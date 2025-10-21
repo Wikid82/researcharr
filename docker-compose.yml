@@ -4,11 +4,17 @@ services:
     image: ghcr.io/wikid82/researcharr:latest
     container_name: researcharr
     restart: unless-stopped
-    environment:
-      - CRON_SCHEDULE=* * * * *
-      - TZ=America/Los_Angeles
+    env_file:
+      - /path/to/config/.env
     volumes:
-      - /path/to/config:/config # place your .env file in here
+      - /path/to/config:/config # This directory will contain your .env file
+    depends_on:
+        <downlod_client>:
+          condition: service_started
+        radarr:
+          condition: service_started
+        sonarr:
+          condition: service_started
     deploy:
         resources:
           limits:

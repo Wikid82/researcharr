@@ -1,3 +1,7 @@
+from datetime import date
+
+# Version based on build date
+__version__ = date.today().strftime('%Y.%m.%d')
 from requests.auth import HTTPBasicAuth
 import os
 import requests as requests

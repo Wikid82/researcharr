@@ -60,7 +60,7 @@ SETTINGS_FORM = '''
     PUID: <input name="puid" value="{{ researcharr.puid }}"><br>
     PGID: <input name="pgid" value="{{ researcharr.pgid }}"><br>
     Timezone: <input name="timezone" value="{{ researcharr.timezone }}"><br>
-    Cron Schedule: <input name="cron_schedule" value="{{ researcharr.cron_schedule }}"><br>
+  <!-- Cron Schedule field moved to Scheduling tab -->
   </fieldset>
   <fieldset><legend>Radarr Instances</legend>
     {% for i in range(5) %}

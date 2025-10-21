@@ -1,7 +1,7 @@
 ---
 services:
   researcharr:
-    image: ghcr.io/Wikid82/researcharr:latest
+    image: ghcr.io/wikid82/researcharr:latest
     container_name: researcharr
     restart: unless-stopped
     environment:

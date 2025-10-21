@@ -464,66 +464,70 @@ def test_connection(service, idx):
 @app.route('/validate_radarr/<int:idx>', methods=['POST'])
 @login_required
 def validate_radarr(idx):
-    cfg = load_config()
-    radarr = cfg.get('radarr', [])
-    if idx < 0 or idx >= len(radarr):
-        return jsonify({'success': False, 'msg': 'Invalid Radarr index'})
-    inst = radarr[idx]
-    url = inst.get('url', '')
-    key = inst.get('api_key', '')
-    if not url or not url.startswith(('http://', 'https://')):
-        return jsonify({'success': False, 'msg': 'Invalid or missing URL'})
-    if not key:
-        return jsonify({'success': False, 'msg': 'Missing API key'})
-    # Test connection
-    try:
-        resp = requests.get(url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': key}, timeout=10)
-        if resp.status_code != 200:
-            return jsonify({'success': False, 'msg': f'Connection failed: HTTP {resp.status_code}'})
-    except Exception as e:
-        return jsonify({'success': False, 'msg': f'Error: {e}'})
-    # Simulate dry run (no actual changes)
-    try:
-        queue_resp = requests.get(url.rstrip('/') + '/api/v3/queue', headers={'Authorization': key}, timeout=10)
-        if queue_resp.status_code == 200:
-            queue = queue_resp.json()
-            return jsonify({'success': True, 'msg': f'Connection successful. Queue length: {len(queue)}'})
-        else:
-            return jsonify({'success': True, 'msg': f'Connection successful, but failed to get queue: HTTP {queue_resp.status_code}'})
-    except Exception as e:
-        return jsonify({'success': True, 'msg': f'Connection successful, but dry run failed: {e}'})
+  cfg = load_config()
+  radarr = cfg.get('radarr', [])
+  if idx < 0 or idx >= len(radarr):
+    return jsonify({'success': False, 'msg': 'Invalid Radarr index'})
+  inst = radarr[idx]
+  url = inst.get('url', '')
+  key = inst.get('api_key', '')
+  if url and not url.startswith(('http://', 'https://')):
+    url = 'http://' + url
+  if not url:
+    return jsonify({'success': False, 'msg': 'Invalid or missing URL'})
+  if not key:
+    return jsonify({'success': False, 'msg': 'Missing API key'})
+  # Test connection
+  try:
+    resp = requests.get(url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': key}, timeout=10)
+    if resp.status_code != 200:
+      return jsonify({'success': False, 'msg': f'Connection failed: HTTP {resp.status_code}'})
+  except Exception as e:
+    return jsonify({'success': False, 'msg': f'Error: {e}'})
+  # Simulate dry run (no actual changes)
+  try:
+    queue_resp = requests.get(url.rstrip('/') + '/api/v3/queue', headers={'Authorization': key}, timeout=10)
+    if queue_resp.status_code == 200:
+      queue = queue_resp.json()
+      return jsonify({'success': True, 'msg': f'Connection successful. Queue length: {len(queue)}'})
+    else:
+      return jsonify({'success': True, 'msg': f'Connection successful, but failed to get queue: HTTP {queue_resp.status_code}'})
+  except Exception as e:
+    return jsonify({'success': True, 'msg': f'Connection successful, but dry run failed: {e}'})
 
 @app.route('/validate_sonarr/<int:idx>', methods=['POST'])
 @login_required
 def validate_sonarr(idx):
-    cfg = load_config()
-    sonarr = cfg.get('sonarr', [])
-    if idx < 0 or idx >= len(sonarr):
-        return jsonify({'success': False, 'msg': 'Invalid Sonarr index'})
-    inst = sonarr[idx]
-    url = inst.get('url', '')
-    key = inst.get('api_key', '')
-    if not url or not url.startswith(('http://', 'https://')):
-        return jsonify({'success': False, 'msg': 'Invalid or missing URL'})
-    if not key:
-        return jsonify({'success': False, 'msg': 'Missing API key'})
-    # Test connection
-    try:
-        resp = requests.get(url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': key}, timeout=10)
-        if resp.status_code != 200:
-            return jsonify({'success': False, 'msg': f'Connection failed: HTTP {resp.status_code}'})
-    except Exception as e:
-        return jsonify({'success': False, 'msg': f'Error: {e}'})
-    # Simulate dry run (no actual changes)
-    try:
-        queue_resp = requests.get(url.rstrip('/') + '/api/v3/queue', headers={'Authorization': key}, timeout=10)
-        if queue_resp.status_code == 200:
-            queue = queue_resp.json()
-            return jsonify({'success': True, 'msg': f'Connection successful. Queue length: {len(queue)}'})
-        else:
-            return jsonify({'success': True, 'msg': f'Connection successful, but failed to get queue: HTTP {queue_resp.status_code}'})
-    except Exception as e:
-        return jsonify({'success': True, 'msg': f'Connection successful, but dry run failed: {e}'})
+  cfg = load_config()
+  sonarr = cfg.get('sonarr', [])
+  if idx < 0 or idx >= len(sonarr):
+    return jsonify({'success': False, 'msg': 'Invalid Sonarr index'})
+  inst = sonarr[idx]
+  url = inst.get('url', '')
+  key = inst.get('api_key', '')
+  if url and not url.startswith(('http://', 'https://')):
+    url = 'http://' + url
+  if not url:
+    return jsonify({'success': False, 'msg': 'Invalid or missing URL'})
+  if not key:
+    return jsonify({'success': False, 'msg': 'Missing API key'})
+  # Test connection
+  try:
+    resp = requests.get(url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': key}, timeout=10)
+    if resp.status_code != 200:
+      return jsonify({'success': False, 'msg': f'Connection failed: HTTP {resp.status_code}'})
+  except Exception as e:
+    return jsonify({'success': False, 'msg': f'Error: {e}'})
+  # Simulate dry run (no actual changes)
+  try:
+    queue_resp = requests.get(url.rstrip('/') + '/api/v3/queue', headers={'Authorization': key}, timeout=10)
+    if queue_resp.status_code == 200:
+      queue = queue_resp.json()
+      return jsonify({'success': True, 'msg': f'Connection successful. Queue length: {len(queue)}'})
+    else:
+      return jsonify({'success': True, 'msg': f'Connection successful, but failed to get queue: HTTP {queue_resp.status_code}'})
+  except Exception as e:
+    return jsonify({'success': True, 'msg': f'Connection successful, but dry run failed: {e}'})
 
 # --- Login page ---
 LOGIN_FORM = '''

@@ -14,7 +14,6 @@ researcharr/
 ├── LICENSE
 ├── README.md
 ├── app.py
-├── cronjob.template
 ├── docker-compose.yml
 ├── entrypoint.sh
 └── requirements.txt
@@ -32,6 +31,22 @@ researcharr/
 
 3.  **Run the container:**
     You can use either Docker Compose (recommended) or a `docker run` command. See the examples below.
+
+4.  **Check the logs:**
+    Live logs are streamed and can be viewed using the `docker logs` command. See the Logging section for more details.
+
+## Logging
+
+The application creates three separate log files inside a `logs` directory within your main config volume (`/path/to/config/logs/`):
+
+*   `researcharr.log`: Contains general application status, such as starting and finishing a run.
+*   `radarr.log`: Contains all logs specifically related to Radarr API calls and processing.
+*   `sonarr.log`: Contains all logs specifically related to Sonarr API calls and processing.
+
+You can view a combined, real-time stream of all logs by running:
+```bash
+docker logs -f researcharr
+```
 
 ## Environment Variables
 
@@ -65,7 +80,7 @@ services:
       - CRON_SCHEDULE=* * * * *
       - TZ=America/Los_Angeles
     volumes:
-      - /path/to/config:/config # This directory should contain your .env file
+      - /path/to/config:/config # This directory will contain your .env file and the logs/ directory
     deploy:
         resources:
           limits:

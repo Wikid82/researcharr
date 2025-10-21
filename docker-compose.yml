@@ -6,6 +6,8 @@ services:
     restart: unless-stopped
     env_file:
       - /path/to/config/.env
+    ports:
+      - "2929:2929" # Expose web UI on port 2929
     volumes:
       - /path/to/config:/config # This directory will contain your .env file
     depends_on:

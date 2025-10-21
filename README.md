@@ -98,6 +98,8 @@ services:
     image: ghcr.io/wikid82/researcharr:latest
     container_name: researcharr
     restart: unless-stopped
+    ports:
+      - "2929:2929" # Expose web UI on port 2929
     volumes:
       - /path/to/config:/config # This directory will contain your config.yml, logs/, and researcharr.db
     depends_on:
@@ -123,6 +125,7 @@ services:
 docker run -d \
   --name=researcharr \
   -v /path/to/config:/config \
+  -p 2929:2929 \
   --restart unless-stopped \
   ghcr.io/wikid82/researcharr:latest
 ```

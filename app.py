@@ -264,3 +264,20 @@ if PROCESS_SONARR:
     conn.close()
 
 main_logger.info("researcharr process finished.")
+
+# --- Test: Countdown until next run (for container startup diagnostics) ---
+import time
+import sys
+
+def countdown(minutes):
+    main_logger.info(f"Countdown: {minutes} minutes until next scheduled run (test mode)")
+    for i in range(minutes, 0, -1):
+        sys.stdout.write(f"\rNext run in {i} minute(s)... ")
+        sys.stdout.flush()
+        time.sleep(60)
+    sys.stdout.write("\n")
+    main_logger.info("Countdown complete. If this is a test, the next cron run should now occur.")
+
+# Only run countdown if started with a special env var (to avoid running in cron jobs)
+if os.environ.get("RESEARCHARR_STARTUP_COUNTDOWN", "0") == "1":
+    countdown(5)  # 5 minute countdown for test/demo

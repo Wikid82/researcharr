@@ -15,6 +15,10 @@ if [ -n "$TZ" ]; then
   echo "Timezone set to: $TZ"
 fi
 
+# Run the script once at startup
+echo "Running researcharr at startup..."
+python3 /app/app.py
+
 # Get cron schedule from config.yml
 CRON_SCHEDULE=$(yq e '.researcharr.cron_schedule // "0 * * * *"' /config/config.yml)
 echo "Using cron schedule: $CRON_SCHEDULE"
@@ -23,10 +27,6 @@ echo "Using cron schedule: $CRON_SCHEDULE"
 echo "${CRON_SCHEDULE} python3 /app/app.py" > /etc/cron.d/researcharr-cron
 chmod 0644 /etc/cron.d/researcharr-cron
 crontab /etc/cron.d/researcharr-cron
-
-# Run the script once at startup
-echo "Running researcharr at startup..."
-python3 /app/app.py
 
 # Start cron in the foreground and tail the logs to make them visible with `docker logs`
 echo "Starting cron..."

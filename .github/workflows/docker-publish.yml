@@ -21,9 +21,13 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Lowercase repository owner
+      id: repo_owner
+      run: echo "name=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
     - name: Build and push
       uses: docker/build-push-action@v4
       with:
         context: .
         push: true
-        tags: ghcr.io/${{ tolower(github.repository) }}:latest
+        tags: ghcr.io/${{ steps.repo_owner.outputs.name }}/${{ github.event.repository.name }}:latest

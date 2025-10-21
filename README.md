@@ -53,7 +53,7 @@ pip install -r requirements.txt
   ```
 
 2.  **Edit your configuration:**
-  Open `/path/to/config/config.yml` in your favorite editor and fill in the values for up to 5 Radarr and 5 Sonarr instances, schedule, and timezone. Each instance can be enabled or disabled. All options are documented in the example file.
+  Open `/path/to/config/config.yml` in your favorite editor and fill in the values for up to 5 Radarr and 5 Sonarr instances, schedule, and timezone. Each instance can be enabled or disabled. All options are documented in the example file. The cron job schedule can also be edited from the "Scheduling" tab in the web UI, with changes reflected in the config and container behavior.
 
 3.  **Run the container:**
     You can use either Docker Compose (recommended) or a `docker run` command. See the examples below. The first time the script runs, it will create a `researcharr.db` file and a `logs` directory inside your config volume.
@@ -73,15 +73,15 @@ pip install -r requirements.txt
   - Default password: `researcharr`
   (Change these in production using the "User Settings" tab in the web UI, which updates `webui_user.yml`.)
 
-  The web UI allows you to edit config.yml, test Radarr/Sonarr connections, and enable/disable up to 5 Radarr and 5 Sonarr instances using slider toggles. All settings are protected behind login. User credentials are now managed in `webui_user.yml` (not in `webui.py`).
+  The web UI allows you to edit config.yml, test Radarr/Sonarr connections, enable/disable up to 5 Radarr and 5 Sonarr instances, and edit the cron job schedule from the "Scheduling" tab. All settings are protected behind login. User credentials are now managed in `webui_user.yml` (not in `webui.py`).
 
 ## Configuration
 
 All configuration is now managed in a single YAML file: `/path/to/config/config.yml`.
 
 - See `config.example.yml` for a fully documented template.
-- You can set your timezone, cron schedule, Radarr/Sonarr URLs, API keys, and processing options in this file.
-- You can set your timezone, cron schedule, and configure up to 5 Radarr and 5 Sonarr instances (each with enable toggles, URLs, API keys, and processing options) in this file.
+- You can set your timezone, cron schedule (or edit it from the Scheduling tab in the web UI), Radarr/Sonarr URLs, API keys, and processing options in this file.
+- You can set your timezone, cron schedule, and configure up to 5 Radarr and 5 Sonarr instances (each with enable toggles, URLs, API keys, and processing options) in this file. The cron schedule can also be managed from the Scheduling tab in the web UI.
 - Example URLs for Docker default network: `http://radarr:7878` and `http://sonarr:8989`.
 
 ## State Management

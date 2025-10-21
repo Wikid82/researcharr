@@ -46,10 +46,17 @@ python3 /app/webui.py &
 echo "Running researcharr at startup..."
 python3 /app/app.py
 
-# Get cron schedule from config.yml
+# Get cron schedule from config.yml (settable in the web UI Scheduling tab)
 CRON_SCHEDULE=$(yq '.researcharr.cron_schedule' /config/config.yml)
 CRON_SCHEDULE=${CRON_SCHEDULE:-"0 * * * *"}
 echo "Using cron schedule: $CRON_SCHEDULE"
+
+# Validate cron schedule (basic check: must have 5 fields)
+CRON_FIELD_COUNT=$(echo "$CRON_SCHEDULE" | awk '{print NF}')
+if [ "$CRON_FIELD_COUNT" -ne 5 ]; then
+  echo "Warning: Invalid cron schedule '$CRON_SCHEDULE'. Falling back to '0 * * * *' (hourly)."
+  CRON_SCHEDULE="0 * * * *"
+fi
 
 # Create cron job file that executes the python script
 echo "${CRON_SCHEDULE} python3 /app/app.py" > /etc/cron.d/researcharr-cron

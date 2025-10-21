@@ -49,6 +49,7 @@ SETTINGS_FORM = '''
 <div class="sidebar">
   <ul>
     <li><a href="/" {% if active_tab == 'app' %}class="active"{% endif %}>App Settings</a></li>
+    <li><a href="/scheduling" {% if active_tab == 'scheduling' %}class="active"{% endif %}>Scheduling</a></li>
     <li><a href="/user" {% if active_tab == 'user' %}class="active"{% endif %}>User Settings</a></li>
   </ul>
 </div>
@@ -95,6 +96,16 @@ SETTINGS_FORM = '''
   </fieldset>
   <br><input type="submit" value="Save Settings">
   </form>
+{% elif active_tab == 'scheduling' %}
+<form method="post" action="/scheduling">
+  <fieldset><legend>Cron Scheduling</legend>
+    Cron Schedule: <input name="cron_schedule" value="{{ cron_schedule }}" style="width:220px;">
+    <a href="https://crontab.guru/" target="_blank" style="margin-left:12px;">Cron Calculator</a><br>
+    <small>Example: <code>0 */1 * * *</code> (every hour)</small><br>
+    <input type="submit" value="Update Schedule">
+    {% if sched_msg %}<div class="user-msg">{{ sched_msg }}</div>{% endif %}
+  </fieldset>
+</form>
 {% elif active_tab == 'user' %}
 <form method="post" action="/user">
   <fieldset><legend>User Settings</legend>
@@ -105,6 +116,31 @@ SETTINGS_FORM = '''
   </fieldset>
 </form>
 {% endif %}
+@app.route('/scheduling', methods=['GET', 'POST'])
+@login_required
+def scheduling():
+  cfg = load_config()
+  msg = None
+  if request.method == 'POST':
+    cron_schedule = request.form.get('cron_schedule', '').strip()
+    if not cron_schedule:
+      msg = 'Cron schedule cannot be blank.'
+    else:
+      cfg.setdefault('researcharr', {})['cron_schedule'] = cron_schedule
+      save_config(cfg)
+      msg = 'Cron schedule updated.'
+      cfg = load_config()
+  cron_schedule = cfg.get('researcharr', {}).get('cron_schedule', '0 */1 * * *')
+  user = load_user_config()
+  return render_template_string(SETTINGS_FORM,
+    researcharr=None,
+    radarr=None,
+    sonarr=None,
+    active_tab='scheduling',
+    user=user,
+    user_msg=None,
+    cron_schedule=cron_schedule,
+    sched_msg=msg)
 </div>
 <style>
 body {

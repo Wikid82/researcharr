@@ -30,10 +30,19 @@ researcharr/
     Create a file named `.env` inside your new config directory (`/path/to/config/.env`). Copy the contents from `.example_env` and fill in the values for your Radarr and/or Sonarr instances.
 
 3.  **Run the container:**
-    You can use either Docker Compose (recommended) or a `docker run` command. See the examples below.
+    You can use either Docker Compose (recommended) or a `docker run` command. See the examples below. The first time the script runs, it will create a `researcharr.db` file and a `logs` directory inside your config volume.
 
 4.  **Check the logs:**
     Live logs are streamed and can be viewed using the `docker logs` command. See the Logging section for more details.
+
+## State Management
+
+This application uses a **SQLite database** (`researcharr.db`) to manage a persistent queue of items to process. This ensures that every eligible media file is eventually searched for without repetition.
+
+*   **Workflow:**
+    1.  On the first run, or any time the processing queue is empty, the script scans your entire library to find all items that need an upgrade and populates the queue. This can take some time depending on the size of your library.
+    2.  On all subsequent runs, the script simply takes the next batch of items from the queue, triggers a search, and removes them from the queue. These runs are very fast.
+*   **Persistence:** The database file is stored in your main config volume (`/path/to/config/researcharr.db`), so the queue is maintained even if you restart or update the container.
 
 ## Logging
 
@@ -80,7 +89,7 @@ services:
       - CRON_SCHEDULE=* * * * *
       - TZ=America/Los_Angeles
     volumes:
-      - /path/to/config:/config # This directory will contain your .env file and the logs/ directory
+      - /path/to/config:/config # This directory will contain your .env file, logs/, and researcharr.db
     deploy:
         resources:
           limits:

@@ -85,11 +85,15 @@ services:
     image: ghcr.io/wikid82/researcharr:latest
     container_name: researcharr
     restart: unless-stopped
-    environment:
-      - CRON_SCHEDULE=* * * * *
-      - TZ=America/Los_Angeles
     volumes:
       - /path/to/config:/config # This directory will contain your .env file, logs/, and researcharr.db
+    depends_on:
+        <download_client>:
+          condition: service_started
+        radarr:
+          condition: service_started
+        sonarr:
+          condition: service_started
     deploy:
         resources:
           limits:

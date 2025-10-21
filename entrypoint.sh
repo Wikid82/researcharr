@@ -19,6 +19,25 @@ if [ -n "$TZ" ]; then
 fi
 
 
+
+
+# Ensure /config/config.yml exists, copy from example if missing
+if [ ! -f /config/config.yml ]; then
+  if [ -f /app/config.example.yml ]; then
+    cp /app/config.example.yml /config/config.yml
+    echo "Copied default config.example.yml to /config/config.yml."
+  else
+    echo "No config.yml or config.example.yml found!"
+    exit 1
+  fi
+fi
+
+# Ensure /config/logs directory exists
+mkdir -p /config/logs
+
+# Ensure /config/researcharr.db exists (touch will not overwrite if present)
+touch /config/researcharr.db
+
 # Start the web UI in the background
 echo "Starting researcharr web UI on port 2929..."
 python3 /app/webui.py &

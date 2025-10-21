@@ -34,7 +34,15 @@ researcharr/
     You can use either Docker Compose (recommended) or a `docker run` command. See the examples below. The first time the script runs, it will create a `researcharr.db` file and a `logs` directory inside your config volume.
 
 4.  **Check the logs:**
-    Live logs are streamed and can be viewed using the `docker logs` command. See the Logging section for more details.
+  Live logs are streamed and can be viewed using the `docker logs` command. See the Logging section for more details.
+
+5.  **(Optional) Use the Web UI:**
+  A simple web interface is available for editing settings and testing connections. After starting the container, run:
+  ```bash
+  docker exec -it researcharr python3 /app/webui.py
+  ```
+  Then visit [http://localhost:2929](http://localhost:2929) in your browser.
+  The web UI allows you to edit config.yml and test Radarr/Sonarr connections directly.
 
 ## Configuration
 
@@ -65,6 +73,17 @@ You can view a combined, real-time stream of all logs by running:
 ```bash
 docker logs -f researcharr
 ```
+
+---
+
+
+## Web UI
+
+The web UI runs on port **2929**. To use it, run:
+```bash
+docker exec -it researcharr python3 /app/webui.py
+```
+and visit [http://localhost:2929](http://localhost:2929).
 
 ---
 

@@ -94,9 +94,33 @@ function testConnection(service, idx) {
 </script>
 '''
 
+def migrate_config(cfg):
+  # Migrate radarr/sonarr from dict to list if needed
+  if isinstance(cfg.get('radarr'), dict):
+    r = cfg['radarr']
+    cfg['radarr'] = [{
+      'enabled': r.get('process', False),
+      'name': r.get('name', 'Radarr 1'),
+      'url': r.get('url', ''),
+      'api_key': r.get('api_key', ''),
+      'movies_to_upgrade': r.get('movies_to_upgrade', 5),
+    }]
+  if isinstance(cfg.get('sonarr'), dict):
+    s = cfg['sonarr']
+    cfg['sonarr'] = [{
+      'enabled': s.get('process', False),
+      'name': s.get('name', 'Sonarr 1'),
+      'url': s.get('url', ''),
+      'api_key': s.get('api_key', ''),
+      'episodes_to_upgrade': s.get('episodes_to_upgrade', 5),
+    }]
+  return cfg
+
 def load_config():
-    with open(CONFIG_PATH, 'r') as f:
-        return yaml.safe_load(f)
+  with open(CONFIG_PATH, 'r') as f:
+    cfg = yaml.safe_load(f)
+  cfg = migrate_config(cfg)
+  return cfg
 
 def save_config(cfg):
     with open(CONFIG_PATH, 'w') as f:

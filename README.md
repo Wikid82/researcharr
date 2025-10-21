@@ -22,10 +22,11 @@ researcharr/
 ## How to Use
 
 1.  **Create a configuration directory:**
-    ```bash
-    mkdir -p /path/to/config
-    cp config.example.yml /path/to/config/config.yml
-    ```
+  ```bash
+  mkdir -p /path/to/config
+  # You do not need to manually copy config.yml unless you want to pre-configure settings.
+  # If /config/config.yml is missing, it will be auto-created from config.example.yml at container startup.
+  ```
 
 2.  **Edit your configuration:**
   Open `/path/to/config/config.yml` in your favorite editor and fill in the values for up to 5 Radarr and 5 Sonarr instances, schedule, and timezone. Each instance can be enabled or disabled. All options are documented in the example file.
@@ -159,4 +160,4 @@ docker run -d \
   --restart unless-stopped \
   ghcr.io/wikid82/researcharr:latest
 ```
-**Note:** All configuration is now handled in `/path/to/config/config.yml`. No environment variables or `.env` file are required.
+**Note:** All configuration is handled in `/path/to/config/config.yml`. If this file is missing, it will be auto-created from `config.example.yml` at container startup. No environment variables or `.env` file are required.

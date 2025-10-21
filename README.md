@@ -1,3 +1,8 @@
+
+<p align="center">
+  <img src="static/logo.png" alt="researcharr logo" height="100"/>
+</p>
+
 # researcharr
 
 A utility to automatically trigger searches in the *arr suite to keep files up to date with any scoring or custom format changes.

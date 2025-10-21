@@ -11,7 +11,10 @@ app.secret_key = 'researcharr_secret_key'
 SETTINGS_FORM = '''
 <!doctype html>
 <title>researcharr Settings</title>
-<h2>researcharr Settings</h2>
+<div class="header">
+  <img src="/static/logo.png" alt="researcharr logo" class="logo">
+  <span class="title-text">researcharr</span>
+</div>
 <form method="post" action="/save">
   <fieldset><legend>General</legend>
     PUID: <input name="puid" value="{{ researcharr.puid }}"><br>
@@ -54,6 +57,77 @@ SETTINGS_FORM = '''
   <br><input type="submit" value="Save Settings">
 </form>
 <style>
+body {
+  background: linear-gradient(135deg, #5B6EF1 0%, #3B50C1 100%);
+  font-family: 'Segoe UI', Arial, sans-serif;
+  color: #2A3B8B;
+  margin: 0;
+  padding: 0;
+}
+.header {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  padding: 24px 0 12px 0;
+  box-shadow: 0 2px 8px rgba(42,59,139,0.07);
+  margin-bottom: 24px;
+  justify-content: center;
+}
+.logo {
+  height: 56px;
+  margin-right: 18px;
+}
+.title-text {
+  font-size: 2.5em;
+  font-weight: bold;
+  color: #2A3B8B;
+  letter-spacing: 2px;
+}
+form {
+  background: #fff;
+  border-radius: 12px;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 32px 32px 24px 32px;
+  box-shadow: 0 4px 24px rgba(42,59,139,0.10);
+}
+fieldset {
+  border: 1.5px solid #3B50C1;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  padding: 16px;
+  background: #f7f8fd;
+}
+legend {
+  color: #2A3B8B;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+input[type="text"], input[type="number"], input[type="password"] {
+  border: 1px solid #3B50C1;
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  font-size: 1em;
+  background: #fff;
+  color: #2A3B8B;
+}
+input[type="submit"] {
+  background: linear-gradient(90deg, #2A3B8B 0%, #5B6EF1 100%);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 32px;
+  font-size: 1.1em;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 18px;
+  box-shadow: 0 2px 8px rgba(42,59,139,0.10);
+  transition: background 0.2s;
+}
+input[type="submit"]:hover {
+  background: linear-gradient(90deg, #3B50C1 0%, #5B6EF1 100%);
+}
 .switch {
   position: relative;
   display: inline-block;
@@ -81,7 +155,7 @@ SETTINGS_FORM = '''
   border-radius: 50%;
 }
 input:checked + .slider {
-  background-color: #2196F3;
+  background-color: #5B6EF1;
 }
 input:checked + .slider:before {
   transform: translateX(16px);

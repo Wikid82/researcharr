@@ -4,6 +4,29 @@ import os
 import requests as requests
 import random
 import logging
+import sqlite3
+
+# --- Database Setup ---
+DB_PATH = "/config/researcharr.db"
+
+def init_db():
+    """Initializes the SQLite database and creates tables if they don't exist."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    # Radarr queue table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS radarr_queue (
+            movie_id INTEGER PRIMARY KEY
+        )
+    ''')
+    # Sonarr queue table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sonarr_queue (
+            episode_id INTEGER PRIMARY KEY
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
 # Create loggers
 def setup_logger(name, log_file, level=logging.INFO):
@@ -24,6 +47,9 @@ def setup_logger(name, log_file, level=logging.INFO):
 main_logger = setup_logger('main_logger', '/config/logs/researcharr.log')
 radarr_logger = setup_logger('radarr_logger', '/config/logs/radarr.log')
 sonarr_logger = setup_logger('sonarr_logger', '/config/logs/sonarr.log')
+
+# Initialize the database
+init_db()
 
 # Load .env
 load_dotenv(dotenv_path="/config/.env")
@@ -80,7 +106,8 @@ if PROCESS_RADARR:
 
     # Get all moviefiles for all movies and if moviefile exists and the customFormatScore is less than the wanted score, add it to dictionary and return dictionary
     def get_movie_files(movies):
-        radarr_logger.info("Querying MovieFiles API")
+        radarr_logger.info("Querying all movie files to find candidates for upgrade...")
+        candidate_ids = []
         for movie in movies:
             monitored_str = str(movie["monitored"])
             is_monitored = monitored_str.lower() == "true" if monitored_str else False
@@ -88,33 +115,57 @@ if PROCESS_RADARR:
                 MOVIE_FILE_GET_API_CALL = RADARR_URL + API_PATH + MOVIEFILE_ENDPOINT + str(movie["movieFileId"])
                 movie_file = requests.get(MOVIE_FILE_GET_API_CALL, headers=radarr_headers).json()
                 movie_quality_profile_id = movie["qualityProfileId"]
-                # Build dictionary of movie files needing upgrades
-                if movie_file["customFormatScore"] < quality_to_formats[movie_quality_profile_id]:
-                    movie_files[movie["id"]] = {}
-                    movie_files[movie["id"]]["title"] = movie["title"]
-                    movie_files[movie["id"]]["customFormatScore"] = movie_file["customFormatScore"]
-                    movie_files[movie["id"]]["wantedCustomFormatScore"] = quality_to_formats[movie_quality_profile_id]
-        return movie_files
+                # If score is lower than wanted, add to candidates
+                if movie_file["customFormatScore"] < quality_to_formats.get(movie_quality_profile_id, 99999):
+                    candidate_ids.append(movie["id"])
+        return candidate_ids
 
+    # --- Radarr Main Logic ---
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
 
-    # Get all quality profile ids and their cutoff scores and add to dictionary
-    radarr_logger.info("Querying Radarr Quality Custom Format Cutoff Scores")
-    get_radarr_quality_cutoff_scores()
+    # Check if queue is empty
+    cursor.execute("SELECT COUNT(*) FROM radarr_queue")
+    queue_count = cursor.fetchone()[0]
+    radarr_logger.info(f"Found {queue_count} movies in the Radarr queue.")
 
-    # Select random movies to upgrade
-    random_keys = list(set(random.choices(list(get_movie_files(get_movies()).keys()), k=NUM_MOVIES_TO_UPGRADE)))
+    if queue_count == 0:
+        radarr_logger.info("Radarr queue is empty. Repopulating from all eligible movies...")
+        get_radarr_quality_cutoff_scores()
+        all_movies = get_movies()
+        candidate_ids = get_movie_files(all_movies)
+        if candidate_ids:
+            radarr_logger.info(f"Found {len(candidate_ids)} movies to add to the queue.")
+            cursor.executemany("INSERT OR IGNORE INTO radarr_queue (movie_id) VALUES (?)", [(id,) for id in candidate_ids])
+            conn.commit()
+        else:
+            radarr_logger.info("No eligible movies found to populate the queue.")
 
-    # Set data payload for the movies to search
-    data = {
-        "name": "MoviesSearch",
-        "movieIds": random_keys
-    }
-    # Do the thing
-    radarr_logger.info("Keys to search are " + str(random_keys))
-    radarr_logger.info("Searching for movies...")
-    MOVIE_COMMAND_API_CALL = RADARR_URL + API_PATH + COMMAND_ENDPOINT
-    requests.post(MOVIE_COMMAND_API_CALL, headers=radarr_headers, json=data)
-    radarr_logger.info("Movie search command sent to Radarr.")
+    # Get movies to process from the queue
+    cursor.execute("SELECT movie_id FROM radarr_queue LIMIT ?", (NUM_MOVIES_TO_UPGRADE,))
+    movie_ids_to_process = [row[0] for row in cursor.fetchall()]
+
+    if movie_ids_to_process:
+        radarr_logger.info(f"Processing {len(movie_ids_to_process)} movies from the queue.")
+        # Set data payload for the movies to search
+        data = {
+            "name": "MoviesSearch",
+            "movieIds": movie_ids_to_process
+        }
+        # Send search command to Radarr
+        MOVIE_COMMAND_API_CALL = RADARR_URL + API_PATH + COMMAND_ENDPOINT
+        requests.post(MOVIE_COMMAND_API_CALL, headers=radarr_headers, json=data)
+        radarr_logger.info(f"Movie search command sent for IDs: {movie_ids_to_process}")
+
+        # Remove processed movies from the queue
+        cursor.executemany("DELETE FROM radarr_queue WHERE movie_id = ?", [(id,) for id in movie_ids_to_process])
+        conn.commit()
+        radarr_logger.info(f"Removed {len(movie_ids_to_process)} movies from the queue.")
+    else:
+        radarr_logger.info("No movies in the queue to process.")
+
+    conn.close()
+
 
 if PROCESS_SONARR:
     sonarr_logger.info("Processing Sonarr...")
@@ -142,45 +193,64 @@ if PROCESS_SONARR:
 
     # Get all episodefiles for all series and if episodefile exists and the customFormatScore is less than the wanted score, add it to dictionary and return dictionary
     def get_episode_files(series):
-        sonarr_logger.info("Querying EpisodeFiles API")
+        sonarr_logger.info("Querying all episode files to find candidates for upgrade...")
+        candidate_ids = []
         for show in series:
             monitored_str = str(show["monitored"])
             is_monitored = monitored_str.lower() == "true" if monitored_str else False
-            episode_quality_profile_id = show["qualityProfileId"]
-            if show["statistics"]["episodeFileCount"] > 0 and is_monitored:
+            if show["monitored"] and show.get("statistics", {}).get("episodeFileCount", 0) > 0:
                 EPISODE_FILE_GET_API_CALL = SONARR_URL + API_PATH + EPISODEFILE_ENDPOINT + "?seriesId=" + str(show["id"])
-                show_episode_files = requests.get(EPISODE_FILE_GET_API_CALL, headers=sonarr_headers).json()
-                for episode in show_episode_files:
-                    # Build dictionary of episode files needing upgrades
-                    if episode["customFormatScore"] < quality_to_formats[episode_quality_profile_id]:
-                        EPISODE_GET_API_CALL = SONARR_URL + API_PATH + EPISODE_ENDPOINT + "?episodeFileId=" + str(episode["id"])
-                        episode_data = requests.get(EPISODE_GET_API_CALL, headers=sonarr_headers).json()
-                        monitored_str = str(episode_data[0]["monitored"])
-                        is_monitored = monitored_str.lower() == "true" if monitored_str else False
-                        if is_monitored:
-                            episode_files[episode["id"]] = {}
-                            episode_files[episode["id"]]["title"] = episode_data[0]["title"]
-                            episode_files[episode["id"]]["customFormatScore"] = episode["customFormatScore"]
-                            episode_files[episode["id"]]["wantedCustomFormatScore"] = quality_to_formats[episode_quality_profile_id]
-        return episode_files
+                episode_files = requests.get(EPISODE_FILE_GET_API_CALL, headers=sonarr_headers).json()
+                for episode_file in episode_files:
+                    episode_quality_profile_id = show["qualityProfileId"]
+                    if episode_file["customFormatScore"] < quality_to_formats.get(episode_quality_profile_id, 99999):
+                        candidate_ids.append(episode_file["id"])
+        return candidate_ids
 
-    # Get all quality profile ids and their cutoff scores and add to dictionary
-    sonarr_logger.info("Querying Sonarr Quality Custom Format Cutoff Scores")
-    get_sonarr_quality_cutoff_scores()
+    # --- Sonarr Main Logic ---
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
 
-    # Select random episodes to upgrade
-    random_keys = list(set(random.choices(list(get_episode_files(get_series()).keys()), k=NUM_EPISODES_TO_UPGRADE)))
+    # Check if queue is empty
+    cursor.execute("SELECT COUNT(*) FROM sonarr_queue")
+    queue_count = cursor.fetchone()[0]
+    sonarr_logger.info(f"Found {queue_count} episodes in the Sonarr queue.")
 
-    # Set data payload for the movies to search
-    data = {
-        "name": "EpisodeSearch",
-        "episodeIds": random_keys
-    }
-    # Do the thing
-    sonarr_logger.info("Keys to search are " + str(random_keys))
-    sonarr_logger.info("Searching for episodes...")
-    EPISODE_COMMAND_API_CALL = SONARR_URL + API_PATH + COMMAND_ENDPOINT
-    requests.post(EPISODE_COMMAND_API_CALL, headers=sonarr_headers, json=data)
-    sonarr_logger.info("Episode search command sent to Sonarr.")
+    if queue_count == 0:
+        sonarr_logger.info("Sonarr queue is empty. Repopulating from all eligible episodes...")
+        get_sonarr_quality_cutoff_scores()
+        all_series = get_series()
+        candidate_ids = get_episode_files(all_series)
+        if candidate_ids:
+            sonarr_logger.info(f"Found {len(candidate_ids)} episodes to add to the queue.")
+            cursor.executemany("INSERT OR IGNORE INTO sonarr_queue (episode_id) VALUES (?)", [(id,) for id in candidate_ids])
+            conn.commit()
+        else:
+            sonarr_logger.info("No eligible episodes found to populate the queue.")
+
+    # Get episodes to process from the queue
+    cursor.execute("SELECT episode_id FROM sonarr_queue LIMIT ?", (NUM_EPISODES_TO_UPGRADE,))
+    episode_ids_to_process = [row[0] for row in cursor.fetchall()]
+
+    if episode_ids_to_process:
+        sonarr_logger.info(f"Processing {len(episode_ids_to_process)} episodes from the queue.")
+        # Set data payload for the episodes to search
+        data = {
+            "name": "EpisodeSearch",
+            "episodeIds": episode_ids_to_process
+        }
+        # Send search command to Sonarr
+        EPISODE_COMMAND_API_CALL = SONARR_URL + API_PATH + COMMAND_ENDPOINT
+        requests.post(EPISODE_COMMAND_API_CALL, headers=sonarr_headers, json=data)
+        sonarr_logger.info(f"Episode search command sent for IDs: {episode_ids_to_process}")
+
+        # Remove processed episodes from the queue
+        cursor.executemany("DELETE FROM sonarr_queue WHERE episode_id = ?", [(id,) for id in episode_ids_to_process])
+        conn.commit()
+        sonarr_logger.info(f"Removed {len(episode_ids_to_process)} episodes from the queue.")
+    else:
+        sonarr_logger.info("No episodes in the queue to process.")
+
+    conn.close()
 
 main_logger.info("researcharr process finished.")

@@ -1,18 +1,33 @@
+
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-# --- Simple user config (replace with config file or env in production) ---
-ADMIN_USERNAME = 'admin'
-# Password is 'researcharr' hashed (change this in production!)
-ADMIN_PASSWORD_HASH = generate_password_hash('researcharr')
+import yaml
 
-# --- Login required decorator ---
+# --- User config file ---
+USER_CONFIG_PATH = '/config/webui_user.yml'
+
+def load_user_config():
+  if not os.path.exists(USER_CONFIG_PATH):
+    # Default user: admin/researcharr
+    with open(USER_CONFIG_PATH, 'w') as f:
+      yaml.safe_dump({
+        'username': 'admin',
+        'password_hash': generate_password_hash('researcharr')
+      }, f)
+  with open(USER_CONFIG_PATH, 'r') as f:
+    return yaml.safe_load(f)
+
+def save_user_config(username, password_hash):
+  with open(USER_CONFIG_PATH, 'w') as f:
+    yaml.safe_dump({'username': username, 'password_hash': password_hash}, f)
+
 def login_required(f):
-  @wraps(f)
-  def decorated_function(*args, **kwargs):
-    if not session.get('logged_in'):
-      return redirect(url_for('login', next=request.url))
-    return f(*args, **kwargs)
-  return decorated_function
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
 from flask import Flask, render_template_string, request, redirect, url_for, flash, jsonify, session
 import yaml
 import os
@@ -33,11 +48,12 @@ SETTINGS_FORM = '''
 </div>
 <div class="sidebar">
   <ul>
-    <li><a href="/">Settings</a></li>
-    <!-- Add more nav links here as needed -->
+    <li><a href="/" {% if active_tab == 'app' %}class="active"{% endif %}>App Settings</a></li>
+    <li><a href="/user" {% if active_tab == 'user' %}class="active"{% endif %}>User Settings</a></li>
   </ul>
 </div>
 <div class="main-content">
+{% if active_tab == 'app' %}
 <form method="post" action="/save">
   <fieldset><legend>General</legend>
     PUID: <input name="puid" value="{{ researcharr.puid }}"><br>
@@ -79,6 +95,16 @@ SETTINGS_FORM = '''
   </fieldset>
   <br><input type="submit" value="Save Settings">
   </form>
+{% elif active_tab == 'user' %}
+<form method="post" action="/user">
+  <fieldset><legend>User Settings</legend>
+    Username: <input name="username" value="{{ user.username }}" required><br>
+    New Password: <input type="password" name="password" placeholder="Leave blank to keep current"><br>
+    <input type="submit" value="Update User">
+    {% if user_msg %}<div class="user-msg">{{ user_msg }}</div>{% endif %}
+  </fieldset>
+</form>
+{% endif %}
 </div>
 <style>
 body {
@@ -156,8 +182,17 @@ body {
   border-radius: 4px 0 0 4px;
   transition: background 0.2s;
 }
+.sidebar a.active, .sidebar a:active {
+  background: #5B6EF1;
+  font-weight: bold;
+}
 .sidebar a:hover {
   background: #3B50C1;
+}
+.user-msg {
+  color: #2A3B8B;
+  margin-top: 12px;
+  font-weight: bold;
 }
 .main-content {
   margin-left: 200px;
@@ -257,10 +292,40 @@ def index():
     radarr.append({'enabled': False, 'name': f'Radarr {len(radarr)+1}', 'url': '', 'api_key': '', 'movies_to_upgrade': 5, 'max_download_queue': 15, 'reprocess_interval_days': 7})
   while len(sonarr) < 5:
     sonarr.append({'enabled': False, 'name': f'Sonarr {len(sonarr)+1}', 'url': '', 'api_key': '', 'episodes_to_upgrade': 5, 'max_download_queue': 15, 'reprocess_interval_days': 7})
+  user = load_user_config()
   return render_template_string(SETTINGS_FORM,
     researcharr=cfg.get('researcharr', {}),
     radarr=radarr,
-    sonarr=sonarr)
+    sonarr=sonarr,
+    active_tab='app',
+    user=user,
+    user_msg=None)
+
+@app.route('/user', methods=['GET', 'POST'])
+@login_required
+def user_settings():
+  user = load_user_config()
+  msg = None
+  if request.method == 'POST':
+    username = request.form.get('username', '').strip()
+    password = request.form.get('password', '')
+    if not username:
+      msg = 'Username cannot be blank.'
+    else:
+      if password:
+        password_hash = generate_password_hash(password)
+      else:
+        password_hash = user['password_hash']
+      save_user_config(username, password_hash)
+      msg = 'User settings updated.'
+      user = load_user_config()
+  return render_template_string(SETTINGS_FORM,
+    researcharr=None,
+    radarr=None,
+    sonarr=None,
+    active_tab='user',
+    user=user,
+    user_msg=msg)
 
 
 @app.route('/save', methods=['POST'])
@@ -366,16 +431,17 @@ LOGIN_FORM = '''
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    error = None
-    if request.method == 'POST':
-        username = request.form.get('username', '')
-        password = request.form.get('password', '')
-        if username == ADMIN_USERNAME and check_password_hash(ADMIN_PASSWORD_HASH, password):
-            session['logged_in'] = True
-            return redirect(url_for('index'))
-        else:
-            error = 'Invalid username or password.'
-    return render_template_string(LOGIN_FORM, error=error)
+  error = None
+  user = load_user_config()
+  if request.method == 'POST':
+    username = request.form.get('username', '')
+    password = request.form.get('password', '')
+    if username == user['username'] and check_password_hash(user['password_hash'], password):
+      session['logged_in'] = True
+      return redirect(url_for('index'))
+    else:
+      error = 'Invalid username or password.'
+  return render_template_string(LOGIN_FORM, error=error)
 
 @app.route('/logout')
 def logout():

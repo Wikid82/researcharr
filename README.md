@@ -24,6 +24,25 @@ researcharr/
 └── requirements.txt
 ```
 
+
+## Requirements
+
+- Python 3.8+
+- Docker (for containerized usage)
+- [Radarr](https://radarr.video/) and/or [Sonarr](https://sonarr.tv/) instances
+
+All required Python packages are listed in `requirements.txt` and are installed automatically when building or running the Docker container. This includes:
+
+- Flask (for the web UI)
+- Werkzeug (for secure login/password hashing)
+- PyYAML (for YAML config and user management)
+
+If running outside Docker, install dependencies with:
+
+```bash
+pip install -r requirements.txt
+```
+
 ## How to Use
 
 1.  **Create a configuration directory:**
@@ -52,9 +71,9 @@ researcharr/
   **Login is required.**
   - Default username: `admin`
   - Default password: `researcharr`
-  (Change these in production by editing `webui.py`.)
+  (Change these in production using the "User Settings" tab in the web UI, which updates `webui_user.yml`.)
 
-  The web UI allows you to edit config.yml, test Radarr/Sonarr connections, and enable/disable up to 5 Radarr and 5 Sonarr instances using slider toggles. All settings are protected behind login.
+  The web UI allows you to edit config.yml, test Radarr/Sonarr connections, and enable/disable up to 5 Radarr and 5 Sonarr instances using slider toggles. All settings are protected behind login. User credentials are now managed in `webui_user.yml` (not in `webui.py`).
 
 ## Configuration
 
@@ -143,6 +162,10 @@ The web UI runs on port **2929**. To use it, run:
 docker exec -it researcharr python3 /app/webui.py
 ```
 and visit [http://localhost:2929](http://localhost:2929).
+
+**Dependencies:** Flask, Werkzeug, and PyYAML are required for the web UI and are installed automatically in Docker. If running locally, install them with `pip install -r requirements.txt`.
+
+**User credentials:** Managed in `webui_user.yml` and editable from the "User Settings" tab in the web UI.
 
 ### Download Queue Limit & Reprocessing Interval (per instance)
 

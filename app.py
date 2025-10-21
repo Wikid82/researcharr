@@ -55,6 +55,13 @@ init_db()
 with open('/config/config.yml', 'r') as f:
     config = yaml.safe_load(f)
 
+# Set researcharr (general) variables
+researcharr_cfg = config.get('researcharr', {})
+PUID = int(researcharr_cfg.get('puid', 1000))
+PGID = int(researcharr_cfg.get('pgid', 1000))
+TIMEZONE = researcharr_cfg.get('timezone', "America/New_York")
+CRON_SCHEDULE = researcharr_cfg.get('cron_schedule', "0 */1 * * *")
+
 # Set radarr variables
 radarr_cfg = config.get('radarr', {})
 process_radarr_str = str(radarr_cfg.get('process', False))

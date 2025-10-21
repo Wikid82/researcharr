@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Load PUID/PGID from config.yml if present
-PUID=$(yq e '.app.puid // 1000' /config/config.yml)
-PGID=$(yq e '.app.pgid // 1000' /config/config.yml)
+PUID=$(yq e '.researcharr.puid // 1000' /config/config.yml)
+PGID=$(yq e '.researcharr.pgid // 1000' /config/config.yml)
 
 # Set ownership of /config and subfolders
 chown -R $PUID:$PGID /config
 
 # Set timezone from config.yml
-TZ=$(yq e '.app.timezone // "America/New_York"' /config/config.yml)
+TZ=$(yq e '.researcharr.timezone // "America/New_York"' /config/config.yml)
 if [ -n "$TZ" ]; then
   ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
   echo $TZ > /etc/timezone
@@ -16,7 +16,7 @@ if [ -n "$TZ" ]; then
 fi
 
 # Get cron schedule from config.yml
-CRON_SCHEDULE=$(yq e '.app.cron_schedule // "0 * * * *"' /config/config.yml)
+CRON_SCHEDULE=$(yq e '.researcharr.cron_schedule // "0 * * * *"' /config/config.yml)
 echo "Using cron schedule: $CRON_SCHEDULE"
 
 # Create cron job file that executes the python script

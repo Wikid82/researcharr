@@ -1,5 +1,5 @@
 # General application settings
-app:
+researcharr:
   # User and group IDs for file permissions (optional, recommended for Unraid/Synology)
   puid: 1000 # Set to your host user ID
   pgid: 1000 # Set to your host group ID

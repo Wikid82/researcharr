@@ -7,7 +7,7 @@ researcharr:
   timezone: "America/New_York"
   # Cron schedule for how often to run the script.
   # See https://crontab.guru/ for help generating a schedule.
-  cron_schedule: "0 */1 * * *"
+  cron_schedule: "* */1 * * *"
 
 # Radarr specific settings
 radarr:

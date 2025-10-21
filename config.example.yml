@@ -16,26 +16,32 @@ radarr:
   url: ""
   api_key: ""
   movies_to_upgrade: 5
+  # Maximum allowed items in Radarr's download queue before skipping upgrades (default: 15)
+  max_download_queue: 15
 - enabled: false
   name: "Radarr 2"
   url: ""
   api_key: ""
   movies_to_upgrade: 5
+  max_download_queue: 15
 - enabled: false
   name: "Radarr 3"
   url: ""
   api_key: ""
   movies_to_upgrade: 5
+  max_download_queue: 15
 - enabled: false
   name: "Radarr 4"
   url: ""
   api_key: ""
   movies_to_upgrade: 5
+  max_download_queue: 15
 - enabled: false
   name: "Radarr 5"
   url: ""
   api_key: ""
   movies_to_upgrade: 5
+  max_download_queue: 15
 
 # Sonarr instances (up to 5 supported)
 sonarr:
@@ -44,23 +50,29 @@ sonarr:
   url: ""
   api_key: ""
   episodes_to_upgrade: 5
+  # Maximum allowed items in Sonarr's download queue before skipping upgrades (default: 15)
+  max_download_queue: 15
 - enabled: false
   name: "Sonarr 2"
   url: ""
   api_key: ""
   episodes_to_upgrade: 5
+  max_download_queue: 15
 - enabled: false
   name: "Sonarr 3"
   url: ""
   api_key: ""
   episodes_to_upgrade: 5
+  max_download_queue: 15
 - enabled: false
   name: "Sonarr 4"
   url: ""
   api_key: ""
   episodes_to_upgrade: 5
+  max_download_queue: 15
 - enabled: false
   name: "Sonarr 5"
   url: ""
   api_key: ""
   episodes_to_upgrade: 5
+  max_download_queue: 15

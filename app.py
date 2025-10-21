@@ -96,6 +96,7 @@ PGID = int(researcharr_cfg.get('pgid', 1000))
 TIMEZONE = researcharr_cfg.get('timezone', "America/New_York")
 CRON_SCHEDULE = researcharr_cfg.get('cron_schedule', "0 */1 * * *")
 
+
 # --- Multi-instance support ---
 radarr_instances = config.get('radarr', [])
 sonarr_instances = config.get('sonarr', [])
@@ -130,6 +131,65 @@ for idx, sonarr_cfg in enumerate(s for s in sonarr_instances if s.get('enabled',
             sonarr_logger.warning(f"Sonarr {idx+1} URL or API key not set; skipping connection test.")
     except Exception as e:
         sonarr_logger.error(f"Sonarr {idx+1} connection error: {e}")
+
+# --- New: Download queue check and main logic for each instance ---
+def get_radarr_queue_length(url, key):
+    try:
+        resp = requests.get(url + '/api/v3/queue', headers={'Authorization': key}, timeout=10)
+        if resp.status_code == 200:
+            queue = resp.json()
+            return len(queue)
+        else:
+            radarr_logger.warning(f"Failed to get Radarr queue: HTTP {resp.status_code}")
+    except Exception as e:
+        radarr_logger.warning(f"Error getting Radarr queue: {e}")
+    return 0
+
+def get_sonarr_queue_length(url, key):
+    try:
+        resp = requests.get(url + '/api/v3/queue', headers={'Authorization': key}, timeout=10)
+        if resp.status_code == 200:
+            queue = resp.json()
+            return len(queue)
+        else:
+            sonarr_logger.warning(f"Failed to get Sonarr queue: HTTP {resp.status_code}")
+    except Exception as e:
+        sonarr_logger.warning(f"Error getting Sonarr queue: {e}")
+    return 0
+
+# --- Radarr instance processing ---
+for idx, radarr_cfg in enumerate(r for r in radarr_instances if r.get('enabled', False)):
+    url = radarr_cfg.get('url', '')
+    key = radarr_cfg.get('api_key', '')
+    process = str(radarr_cfg.get('process', False)).lower() == 'true'
+    num_to_upgrade = int(radarr_cfg.get('movies_to_upgrade', 5))
+    max_queue = int(radarr_cfg.get('max_download_queue', 15))
+    if not (url and key and process):
+        continue
+    queue_len = get_radarr_queue_length(url, key)
+    if queue_len >= max_queue:
+        radarr_logger.info(f"Radarr {idx+1}: Download queue has {queue_len} items (limit {max_queue}), skipping this run.")
+        continue
+    radarr_logger.info(f"Radarr {idx+1}: Download queue has {queue_len} items (limit {max_queue}), proceeding.")
+    # ...existing Radarr processing logic can be refactored into a function and called here...
+    # For now, only the first instance is processed by the old logic below
+
+# --- Sonarr instance processing ---
+for idx, sonarr_cfg in enumerate(s for s in sonarr_instances if s.get('enabled', False)):
+    url = sonarr_cfg.get('url', '')
+    key = sonarr_cfg.get('api_key', '')
+    process = str(sonarr_cfg.get('process', False)).lower() == 'true'
+    num_to_upgrade = int(sonarr_cfg.get('episodes_to_upgrade', 5))
+    max_queue = int(sonarr_cfg.get('max_download_queue', 15))
+    if not (url and key and process):
+        continue
+    queue_len = get_sonarr_queue_length(url, key)
+    if queue_len >= max_queue:
+        sonarr_logger.info(f"Sonarr {idx+1}: Download queue has {queue_len} items (limit {max_queue}), skipping this run.")
+        continue
+    sonarr_logger.info(f"Sonarr {idx+1}: Download queue has {queue_len} items (limit {max_queue}), proceeding.")
+    # ...existing Sonarr processing logic can be refactored into a function and called here...
+    # For now, only the first instance is processed by the old logic below
 
 # Load configuration from YAML
 with open('/config/config.yml', 'r') as f:

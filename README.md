@@ -92,11 +92,13 @@ radarr:
     url: "http://radarr:7878"
     api_key: "your_radarr_api_key"
     movies_to_upgrade: 5
+    max_download_queue: 15  # Maximum allowed items in Radarr's download queue before skipping upgrades (default: 15)
   - enabled: false
     name: "Radarr 2"
     url: ""
     api_key: ""
     movies_to_upgrade: 5
+    max_download_queue: 15
   # ... up to 5
 sonarr:
   - enabled: true
@@ -104,53 +106,34 @@ sonarr:
     url: "http://sonarr:8989"
     api_key: "your_sonarr_api_key"
     episodes_to_upgrade: 5
+    max_download_queue: 15  # Maximum allowed items in Sonarr's download queue before skipping upgrades (default: 15)
   - enabled: false
     name: "Sonarr 2"
     url: ""
     api_key: ""
     episodes_to_upgrade: 5
+    max_download_queue: 15
   # ... up to 5
 ```
 
 docker exec -it researcharr python3 /app/webui.py
 ```
 and visit [http://localhost:2929](http://localhost:2929).
-
----
-
-## Docker Compose Example
-
-This is the recommended way to run the application.
-
-```yaml
----
-services:
-  researcharr:
-    image: ghcr.io/wikid82/researcharr:latest
-    container_name: researcharr
-    restart: unless-stopped
-    ports:
-      - "2929:2929" # Expose web UI on port 2929
-    volumes:
-      - /path/to/config:/config # This directory will contain your config.yml, logs/, and researcharr.db
-    depends_on:
-        <download_client>:
-          condition: service_started
-        radarr:
-          condition: service_started
-        sonarr:
-          condition: service_started
-    deploy:
-        resources:
-          limits:
-            cpus: '1.0'
-            memory: 2G
-          reservations:
-            cpus: '0.5'
-            memory: 512M
 ```
 
-## Docker Run Example
+## Web UI
+
+The web UI runs on port **2929**. To use it, run:
+```bash
+docker exec -it researcharr python3 /app/webui.py
+```
+and visit [http://localhost:2929](http://localhost:2929).
+
+### Download Queue Limit (per instance)
+
+Each Radarr and Sonarr instance now supports a `max_download_queue` setting (default: 15). If the number of items in the instance's download queue is at or above this value, researcharr will skip upgrades for that instance until the next run. This helps prevent overloading your download client.
+
+You can edit this value for each instance in the web UI or directly in `config.yml`.
 
 ```bash
 docker run -d \

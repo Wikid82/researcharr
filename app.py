@@ -589,3 +589,14 @@ def countdown(minutes):
 # Only run countdown if started with a special env var (to avoid running in cron jobs)
 if os.environ.get("RESEARCHARR_STARTUP_COUNTDOWN", "0") == "1":
     countdown(5)  # 5 minute countdown for test/demo
+
+# --- Startup validation for Radarr/Sonarr config ---
+def has_valid_url_and_key(instances):
+    for inst in instances:
+        if inst.get('enabled', False) and inst.get('url', '').startswith(('http://', 'https://')) and inst.get('api_key', ''):
+            return True
+    return False
+
+if not has_valid_url_and_key(radarr_instances) and not has_valid_url_and_key(sonarr_instances):
+    main_logger.warning("No enabled Radarr or Sonarr instance has a valid URL (must start with http:// or https://) and API key. Please update your config.yml using the web UI. The app will not run jobs until this is fixed.")
+    print("WARNING: No enabled Radarr or Sonarr instance has a valid URL (must start with http:// or https://) and API key. Please update your config.yml using the web UI. The app will not run jobs until this is fixed.")

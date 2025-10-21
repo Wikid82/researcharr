@@ -106,8 +106,10 @@ SETTINGS_FORM = '''
   Movies to Upgrade: <input name="radarr{{i}}_movies_to_upgrade" value="{{ radarr[i].movies_to_upgrade }}"><br>
   Max Download Queue: <input name="radarr{{i}}_max_download_queue" value="{{ radarr[i].max_download_queue if radarr[i].get('max_download_queue') is not none else 15 }}"><br>
   Reprocess Interval (days): <input name="radarr{{i}}_reprocess_interval_days" value="{{ radarr[i].reprocess_interval_days if radarr[i].get('reprocess_interval_days') is not none else 7 }}"><br>
-        <button type="button" onclick="testConnection('radarr', {{i}})">Test Connection</button>
-        <span id="radarr_status_{{i}}"></span>
+  <button type="button" onclick="testConnection('radarr', {{i}})">Test Connection</button>
+  <button type="button" onclick="validateRadarr({{i}})">Validate & Save</button>
+  <span id="radarr_status_{{i}}"></span>
+  <span id="radarr_validate_{{i}}" style="margin-left:10px;"></span>
       </fieldset>
     {% endfor %}
   </fieldset>
@@ -122,8 +124,10 @@ SETTINGS_FORM = '''
   Episodes to Upgrade: <input name="sonarr{{i}}_episodes_to_upgrade" value="{{ sonarr[i].episodes_to_upgrade }}"><br>
   Max Download Queue: <input name="sonarr{{i}}_max_download_queue" value="{{ sonarr[i].max_download_queue if sonarr[i].get('max_download_queue') is not none else 15 }}"><br>
   Reprocess Interval (days): <input name="sonarr{{i}}_reprocess_interval_days" value="{{ sonarr[i].reprocess_interval_days if sonarr[i].get('reprocess_interval_days') is not none else 7 }}"><br>
-        <button type="button" onclick="testConnection('sonarr', {{i}})">Test Connection</button>
-        <span id="sonarr_status_{{i}}"></span>
+  <button type="button" onclick="testConnection('sonarr', {{i}})">Test Connection</button>
+  <button type="button" onclick="validateSonarr({{i}})">Validate & Save</button>
+  <span id="sonarr_status_{{i}}"></span>
+  <span id="sonarr_validate_{{i}}" style="margin-left:10px;"></span>
       </fieldset>
     {% endfor %}
   </fieldset>
@@ -292,6 +296,23 @@ function testConnection(service, idx) {
       document.getElementById(service + '_status_' + idx).innerText = data.status;
     });
 }
+
+function validateRadarr(idx) {
+  document.getElementById('radarr_validate_' + idx).innerText = 'Validating...';
+  fetch('/validate_radarr/' + idx, {method: 'POST'})
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('radarr_validate_' + idx).innerText = data.msg;
+    });
+}
+function validateSonarr(idx) {
+  document.getElementById('sonarr_validate_' + idx).innerText = 'Validating...';
+  fetch('/validate_sonarr/' + idx, {method: 'POST'})
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('sonarr_validate_' + idx).innerText = data.msg;
+    });
+}
 </script>
 '''
 
@@ -439,6 +460,70 @@ def test_connection(service, idx):
       return jsonify({'status': f'Failed: HTTP {resp.status_code}'})
   except Exception as e:
     return jsonify({'status': f'Error: {e}'})
+
+@app.route('/validate_radarr/<int:idx>', methods=['POST'])
+@login_required
+def validate_radarr(idx):
+    cfg = load_config()
+    radarr = cfg.get('radarr', [])
+    if idx < 0 or idx >= len(radarr):
+        return jsonify({'success': False, 'msg': 'Invalid Radarr index'})
+    inst = radarr[idx]
+    url = inst.get('url', '')
+    key = inst.get('api_key', '')
+    if not url or not url.startswith(('http://', 'https://')):
+        return jsonify({'success': False, 'msg': 'Invalid or missing URL'})
+    if not key:
+        return jsonify({'success': False, 'msg': 'Missing API key'})
+    # Test connection
+    try:
+        resp = requests.get(url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': key}, timeout=10)
+        if resp.status_code != 200:
+            return jsonify({'success': False, 'msg': f'Connection failed: HTTP {resp.status_code}'})
+    except Exception as e:
+        return jsonify({'success': False, 'msg': f'Error: {e}'})
+    # Simulate dry run (no actual changes)
+    try:
+        queue_resp = requests.get(url.rstrip('/') + '/api/v3/queue', headers={'Authorization': key}, timeout=10)
+        if queue_resp.status_code == 200:
+            queue = queue_resp.json()
+            return jsonify({'success': True, 'msg': f'Connection successful. Queue length: {len(queue)}'})
+        else:
+            return jsonify({'success': True, 'msg': f'Connection successful, but failed to get queue: HTTP {queue_resp.status_code}'})
+    except Exception as e:
+        return jsonify({'success': True, 'msg': f'Connection successful, but dry run failed: {e}'})
+
+@app.route('/validate_sonarr/<int:idx>', methods=['POST'])
+@login_required
+def validate_sonarr(idx):
+    cfg = load_config()
+    sonarr = cfg.get('sonarr', [])
+    if idx < 0 or idx >= len(sonarr):
+        return jsonify({'success': False, 'msg': 'Invalid Sonarr index'})
+    inst = sonarr[idx]
+    url = inst.get('url', '')
+    key = inst.get('api_key', '')
+    if not url or not url.startswith(('http://', 'https://')):
+        return jsonify({'success': False, 'msg': 'Invalid or missing URL'})
+    if not key:
+        return jsonify({'success': False, 'msg': 'Missing API key'})
+    # Test connection
+    try:
+        resp = requests.get(url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': key}, timeout=10)
+        if resp.status_code != 200:
+            return jsonify({'success': False, 'msg': f'Connection failed: HTTP {resp.status_code}'})
+    except Exception as e:
+        return jsonify({'success': False, 'msg': f'Error: {e}'})
+    # Simulate dry run (no actual changes)
+    try:
+        queue_resp = requests.get(url.rstrip('/') + '/api/v3/queue', headers={'Authorization': key}, timeout=10)
+        if queue_resp.status_code == 200:
+            queue = queue_resp.json()
+            return jsonify({'success': True, 'msg': f'Connection successful. Queue length: {len(queue)}'})
+        else:
+            return jsonify({'success': True, 'msg': f'Connection successful, but failed to get queue: HTTP {queue_resp.status_code}'})
+    except Exception as e:
+        return jsonify({'success': True, 'msg': f'Connection successful, but dry run failed: {e}'})
 
 # --- Login page ---
 LOGIN_FORM = '''

@@ -24,6 +24,10 @@ echo "${CRON_SCHEDULE} python3 /app/app.py" > /etc/cron.d/researcharr-cron
 chmod 0644 /etc/cron.d/researcharr-cron
 crontab /etc/cron.d/researcharr-cron
 
+# Run the script once at startup
+echo "Running researcharr at startup..."
+python3 /app/app.py
+
 # Start cron in the foreground and tail the logs to make them visible with `docker logs`
 echo "Starting cron..."
 cron -f &

@@ -1,4 +1,19 @@
-from flask import Flask, render_template_string, request, redirect, url_for, flash, jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+# --- Simple user config (replace with config file or env in production) ---
+ADMIN_USERNAME = 'admin'
+# Password is 'researcharr' hashed (change this in production!)
+ADMIN_PASSWORD_HASH = generate_password_hash('researcharr')
+
+# --- Login required decorator ---
+def login_required(f):
+  @wraps(f)
+  def decorated_function(*args, **kwargs):
+    if not session.get('logged_in'):
+      return redirect(url_for('login', next=request.url))
+    return f(*args, **kwargs)
+  return decorated_function
+from flask import Flask, render_template_string, request, redirect, url_for, flash, jsonify, session
 import yaml
 import os
 import requests
@@ -6,15 +21,23 @@ import requests
 CONFIG_PATH = '/config/config.yml'
 
 app = Flask(__name__)
-app.secret_key = 'researcharr_secret_key'
+app.secret_key = 'researcharr_secret_key'  # Change this in production
 
 SETTINGS_FORM = '''
 <!doctype html>
 <title>researcharr Settings</title>
-<div class="header">
+<div class="topbar">
   <img src="/static/logo.png" alt="researcharr logo" class="logo">
   <span class="title-text">researcharr</span>
+  <span class="logout-link"><a href="/logout">Logout</a></span>
 </div>
+<div class="sidebar">
+  <ul>
+    <li><a href="/">Settings</a></li>
+    <!-- Add more nav links here as needed -->
+  </ul>
+</div>
+<div class="main-content">
 <form method="post" action="/save">
   <fieldset><legend>General</legend>
     PUID: <input name="puid" value="{{ researcharr.puid }}"><br>
@@ -55,7 +78,8 @@ SETTINGS_FORM = '''
     {% endfor %}
   </fieldset>
   <br><input type="submit" value="Save Settings">
-</form>
+  </form>
+</div>
 <style>
 body {
   background: linear-gradient(135deg, #5B6EF1 0%, #3B50C1 100%);
@@ -64,70 +88,87 @@ body {
   margin: 0;
   padding: 0;
 }
-.header {
+.topbar {
   display: flex;
   align-items: center;
   background: #fff;
-  padding: 24px 0 12px 0;
+  padding: 18px 0 10px 0;
   box-shadow: 0 2px 8px rgba(42,59,139,0.07);
-  margin-bottom: 24px;
+  margin-bottom: 0;
   justify-content: center;
+  position: relative;
 }
 .logo {
-  height: 56px;
-  margin-right: 18px;
+  height: 48px;
+  margin-right: 16px;
 }
 .title-text {
-  font-size: 2.5em;
+  font-size: 2.1em;
   font-weight: bold;
   color: #2A3B8B;
   letter-spacing: 2px;
 }
-form {
-  background: #fff;
-  border-radius: 12px;
-  max-width: 700px;
-  margin: 0 auto;
-  padding: 32px 32px 24px 32px;
-  box-shadow: 0 4px 24px rgba(42,59,139,0.10);
-}
-fieldset {
-  border: 1.5px solid #3B50C1;
-  border-radius: 8px;
-  margin-bottom: 18px;
-  padding: 16px;
-  background: #f7f8fd;
-}
-legend {
-  color: #2A3B8B;
-  font-weight: bold;
-  font-size: 1.1em;
-}
-input[type="text"], input[type="number"], input[type="password"] {
-  border: 1px solid #3B50C1;
-  border-radius: 4px;
-  padding: 6px 10px;
-  margin-bottom: 8px;
+.logout-link {
+  position: absolute;
+  right: 32px;
+  top: 50%;
+  transform: translateY(-50%);
   font-size: 1em;
-  background: #fff;
-  color: #2A3B8B;
 }
-input[type="submit"] {
-  background: linear-gradient(90deg, #2A3B8B 0%, #5B6EF1 100%);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 10px 32px;
-  font-size: 1.1em;
+.logout-link a {
+  color: #2A3B8B;
+  text-decoration: none;
   font-weight: bold;
-  cursor: pointer;
-  margin-top: 18px;
-  box-shadow: 0 2px 8px rgba(42,59,139,0.10);
+  padding: 6px 16px;
+  border-radius: 4px;
+  background: #f7f8fd;
+  border: 1px solid #3B50C1;
   transition: background 0.2s;
 }
-input[type="submit"]:hover {
-  background: linear-gradient(90deg, #3B50C1 0%, #5B6EF1 100%);
+.logout-link a:hover {
+  background: #e6eaff;
 }
+.sidebar {
+  position: fixed;
+  top: 80px;
+  left: 0;
+  width: 180px;
+  height: 100%;
+  background: #2A3B8B;
+  color: #fff;
+  padding-top: 24px;
+  z-index: 10;
+}
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.sidebar li {
+  margin-bottom: 18px;
+}
+.sidebar a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 1.1em;
+  padding: 8px 24px;
+  display: block;
+  border-radius: 4px 0 0 4px;
+  transition: background 0.2s;
+}
+.sidebar a:hover {
+  background: #3B50C1;
+}
+.main-content {
+  margin-left: 200px;
+  padding: 32px 32px 24px 32px;
+  background: #fff;
+  border-radius: 12px;
+  max-width: 800px;
+  box-shadow: 0 4px 24px rgba(42,59,139,0.10);
+  min-height: 80vh;
+}
+/* ...existing form and switch styles... */
 .switch {
   position: relative;
   display: inline-block;
@@ -206,6 +247,7 @@ def save_config(cfg):
 
 
 @app.route('/', methods=['GET'])
+@login_required
 def index():
   cfg = load_config()
   # Pad radarr/sonarr lists to 5 for UI
@@ -222,6 +264,7 @@ def index():
 
 
 @app.route('/save', methods=['POST'])
+@login_required
 def save():
   cfg = load_config()
   # General
@@ -261,6 +304,7 @@ def save():
 
 
 @app.route('/test_connection/<service>/<int:idx>')
+@login_required
 def test_connection(service, idx):
   cfg = load_config()
   if service == 'radarr':
@@ -281,6 +325,62 @@ def test_connection(service, idx):
       return jsonify({'status': f'Failed: HTTP {resp.status_code}'})
   except Exception as e:
     return jsonify({'status': f'Error: {e}'})
+
+# --- Login page ---
+LOGIN_FORM = '''
+<!doctype html>
+<title>Login - researcharr</title>
+<div class="topbar">
+  <img src="/static/logo.png" alt="researcharr logo" class="logo">
+  <span class="title-text">researcharr</span>
+</div>
+<div class="login-content">
+  <form method="post" action="/login">
+    <fieldset>
+      <legend>Login</legend>
+      <label for="username">Username:</label><br>
+      <input type="text" id="username" name="username" required><br>
+      <label for="password">Password:</label><br>
+      <input type="password" id="password" name="password" required><br>
+      <input type="submit" value="Login">
+      {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    </fieldset>
+  </form>
+</div>
+<style>
+.login-content {
+  margin: 60px auto 0 auto;
+  max-width: 400px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(42,59,139,0.10);
+  padding: 32px 32px 24px 32px;
+}
+.error {
+  color: #b00;
+  margin-top: 12px;
+  font-weight: bold;
+}
+</style>
+'''
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username', '')
+        password = request.form.get('password', '')
+        if username == ADMIN_USERNAME and check_password_hash(ADMIN_PASSWORD_HASH, password):
+            session['logged_in'] = True
+            return redirect(url_for('index'))
+        else:
+            error = 'Invalid username or password.'
+    return render_template_string(LOGIN_FORM, error=error)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=2929, debug=True)

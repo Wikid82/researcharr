@@ -43,12 +43,18 @@ researcharr/
   Live logs are streamed and can be viewed using the `docker logs` command. See the Logging section for more details.
 
 5.  **(Optional) Use the Web UI:**
-  A simple web interface is available for editing settings and testing connections. After starting the container, run:
+  A secure web interface is available for editing settings and testing connections. After starting the container, run:
   ```bash
   docker exec -it researcharr python3 /app/webui.py
   ```
   Then visit [http://localhost:2929](http://localhost:2929) in your browser.
-  The web UI allows you to edit config.yml and test Radarr/Sonarr connections directly. You can enable or disable up to 5 Radarr and 5 Sonarr instances using slider toggles.
+
+  **Login is required.**
+  - Default username: `admin`
+  - Default password: `researcharr`
+  (Change these in production by editing `webui.py`.)
+
+  The web UI allows you to edit config.yml, test Radarr/Sonarr connections, and enable/disable up to 5 Radarr and 5 Sonarr instances using slider toggles. All settings are protected behind login.
 
 ## Configuration
 

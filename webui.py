@@ -98,7 +98,10 @@ SETTINGS_FORM = '''
   </form>
 {% elif active_tab == 'scheduling' %}
 <form method="post" action="/scheduling">
-  <fieldset><legend>Cron Scheduling</legend>
+  <fieldset><legend>Scheduling</legend>
+    Timezone: <input name="timezone" value="{{ timezone }}" style="width:220px;">
+    <a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones" target="_blank" style="margin-left:12px;">Timezone List</a><br>
+    <small>Example: <code>America/New_York</code></small><br><br>
     Cron Schedule: <input name="cron_schedule" value="{{ cron_schedule }}" style="width:220px;">
     <a href="https://crontab.guru/" target="_blank" style="margin-left:12px;">Cron Calculator</a><br>
     <small>Example: <code>0 */1 * * *</code> (every hour)</small><br>
@@ -123,14 +126,19 @@ def scheduling():
   msg = None
   if request.method == 'POST':
     cron_schedule = request.form.get('cron_schedule', '').strip()
+    timezone = request.form.get('timezone', '').strip()
     if not cron_schedule:
       msg = 'Cron schedule cannot be blank.'
+    elif not timezone:
+      msg = 'Timezone cannot be blank.'
     else:
       cfg.setdefault('researcharr', {})['cron_schedule'] = cron_schedule
+      cfg['researcharr']['timezone'] = timezone
       save_config(cfg)
-      msg = 'Cron schedule updated.'
+      msg = 'Schedule and timezone updated.'
       cfg = load_config()
   cron_schedule = cfg.get('researcharr', {}).get('cron_schedule', '0 */1 * * *')
+  timezone = cfg.get('researcharr', {}).get('timezone', 'America/New_York')
   user = load_user_config()
   return render_template_string(SETTINGS_FORM,
     researcharr=None,
@@ -140,6 +148,7 @@ def scheduling():
     user=user,
     user_msg=None,
     cron_schedule=cron_schedule,
+    timezone=timezone,
     sched_msg=msg)
 </div>
 <style>

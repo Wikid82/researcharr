@@ -1,4 +1,3 @@
-
 <p align="center">
   <img src="static/logo.png" alt="researcharr logo" height="100"/>
 </p>
@@ -80,8 +79,8 @@ pip install -r requirements.txt
 All configuration is now managed in a single YAML file: `/path/to/config/config.yml`.
 
 - See `config.example.yml` for a fully documented template.
-- You can set your timezone, cron schedule (or edit it from the Scheduling tab in the web UI), Radarr/Sonarr URLs, API keys, and processing options in this file.
-- You can set your timezone, cron schedule, and configure up to 5 Radarr and 5 Sonarr instances (each with enable toggles, URLs, API keys, and processing options) in this file. The cron schedule can also be managed from the Scheduling tab in the web UI.
+- You can set your timezone, cron schedule (or edit both from the Scheduling tab in the web UI), Radarr/Sonarr URLs, API keys, and processing options in this file.
+- The Scheduling tab in the web UI now allows you to edit both the cron job schedule and the timezone. Changes are saved to config and used by the app and entrypoint script. See the wiki page [Scheduling and Timezone](wiki/Scheduling-and-Timezone.md) for details.
 - Example URLs for Docker default network: `http://radarr:7878` and `http://sonarr:8989`.
 
 ## State Management

@@ -355,26 +355,35 @@ PGID = int(researcharr_cfg.get('pgid', 1000))
 TIMEZONE = researcharr_cfg.get('timezone', "America/New_York")
 CRON_SCHEDULE = researcharr_cfg.get('cron_schedule', "0 */1 * * *")
 
-# Set radarr variables
-radarr_cfg = config.get('radarr', {})
-process_radarr_str = str(radarr_cfg.get('process', False))
-PROCESS_RADARR = process_radarr_str.lower() == "true"
-RADARR_API_KEY = radarr_cfg.get('api_key', "")
-RADARR_URL = radarr_cfg.get('url', "")
-NUM_MOVIES_TO_UPGRADE = int(radarr_cfg.get('movies_to_upgrade', 5))
-MOVIE_ENDPOINT = "movie"
-MOVIEFILE_ENDPOINT = "moviefile/"
 
-# Set sonarr variables
-sonarr_cfg = config.get('sonarr', {})
-process_sonarr_str = str(sonarr_cfg.get('process', False))
-PROCESS_SONARR = process_sonarr_str.lower() == "true"
-SONARR_API_KEY = sonarr_cfg.get('api_key', "")
-SONARR_URL = sonarr_cfg.get('url', "")
-NUM_EPISODES_TO_UPGRADE = int(sonarr_cfg.get('episodes_to_upgrade', 5))
-SERIES_ENDPOINT = "series"
-EPISODEFILE_ENDPOINT = "episodefile"
-EPISODE_ENDPOINT = "episode"
+# Multi-instance Radarr
+radarr_list = config.get('radarr', [])
+for idx, radarr_cfg in enumerate(radarr_list):
+    if not radarr_cfg.get('enabled', False):
+        continue
+    process_radarr_str = str(radarr_cfg.get('process', True))
+    PROCESS_RADARR = process_radarr_str.lower() == "true"
+    RADARR_API_KEY = radarr_cfg.get('api_key', "")
+    RADARR_URL = radarr_cfg.get('url', "")
+    NUM_MOVIES_TO_UPGRADE = int(radarr_cfg.get('movies_to_upgrade', 5))
+    MOVIE_ENDPOINT = "movie"
+    MOVIEFILE_ENDPOINT = "moviefile/"
+    # ...existing Radarr processing logic here, using these variables per instance...
+
+# Multi-instance Sonarr
+sonarr_list = config.get('sonarr', [])
+for idx, sonarr_cfg in enumerate(sonarr_list):
+    if not sonarr_cfg.get('enabled', False):
+        continue
+    process_sonarr_str = str(sonarr_cfg.get('process', True))
+    PROCESS_SONARR = process_sonarr_str.lower() == "true"
+    SONARR_API_KEY = sonarr_cfg.get('api_key', "")
+    SONARR_URL = sonarr_cfg.get('url', "")
+    NUM_EPISODES_TO_UPGRADE = int(sonarr_cfg.get('episodes_to_upgrade', 5))
+    SERIES_ENDPOINT = "series"
+    EPISODEFILE_ENDPOINT = "episodefile"
+    EPISODE_ENDPOINT = "episode"
+    # ...existing Sonarr processing logic here, using these variables per instance...
 
 # Set shared variables
 API_PATH = "/api/v3/"

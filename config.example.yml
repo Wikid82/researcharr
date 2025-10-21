@@ -1,0 +1,25 @@
+# General application settings
+app:
+  # See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for a list of valid timezones
+  timezone: "America/New_York"
+  # Cron schedule for how often to run the script.
+  # See https://crontab.guru/ for help generating a schedule.
+  cron_schedule: "0 * * * *"
+
+# Radarr specific settings
+radarr:
+  process: false
+  # URL to your Radarr instance (e.g., http://radarr:7878)
+  url: ""
+  api_key: ""
+  # The number of movies to search for in each run.
+  movies_to_upgrade: 5
+
+# Sonarr specific settings
+sonarr:
+  process: false
+  # URL to your Sonarr instance (e.g., http://sonarr:8989)
+  url: ""
+  api_key: ""
+  # The number of episodes to search for in each run.
+  episodes_to_upgrade: 5

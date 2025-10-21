@@ -18,6 +18,11 @@ if [ -n "$TZ" ]; then
   echo "Timezone set to: $TZ"
 fi
 
+
+# Start the web UI in the background
+echo "Starting researcharr web UI on port 2929..."
+python3 /app/webui.py &
+
 # Run the script once at startup
 echo "Running researcharr at startup..."
 python3 /app/app.py

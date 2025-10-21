@@ -9,20 +9,58 @@ researcharr:
   # See https://crontab.guru/ for help generating a schedule.
   cron_schedule: "* */1 * * *"
 
-# Radarr specific settings
+# Radarr instances (up to 5 supported)
 radarr:
-  process: false
-  # URL to your Radarr instance (e.g., http://radarr:7878)
+- enabled: true
+  name: "Radarr 1"
   url: ""
   api_key: ""
-  # The number of movies to search for in each run.
+  movies_to_upgrade: 5
+- enabled: false
+  name: "Radarr 2"
+  url: ""
+  api_key: ""
+  movies_to_upgrade: 5
+- enabled: false
+  name: "Radarr 3"
+  url: ""
+  api_key: ""
+  movies_to_upgrade: 5
+- enabled: false
+  name: "Radarr 4"
+  url: ""
+  api_key: ""
+  movies_to_upgrade: 5
+- enabled: false
+  name: "Radarr 5"
+  url: ""
+  api_key: ""
   movies_to_upgrade: 5
 
-# Sonarr specific settings
+# Sonarr instances (up to 5 supported)
 sonarr:
-  process: false
-  # URL to your Sonarr instance (e.g., http://sonarr:8989)
+- enabled: true
+  name: "Sonarr 1"
   url: ""
   api_key: ""
-  # The number of episodes to search for in each run.
+  episodes_to_upgrade: 5
+- enabled: false
+  name: "Sonarr 2"
+  url: ""
+  api_key: ""
+  episodes_to_upgrade: 5
+- enabled: false
+  name: "Sonarr 3"
+  url: ""
+  api_key: ""
+  episodes_to_upgrade: 5
+- enabled: false
+  name: "Sonarr 4"
+  url: ""
+  api_key: ""
+  episodes_to_upgrade: 5
+- enabled: false
+  name: "Sonarr 5"
+  url: ""
+  api_key: ""
   episodes_to_upgrade: 5

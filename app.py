@@ -84,9 +84,52 @@ def check_sonarr_connection():
 # Initialize the database
 init_db()
 
-# Log connection status at startup
-check_radarr_connection()
-check_sonarr_connection()
+
+# Load configuration from YAML
+with open('/config/config.yml', 'r') as f:
+    config = yaml.safe_load(f)
+
+# Set researcharr (general) variables
+researcharr_cfg = config.get('researcharr', {})
+PUID = int(researcharr_cfg.get('puid', 1000))
+PGID = int(researcharr_cfg.get('pgid', 1000))
+TIMEZONE = researcharr_cfg.get('timezone', "America/New_York")
+CRON_SCHEDULE = researcharr_cfg.get('cron_schedule', "0 */1 * * *")
+
+# --- Multi-instance support ---
+radarr_instances = config.get('radarr', [])
+sonarr_instances = config.get('sonarr', [])
+
+# Log connection status for all enabled Radarr/Sonarr instances
+for idx, radarr_cfg in enumerate(r for r in radarr_instances if r.get('enabled', False)):
+    url = radarr_cfg.get('url', '')
+    key = radarr_cfg.get('api_key', '')
+    try:
+        if url and key:
+            resp = requests.get(url + '/api/v3/system/status', headers={'Authorization': key}, timeout=10)
+            if resp.status_code == 200:
+                radarr_logger.info(f"Radarr {idx+1} connection successful.")
+            else:
+                radarr_logger.error(f"Radarr {idx+1} connection failed: HTTP {resp.status_code} - {resp.text}")
+        else:
+            radarr_logger.warning(f"Radarr {idx+1} URL or API key not set; skipping connection test.")
+    except Exception as e:
+        radarr_logger.error(f"Radarr {idx+1} connection error: {e}")
+
+for idx, sonarr_cfg in enumerate(s for s in sonarr_instances if s.get('enabled', False)):
+    url = sonarr_cfg.get('url', '')
+    key = sonarr_cfg.get('api_key', '')
+    try:
+        if url and key:
+            resp = requests.get(url + '/api/v3/system/status', headers={'Authorization': key}, timeout=10)
+            if resp.status_code == 200:
+                sonarr_logger.info(f"Sonarr {idx+1} connection successful.")
+            else:
+                sonarr_logger.error(f"Sonarr {idx+1} connection failed: HTTP {resp.status_code} - {resp.text}")
+        else:
+            sonarr_logger.warning(f"Sonarr {idx+1} URL or API key not set; skipping connection test.")
+    except Exception as e:
+        sonarr_logger.error(f"Sonarr {idx+1} connection error: {e}")
 
 # Load configuration from YAML
 with open('/config/config.yml', 'r') as f:

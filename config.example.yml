@@ -1,10 +1,13 @@
 # General application settings
 app:
+  # User and group IDs for file permissions (optional, recommended for Unraid/Synology)
+  puid: 1000 # Set to your host user ID
+  pgid: 1000 # Set to your host group ID
   # See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for a list of valid timezones
   timezone: "America/New_York"
   # Cron schedule for how often to run the script.
   # See https://crontab.guru/ for help generating a schedule.
-  cron_schedule: "0 * * * *"
+  cron_schedule: "0 */1 * * *"
 
 # Radarr specific settings
 radarr:

@@ -43,13 +43,46 @@ def setup_logger(name, log_file, level=logging.INFO):
     logger.addHandler(handler)
     return logger
 
+
 # Setup loggers
 main_logger = setup_logger('main_logger', '/config/logs/researcharr.log')
 radarr_logger = setup_logger('radarr_logger', '/config/logs/radarr.log')
 sonarr_logger = setup_logger('sonarr_logger', '/config/logs/sonarr.log')
 
+# --- Connection Status Checks ---
+def check_radarr_connection():
+    try:
+        if RADARR_URL and RADARR_API_KEY:
+            resp = requests.get(RADARR_URL + '/api/v3/system/status', headers={'Authorization': RADARR_API_KEY}, timeout=10)
+            if resp.status_code == 200:
+                radarr_logger.info("Radarr connection successful.")
+            else:
+                radarr_logger.error(f"Radarr connection failed: HTTP {resp.status_code} - {resp.text}")
+        else:
+            radarr_logger.warning("Radarr URL or API key not set; skipping connection test.")
+    except Exception as e:
+        radarr_logger.error(f"Radarr connection error: {e}")
+
+def check_sonarr_connection():
+    try:
+        if SONARR_URL and SONARR_API_KEY:
+            resp = requests.get(SONARR_URL + '/api/v3/system/status', headers={'Authorization': SONARR_API_KEY}, timeout=10)
+            if resp.status_code == 200:
+                sonarr_logger.info("Sonarr connection successful.")
+            else:
+                sonarr_logger.error(f"Sonarr connection failed: HTTP {resp.status_code} - {resp.text}")
+        else:
+            sonarr_logger.warning("Sonarr URL or API key not set; skipping connection test.")
+    except Exception as e:
+        sonarr_logger.error(f"Sonarr connection error: {e}")
+
+
 # Initialize the database
 init_db()
+
+# Log connection status at startup
+check_radarr_connection()
+check_sonarr_connection()
 
 # Load configuration from YAML
 with open('/config/config.yml', 'r') as f:

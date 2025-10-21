@@ -17,16 +17,18 @@ def init_db():
     """Initializes the SQLite database and creates tables if they don't exist."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    # Radarr queue table
+    # Radarr queue table with last_processed
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS radarr_queue (
-            movie_id INTEGER PRIMARY KEY
+            movie_id INTEGER PRIMARY KEY,
+            last_processed TIMESTAMP
         )
     ''')
-    # Sonarr queue table
+    # Sonarr queue table with last_processed
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS sonarr_queue (
-            episode_id INTEGER PRIMARY KEY
+            episode_id INTEGER PRIMARY KEY,
+            last_processed TIMESTAMP
         )
     ''')
     conn.commit()
@@ -158,21 +160,96 @@ def get_sonarr_queue_length(url, key):
     return 0
 
 # --- Radarr instance processing ---
+import datetime
 for idx, radarr_cfg in enumerate(r for r in radarr_instances if r.get('enabled', False)):
     url = radarr_cfg.get('url', '')
     key = radarr_cfg.get('api_key', '')
     process = str(radarr_cfg.get('process', False)).lower() == 'true'
     num_to_upgrade = int(radarr_cfg.get('movies_to_upgrade', 5))
     max_queue = int(radarr_cfg.get('max_download_queue', 15))
+    reprocess_days = int(radarr_cfg.get('reprocess_interval_days', 7))
     if not (url and key and process):
         continue
+    API_PATH = "/api/v3/"
+    COMMAND_ENDPOINT = "command"
+    QUALITY_PROFILE_ENDPOINT = "qualityprofile"
+    MOVIE_ENDPOINT = "movie"
+    MOVIEFILE_ENDPOINT = "moviefile/"
+    radarr_headers = {'Authorization': key}
+
+    def get_radarr_quality_cutoff_scores():
+        QUALITY_PROFILES_GET_API_CALL = url + API_PATH + QUALITY_PROFILE_ENDPOINT
+        quality_profiles = requests.get(QUALITY_PROFILES_GET_API_CALL, headers=radarr_headers).json()
+        quality_to_formats = {}
+        for quality in quality_profiles:
+            quality_to_formats.update({quality["id"]: quality["cutoffFormatScore"]})
+        return quality_to_formats
+
+    def get_movies():
+        MOVIES_GET_API_CALL = url + API_PATH + MOVIE_ENDPOINT
+        movies = requests.get(MOVIES_GET_API_CALL, headers=radarr_headers).json()
+        return movies
+
+    def get_movie_files(movies, quality_to_formats):
+        candidate_ids = []
+        for movie in movies:
+            monitored_str = str(movie.get("monitored", ""))
+            is_monitored = monitored_str.lower() == "true" if monitored_str else False
+            if movie.get("movieFileId", 0) > 0 and is_monitored:
+                MOVIE_FILE_GET_API_CALL = url + API_PATH + MOVIEFILE_ENDPOINT + str(movie["movieFileId"])
+                movie_file = requests.get(MOVIE_FILE_GET_API_CALL, headers=radarr_headers).json()
+                movie_quality_profile_id = movie["qualityProfileId"]
+                if movie_file.get("customFormatScore", 99999) < quality_to_formats.get(movie_quality_profile_id, 99999):
+                    candidate_ids.append(movie["id"])
+        return candidate_ids
+
     queue_len = get_radarr_queue_length(url, key)
     if queue_len >= max_queue:
         radarr_logger.info(f"Radarr {idx+1}: Download queue has {queue_len} items (limit {max_queue}), skipping this run.")
         continue
     radarr_logger.info(f"Radarr {idx+1}: Download queue has {queue_len} items (limit {max_queue}), proceeding.")
-    # ...existing Radarr processing logic can be refactored into a function and called here...
-    # For now, only the first instance is processed by the old logic below
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM radarr_queue")
+    queue_count = cursor.fetchone()[0]
+    radarr_logger.info(f"Found {queue_count} movies in the Radarr queue.")
+
+    cutoff = (datetime.datetime.utcnow() - datetime.timedelta(days=reprocess_days)).isoformat()
+    cursor.execute("SELECT movie_id FROM radarr_queue WHERE last_processed IS NULL OR last_processed < ?", (cutoff,))
+    reprocess_ids = [row[0] for row in cursor.fetchall()]
+
+    if queue_count == 0 or reprocess_ids:
+        radarr_logger.info("Radarr queue is empty or items need reprocessing. Repopulating from all eligible movies...")
+        quality_to_formats = get_radarr_quality_cutoff_scores()
+        all_movies = get_movies()
+        candidate_ids = get_movie_files(all_movies, quality_to_formats)
+        for movie_id in candidate_ids:
+            cursor.execute("INSERT OR IGNORE INTO radarr_queue (movie_id, last_processed) VALUES (?, NULL)", (movie_id,))
+        conn.commit()
+    else:
+        radarr_logger.info("No eligible movies found to populate the queue.")
+
+    cursor.execute("SELECT movie_id FROM radarr_queue ORDER BY COALESCE(last_processed, '1970-01-01') ASC LIMIT ?", (num_to_upgrade,))
+    movie_ids_to_process = [row[0] for row in cursor.fetchall()]
+
+    if movie_ids_to_process:
+        radarr_logger.info(f"Processing {len(movie_ids_to_process)} movies from the queue.")
+        data = {
+            "name": "MoviesSearch",
+            "movieIds": movie_ids_to_process
+        }
+        MOVIE_COMMAND_API_CALL = url + API_PATH + COMMAND_ENDPOINT
+        requests.post(MOVIE_COMMAND_API_CALL, headers=radarr_headers, json=data)
+        radarr_logger.info(f"Movie search command sent for IDs: {movie_ids_to_process}")
+        now = datetime.datetime.utcnow().isoformat()
+        for movie_id in movie_ids_to_process:
+            cursor.execute("UPDATE radarr_queue SET last_processed = ? WHERE movie_id = ?", (now, movie_id))
+        conn.commit()
+        radarr_logger.info(f"Updated last_processed for {len(movie_ids_to_process)} movies.")
+    else:
+        radarr_logger.info("No movies in the queue to process.")
+    conn.close()
 
 # --- Sonarr instance processing ---
 for idx, sonarr_cfg in enumerate(s for s in sonarr_instances if s.get('enabled', False)):
@@ -181,15 +258,91 @@ for idx, sonarr_cfg in enumerate(s for s in sonarr_instances if s.get('enabled',
     process = str(sonarr_cfg.get('process', False)).lower() == 'true'
     num_to_upgrade = int(sonarr_cfg.get('episodes_to_upgrade', 5))
     max_queue = int(sonarr_cfg.get('max_download_queue', 15))
+    reprocess_days = int(sonarr_cfg.get('reprocess_interval_days', 7))
     if not (url and key and process):
         continue
+    API_PATH = "/api/v3/"
+    COMMAND_ENDPOINT = "command"
+    QUALITY_PROFILE_ENDPOINT = "qualityprofile"
+    SERIES_ENDPOINT = "series"
+    EPISODEFILE_ENDPOINT = "episodefile"
+    EPISODE_ENDPOINT = "episode"
+    sonarr_headers = {'Authorization': key}
+
+    def get_sonarr_quality_cutoff_scores():
+        QUALITY_PROFILES_GET_API_CALL = url + API_PATH + QUALITY_PROFILE_ENDPOINT
+        quality_profiles = requests.get(QUALITY_PROFILES_GET_API_CALL, headers=sonarr_headers).json()
+        quality_to_formats = {}
+        for quality in quality_profiles:
+            quality_to_formats.update({quality["id"]: quality["cutoffFormatScore"]})
+        return quality_to_formats
+
+    def get_series():
+        SERIES_GET_API_CALL = url + API_PATH + SERIES_ENDPOINT
+        series = requests.get(SERIES_GET_API_CALL, headers=sonarr_headers).json()
+        return series
+
+    def get_episode_files(series, quality_to_formats):
+        candidate_ids = []
+        for show in series:
+            monitored_str = str(show.get("monitored", ""))
+            is_monitored = monitored_str.lower() == "true" if monitored_str else False
+            if show.get("monitored") and show.get("statistics", {}).get("episodeFileCount", 0) > 0:
+                EPISODE_FILE_GET_API_CALL = url + API_PATH + EPISODEFILE_ENDPOINT + "?seriesId=" + str(show["id"])
+                episode_files = requests.get(EPISODE_FILE_GET_API_CALL, headers=sonarr_headers).json()
+                for episode_file in episode_files:
+                    episode_quality_profile_id = show["qualityProfileId"]
+                    if episode_file.get("customFormatScore", 99999) < quality_to_formats.get(episode_quality_profile_id, 99999):
+                        candidate_ids.append(episode_file["id"])
+        return candidate_ids
+
     queue_len = get_sonarr_queue_length(url, key)
     if queue_len >= max_queue:
         sonarr_logger.info(f"Sonarr {idx+1}: Download queue has {queue_len} items (limit {max_queue}), skipping this run.")
         continue
     sonarr_logger.info(f"Sonarr {idx+1}: Download queue has {queue_len} items (limit {max_queue}), proceeding.")
-    # ...existing Sonarr processing logic can be refactored into a function and called here...
-    # For now, only the first instance is processed by the old logic below
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM sonarr_queue")
+    queue_count = cursor.fetchone()[0]
+    sonarr_logger.info(f"Found {queue_count} episodes in the Sonarr queue.")
+
+    cutoff = (datetime.datetime.utcnow() - datetime.timedelta(days=reprocess_days)).isoformat()
+    cursor.execute("SELECT episode_id FROM sonarr_queue WHERE last_processed IS NULL OR last_processed < ?", (cutoff,))
+    reprocess_ids = [row[0] for row in cursor.fetchall()]
+
+    if queue_count == 0 or reprocess_ids:
+        sonarr_logger.info("Sonarr queue is empty or items need reprocessing. Repopulating from all eligible episodes...")
+        quality_to_formats = get_sonarr_quality_cutoff_scores()
+        all_series = get_series()
+        candidate_ids = get_episode_files(all_series, quality_to_formats)
+        for episode_id in candidate_ids:
+            cursor.execute("INSERT OR IGNORE INTO sonarr_queue (episode_id, last_processed) VALUES (?, NULL)", (episode_id,))
+        conn.commit()
+    else:
+        sonarr_logger.info("No eligible episodes found to populate the queue.")
+
+    cursor.execute("SELECT episode_id FROM sonarr_queue ORDER BY COALESCE(last_processed, '1970-01-01') ASC LIMIT ?", (num_to_upgrade,))
+    episode_ids_to_process = [row[0] for row in cursor.fetchall()]
+
+    if episode_ids_to_process:
+        sonarr_logger.info(f"Processing {len(episode_ids_to_process)} episodes from the queue.")
+        data = {
+            "name": "EpisodeSearch",
+            "episodeIds": episode_ids_to_process
+        }
+        EPISODE_COMMAND_API_CALL = url + API_PATH + COMMAND_ENDPOINT
+        requests.post(EPISODE_COMMAND_API_CALL, headers=sonarr_headers, json=data)
+        sonarr_logger.info(f"Episode search command sent for IDs: {episode_ids_to_process}")
+        now = datetime.datetime.utcnow().isoformat()
+        for episode_id in episode_ids_to_process:
+            cursor.execute("UPDATE sonarr_queue SET last_processed = ? WHERE episode_id = ?", (now, episode_id))
+        conn.commit()
+        sonarr_logger.info(f"Updated last_processed for {len(episode_ids_to_process)} episodes.")
+    else:
+        sonarr_logger.info("No episodes in the queue to process.")
+    conn.close()
 
 # Load configuration from YAML
 with open('/config/config.yml', 'r') as f:

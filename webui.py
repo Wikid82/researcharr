@@ -29,6 +29,7 @@ SETTINGS_FORM = '''
         API Key: <input name="radarr{{i}}_api_key" value="{{ radarr[i].api_key }}"><br>
   Movies to Upgrade: <input name="radarr{{i}}_movies_to_upgrade" value="{{ radarr[i].movies_to_upgrade }}"><br>
   Max Download Queue: <input name="radarr{{i}}_max_download_queue" value="{{ radarr[i].max_download_queue if radarr[i].get('max_download_queue') is not none else 15 }}"><br>
+  Reprocess Interval (days): <input name="radarr{{i}}_reprocess_interval_days" value="{{ radarr[i].reprocess_interval_days if radarr[i].get('reprocess_interval_days') is not none else 7 }}"><br>
         <button type="button" onclick="testConnection('radarr', {{i}})">Test Connection</button>
         <span id="radarr_status_{{i}}"></span>
       </fieldset>
@@ -44,6 +45,7 @@ SETTINGS_FORM = '''
         API Key: <input name="sonarr{{i}}_api_key" value="{{ sonarr[i].api_key }}"><br>
   Episodes to Upgrade: <input name="sonarr{{i}}_episodes_to_upgrade" value="{{ sonarr[i].episodes_to_upgrade }}"><br>
   Max Download Queue: <input name="sonarr{{i}}_max_download_queue" value="{{ sonarr[i].max_download_queue if sonarr[i].get('max_download_queue') is not none else 15 }}"><br>
+  Reprocess Interval (days): <input name="sonarr{{i}}_reprocess_interval_days" value="{{ sonarr[i].reprocess_interval_days if sonarr[i].get('reprocess_interval_days') is not none else 7 }}"><br>
         <button type="button" onclick="testConnection('sonarr', {{i}})">Test Connection</button>
         <span id="sonarr_status_{{i}}"></span>
       </fieldset>
@@ -136,9 +138,9 @@ def index():
   radarr = cfg.get('radarr', [])
   sonarr = cfg.get('sonarr', [])
   while len(radarr) < 5:
-    radarr.append({'enabled': False, 'name': f'Radarr {len(radarr)+1}', 'url': '', 'api_key': '', 'movies_to_upgrade': 5, 'max_download_queue': 15})
+    radarr.append({'enabled': False, 'name': f'Radarr {len(radarr)+1}', 'url': '', 'api_key': '', 'movies_to_upgrade': 5, 'max_download_queue': 15, 'reprocess_interval_days': 7})
   while len(sonarr) < 5:
-    sonarr.append({'enabled': False, 'name': f'Sonarr {len(sonarr)+1}', 'url': '', 'api_key': '', 'episodes_to_upgrade': 5, 'max_download_queue': 15})
+    sonarr.append({'enabled': False, 'name': f'Sonarr {len(sonarr)+1}', 'url': '', 'api_key': '', 'episodes_to_upgrade': 5, 'max_download_queue': 15, 'reprocess_interval_days': 7})
   return render_template_string(SETTINGS_FORM,
     researcharr=cfg.get('researcharr', {}),
     radarr=radarr,
@@ -163,6 +165,7 @@ def save():
       'api_key': request.form.get(f'radarr{i}_api_key', ''),
       'movies_to_upgrade': int(request.form.get(f'radarr{i}_movies_to_upgrade', 5)),
       'max_download_queue': int(request.form.get(f'radarr{i}_max_download_queue', 15)),
+      'reprocess_interval_days': int(request.form.get(f'radarr{i}_reprocess_interval_days', 7)),
     })
   cfg['radarr'] = radarr
   # Sonarr
@@ -175,6 +178,7 @@ def save():
       'api_key': request.form.get(f'sonarr{i}_api_key', ''),
       'episodes_to_upgrade': int(request.form.get(f'sonarr{i}_episodes_to_upgrade', 5)),
       'max_download_queue': int(request.form.get(f'sonarr{i}_max_download_queue', 15)),
+      'reprocess_interval_days': int(request.form.get(f'sonarr{i}_reprocess_interval_days', 7)),
     })
   cfg['sonarr'] = sonarr
   save_config(cfg)

@@ -92,13 +92,15 @@ radarr:
     url: "http://radarr:7878"
     api_key: "your_radarr_api_key"
     movies_to_upgrade: 5
-    max_download_queue: 15  # Maximum allowed items in Radarr's download queue before skipping upgrades (default: 15)
+  max_download_queue: 15  # Maximum allowed items in Radarr's download queue before skipping upgrades (default: 15)
+  reprocess_interval_days: 7  # Number of days before a movie is eligible to be reprocessed (default: 7)
   - enabled: false
     name: "Radarr 2"
     url: ""
     api_key: ""
     movies_to_upgrade: 5
-    max_download_queue: 15
+  max_download_queue: 15
+  reprocess_interval_days: 7
   # ... up to 5
 sonarr:
   - enabled: true
@@ -106,13 +108,15 @@ sonarr:
     url: "http://sonarr:8989"
     api_key: "your_sonarr_api_key"
     episodes_to_upgrade: 5
-    max_download_queue: 15  # Maximum allowed items in Sonarr's download queue before skipping upgrades (default: 15)
+  max_download_queue: 15  # Maximum allowed items in Sonarr's download queue before skipping upgrades (default: 15)
+  reprocess_interval_days: 7  # Number of days before an episode is eligible to be reprocessed (default: 7)
   - enabled: false
     name: "Sonarr 2"
     url: ""
     api_key: ""
     episodes_to_upgrade: 5
-    max_download_queue: 15
+  max_download_queue: 15
+  reprocess_interval_days: 7
   # ... up to 5
 ```
 
@@ -129,11 +133,12 @@ docker exec -it researcharr python3 /app/webui.py
 ```
 and visit [http://localhost:2929](http://localhost:2929).
 
-### Download Queue Limit (per instance)
+### Download Queue Limit & Reprocessing Interval (per instance)
 
-Each Radarr and Sonarr instance now supports a `max_download_queue` setting (default: 15). If the number of items in the instance's download queue is at or above this value, researcharr will skip upgrades for that instance until the next run. This helps prevent overloading your download client.
+Each Radarr and Sonarr instance now supports:
 
-You can edit this value for each instance in the web UI or directly in `config.yml`.
+- `max_download_queue` (default: 15): If the number of items in the instance's download queue is at or above this value, researcharr will skip upgrades for that instance until the next run. This helps prevent overloading your download client.
+- `reprocess_interval_days` (default: 7): Items will be reprocessed (searched again) after this many days, even if they were previously processed. This helps ensure upgrades are retried over time. You can edit this value for each instance in the web UI or directly in `config.yml`.
 
 ```bash
 docker run -d \

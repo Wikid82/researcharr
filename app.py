@@ -170,6 +170,9 @@ for idx, radarr_cfg in enumerate(r for r in radarr_instances if r.get('enabled',
     reprocess_days = int(radarr_cfg.get('reprocess_interval_days', 7))
     if not (url and key and process):
         continue
+    if not url.startswith(('http://', 'https://')):
+        radarr_logger.warning(f"Radarr {idx+1} URL is invalid or missing scheme, skipping this instance.")
+        continue
     API_PATH = "/api/v3/"
     COMMAND_ENDPOINT = "command"
     QUALITY_PROFILE_ENDPOINT = "qualityprofile"
@@ -260,6 +263,9 @@ for idx, sonarr_cfg in enumerate(s for s in sonarr_instances if s.get('enabled',
     max_queue = int(sonarr_cfg.get('max_download_queue', 15))
     reprocess_days = int(sonarr_cfg.get('reprocess_interval_days', 7))
     if not (url and key and process):
+        continue
+    if not url.startswith(('http://', 'https://')):
+        sonarr_logger.warning(f"Sonarr {idx+1} URL is invalid or missing scheme, skipping this instance.")
         continue
     API_PATH = "/api/v3/"
     COMMAND_ENDPOINT = "command"

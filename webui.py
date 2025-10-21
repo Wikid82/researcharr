@@ -1,7 +1,16 @@
-
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import yaml
+
+from flask import Flask, render_template_string, request, redirect, url_for, flash, jsonify, session
+import yaml
+import os
+import requests
+
+CONFIG_PATH = '/config/config.yml'
+
+app = Flask(__name__)
+app.secret_key = 'researcharr_secret_key'  # Change this in production
 
 # --- User config file ---
 USER_CONFIG_PATH = '/config/webui_user.yml'
@@ -28,15 +37,39 @@ def login_required(f):
             return redirect(url_for('login', next=request.url))
         return f(*args, **kwargs)
     return decorated_function
-from flask import Flask, render_template_string, request, redirect, url_for, flash, jsonify, session
-import yaml
-import os
-import requests
 
-CONFIG_PATH = '/config/config.yml'
-
-app = Flask(__name__)
-app.secret_key = 'researcharr_secret_key'  # Change this in production
+# --- Scheduling tab route (must be before SETTINGS_FORM) ---
+@app.route('/scheduling', methods=['GET', 'POST'])
+@login_required
+def scheduling():
+  cfg = load_config()
+  msg = None
+  if request.method == 'POST':
+    cron_schedule = request.form.get('cron_schedule', '').strip()
+    timezone = request.form.get('timezone', '').strip()
+    if not cron_schedule:
+      msg = 'Cron schedule cannot be blank.'
+    elif not timezone:
+      msg = 'Timezone cannot be blank.'
+    else:
+      cfg.setdefault('researcharr', {})['cron_schedule'] = cron_schedule
+      cfg['researcharr']['timezone'] = timezone
+      save_config(cfg)
+      msg = 'Schedule and timezone updated.'
+      cfg = load_config()
+  cron_schedule = cfg.get('researcharr', {}).get('cron_schedule', '0 */1 * * *')
+  timezone = cfg.get('researcharr', {}).get('timezone', 'America/New_York')
+  user = load_user_config()
+  return render_template_string(SETTINGS_FORM,
+    researcharr=None,
+    radarr=None,
+    sonarr=None,
+    active_tab='scheduling',
+    user=user,
+    user_msg=None,
+    cron_schedule=cron_schedule,
+    timezone=timezone,
+    sched_msg=msg)
 
 SETTINGS_FORM = '''
 <!doctype html>
@@ -119,37 +152,6 @@ SETTINGS_FORM = '''
   </fieldset>
 </form>
 {% endif %}
-@app.route('/scheduling', methods=['GET', 'POST'])
-@login_required
-def scheduling():
-  cfg = load_config()
-  msg = None
-  if request.method == 'POST':
-    cron_schedule = request.form.get('cron_schedule', '').strip()
-    timezone = request.form.get('timezone', '').strip()
-    if not cron_schedule:
-      msg = 'Cron schedule cannot be blank.'
-    elif not timezone:
-      msg = 'Timezone cannot be blank.'
-    else:
-      cfg.setdefault('researcharr', {})['cron_schedule'] = cron_schedule
-      cfg['researcharr']['timezone'] = timezone
-      save_config(cfg)
-      msg = 'Schedule and timezone updated.'
-      cfg = load_config()
-  cron_schedule = cfg.get('researcharr', {}).get('cron_schedule', '0 */1 * * *')
-  timezone = cfg.get('researcharr', {}).get('timezone', 'America/New_York')
-  user = load_user_config()
-  return render_template_string(SETTINGS_FORM,
-    researcharr=None,
-    radarr=None,
-    sonarr=None,
-    active_tab='scheduling',
-    user=user,
-    user_msg=None,
-    cron_schedule=cron_schedule,
-    timezone=timezone,
-    sched_msg=msg)
 </div>
 <style>
 body {
@@ -427,8 +429,10 @@ def test_connection(service, idx):
     key = inst.get('api_key', '')
   else:
     return jsonify({'status': 'Unknown service'})
+  if not url or not url.startswith(('http://', 'https://')):
+    return jsonify({'status': 'Invalid or missing URL'})
   try:
-    resp = requests.get(url + '/api/v3/system/status', headers={'Authorization': key}, timeout=10)
+    resp = requests.get(url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': key}, timeout=10)
     if resp.status_code == 200:
       return jsonify({'status': 'Connection successful'})
     else:

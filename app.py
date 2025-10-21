@@ -1,10 +1,10 @@
 from requests.auth import HTTPBasicAuth
-from dotenv import load_dotenv
 import os
 import requests as requests
 import random
 import logging
 import sqlite3
+import yaml
 
 # --- Database Setup ---
 DB_PATH = "/config/researcharr.db"
@@ -51,24 +51,27 @@ sonarr_logger = setup_logger('sonarr_logger', '/config/logs/sonarr.log')
 # Initialize the database
 init_db()
 
-# Load .env
-load_dotenv(dotenv_path="/config/.env")
+# Load configuration from YAML
+with open('/config/config.yml', 'r') as f:
+    config = yaml.safe_load(f)
 
 # Set radarr variables
-process_radarr_str = os.getenv("PROCESS_RADARR")
-PROCESS_RADARR = process_radarr_str.lower() == "true" if process_radarr_str else False
-RADARR_API_KEY = os.getenv("RADARR_API_KEY")
-RADARR_URL = os.getenv("RADARR_URL")
-NUM_MOVIES_TO_UPGRADE = int(os.getenv("NUM_MOVIES_TO_UPGRADE"))
+radarr_cfg = config.get('radarr', {})
+process_radarr_str = str(radarr_cfg.get('process', False))
+PROCESS_RADARR = process_radarr_str.lower() == "true"
+RADARR_API_KEY = radarr_cfg.get('api_key', "")
+RADARR_URL = radarr_cfg.get('url', "")
+NUM_MOVIES_TO_UPGRADE = int(radarr_cfg.get('movies_to_upgrade', 5))
 MOVIE_ENDPOINT = "movie"
 MOVIEFILE_ENDPOINT = "moviefile/"
 
-# Set sonarr varaibles
-process_sonarr_str = os.getenv("PROCESS_SONARR")
-PROCESS_SONARR = process_sonarr_str.lower() == "true" if process_sonarr_str else False
-SONARR_API_KEY = os.getenv("SONARR_API_KEY")
-SONARR_URL = os.getenv("SONARR_URL")
-NUM_EPISODES_TO_UPGRADE = int(os.getenv("NUM_EPISODES_TO_UPGRADE"))
+# Set sonarr variables
+sonarr_cfg = config.get('sonarr', {})
+process_sonarr_str = str(sonarr_cfg.get('process', False))
+PROCESS_SONARR = process_sonarr_str.lower() == "true"
+SONARR_API_KEY = sonarr_cfg.get('api_key', "")
+SONARR_URL = sonarr_cfg.get('url', "")
+NUM_EPISODES_TO_UPGRADE = int(sonarr_cfg.get('episodes_to_upgrade', 5))
 SERIES_ENDPOINT = "series"
 EPISODEFILE_ENDPOINT = "episodefile"
 EPISODE_ENDPOINT = "episode"

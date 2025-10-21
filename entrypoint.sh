@@ -1,17 +1,19 @@
 #!/bin/bash
 
-# Replace placeholder in cron job template with the environment variable
-if [ -z "$CRON_SCHEDULE" ]; then
-  echo "CRON_SCHEDULE environment variable not set, using default schedule of every hour."
-  CRON_SCHEDULE="0 * * * *"  # Default to every hour if not set
-fi
+# Default to every hour if not set
+CRON_SCHEDULE=${CRON_SCHEDULE:-"0 * * * *"}
+echo "Using cron schedule: $CRON_SCHEDULE"
 
-# Replace the cronjob template with the actual cron schedule
-sed "s|\${CRON_SCHEDULE}|$CRON_SCHEDULE|" /etc/cron.d/my-cron-job > /etc/cron.d/my-cron-job.actual
+# Create cron job file that executes the python script
+echo "${CRON_SCHEDULE} python3 /app/app.py" > /etc/cron.d/researcharr-cron
 
-# Set permissions for the cron job file
-chmod 0644 /etc/cron.d/my-cron-job.actual
-crontab /etc/cron.d/my-cron-job.actual
+# Give execution rights on the cron job
+chmod 0644 /etc/cron.d/researcharr-cron
 
-# Start cron in the foreground
-cron -f
+# Apply cron job
+crontab /etc/cron.d/researcharr-cron
+
+# Start cron in the foreground and tail the logs to make them visible with `docker logs`
+echo "Starting cron..."
+cron -f &
+tail -f /config/logs/*.log

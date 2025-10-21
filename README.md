@@ -28,7 +28,7 @@ researcharr/
     ```
 
 2.  **Edit your configuration:**
-    Open `/path/to/config/config.yml` in your favorite editor and fill in the values for your Radarr and/or Sonarr instances, schedule, and timezone. All options are documented in the example file.
+  Open `/path/to/config/config.yml` in your favorite editor and fill in the values for up to 5 Radarr and 5 Sonarr instances, schedule, and timezone. Each instance can be enabled or disabled. All options are documented in the example file.
 
 3.  **Run the container:**
     You can use either Docker Compose (recommended) or a `docker run` command. See the examples below. The first time the script runs, it will create a `researcharr.db` file and a `logs` directory inside your config volume.
@@ -42,7 +42,7 @@ researcharr/
   docker exec -it researcharr python3 /app/webui.py
   ```
   Then visit [http://localhost:2929](http://localhost:2929) in your browser.
-  The web UI allows you to edit config.yml and test Radarr/Sonarr connections directly.
+  The web UI allows you to edit config.yml and test Radarr/Sonarr connections directly. You can enable or disable up to 5 Radarr and 5 Sonarr instances using slider toggles.
 
 ## Configuration
 
@@ -50,6 +50,7 @@ All configuration is now managed in a single YAML file: `/path/to/config/config.
 
 - See `config.example.yml` for a fully documented template.
 - You can set your timezone, cron schedule, Radarr/Sonarr URLs, API keys, and processing options in this file.
+- You can set your timezone, cron schedule, and configure up to 5 Radarr and 5 Sonarr instances (each with enable toggles, URLs, API keys, and processing options) in this file.
 - Example URLs for Docker default network: `http://radarr:7878` and `http://sonarr:8989`.
 
 ## State Management
@@ -81,6 +82,35 @@ docker logs -f researcharr
 
 The web UI runs on port **2929**. To use it, run:
 ```bash
+## Example: Multiple Radarr/Sonarr Instances in config.yml
+
+```yaml
+radarr:
+  - enabled: true
+    name: "Radarr 1"
+    url: "http://radarr:7878"
+    api_key: "your_radarr_api_key"
+    movies_to_upgrade: 5
+  - enabled: false
+    name: "Radarr 2"
+    url: ""
+    api_key: ""
+    movies_to_upgrade: 5
+  # ... up to 5
+sonarr:
+  - enabled: true
+    name: "Sonarr 1"
+    url: "http://sonarr:8989"
+    api_key: "your_sonarr_api_key"
+    episodes_to_upgrade: 5
+  - enabled: false
+    name: "Sonarr 2"
+    url: ""
+    api_key: ""
+    episodes_to_upgrade: 5
+  # ... up to 5
+```
+
 docker exec -it researcharr python3 /app/webui.py
 ```
 and visit [http://localhost:2929](http://localhost:2929).

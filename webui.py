@@ -2,7 +2,7 @@ import os
 import sys
 from functools import wraps
 import yaml
-from flask import Flask, redirect, render_template_string, request, session, url_for
+from flask import Flask, redirect, render_template_string, request, session, url_for  # noqa: E501
 from werkzeug.security import generate_password_hash
 
 # Initialize Flask app before any usage
@@ -119,24 +119,25 @@ function toggleAppSettings() {
 </script>
 """
 
-
+  
 # --- Helper Functions ---
+
 def login_required(f):
   @wraps(f)
   def decorated_function(*args, **kwargs):
     print(
-      f"[DEBUG] login_required: session = {dict(session)} for {request.method} {request.path}",
+      "[DEBUG] login_required: session = {} for {} {}".format(dict(session), request.method, request.path),
       file=sys.stderr,
     )
     if not session.get("logged_in"):
       print(
-        f"[DEBUG] login_required: not logged in, redirecting to login",
+        "[DEBUG] login_required: not logged in, redirecting to login",
         file=sys.stderr,
       )
       return redirect(url_for("login", next=request.url))
     return f(*args, **kwargs)
   return decorated_function
-    # ...existing code...
+
 GENERAL_FORM = """
 <div class="topbar">
   <img src="/static/logo.png" alt="researcharr logo" class="logo">

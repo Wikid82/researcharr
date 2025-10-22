@@ -17,25 +17,11 @@ def index():
     return redirect(url_for("login"))
 
 SONARR_FORM = """
-<div class="topbar">
-  <img src="/static/logo.png" alt="researcharr logo" class="logo">
-  <span class="title-text">researcharr</span>
-  <span class="logout-link"><a href="/logout">Logout</a></span>
-</div>
-<div class="sidebar">
-  <ul>
-    <li class="app-settings-header" onclick="toggleAppSettings()">App Settings ▼
-      <ul id="app-settings-list" class="app-settings-list">
-        <li><a href="/settings/general">General</a></li>
-        <li><a href="/settings/radarr">Radarr</a></li>
-        <li><a href="/settings/sonarr" class="active">Sonarr</a></li>
-      </ul>
-    </li>
-    <li><a href="/scheduling">Scheduling</a></li>
-    <li><a href="/user">User Settings</a></li>
-  </ul>
-</div>
-<div class="main-content">
+<!-- HEADER -->
+{% include 'header.html' %}
+<!-- SIDEBAR -->
+{% include 'sidebar.html' %}
+<div class="main-content" style="margin-left:220px; margin-top:64px;">
 {% if validate_summary %}<div class="user-msg">{{ validate_summary }}</div>{% endif %}
 <form method="post" action="/settings/sonarr">
   <fieldset><legend>Sonarr Instances</legend>
@@ -81,7 +67,11 @@ function toggleAppSettings() {
 </script>
 """
 USER_FORM = """
-<div class="main-content">
+<!-- HEADER -->
+{% include 'header.html' %}
+<!-- SIDEBAR -->
+{% include 'sidebar.html' %}
+<div class="main-content" style="margin-left:220px; margin-top:64px;">
 <form method="post" action="/user">
   <fieldset><legend>User Settings</legend>
     Username: <input name="username" value="{{ user.username }}"><br>
@@ -137,14 +127,11 @@ function toggleAppSettings() {
 
 
 GENERAL_FORM = """
-<div class="topbar">
-  <img src="/static/logo.png" alt="researcharr logo" class="logo">
-  <span class="title-text">researcharr</span>
-  <span class="logout-link"><a href="/logout">Logout</a></span>
-</div>
-<div class="sidebar">
-  <ul>
-<div class="main-content">
+<!-- HEADER -->
+{% include 'header.html' %}
+<!-- SIDEBAR -->
+{% include 'sidebar.html' %}
+<div class="main-content" style="margin-left:220px; margin-top:64px;">
 <form method="post" action="/settings/general">
   <fieldset><legend>General Settings</legend>
     PUID: <input name="puid" value="{{ puid }}"><br>
@@ -490,7 +477,9 @@ def settings_radarr():
             form_html += f'<div>{inst["url"]}</div>'
         if inst["api_pulls"]:
             form_html += f'<div>{inst["api_pulls"]}</div>'
-    return render_template_string(form_html)
+    with open("templates/footer.html") as f:
+        footer = f.read()
+    return render_template_string(form_html + footer)
 
 @app.route("/settings/sonarr", methods=["GET", "POST"])
 @login_required
@@ -542,7 +531,9 @@ def settings_sonarr():
             form_html += f'<div>{inst["name"]}</div>'
         if inst["url"]:
             form_html += f'<div>{inst["url"]}</div>'
-    return render_template_string(form_html)
+    with open("templates/footer.html") as f:
+        footer = f.read()
+    return render_template_string(form_html + footer)
 
 @app.route("/scheduling", methods=["GET", "POST"])
 @login_required
@@ -554,7 +545,9 @@ def scheduling():
         msg = "Schedule saved"
     cron = SCHEDULING_SETTINGS.get("cron_schedule", "")
     tz = SCHEDULING_SETTINGS.get("timezone", "UTC")
-    return render_template_string(
+    with open("templates/footer.html") as f:
+        footer = f.read()
+    page = (
         '<div class="main-content"><h2>Scheduling</h2>'
         + (f"<div>{msg}</div>" if msg else "")
         + '<form method="post">'
@@ -564,12 +557,13 @@ def scheduling():
         )
         + (
             f'<label for="cron_schedule">Cron Schedule:</label>'
-            f'<input id="cron_schedule" name="cron_schedule" value="{cron}"><br>'  # noqa: E501
+            f'<input id="cron_schedule" name="cron_schedule" value="{cron}"><br>'
         )
         + '<input type="submit" value="Save"></form>'
         + (f"<div>{cron}</div>" if cron else "")
         + "</div>"
     )
+    return render_template_string(page + footer)
 
  # --- Helper Functions ---
 def login_required(f):
@@ -605,7 +599,9 @@ def user_settings():
         else:
             user["username"] = username
             user_msg = "User settings saved."
-    return render_template_string(USER_FORM, user=user, user_msg=user_msg)
+    with open("templates/footer.html") as f:
+        footer = f.read()
+    return render_template_string(USER_FORM + footer, user=user, user_msg=user_msg)
 
 
 
@@ -672,23 +668,25 @@ def login():
             return redirect("/settings/general")
         else:
             error = "Invalid username or password"
-    return render_template_string(
-        """
+    with open("templates/footer.html") as f:
+        footer = f.read()
+    login_form = """
         <form method="post">
             <input name="username">
             <input name="password" type="password">
             <input type="submit" value="Login">
             {% if error %}<div>{{ error }}</div>{% endif %}
         </form>
-        """,
-        error=error,
-    )
+    """
+    return render_template_string(login_form + footer, error=error)
 
 @app.route("/settings/general", methods=["GET"])
 def settings_general():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
-    return render_template_string(GENERAL_FORM, puid="1000", pgid="1000", msg=None)  # noqa: E501
+    with open("templates/footer.html") as f:
+        footer = f.read()
+    return render_template_string(GENERAL_FORM + footer, puid="1000", pgid="1000", msg=None)
 
 @app.route("/save", methods=["POST"])
 @login_required
@@ -696,4 +694,6 @@ def save_general():
     puid = request.form.get("puid", "")
     pgid = request.form.get("pgid", "")
     msg = "Settings saved."
-    return render_template_string(GENERAL_FORM, puid=puid, pgid=pgid, msg=msg)
+    with open("templates/footer.html") as f:
+        footer = f.read()
+    return render_template_string(GENERAL_FORM + footer, puid=puid, pgid=pgid, msg=msg)

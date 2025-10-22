@@ -1,19 +1,10 @@
-import os
-from functools import wraps
 
-import requests
+import os
+import sys
+from functools import wraps
 import yaml
-from flask import (
-    Flask,
-    flash,
-    jsonify,
-    redirect,
-    render_template_string,
-    request,
-    session,
-    url_for,
-)
-from werkzeug.security import check_password_hash, generate_password_hash
+from flask import Flask, redirect, render_template_string, request, session, url_for
+from werkzeug.security import generate_password_hash
 
 # Initialize Flask app before any usage
 app = Flask(__name__)
@@ -26,7 +17,7 @@ def index():
     return redirect(url_for("login"))
 
 
-SONARR_FORM = """
+SONARR_FORM = """  # noqa: E501
 <div class="topbar">
   <img src="/static/logo.png" alt="researcharr logo" class="logo">
   <span class="title-text">researcharr</span>
@@ -55,10 +46,7 @@ SONARR_FORM = """
         Enable: <label class="switch"><input name="sonarr{{i}}_enabled" type="checkbox" {% if sonarr[i].enabled %}checked{% endif %} onchange="toggleInstance('sonarr', {{i}})"><span class="slider round"></span></label><br>
         <div id="sonarr_fields_{{i}}" class="instance-fields{% if sonarr[i].enabled %} open{% endif %}">
           Name: <input name="sonarr{{i}}_name" value="{{ sonarr[i].name }}"><br>
-          URL: <input name="sonarr{{i}}_url" value="{{ sonarr[i].url }}"><br>
-          API Key: <input name="sonarr{{i}}_api_key" value="{{ sonarr[i].api_key }}"><br>
-          Process: <input name="sonarr{{i}}_process" type="checkbox" {% if sonarr[i].get('process', False) %}checked{% endif %}><br>
-          Process by: <select name="sonarr{{i}}_mode">
+def save_config(cfg): pass
             <option value="series" {% if sonarr[i].get('mode', 'series') == 'series' %}selected{% endif %}>Series (default, most efficient)</option>
             <option value="season" {% if sonarr[i].get('mode') == 'season' %}selected{% endif %}>Season</option>
             <option value="episode" {% if sonarr[i].get('mode') == 'episode' %}selected{% endif %}>Episode</option>
@@ -92,7 +80,7 @@ function toggleAppSettings() {
 """
 
 
-USER_FORM = """
+USER_FORM = """  # noqa: E501
 <div class="main-content">
 <form method="post" action="/user">
   <fieldset><legend>User Settings</legend>
@@ -135,31 +123,12 @@ function toggleAppSettings() {
 }
 </script>
 """
-
-import os
-from functools import wraps
-
-import requests
-import yaml
-from flask import (
-    Flask,
-    flash,
-    jsonify,
-    redirect,
-    render_template_string,
-    request,
-    session,
-    url_for,
-)
-from werkzeug.security import check_password_hash, generate_password_hash
 
 
 # --- Helper Functions ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        import sys
-
         print(
             f"[DEBUG] login_required: session = {dict(session)} for {request.method} {request.path}",
             file=sys.stderr,
@@ -173,101 +142,7 @@ def login_required(f):
         return f(*args, **kwargs)
 
     return decorated_function
-
-
-def register_additional_routes(app):
-    pass
-
-
-register_additional_routes(app)
-
-
-def load_config():
-    config_path = "config/config.yml"
-    if not os.path.exists(os.path.dirname(config_path)):
-        os.makedirs(os.path.dirname(config_path), exist_ok=True)
-    if not os.path.exists(config_path):
-        with open(config_path, "w") as f:
-            yaml.safe_dump({"radarr": [], "sonarr": []}, f)
-    with open(config_path, "r") as f:
-        return yaml.safe_load(f)
-
-
-def save_config(cfg):
-    config_path = "config/config.yml"
-    with open(config_path, "w") as f:
-        yaml.safe_dump(cfg, f)
-
-
-USER_CONFIG_PATH = "config/webui_user.yml"
-
-
-def load_user_config():
-    user_dir = os.path.dirname(USER_CONFIG_PATH)
-    if not os.path.exists(user_dir):
-        os.makedirs(user_dir, exist_ok=True)
-    if not os.path.exists(USER_CONFIG_PATH):
-        with open(USER_CONFIG_PATH, "w") as f:
-            yaml.safe_dump(
-                {
-                    "username": "admin",
-                    "password_hash": generate_password_hash("researcharr"),
-                },
-                f,
-            )
-    with open(USER_CONFIG_PATH, "r") as f:
-        return yaml.safe_load(f)
-
-
-def save_user_config(username, password_hash):
-    user_dir = os.path.dirname(USER_CONFIG_PATH)
-    if not os.path.exists(user_dir):
-        os.makedirs(user_dir, exist_ok=True)
-    with open(USER_CONFIG_PATH, "w") as f:
-        yaml.safe_dump({"username": username, "password_hash": password_hash}, f)
-
-
-# --- End Helper Functions ---
-
-
-# Start the Flask app if run as main
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=2929)
-# User settings route
-
-
-def login_required(f):
-    from functools import wraps
-
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        import sys
-
-        print(
-            f"[DEBUG] login_required: session = {dict(session)} for {request.method} {request.path}",
-            file=sys.stderr,
-        )
-        if not session.get("logged_in"):
-            print(
-                f"[DEBUG] login_required: not logged in, redirecting to login",
-                file=sys.stderr,
-            )
-            return redirect(url_for("login", next=request.url))
-        return f(*args, **kwargs)
-
-    return decorated_function
-
-
-# --- Minimal login and settings routes for test coverage ---
-def register_routes(app):
-    pass
-    # User settings route
-    pass
-
-
-register_routes(app)
-
-
+  # ...existing code...
 GENERAL_FORM = """
 <div class="topbar">
   <img src="/static/logo.png" alt="researcharr logo" class="logo">
@@ -298,22 +173,6 @@ function toggleAppSettings() {
 </script>
 """
 
-import os
-from functools import wraps
-
-import requests
-import yaml
-from flask import (
-    Flask,
-    flash,
-    jsonify,
-    redirect,
-    render_template_string,
-    request,
-    session,
-    url_for,
-)
-from werkzeug.security import check_password_hash, generate_password_hash
 
 GENERAL_FORM = """
 <div class="topbar">
@@ -456,22 +315,7 @@ function toggleAppSettings() {
 </script>
 """
 
-import os
-from functools import wraps
 
-import requests
-import yaml
-from flask import (
-    Flask,
-    flash,
-    jsonify,
-    redirect,
-    render_template_string,
-    request,
-    session,
-    url_for,
-)
-from werkzeug.security import check_password_hash, generate_password_hash
 
 GENERAL_FORM = """
 <div class="topbar">
@@ -629,10 +473,18 @@ def settings_radarr():
         form_html += f"<div>{msg}</div>"
     form_html += '<form method="post">'
     for idx, inst in enumerate(instances or [{}]):
-        form_html += f'<label>Name</label><input name="radarr{idx}_name" value="{inst.get("name", "")}"><br>'
-        form_html += f'<label>URL</label><input name="radarr{idx}_url" value="{inst.get("url", "")}"><br>'
-        form_html += f'<label>API Key</label><input name="radarr{idx}_api_key" value="{inst.get("api_key", "")}"><br>'
-        form_html += f'<label>API Pulls</label><input name="radarr{idx}_api_pulls" value="{inst.get("api_pulls", "")}"><br>'
+        form_html += (
+            f'<label>Name</label><input name="radarr{idx}_name" value="{inst.get("name", "")}"><br>'
+        )
+        form_html += (
+            f'<label>URL</label><input name="radarr{idx}_url" value="{inst.get("url", "")}"><br>'
+        )
+        form_html += (
+            f'<label>API Key</label><input name="radarr{idx}_api_key" value="{inst.get("api_key", "")}"><br>'
+        )
+        form_html += (
+            f'<label>API Pulls</label><input name="radarr{idx}_api_pulls" value="{inst.get("api_pulls", "")}"><br>'
+        )
     form_html += '<input type="submit" value="Save"></form>'
     for inst in instances:
         if inst["name"]:
@@ -676,9 +528,15 @@ def settings_sonarr():
         form_html += f"<div>{error}</div>"
     form_html += '<form method="post">'
     for idx, inst in enumerate(instances or [{}]):
-        form_html += f'<label>Name</label><input name="sonarr{idx}_name" value="{inst.get("name", "")}"><br>'
-        form_html += f'<label>URL</label><input name="sonarr{idx}_url" value="{inst.get("url", "")}"><br>'
-        form_html += f'<label>API Key</label><input name="sonarr{idx}_api_key" value="{inst.get("api_key", "")}"><br>'
+        form_html += (
+            f'<label>Name</label><input name="sonarr{idx}_name" value="{inst.get("name", "")}"><br>'
+        )
+        form_html += (
+            f'<label>URL</label><input name="sonarr{idx}_url" value="{inst.get("url", "")}"><br>'
+        )
+        form_html += (
+            f'<label>API Key</label><input name="sonarr{idx}_api_key" value="{inst.get("api_key", "")}"><br>'
+        )
     form_html += '<input type="submit" value="Save"></form>'
     for inst in instances:
         if inst["name"]:
@@ -702,8 +560,14 @@ def scheduling():
         '<div class="main-content"><h2>Scheduling</h2>'
         + (f"<div>{msg}</div>" if msg else "")
         + '<form method="post">'
-        + f'<label for="timezone">Timezone:</label><input id="timezone" name="timezone" value="{tz}"><br>'
-        + f'<label for="cron_schedule">Cron Schedule:</label><input id="cron_schedule" name="cron_schedule" value="{cron}"><br>'
+        + (
+            f'<label for="timezone">Timezone:</label>'
+            f'<input id="timezone" name="timezone" value="{tz}"><br>'
+        )
+        + (
+            f'<label for="cron_schedule">Cron Schedule:</label>'
+            f'<input id="cron_schedule" name="cron_schedule" value="{cron}"><br>'
+        )
         + '<input type="submit" value="Save"></form>'
         + (f"<div>{cron}</div>" if cron else "")
         + "</div>"
@@ -714,7 +578,7 @@ def scheduling():
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        import sys
+
 
         print(
             f"[DEBUG] login_required: session = {dict(session)} for {request.method} {request.path}",
@@ -722,7 +586,7 @@ def login_required(f):
         )
         if not session.get("logged_in"):
             print(
-                f"[DEBUG] login_required: not logged in, redirecting to login",
+                "[DEBUG] login_required: not logged in, redirecting to login",
                 file=sys.stderr,
             )
             return redirect(url_for("login", next=request.url))
@@ -816,10 +680,14 @@ def login():
             return redirect("/settings/general")
         else:
             error = "Invalid username or password"
-    return render_template_string(
-        """<form method="post"><input name="username"><input name="password" type="password"><input type="submit" value="Login">{% if error %}<div>{{ error }}</div>{% endif %}</form>""",
-        error=error,
-    )
+  return render_template_string(
+    (
+      """<form method="post"><input name="username"><input name="password" type="password">"
+      "<input type="submit" value="Login">"
+      "{% if error %}<div>{{ error }}</div>{% endif %}</form>"""
+    ),
+    error=error,
+  )
 
 
 @app.route("/settings/general", methods=["GET"])

@@ -57,7 +57,7 @@ def scheduling():
       save_config(cfg)
       msg = 'Schedule and timezone updated.'
       cfg = load_config()
-  cron_schedule = cfg.get('researcharr', {}).get('cron_schedule', '0 */1 * * *')
+  cron_schedule = cfg.get('researcharr', {}).get('cron_schedule', '0 * * * *')
   timezone = cfg.get('researcharr', {}).get('timezone', 'America/New_York')
   user = load_user_config()
   return render_template_string(SETTINGS_FORM,
@@ -292,7 +292,7 @@ input:checked + .slider:before {
 function testConnection(service, idx) {
   fetch('/test_connection/' + service + '/' + idx)
     .then(r => r.json())
-    .then(data => {
+    .then data => {
       document.getElementById(service + '_status_' + idx).innerText = data.status;
     });
 }
@@ -404,7 +404,7 @@ def save():
   cfg['researcharr']['puid'] = int(request.form.get('puid', 1000))
   cfg['researcharr']['pgid'] = int(request.form.get('pgid', 1000))
   cfg['researcharr']['timezone'] = request.form.get('timezone', 'America/New_York')
-  cfg['researcharr']['cron_schedule'] = request.form.get('cron_schedule', '0 */1 * * *')
+  cfg['researcharr']['cron_schedule'] = request.form.get('cron_schedule', '0 * * * *')
   # Radarr
   radarr = []
   for i in range(5):

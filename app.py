@@ -10,6 +10,18 @@ import logging
 import sqlite3
 import yaml
 
+# --- Force TZ environment variable and tzset at startup ---
+try:
+    with open('/config/config.yml', 'r') as f:
+        _cfg = yaml.safe_load(f)
+        _tz = _cfg.get('researcharr', {}).get('timezone', 'America/New_York')
+        os.environ['TZ'] = _tz
+        import time
+        time.tzset()
+except Exception as e:
+    print(f"[WARNING] Could not set TZ at startup: {e}")
+import yaml
+
 # --- Database Setup ---
 DB_PATH = "/config/researcharr.db"
 

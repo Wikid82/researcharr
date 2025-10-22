@@ -1,12 +1,57 @@
+# --- Database Setup ---
+def init_db():
+    """Initializes the SQLite database and creates tables if they don't exist."""
+    db_dir = os.path.dirname(DB_PATH)
+    if db_dir and not os.path.exists(db_dir):
+        os.makedirs(db_dir, exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    # Radarr queue table with last_processed
+    cursor.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS radarr_queue (
+            movie_id INTEGER PRIMARY KEY,
+            last_processed TIMESTAMP
+        )
+        '''
+    )
+    # Sonarr queue table with last_processed
+    cursor.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS sonarr_queue (
+            episode_id INTEGER PRIMARY KEY,
+            last_processed TIMESTAMP
+        )
+        '''
+    )
+    conn.commit()
+    conn.close()
+
+# Standard library imports
+import os
+import logging
+import sqlite3
+from datetime import date
+
+# Third-party imports
+import requests
+import yaml
+
 # --- Connection Status Checks ---
 def check_radarr_connection(url, key, logger):
     try:
         if url and key:
-            resp = requests.get(url + '/api/v3/system/status', headers={'Authorization': key}, timeout=10)
+            resp = requests.get(
+                url + '/api/v3/system/status',
+                headers={'Authorization': key},
+                timeout=10
+            )
             if resp.status_code == 200:
                 logger.info("Radarr connection successful.")
             else:
-                logger.error(f"Radarr connection failed: HTTP {resp.status_code} - {resp.text}")
+                logger.error(
+                    f"Radarr connection failed: HTTP {resp.status_code} - {resp.text}"
+                )
         else:
             logger.warning("Radarr URL or API key not set; skipping connection test.")
     except Exception as e:
@@ -15,56 +60,24 @@ def check_radarr_connection(url, key, logger):
 def check_sonarr_connection(url, key, logger):
     try:
         if url and key:
-            resp = requests.get(url + '/api/v3/system/status', headers={'Authorization': key}, timeout=10)
+            resp = requests.get(
+                url + '/api/v3/system/status',
+                headers={'Authorization': key},
+                timeout=10
+            )
             if resp.status_code == 200:
                 logger.info("Sonarr connection successful.")
             else:
-                logger.error(f"Sonarr connection failed: HTTP {resp.status_code} - {resp.text}")
+                logger.error(
+                    f"Sonarr connection failed: HTTP {resp.status_code} - {resp.text}"
+                )
         else:
             logger.warning("Sonarr URL or API key not set; skipping connection test.")
     except Exception as e:
         logger.error(f"Sonarr connection error: {e}")
-from datetime import date
-
-# Version based on build date
-__version__ = date.today().strftime('%Y.%m.%d')
-from requests.auth import HTTPBasicAuth
-import os
-import requests as requests
-import random
-import logging
-import sqlite3
-import yaml
-
-
 
 # --- Database Setup ---
 DB_PATH = "/config/researcharr.db"
-
-def init_db():
-    """Initializes the SQLite database and creates tables if they don't exist."""
-    # Ensure parent directory exists
-    db_dir = os.path.dirname(DB_PATH)
-    if db_dir and not os.path.exists(db_dir):
-        os.makedirs(db_dir, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    # Radarr queue table with last_processed
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS radarr_queue (
-            movie_id INTEGER PRIMARY KEY,
-            last_processed TIMESTAMP
-        )
-    ''')
-    # Sonarr queue table with last_processed
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS sonarr_queue (
-            episode_id INTEGER PRIMARY KEY,
-            last_processed TIMESTAMP
-        )
-    ''')
-    conn.commit()
-    conn.close()
 
 # Create loggers
 def setup_logger(name, log_file, level=logging.INFO):

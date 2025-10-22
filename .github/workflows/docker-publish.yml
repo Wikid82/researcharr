@@ -23,7 +23,7 @@ jobs:
         pip install -r requirements.txt
         pip install pytest
     - name: Run tests
-      run: pytest researcharr/tests/ -v
+      run: pytest tests/ -v
 
   lint:
     runs-on: ubuntu-latest

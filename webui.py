@@ -597,19 +597,19 @@ def scheduling():
 # --- Helper Functions ---
 def login_required(f):
     @wraps(f)
-  def decorated_function(*args, **kwargs):
-    print(
-      f"[DEBUG] login_required: session = {dict(session)} for {request.method} {request.path}",  # noqa: E501
-      file=sys.stderr,
-    )
-    if not session.get("logged_in"):
-      print(
-        "[DEBUG] login_required: not logged in, redirecting to login",
-        file=sys.stderr,
-      )
-      return redirect(url_for("login", next=request.url))
-    return f(*args, **kwargs)
-  return decorated_function
+    def decorated_function(*args, **kwargs):
+        print(
+            f"[DEBUG] login_required: session = {dict(session)} for {request.method} {request.path}",  # noqa: E501
+            file=sys.stderr,
+        )
+        if not session.get("logged_in"):
+            print(
+                "[DEBUG] login_required: not logged in, redirecting to login",
+                file=sys.stderr,
+            )
+            return redirect(url_for("login", next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 def register_additional_routes(app):

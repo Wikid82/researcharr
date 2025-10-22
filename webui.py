@@ -93,8 +93,7 @@ SETTINGS_FORM = '''
   <fieldset><legend>General</legend>
     PUID: <input name="puid" value="{{ researcharr.puid }}"><br>
     PGID: <input name="pgid" value="{{ researcharr.pgid }}"><br>
-    Timezone: <input name="timezone" value="{{ researcharr.timezone }}"><br>
-  <!-- Cron Schedule field moved to Scheduling tab -->
+  <!-- Timezone and Cron Schedule fields are now only in the Scheduling tab -->
   </fieldset>
   <fieldset><legend>Radarr Instances</legend>
     {% for i in range(5) %}
@@ -295,10 +294,24 @@ input:checked + .slider:before {
 </style>
 <script>
 function toggleInstance(service, idx) {
-  var checked = document.querySelector('input[name="' + service + idx + '_enabled"]').checked;
+  var input = document.querySelector('input[name="' + service + idx + '_enabled'"]');
+  var checked = input && input.checked;
   var fields = document.getElementById(service + '_fields_' + idx);
-  fields.style.display = checked ? 'block' : 'none';
+  if (fields) {
+    fields.style.display = checked ? 'block' : 'none';
+    console.log('Toggled ' + service + idx + ' to ' + (checked ? 'enabled' : 'disabled'));
+  } else {
+    console.log('Could not find fields for ' + service + idx);
+  }
 }
+// Ensure toggles are initialized on page load (for browser cache or back/forward nav)
+window.addEventListener('DOMContentLoaded', function() {
+  ['radarr', 'sonarr'].forEach(function(service) {
+    for (var i = 0; i < 5; i++) {
+      toggleInstance(service, i);
+    }
+  });
+});
 function testConnection(service, idx) {
   fetch('/test_connection/' + service + '/' + idx)
     .then(r => r.json())
@@ -417,8 +430,7 @@ def save():
   # General
   cfg['researcharr']['puid'] = int(request.form.get('puid', 1000))
   cfg['researcharr']['pgid'] = int(request.form.get('pgid', 1000))
-  cfg['researcharr']['timezone'] = request.form.get('timezone', 'America/New_York')
-  cfg['researcharr']['cron_schedule'] = request.form.get('cron_schedule', '0 * * * *')
+  # Timezone and cron_schedule are only set in the Scheduling tab
   # Radarr
   radarr = []
   for i in range(5):

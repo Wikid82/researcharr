@@ -1,8 +1,10 @@
+<p align="center" style="background: rgba(255, 255, 255, 1); padding: 16px; border-radius: 8px;">
+  <img src="static/logo.jpg" alt="researcharr logo" height="150"/>
+</p>
+
+<p align="center"
 ![Docker Publish (main)](https://github.com/Wikid82/researcharr/actions/workflows/docker-publish.yml/badge.svg?branch=main)
 ![Docker Publish (development)](https://github.com/Wikid82/researcharr/actions/workflows/docker-publish.yml/badge.svg?branch=development)
-
-<p align="center" style="background: rgba(255, 255, 255, 1); padding: 16px; border-radius: 8px;">
-  <img src="static/logo.jpg" alt="researcharr logo" height="200"/>
 </p>
 
 # researcharr

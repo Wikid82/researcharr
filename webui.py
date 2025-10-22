@@ -55,7 +55,19 @@ def scheduling():
       cfg.setdefault('researcharr', {})['cron_schedule'] = cron_schedule
       cfg['researcharr']['timezone'] = timezone
       save_config(cfg)
-      msg = 'Schedule and timezone updated.'
+      # --- Set system timezone immediately ---
+      import subprocess, sys
+      try:
+        # Update /etc/localtime and /etc/timezone (Linux only)
+        subprocess.run(['ln', '-snf', f'/usr/share/zoneinfo/{timezone}', '/etc/localtime'], check=True)
+        with open('/etc/timezone', 'w') as tzf:
+            tzf.write(timezone + '\n')
+        # Update Python's timezone awareness
+        import time
+        time.tzset()
+        msg = 'Schedule and timezone updated. Timezone change applied immediately.'
+      except Exception as e:
+        msg = f'Schedule updated, but failed to set system timezone: {e}'
       cfg = load_config()
   cron_schedule = cfg.get('researcharr', {}).get('cron_schedule', '0 * * * *')
   timezone = cfg.get('researcharr', {}).get('timezone', 'America/New_York')

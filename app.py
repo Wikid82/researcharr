@@ -43,7 +43,19 @@ def setup_logger(name, log_file, level=logging.INFO):
         os.makedirs(log_dir)
         
     handler = logging.FileHandler(log_file, encoding='utf-8')
-    handler.setFormatter(logging.Formatter('%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p'))
+    # Add timezone info to log messages
+    handler.setFormatter(logging.Formatter('%(asctime)s %(message)s [%(levelname)s] [%(name)s] [%(process)d] [%(thread)d] [%(timezone)s]', datefmt='%m/%d/%Y %I:%M:%S %p'))
+    # Patch LogRecord to add timezone
+    old_factory = logging.getLogRecordFactory()
+    import time
+    def record_factory(*args, **kwargs):
+        record = old_factory(*args, **kwargs)
+        try:
+            record.timezone = time.tzname[0]
+        except Exception:
+            record.timezone = 'Unknown'
+        return record
+    logging.setLogRecordFactory(record_factory)
     logger = logging.getLogger(name)
     logger.setLevel(level)
     logger.addHandler(handler)

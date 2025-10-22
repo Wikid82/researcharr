@@ -4,7 +4,14 @@
 
 # researcharr
 
-A utility to automatically trigger searches in the *arr suite to keep files up to date with any scoring or custom format changes.
+A modern, always-on utility to automatically trigger searches in the *arr suite to keep files up to date with any scoring or custom format changes. Features a secure, AJAX-powered web UI for managing all settings, per-instance validation, and robust automated test coverage.
+
+**Key Features:**
+- Modern AJAX web UI (instant navigation, no page reloads)
+- Secure login, user management, and error feedback
+- Edit all config (including schedule/timezone) from the UI
+- Enable/disable and validate up to 5 Radarr & 5 Sonarr instances
+- All endpoints and UI behaviors are covered by automated tests
 
 ## Project Structure
 
@@ -60,24 +67,25 @@ pip install -r requirements.txt
 4.  **Check the logs:**
   Live logs are streamed and can be viewed using the `docker logs` command. See the Logging section for more details.
 
-5.  **(Optional) Use the Web UI:**
-  A secure web interface is available for editing settings and testing connections. After starting the container, run:
-  ```bash
-  docker exec -it researcharr python3 /app/webui.py
-  ```
-  Then visit [http://localhost:2929](http://localhost:2929) in your browser.
+5.  **Use the Web UI (AJAX-powered, always-on):**
+    - Launch with:
+      ```bash
+      docker exec -it researcharr python3 /app/webui.py
+      ```
+      Then visit [http://localhost:2929](http://localhost:2929) in your browser.
+    - **Login is required.**
+      - Default username: `admin`
+      - Default password: `researcharr`
+      (Change these in production using the "User Settings" tab in the web UI, which updates `webui_user.yml`.)
+    - **AJAX navigation:** Sidebar and header never reload; only the main content area updates. All forms and navigation are AJAX-powered for instant feedback.
+    - **Per-instance validation:** Each Radarr and Sonarr instance has a "Validate & Save" button for instant connection testing and dry-run, with results shown in the UI.
+    - **Error feedback:** All error messages (e.g., invalid config, missing API key) are shown instantly in the UI.
+    - **Multi-instance:** Enable/disable and configure up to 5 Radarr and 5 Sonarr instances. All instance settings are collapsed by default; enable to expand and edit.
+    - **Always-on:** The container and web UI never exit on invalid config—fix your settings at any time using the web UI.
+    - **User credentials:** Managed in `webui_user.yml` and editable from the UI.
+    - **Test coverage:** All endpoints and UI behaviors are covered by automated tests.
 
-  **Login is required.**
-  - Default username: `admin`
-  - Default password: `researcharr`
-  (Change these in production using the "User Settings" tab in the web UI, which updates `webui_user.yml`.)
-
-  The web UI allows you to edit config.yml, test Radarr/Sonarr connections, enable/disable up to 5 Radarr and 5 Sonarr instances, and edit the cron job schedule from the "Scheduling" tab. All settings are protected behind login. User credentials are now managed in `webui_user.yml` (not in `webui.py`).
-
-  **New UI Behavior:**
-  - All Radarr and Sonarr instances are now disabled by default and their settings are collapsed in the web UI. Enable an instance to expand and configure it.
-
-## Configuration
+## Configuration (All Editable in Web UI)
 
 All configuration is now managed in a single YAML file: `/path/to/config/config.yml`.
 
@@ -113,15 +121,16 @@ docker logs -f researcharr
 
 docker exec -it researcharr python3 /app/webui.py
 
-## Web UI (AJAX Navigation)
-
-The web UI runs on port **2929** and now features a modern, responsive interface with static sidebar and header. Navigation between settings pages (General, Radarr, Sonarr, Scheduling, User Settings) is instant and seamless—only the main content area reloads, with no full page refreshes. This is powered by AJAX, making the UI feel much faster and more app-like.
+## Web UI (AJAX Navigation, Always-On)
 
 **Key Features:**
-- **Static Sidebar & Header:** Sidebar and header never reload; only the center content changes.
-- **Instant Navigation:** Clicking any sidebar link loads the corresponding settings page instantly via AJAX.
-- **AJAX Forms:** All forms (settings, user, scheduling) submit via AJAX and update the content area with error/success feedback—no page reloads.
-- **Active Highlight:** The sidebar highlights the active section after navigation.
+- **AJAX Navigation:** Sidebar and header never reload; only the main content area updates. All forms and navigation are AJAX-powered for instant feedback.
+- **Per-Instance Validation:** Each Radarr and Sonarr instance has a "Validate & Save" button for instant connection testing and dry-run, with results shown in the UI.
+- **Error Feedback:** All error messages (e.g., invalid config, missing API key) are shown instantly in the UI.
+- **Multi-Instance:** Enable/disable and configure up to 5 Radarr and 5 Sonarr instances. All instance settings are collapsed by default; enable to expand and edit.
+- **Always-On:** The container and web UI never exit on invalid config—fix your settings at any time using the web UI.
+- **User Credentials:** Managed in `webui_user.yml` and editable from the UI.
+- **Test Coverage:** All endpoints and UI behaviors are covered by automated tests.
 - **Responsive:** The UI is optimized for both desktop and mobile browsers.
 
 To use the web UI, run:

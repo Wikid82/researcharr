@@ -1,5 +1,23 @@
+
 import pytest
 from researcharr import webui
+import os
+import yaml
+from werkzeug.security import generate_password_hash
+
+
+# Always reset user config to default before each test
+@pytest.fixture(autouse=True)
+def reset_user_config():
+    # Use the same path as the app: config/webui_user.yml relative to project root
+    user_config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../config/webui_user.yml'))
+    # But the app expects 'config/webui_user.yml' relative to CWD/project root
+    # So, always write to 'config/webui_user.yml' in the CWD
+    user_config_path = os.path.abspath(os.path.join(os.getcwd(), 'config/webui_user.yml'))
+    os.makedirs(os.path.dirname(user_config_path), exist_ok=True)
+    with open(user_config_path, 'w') as f:
+        yaml.safe_dump({'username': 'admin', 'password_hash': generate_password_hash('researcharr')}, f)
+    yield
 
 @pytest.fixture
 def client():

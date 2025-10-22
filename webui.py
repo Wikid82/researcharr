@@ -112,6 +112,7 @@ def user_settings():
             user_msg = "User settings saved."
     return render_template("user.html", user=user, user_msg=user_msg)
 
+
 USER_CONFIG_PATH = "config/webui_user.yml"
 
 def load_user_config():
@@ -136,6 +137,7 @@ def save_user_config(username, password_hash):
         os.makedirs(user_dir, exist_ok=True)
     with open(USER_CONFIG_PATH, "w") as f:
         yaml.safe_dump({"username": username, "password_hash": password_hash}, f)
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():

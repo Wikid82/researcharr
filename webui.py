@@ -100,7 +100,7 @@ SETTINGS_FORM = '''
       <fieldset style="margin:10px; border:1px solid #ccc;">
         <legend>Radarr {{i+1}}</legend>
         Enable: <label class="switch"><input name="radarr{{i}}_enabled" type="checkbox" {% if radarr[i].enabled %}checked{% endif %} onchange="toggleInstance('radarr', {{i}})"><span class="slider round"></span></label><br>
-        <div id="radarr_fields_{{i}}" style="display: {% if radarr[i].enabled %}block{% else %}none{% endif %};">
+  <div id="radarr_fields_{{i}}" class="instance-fields{% if radarr[i].enabled %} open{% endif %}">
           Name: <input name="radarr{{i}}_name" value="{{ radarr[i].name }}"><br>
           URL: <input name="radarr{{i}}_url" value="{{ radarr[i].url }}"><br>
           API Key: <input name="radarr{{i}}_api_key" value="{{ radarr[i].api_key }}"><br>
@@ -120,7 +120,7 @@ SETTINGS_FORM = '''
       <fieldset style="margin:10px; border:1px solid #ccc;">
         <legend>Sonarr {{i+1}}</legend>
         Enable: <label class="switch"><input name="sonarr{{i}}_enabled" type="checkbox" {% if sonarr[i].enabled %}checked{% endif %} onchange="toggleInstance('sonarr', {{i}})"><span class="slider round"></span></label><br>
-        <div id="sonarr_fields_{{i}}" style="display: {% if sonarr[i].enabled %}block{% else %}none{% endif %};">
+  <div id="sonarr_fields_{{i}}" class="instance-fields{% if sonarr[i].enabled %} open{% endif %}">
           Name: <input name="sonarr{{i}}_name" value="{{ sonarr[i].name }}"><br>
           URL: <input name="sonarr{{i}}_url" value="{{ sonarr[i].url }}"><br>
           API Key: <input name="sonarr{{i}}_api_key" value="{{ sonarr[i].api_key }}"><br>
@@ -291,6 +291,18 @@ input:checked + .slider {
 input:checked + .slider:before {
   transform: translateX(16px);
 }
+
+/* Dropdown animation for instance fields */
+.instance-fields {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.instance-fields.open {
+  max-height: 500px;
+  opacity: 1;
+}
 </style>
 <script>
 function toggleInstance(service, idx) {
@@ -298,10 +310,11 @@ function toggleInstance(service, idx) {
   var checked = input && input.checked;
   var fields = document.getElementById(service + '_fields_' + idx);
   if (fields) {
-    fields.style.display = checked ? 'block' : 'none';
-    console.log('Toggled ' + service + idx + ' to ' + (checked ? 'enabled' : 'disabled'));
-  } else {
-    console.log('Could not find fields for ' + service + idx);
+    if (checked) {
+      fields.classList.add('open');
+    } else {
+      fields.classList.remove('open');
+    }
   }
 }
 // Ensure toggles are initialized on page load (for browser cache or back/forward nav)

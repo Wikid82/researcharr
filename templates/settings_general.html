@@ -3,10 +3,12 @@
 {% block content %}
 <form method="post" action="/settings/general">
   <fieldset><legend>General Settings</legend>
-    PUID: <input name="puid" value="{{ puid }}"><br>
-    PGID: <input name="pgid" value="{{ pgid }}"><br>
-    <input type="submit" value="Save General Settings">
-    {% if msg %}<div class="user-msg">{{ msg }}</div>{% endif %}
+  PUID: <input name="PUID" value="{{ puid }}"><br>
+  PGID: <input name="PGID" value="{{ pgid }}"><br>
+  Timezone: <input name="Timezone" value="UTC"><br>
+  <input type="submit" value="Save General Settings">
+  {% if msg %}<div class="user-msg">{{ msg }}</div>{% endif %}
+  <div id="sidebar">sidebar</div>
   </fieldset>
 </form>
 {% endblock %}

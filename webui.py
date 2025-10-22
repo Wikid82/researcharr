@@ -75,6 +75,7 @@ def settings_radarr():
 @login_required
 def settings_sonarr():
     msg = None
+    error = None
     if request.method == "POST":
         SONARR_SETTINGS.update(request.form)
         # Validation: enabled but missing url or api_key
@@ -83,7 +84,7 @@ def settings_sonarr():
             url = SONARR_SETTINGS.get(f"sonarr{i}_url", "")
             api_key = SONARR_SETTINGS.get(f"sonarr{i}_api_key", "")
             if enabled and (not url or not api_key):
-                pass  # error = "Missing URL or API key for enabled instance."
+                error = "Missing URL or API key for enabled instance."
         msg = "Sonarr settings saved"
     instances = []
     i = 0
@@ -96,7 +97,7 @@ def settings_sonarr():
         instances.append({"name": name, "url": url, "api_key": api_key})
         i += 1
     return render_template(
-        "settings_sonarr.html", sonarr=instances, validate_summary=msg
+        "settings_sonarr.html", sonarr=instances, validate_summary=msg, error=error
     )
 
 

@@ -1,0 +1,18 @@
+/* Color scheme for researcharr */
+:root {
+  --color-bg: #181818;
+  --color-bg-alt: #222;
+  --color-header: #222;
+  --color-footer: #222;
+  --color-sidebar: #181818;
+  --color-main: #23272e;
+  --color-primary: #4f8cff;
+  --color-accent: #ffb347;
+  --color-success: #4caf50;
+  --color-warning: #ff9800;
+  --color-error: #f44336;
+  --color-text: #fff;
+  --color-text-muted: #bbb;
+  --color-link: #4f8cff;
+  --color-link-hover: #82b1ff;
+}

@@ -17,22 +17,22 @@ def index():
     return redirect(url_for("login"))
 
 
-SONARR_FORM = """  # noqa: E501
+SONARR_FORM = """
 <div class="topbar">
-  <img src="/static/logo.png" alt="researcharr logo" class="logo">
-  <span class="title-text">researcharr</span>
-  <span class="logout-link"><a href="/logout">Logout</a></span>
-</div>
-<div class="sidebar">
-  <ul>
-    <li class="app-settings-header" onclick="toggleAppSettings()">App Settings ▼
-      <ul id="app-settings-list" class="app-settings-list">
-        <li><a href="/settings/general">General</a></li>
-        <li><a href="/settings/radarr">Radarr</a></li>
-        <li><a href="/settings/sonarr" class="active">Sonarr</a></li>
-      </ul>
-    </li>
-    <li><a href="/scheduling">Scheduling</a></li>
+    <img src="/static/logo.png" alt="researcharr logo" class="logo">
+    <span class="title-text">researcharr</span>
+    <span class="logout-link"><a href="/logout">Logout</a></span>
+    <ul>
+        <li class="app-settings-header" onclick="toggleAppSettings()">App Settings ▼
+            <ul id="app-settings-list" class="app-settings-list">
+                <li><a href="/settings/general">General</a></li>
+                <li><a href="/settings/radarr">Radarr</a></li>
+                <li><a href="/settings/sonarr" class="active">Sonarr</a></li>
+            </ul>
+        </li>
+        <li><a href="/scheduling">Scheduling</a></li>
+        <li><a href="/user">User Settings</a></li>
+    </ul>
     <li><a href="/user">User Settings</a></li>
   </ul>
 </div>
@@ -78,9 +78,7 @@ function toggleAppSettings() {
 }
 </script>
 """
-
-
-USER_FORM = """  # noqa: E501
+USER_FORM = """
 <div class="main-content">
 <form method="post" action="/user">
   <fieldset><legend>User Settings</legend>
@@ -140,9 +138,8 @@ def login_required(f):
             )
             return redirect(url_for("login", next=request.url))
         return f(*args, **kwargs)
-
     return decorated_function
-  # ...existing code...
+    # ...existing code...
 GENERAL_FORM = """
 <div class="topbar">
   <img src="/static/logo.png" alt="researcharr logo" class="logo">
@@ -464,9 +461,12 @@ def settings_radarr():
         api_pulls = RADARR_SETTINGS.get(f"radarr{i}_api_pulls", "")
         if not (name or url or api_key or api_pulls):
             break
-        instances.append(
-            {"name": name, "url": url, "api_key": api_key, "api_pulls": api_pulls}
-        )
+        instances.append({
+            "name": name,
+            "url": url,
+            "api_key": api_key,
+            "api_pulls": api_pulls,
+        })
         i += 1
     form_html = "<h1>Radarr</h1>"
     if msg:
@@ -474,16 +474,20 @@ def settings_radarr():
     form_html += '<form method="post">'
     for idx, inst in enumerate(instances or [{}]):
         form_html += (
-            f'<label>Name</label><input name="radarr{idx}_name" value="{inst.get("name", "")}"><br>'
+            f'<label>Name</label><input name="radarr{idx}_name" value="{inst.get("name", "")}"'  # noqa: E501
+            f'><br>'
         )
         form_html += (
-            f'<label>URL</label><input name="radarr{idx}_url" value="{inst.get("url", "")}"><br>'
+            f'<label>URL</label><input name="radarr{idx}_url" value="{inst.get("url", "")}"'  # noqa: E501
+            f'><br>'
         )
         form_html += (
-            f'<label>API Key</label><input name="radarr{idx}_api_key" value="{inst.get("api_key", "")}"><br>'
+            f'<label>API Key</label><input name="radarr{idx}_api_key" value="{inst.get("api_key", "")}"'  # noqa: E501
+            f'><br>'
         )
         form_html += (
-            f'<label>API Pulls</label><input name="radarr{idx}_api_pulls" value="{inst.get("api_pulls", "")}"><br>'
+            f'<label>API Pulls</label><input name="radarr{idx}_api_pulls" value="{inst.get("api_pulls", "")}"'  # noqa: E501
+            f'><br>'
         )
     form_html += '<input type="submit" value="Save"></form>'
     for inst in instances:
@@ -529,13 +533,16 @@ def settings_sonarr():
     form_html += '<form method="post">'
     for idx, inst in enumerate(instances or [{}]):
         form_html += (
-            f'<label>Name</label><input name="sonarr{idx}_name" value="{inst.get("name", "")}"><br>'
+            f'<label>Name</label><input name="sonarr{idx}_name" value="{inst.get("name", "")}"'  # noqa: E501
+            f'><br>'
         )
         form_html += (
-            f'<label>URL</label><input name="sonarr{idx}_url" value="{inst.get("url", "")}"><br>'
+            f'<label>URL</label><input name="sonarr{idx}_url" value="{inst.get("url", "")}"'  # noqa: E501
+            f'><br>'
         )
         form_html += (
-            f'<label>API Key</label><input name="sonarr{idx}_api_key" value="{inst.get("api_key", "")}"><br>'
+            f'<label>API Key</label><input name="sonarr{idx}_api_key" value="{inst.get("api_key", "")}"'  # noqa: E501
+            f'><br>'
         )
     form_html += '<input type="submit" value="Save"></form>'
     for inst in instances:
@@ -578,8 +585,6 @@ def scheduling():
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-
-
         print(
             f"[DEBUG] login_required: session = {dict(session)} for {request.method} {request.path}",
             file=sys.stderr,
@@ -591,7 +596,6 @@ def login_required(f):
             )
             return redirect(url_for("login", next=request.url))
         return f(*args, **kwargs)
-
     return decorated_function
 
 
@@ -680,14 +684,17 @@ def login():
             return redirect("/settings/general")
         else:
             error = "Invalid username or password"
-  return render_template_string(
-    (
-      """<form method="post"><input name="username"><input name="password" type="password">"
-      "<input type="submit" value="Login">"
-      "{% if error %}<div>{{ error }}</div>{% endif %}</form>"""
-    ),
-    error=error,
-  )
+    return render_template_string(
+        """
+        <form method="post">
+            <input name="username">
+            <input name="password" type="password">
+            <input type="submit" value="Login">
+            {% if error %}<div>{{ error }}</div>{% endif %}
+        </form>
+        """,
+        error=error,
+    )
 
 
 @app.route("/settings/general", methods=["GET"])

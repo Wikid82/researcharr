@@ -1,0 +1,1 @@
+python -m pytest tests/ --maxfail=3 --disable-warnings -v

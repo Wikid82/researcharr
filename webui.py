@@ -192,7 +192,13 @@ def save_user_config(username, password_hash):
     with open(USER_CONFIG_PATH, 'w') as f:
         yaml.safe_dump({'username': username, 'password_hash': password_hash}, f)
 
+
 # --- End Helper Functions ---
+
+
+# Start the Flask app if run as main
+if __name__ == "__main__":
+  app.run(host="0.0.0.0", port=2929)
 # User settings route
 
 def login_required(f):

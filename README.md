@@ -74,6 +74,9 @@ pip install -r requirements.txt
 
   The web UI allows you to edit config.yml, test Radarr/Sonarr connections, enable/disable up to 5 Radarr and 5 Sonarr instances, and edit the cron job schedule from the "Scheduling" tab. All settings are protected behind login. User credentials are now managed in `webui_user.yml` (not in `webui.py`).
 
+  **New UI Behavior:**
+  - All Radarr and Sonarr instances are now disabled by default and their settings are collapsed in the web UI. Enable an instance to expand and configure it.
+
 ## Configuration
 
 All configuration is now managed in a single YAML file: `/path/to/config/config.yml`.

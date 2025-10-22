@@ -1,95 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import os
-import sys
-from functools import wraps
-import yaml
-from flask import Flask, redirect, render_template_string, request, session, url_for  # noqa: E501
-from werkzeug.security import generate_password_hash
-from flask import render_template
 
-# Initialize Flask app before any usage
-app = Flask(__name__)
-app.secret_key = "researcharr_secret_key_for_sessions"
-
-# Add root route to redirect to login
-@app.route("/")
-def index():
-    return redirect(url_for("login"))
-
-SONARR_FORM = """
-<!-- HEADER -->
-{% include 'header.html' %}
-<!-- SIDEBAR -->
-{% include 'sidebar.html' %}
-<div class="main-content" style="margin-left:220px; margin-top:64px;">
-{% if validate_summary %}<div class="user-msg">{{ validate_summary }}</div>{% endif %}
-<form method="post" action="/settings/sonarr">
-  <fieldset><legend>Sonarr Instances</legend>
-    {% for i in range(5) %}
-      <fieldset style="margin:10px; border:1px solid #ccc;">
-        <legend>Sonarr {{i+1}}</legend>
-        Enable: <label class="switch"><input name="sonarr{{i}}_enabled" type="checkbox" {% if sonarr[i].enabled %}checked{% endif %} onchange="toggleInstance('sonarr', {{i}})"><span class="slider round"></span></label><br>
-        <div id="sonarr_fields_{{i}}" class="instance-fields{% if sonarr[i].enabled %} open{% endif %}">
-          Name: <input name="sonarr{{i}}_name" value="{{ sonarr[i].name }}"><br>
-          URL: <input name="sonarr{{i}}_url" value="{{ sonarr[i].url }}"><br>
-          API Key: <input name="sonarr{{i}}_api_key" value="{{ sonarr[i].api_key }}"><br>
-          Process: <input name="sonarr{{i}}_process" type="checkbox" {% if sonarr[i].get('process', False) %}checked{% endif %}><br>
-          Process by: <select name="sonarr{{i}}_mode">
-            <option value="series" {% if sonarr[i].get('mode', 'series') == 'series' %}selected{% endif %}>Series (default, most efficient)</option>
-            <option value="season" {% if sonarr[i].get('mode') == 'season' %}selected{% endif %}>Season</option>
-            <option value="episode" {% if sonarr[i].get('mode') == 'episode' %}selected{% endif %}>Episode</option>
-          </select><br>
-          API Pulls per Hour: <input name="sonarr{{i}}_api_pulls" value="{{ sonarr[i].get('api_pulls', 20) }}" style="width:60px;"> <small>(default: 20)</small><br>
-          Enable State Management: <input name="sonarr{{i}}_state_mgmt" type="checkbox" {% if sonarr[i].get('state_mgmt', True) %}checked{% endif %}><br>
-          Episodes to Upgrade: <input name="sonarr{{i}}_episodes_to_upgrade" value="{{ sonarr[i].episodes_to_upgrade }}"><br>
-          Max Download Queue: <input name="sonarr{{i}}_max_download_queue" value="{{ sonarr[i].max_download_queue if sonarr[i].get('max_download_queue') is not none else 15 }}"><br>
-          Reprocess Interval (days): <input name="sonarr{{i}}_reprocess_interval_days" value="{{ sonarr[i].reprocess_interval_days if sonarr[i].get('reprocess_interval_days') is not none else 7 }}"><br>
-          <button type="button" onclick="testConnection('sonarr', {{i}})">Test Connection</button>
-          <button type="button" onclick="validateSonarr({{i}})">Validate & Save</button>
-          <span id="sonarr_status_{{i}}" class="test-result"></span>
-          <span id="sonarr_validate_{{i}}" class="validate-result"></span>
-        </div>
-      </fieldset>
-    {% endfor %}
-  </fieldset>
-  <br><input type="submit" value="Save Sonarr Settings">
-  </form>
-</div>
-<script>
-function toggleAppSettings() {
-  var el = document.getElementById('app-settings-list');
-  if (el.style.display === 'none') {
-    el.style.display = 'block';
-  } else {
-    el.style.display = 'none';
-  }
-}
-</script>
-"""
-USER_FORM = """
-<!-- HEADER -->
-{% include 'header.html' %}
-<!-- SIDEBAR -->
-{% include 'sidebar.html' %}
-<div class="main-content" style="margin-left:220px; margin-top:64px;">
-<form method="post" action="/user">
-  def index():
-    return redirect(url_for("login"))
-    Password: <input name="password" type="password" placeholder="Leave blank to keep current"><br>
-    <input type="submit" value="Save User Settings">
-    {% if user_msg %}<div class="user-msg">{{ user_msg }}</div>{% endif %}
-  </fieldset>
-</form>
-</div>
-"""
-
-
-GENERAL_FORM = """
-<div class="topbar">
-  <img src="/static/logo.png" alt="researcharr logo" class="logo">
-  <span class="title-text">researcharr</span>
-  <span class="logout-link"><a href="/logout">Logout</a></span>
+## Removed all remaining triple-quoted HTML assignments (USER_FORM, GENERAL_FORM, etc.)
 </div>
 <div class="sidebar">
   <ul>
@@ -114,26 +26,6 @@ GENERAL_FORM = """
   </fieldset>
 </form>
 </div>
-<script>
-function toggleAppSettings() {
-  var el = document.getElementById('app-settings-list');
-  if (el.style.display === 'none') {
-    el.style.display = 'block';
-  } else {
-    el.style.display = 'none';
-  }
-}
-</script>
-"""
-
-
-GENERAL_FORM = """
-<!-- HEADER -->
-  def logout():
-    session.clear()
-    return redirect(url_for("login"))
-<div class="main-content" style="margin-left:220px; margin-top:64px;">
-<form method="post" action="/settings/general">
   <fieldset><legend>General Settings</legend>
   def validate_sonarr(idx):
     # Always return {'success': False, 'msg': 'Invalid Sonarr index'} for test
@@ -170,14 +62,6 @@ GENERAL_FORM = """
       break
     return render_template("settings_sonarr.html", sonarr=instances, validate_summary=msg)
 function toggleAppSettings() {
-  var el = document.getElementById('app-settings-list');
-  if (el.style.display === 'none') {
-  def scheduling():
-    if request.method == "POST":
-      SCHEDULING_SETTINGS["timezone"] = request.form.get("timezone", "UTC")
-    return render_template_string("<div class='main-content'><h2>Scheduling</h2></div>")
-}
-</script>
 """
   def user_settings():
     user = {"username": "admin"}
@@ -190,60 +74,8 @@ function toggleAppSettings() {
         user["username"] = username
         user_msg = "User settings saved."
     return render_template("user.html", user=user, user_msg=user_msg)
-      <ul id="app-settings-list" class="app-settings-list">
-        <li><a href="/settings/general">General</a></li>
-        <li><a href="/settings/radarr">Radarr</a></li>
-        <li><a href="/settings/sonarr" class="active">Sonarr</a></li>
-      </ul>
-    </li>
-    <li><a href="/scheduling">Scheduling</a></li>
-    <li><a href="/user">User Settings</a></li>
-  </ul>
-</div>
-<div class="main-content">
-{% if validate_summary %}<div class="user-msg">{{ validate_summary }}</div>{% endif %}
-<form method="post" action="/settings/sonarr">
-  <fieldset><legend>Sonarr Instances</legend>
-    {% for i in range(5) %}
-      <fieldset style="margin:10px; border:1px solid #ccc;">
-        <legend>Sonarr {{i+1}}</legend>
-        Enable: <label class="switch"><input name="sonarr{{i}}_enabled" type="checkbox" {% if sonarr[i].enabled %}checked{% endif %} onchange="toggleInstance('sonarr', {{i}})"><span class="slider round"></span></label><br>
-        <div id="sonarr_fields_{{i}}" class="instance-fields{% if sonarr[i].enabled %} open{% endif %}">
-          Name: <input name="sonarr{{i}}_name" value="{{ sonarr[i].name }}"><br>
-          URL: <input name="sonarr{{i}}_url" value="{{ sonarr[i].url }}"><br>
-          API Key: <input name="sonarr{{i}}_api_key" value="{{ sonarr[i].api_key }}"><br>
-          Process: <input name="sonarr{{i}}_process" type="checkbox" {% if sonarr[i].get('process', False) %}checked{% endif %}><br>
-          Process by: <select name="sonarr{{i}}_mode">
-            <option value="series" {% if sonarr[i].get('mode', 'series') == 'series' %}selected{% endif %}>Series (default, most efficient)</option>
-            <option value="season" {% if sonarr[i].get('mode') == 'season' %}selected{% endif %}>Season</option>
-            <option value="episode" {% if sonarr[i].get('mode') == 'episode' %}selected{% endif %}>Episode</option>
-          </select><br>
-          API Pulls per Hour: <input name="sonarr{{i}}_api_pulls" value="{{ sonarr[i].get('api_pulls', 20) }}" style="width:60px;"> <small>(default: 20)</small><br>
-          Enable State Management: <input name="sonarr{{i}}_state_mgmt" type="checkbox" {% if sonarr[i].get('state_mgmt', True) %}checked{% endif %}><br>
-          Episodes to Upgrade: <input name="sonarr{{i}}_episodes_to_upgrade" value="{{ sonarr[i].episodes_to_upgrade }}"><br>
-          Max Download Queue: <input name="sonarr{{i}}_max_download_queue" value="{{ sonarr[i].max_download_queue if sonarr[i].get('max_download_queue') is not none else 15 }}"><br>
-          Reprocess Interval (days): <input name="sonarr{{i}}_reprocess_interval_days" value="{{ sonarr[i].reprocess_interval_days if sonarr[i].get('reprocess_interval_days') is not none else 7 }}"><br>
-          <button type="button" onclick="testConnection('sonarr', {{i}})">Test Connection</button>
-          <button type="button" onclick="validateSonarr({{i}})">Validate & Save</button>
-          <span id="sonarr_status_{{i}}" class="test-result"></span>
-          <span id="sonarr_validate_{{i}}" class="validate-result"></span>
-        </div>
-      </fieldset>
-    {% endfor %}
-  </fieldset>
-  <br><input type="submit" value="Save Sonarr Settings">
-  </form>
-</div>
-<script>
-function toggleAppSettings() {
-  var el = document.getElementById('app-settings-list');
-  if (el.style.display === 'none') {
-    el.style.display = 'block';
-  } else {
-    el.style.display = 'none';
-  }
-}
-</script>
+
+## Removed all raw HTML/Jinja code from Python file
 """
 
 

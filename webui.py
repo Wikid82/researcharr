@@ -569,29 +569,29 @@ def settings_sonarr():
 @app.route("/scheduling", methods=["GET", "POST"])
 @login_required
 def scheduling():
-  msg = None
-  if request.method == "POST":
-    SCHEDULING_SETTINGS["cron_schedule"] = request.form.get("cron_schedule", "")  # noqa: E501
-    SCHEDULING_SETTINGS["timezone"] = request.form.get("timezone", "UTC")
-    msg = "Schedule saved"
-  cron = SCHEDULING_SETTINGS.get("cron_schedule", "")
-  tz = SCHEDULING_SETTINGS.get("timezone", "UTC")
-  return render_template_string(
-    '<div class="main-content"><h2>Scheduling</h2>'
-    + (f"<div>{msg}</div>" if msg else "")
-    + '<form method="post">'
-    + (
-      f'<label for="timezone">Timezone:</label>'
-      f'<input id="timezone" name="timezone" value="{tz}"><br>'
+    msg = None
+    if request.method == "POST":
+        SCHEDULING_SETTINGS["cron_schedule"] = request.form.get("cron_schedule", "")  # noqa: E501
+        SCHEDULING_SETTINGS["timezone"] = request.form.get("timezone", "UTC")
+        msg = "Schedule saved"
+    cron = SCHEDULING_SETTINGS.get("cron_schedule", "")
+    tz = SCHEDULING_SETTINGS.get("timezone", "UTC")
+    return render_template_string(
+        '<div class="main-content"><h2>Scheduling</h2>'
+        + (f"<div>{msg}</div>" if msg else "")
+        + '<form method="post">'
+        + (
+            f'<label for="timezone">Timezone:</label>'
+            f'<input id="timezone" name="timezone" value="{tz}"><br>'
+        )
+        + (
+            f'<label for="cron_schedule">Cron Schedule:</label>'
+            f'<input id="cron_schedule" name="cron_schedule" value="{cron}"><br>'  # noqa: E501
+        )
+        + '<input type="submit" value="Save"></form>'
+        + (f"<div>{cron}</div>" if cron else "")
+        + "</div>"
     )
-    + (
-      f'<label for="cron_schedule">Cron Schedule:</label>'
-      f'<input id="cron_schedule" name="cron_schedule" value="{cron}"><br>'  # noqa: E501
-    )
-    + '<input type="submit" value="Save"></form>'
-    + (f"<div>{cron}</div>" if cron else "")
-    + "</div>"
-  )
 
 
 # --- Helper Functions ---
@@ -674,11 +674,11 @@ def load_user_config():
 
 
 def save_user_config(username, password_hash):
-  user_dir = os.path.dirname(USER_CONFIG_PATH)
-  if not os.path.exists(user_dir):
-    os.makedirs(user_dir, exist_ok=True)
-  with open(USER_CONFIG_PATH, "w") as f:
-    yaml.safe_dump({"username": username, "password_hash": password_hash}, f)  # noqa: E501
+    user_dir = os.path.dirname(USER_CONFIG_PATH)
+    if not os.path.exists(user_dir):
+        os.makedirs(user_dir, exist_ok=True)
+    with open(USER_CONFIG_PATH, "w") as f:
+        yaml.safe_dump({"username": username, "password_hash": password_hash}, f)  # noqa: E501
 
 
 # --- End Helper Functions ---
@@ -712,9 +712,9 @@ def login():
 
 @app.route("/settings/general", methods=["GET"])
 def settings_general():
-  if not session.get("logged_in"):
-    return redirect(url_for("login"))
-  return render_template_string(GENERAL_FORM, puid="1000", pgid="1000", msg=None)  # noqa: E501
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+    return render_template_string(GENERAL_FORM, puid="1000", pgid="1000", msg=None)  # noqa: E501
 
 
 @app.route("/save", methods=["POST"])

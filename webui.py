@@ -99,17 +99,19 @@ SETTINGS_FORM = '''
     {% for i in range(5) %}
       <fieldset style="margin:10px; border:1px solid #ccc;">
         <legend>Radarr {{i+1}}</legend>
-  Enable: <label class="switch"><input name="radarr{{i}}_enabled" type="checkbox" {% if radarr[i].enabled %}checked{% endif %}><span class="slider round"></span></label><br>
-        Name: <input name="radarr{{i}}_name" value="{{ radarr[i].name }}"><br>
-        URL: <input name="radarr{{i}}_url" value="{{ radarr[i].url }}"><br>
-        API Key: <input name="radarr{{i}}_api_key" value="{{ radarr[i].api_key }}"><br>
-  Movies to Upgrade: <input name="radarr{{i}}_movies_to_upgrade" value="{{ radarr[i].movies_to_upgrade }}"><br>
-  Max Download Queue: <input name="radarr{{i}}_max_download_queue" value="{{ radarr[i].max_download_queue if radarr[i].get('max_download_queue') is not none else 15 }}"><br>
-  Reprocess Interval (days): <input name="radarr{{i}}_reprocess_interval_days" value="{{ radarr[i].reprocess_interval_days if radarr[i].get('reprocess_interval_days') is not none else 7 }}"><br>
-  <button type="button" onclick="testConnection('radarr', {{i}})">Test Connection</button>
-  <button type="button" onclick="validateRadarr({{i}})">Validate & Save</button>
-  <span id="radarr_status_{{i}}"></span>
-  <span id="radarr_validate_{{i}}" style="margin-left:10px;"></span>
+        Enable: <label class="switch"><input name="radarr{{i}}_enabled" type="checkbox" {% if radarr[i].enabled %}checked{% endif %} onchange="toggleInstance('radarr', {{i}})"><span class="slider round"></span></label><br>
+        <div id="radarr_fields_{{i}}" style="display: {% if radarr[i].enabled %}block{% else %}none{% endif %};">
+          Name: <input name="radarr{{i}}_name" value="{{ radarr[i].name }}"><br>
+          URL: <input name="radarr{{i}}_url" value="{{ radarr[i].url }}"><br>
+          API Key: <input name="radarr{{i}}_api_key" value="{{ radarr[i].api_key }}"><br>
+          Movies to Upgrade: <input name="radarr{{i}}_movies_to_upgrade" value="{{ radarr[i].movies_to_upgrade }}"><br>
+          Max Download Queue: <input name="radarr{{i}}_max_download_queue" value="{{ radarr[i].max_download_queue if radarr[i].get('max_download_queue') is not none else 15 }}"><br>
+          Reprocess Interval (days): <input name="radarr{{i}}_reprocess_interval_days" value="{{ radarr[i].reprocess_interval_days if radarr[i].get('reprocess_interval_days') is not none else 7 }}"><br>
+          <button type="button" onclick="testConnection('radarr', {{i}})">Test Connection</button>
+          <button type="button" onclick="validateRadarr({{i}})">Validate & Save</button>
+          <span id="radarr_status_{{i}}"></span>
+          <span id="radarr_validate_{{i}}" style="margin-left:10px;"></span>
+        </div>
       </fieldset>
     {% endfor %}
   </fieldset>
@@ -117,17 +119,19 @@ SETTINGS_FORM = '''
     {% for i in range(5) %}
       <fieldset style="margin:10px; border:1px solid #ccc;">
         <legend>Sonarr {{i+1}}</legend>
-  Enable: <label class="switch"><input name="sonarr{{i}}_enabled" type="checkbox" {% if sonarr[i].enabled %}checked{% endif %}><span class="slider round"></span></label><br>
-        Name: <input name="sonarr{{i}}_name" value="{{ sonarr[i].name }}"><br>
-        URL: <input name="sonarr{{i}}_url" value="{{ sonarr[i].url }}"><br>
-        API Key: <input name="sonarr{{i}}_api_key" value="{{ sonarr[i].api_key }}"><br>
-  Episodes to Upgrade: <input name="sonarr{{i}}_episodes_to_upgrade" value="{{ sonarr[i].episodes_to_upgrade }}"><br>
-  Max Download Queue: <input name="sonarr{{i}}_max_download_queue" value="{{ sonarr[i].max_download_queue if sonarr[i].get('max_download_queue') is not none else 15 }}"><br>
-  Reprocess Interval (days): <input name="sonarr{{i}}_reprocess_interval_days" value="{{ sonarr[i].reprocess_interval_days if sonarr[i].get('reprocess_interval_days') is not none else 7 }}"><br>
-  <button type="button" onclick="testConnection('sonarr', {{i}})">Test Connection</button>
-  <button type="button" onclick="validateSonarr({{i}})">Validate & Save</button>
-  <span id="sonarr_status_{{i}}"></span>
-  <span id="sonarr_validate_{{i}}" style="margin-left:10px;"></span>
+        Enable: <label class="switch"><input name="sonarr{{i}}_enabled" type="checkbox" {% if sonarr[i].enabled %}checked{% endif %} onchange="toggleInstance('sonarr', {{i}})"><span class="slider round"></span></label><br>
+        <div id="sonarr_fields_{{i}}" style="display: {% if sonarr[i].enabled %}block{% else %}none{% endif %};">
+          Name: <input name="sonarr{{i}}_name" value="{{ sonarr[i].name }}"><br>
+          URL: <input name="sonarr{{i}}_url" value="{{ sonarr[i].url }}"><br>
+          API Key: <input name="sonarr{{i}}_api_key" value="{{ sonarr[i].api_key }}"><br>
+          Episodes to Upgrade: <input name="sonarr{{i}}_episodes_to_upgrade" value="{{ sonarr[i].episodes_to_upgrade }}"><br>
+          Max Download Queue: <input name="sonarr{{i}}_max_download_queue" value="{{ sonarr[i].max_download_queue if sonarr[i].get('max_download_queue') is not none else 15 }}"><br>
+          Reprocess Interval (days): <input name="sonarr{{i}}_reprocess_interval_days" value="{{ sonarr[i].reprocess_interval_days if sonarr[i].get('reprocess_interval_days') is not none else 7 }}"><br>
+          <button type="button" onclick="testConnection('sonarr', {{i}})">Test Connection</button>
+          <button type="button" onclick="validateSonarr({{i}})">Validate & Save</button>
+          <span id="sonarr_status_{{i}}"></span>
+          <span id="sonarr_validate_{{i}}" style="margin-left:10px;"></span>
+        </div>
       </fieldset>
     {% endfor %}
   </fieldset>
@@ -289,6 +293,11 @@ input:checked + .slider:before {
 }
 </style>
 <script>
+function toggleInstance(service, idx) {
+  var checked = document.querySelector('input[name="' + service + idx + '_enabled"]').checked;
+  var fields = document.getElementById(service + '_fields_' + idx);
+  fields.style.display = checked ? 'block' : 'none';
+}
 function testConnection(service, idx) {
   fetch('/test_connection/' + service + '/' + idx)
     .then(r => r.json())
@@ -358,8 +367,12 @@ def index():
   sonarr = cfg.get('sonarr', [])
   while len(radarr) < 5:
     radarr.append({'enabled': False, 'name': f'Radarr {len(radarr)+1}', 'url': '', 'api_key': '', 'movies_to_upgrade': 5, 'max_download_queue': 15, 'reprocess_interval_days': 7})
+  for r in radarr:
+    r['enabled'] = False
   while len(sonarr) < 5:
     sonarr.append({'enabled': False, 'name': f'Sonarr {len(sonarr)+1}', 'url': '', 'api_key': '', 'episodes_to_upgrade': 5, 'max_download_queue': 15, 'reprocess_interval_days': 7})
+  for s in sonarr:
+    s['enabled'] = False
   user = load_user_config()
   return render_template_string(SETTINGS_FORM,
     researcharr=cfg.get('researcharr', {}),

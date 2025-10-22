@@ -381,12 +381,8 @@ def index():
   sonarr = cfg.get('sonarr', [])
   while len(radarr) < 5:
     radarr.append({'enabled': False, 'name': f'Radarr {len(radarr)+1}', 'url': '', 'api_key': '', 'movies_to_upgrade': 5, 'max_download_queue': 15, 'reprocess_interval_days': 7})
-  for r in radarr:
-    r['enabled'] = False
   while len(sonarr) < 5:
     sonarr.append({'enabled': False, 'name': f'Sonarr {len(sonarr)+1}', 'url': '', 'api_key': '', 'episodes_to_upgrade': 5, 'max_download_queue': 15, 'reprocess_interval_days': 7})
-  for s in sonarr:
-    s['enabled'] = False
   user = load_user_config()
   return render_template_string(SETTINGS_FORM,
     researcharr=cfg.get('researcharr', {}),

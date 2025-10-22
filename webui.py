@@ -64,8 +64,10 @@ def save_config(cfg): pass
   <br><input type="submit" value="Save Sonarr Settings">
   </form>
 </div>
-<script>
 function toggleAppSettings() {
+  </script>
+
+
   var el = document.getElementById('app-settings-list');
   if (el.style.display === 'none') {
     el.style.display = 'block';
@@ -87,7 +89,6 @@ USER_FORM = """
 </form>
 </div>
 """
-
 
 GENERAL_FORM = """
 <div class="topbar">
@@ -117,26 +118,25 @@ function toggleAppSettings() {
   }
 }
 </script>
-"""
+def login_required(f):
 
-  
 # --- Helper Functions ---
 
 def login_required(f):
-  @wraps(f)
-  def decorated_function(*args, **kwargs):
-    print(
-      "[DEBUG] login_required: session = {} for {} {}".format(dict(session), request.method, request.path),
-      file=sys.stderr,
-    )
-    if not session.get("logged_in"):
-      print(
-        "[DEBUG] login_required: not logged in, redirecting to login",
-        file=sys.stderr,
-      )
-      return redirect(url_for("login", next=request.url))
-    return f(*args, **kwargs)
-  return decorated_function
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        print(
+            "[DEBUG] login_required: session = {} for {} {}".format(dict(session), request.method, request.path),
+            file=sys.stderr,
+        )
+        if not session.get("logged_in"):
+            print(
+                "[DEBUG] login_required: not logged in, redirecting to login",
+                file=sys.stderr,
+            )
+            return redirect(url_for("login", next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
 
 GENERAL_FORM = """
 <div class="topbar">

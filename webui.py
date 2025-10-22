@@ -12,7 +12,7 @@ app.secret_key = "researcharr_secret_key_for_sessions"
 # Add root route to redirect to login
 @app.route("/")
 def index():
-  return redirect(url_for("login"))
+    return redirect(url_for("login"))
 
 SONARR_FORM = """
 <div class="topbar">
@@ -122,20 +122,20 @@ function toggleAppSettings() {
 
 # --- Helper Functions ---
 def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        print(
-            f"[DEBUG] login_required: session = {dict(session)} for {request.method} {request.path}",
-            file=sys.stderr,
-        )
-        if not session.get("logged_in"):
-            print(
-                f"[DEBUG] login_required: not logged in, redirecting to login",
-                file=sys.stderr,
-            )
-            return redirect(url_for("login", next=request.url))
-        return f(*args, **kwargs)
-    return decorated_function
+  @wraps(f)
+  def decorated_function(*args, **kwargs):
+    print(
+      f"[DEBUG] login_required: session = {dict(session)} for {request.method} {request.path}",
+      file=sys.stderr,
+    )
+    if not session.get("logged_in"):
+      print(
+        f"[DEBUG] login_required: not logged in, redirecting to login",
+        file=sys.stderr,
+      )
+      return redirect(url_for("login", next=request.url))
+    return f(*args, **kwargs)
+  return decorated_function
     # ...existing code...
 GENERAL_FORM = """
 <div class="topbar">

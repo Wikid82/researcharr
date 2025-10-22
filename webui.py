@@ -603,10 +603,28 @@ def settings_general():
         return redirect(url_for("login"))
     return render_template("settings_general.html", puid="1000", pgid="1000", msg=None)
 
+
+# --- Helper Functions ---
+def login_required(f):
+  @wraps(f)
+  def decorated_function(*args, **kwargs):
+    print(
+      f"[DEBUG] login_required: session = {dict(session)} for {request.method} {request.path}",  # noqa: E501
+      file=sys.stderr,
+    )
+    if not session.get("logged_in"):
+      print(
+        "[DEBUG] login_required: not logged in, redirecting to login",
+        file=sys.stderr,
+      )
+      return redirect(url_for("login", next=request.url))
+    return f(*args, **kwargs)
+  return decorated_function
+
 @app.route("/save", methods=["POST"])
 @login_required
 def save_general():
-    puid = request.form.get("puid", "")
-    pgid = request.form.get("pgid", "")
-    msg = "Settings saved."
-    return render_template("settings_general.html", puid=puid, pgid=pgid, msg=msg)
+  puid = request.form.get("puid", "")
+  pgid = request.form.get("pgid", "")
+  msg = "Settings saved."
+  return render_template("settings_general.html", puid=puid, pgid=pgid, msg=msg)

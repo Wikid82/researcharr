@@ -1,4 +1,4 @@
-<p align="center" style="background: #fff; padding: 16px; border-radius: 8px;">
+<p align="center" style="background: rgba(255, 255, 255, 1); padding: 16px; border-radius: 8px;">
   <img src="static/logo.png" alt="researcharr logo" height="300"/>
 </p>
 

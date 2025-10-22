@@ -1,12 +1,5 @@
-[![Image Version](https://img.shields.io/docker/v/wikid82/researcharr?sort=semver)](https://github.com/Wikid82/researcharr)
-[![Pulls](https://img.shields.io/docker/pulls/wikid82/researcharr)](https://github.com/Wikid82/researcharr
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/Wikid82/researcharr/docker-publish.yml?branch=main)](https://github.com/Wikid82/researcharr/actions)
-[![License](https://img.shields.io/github/license/Wikid82/researcharr)](LICENSE)
-[![GitHub Release](https://img.shields.io/github/v/release/Wikid82/researcharr)](https://github.com/Wikid82/researcharr/releases)
-[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
-
 <p align="center">
-  <img src="static/logo.png" alt="researcharr logo" height="100"/>
+  <img src="static/logo.png" alt="researcharr logo" height="400"/>
 </p>
 
 # researcharr

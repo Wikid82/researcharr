@@ -1,4 +1,15 @@
 # --- Database Setup ---
+# Standard library imports
+import logging
+import os
+import sqlite3
+import datetime
+import requests
+import yaml
+import sys
+import time
+
+# --- Database Setup ---
 def init_db():
     """Initializes the SQLite database and creates tables if they don't exist."""
     db_dir = os.path.dirname(DB_PATH)
@@ -59,7 +70,6 @@ def check_radarr_connection(url, key, logger):
             logger.warning("Radarr URL or API key not set; skipping connection test.")
     except Exception as e:
         logger.error(f"Radarr connection error: {e}")
-
 
 def check_sonarr_connection(url, key, logger):
     try:

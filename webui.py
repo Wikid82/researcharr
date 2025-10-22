@@ -120,6 +120,7 @@ SETTINGS_FORM = '''
           URL: <input name="radarr{{i}}_url" value="{{ radarr[i].url }}"><br>
           API Key: <input name="radarr{{i}}_api_key" value="{{ radarr[i].api_key }}"><br>
           Process: <input name="radarr{{i}}_process" type="checkbox" {% if radarr[i].get('process', False) %}checked{% endif %}><br>
+          Enable State Management: <input name="radarr{{i}}_state_mgmt" type="checkbox" {% if radarr[i].get('state_mgmt', True) %}checked{% endif %}><br>
           Movies to Upgrade: <input name="radarr{{i}}_movies_to_upgrade" value="{{ radarr[i].movies_to_upgrade }}"><br>
           Max Download Queue: <input name="radarr{{i}}_max_download_queue" value="{{ radarr[i].max_download_queue if radarr[i].get('max_download_queue') is not none else 15 }}"><br>
           Reprocess Interval (days): <input name="radarr{{i}}_reprocess_interval_days" value="{{ radarr[i].reprocess_interval_days if radarr[i].get('reprocess_interval_days') is not none else 7 }}"><br>
@@ -141,6 +142,13 @@ SETTINGS_FORM = '''
           URL: <input name="sonarr{{i}}_url" value="{{ sonarr[i].url }}"><br>
           API Key: <input name="sonarr{{i}}_api_key" value="{{ sonarr[i].api_key }}"><br>
           Process: <input name="sonarr{{i}}_process" type="checkbox" {% if sonarr[i].get('process', False) %}checked{% endif %}><br>
+          Process by: <select name="sonarr{{i}}_mode">
+            <option value="series" {% if sonarr[i].get('mode', 'series') == 'series' %}selected{% endif %}>Series (default, most efficient)</option>
+            <option value="season" {% if sonarr[i].get('mode') == 'season' %}selected{% endif %}>Season</option>
+            <option value="episode" {% if sonarr[i].get('mode') == 'episode' %}selected{% endif %}>Episode</option>
+          </select><br>
+          API Pulls per Hour: <input name="sonarr{{i}}_api_pulls" value="{{ sonarr[i].get('api_pulls', 20) }}" style="width:60px;"> <small>(default: 20)</small><br>
+          Enable State Management: <input name="sonarr{{i}}_state_mgmt" type="checkbox" {% if sonarr[i].get('state_mgmt', True) %}checked{% endif %}><br>
           Episodes to Upgrade: <input name="sonarr{{i}}_episodes_to_upgrade" value="{{ sonarr[i].episodes_to_upgrade }}"><br>
           Max Download Queue: <input name="sonarr{{i}}_max_download_queue" value="{{ sonarr[i].max_download_queue if sonarr[i].get('max_download_queue') is not none else 15 }}"><br>
           Reprocess Interval (days): <input name="sonarr{{i}}_reprocess_interval_days" value="{{ sonarr[i].reprocess_interval_days if sonarr[i].get('reprocess_interval_days') is not none else 7 }}"><br>
@@ -513,96 +521,104 @@ def user_settings():
 @app.route('/save', methods=['POST'])
 @login_required
 def save():
-    cfg = load_config()
-    # General
-    cfg['researcharr']['puid'] = int(request.form.get('puid', 1000))
-    cfg['researcharr']['pgid'] = int(request.form.get('pgid', 1000))
-    # Timezone and cron_schedule are only set in the Scheduling tab
+  cfg = load_config()
+  # General
+  cfg['researcharr']['puid'] = int(request.form.get('puid', 1000))
+  cfg['researcharr']['pgid'] = int(request.form.get('pgid', 1000))
+  # Timezone and cron_schedule are only set in the Scheduling tab
 
-    # Radarr
-    radarr = []
-    radarr_results = []
-    for i in range(5):
-        enabled = f'radarr{i}_enabled' in request.form
-        process = f'radarr{i}_process' in request.form
-        name = request.form.get(f'radarr{i}_name', f'Radarr {i+1}')
-        url = request.form.get(f'radarr{i}_url', '')
-        api_key = request.form.get(f'radarr{i}_api_key', '')
-        radarr.append({
-            'enabled': enabled,
-            'process': process,
-            'name': name,
-            'url': url,
-            'api_key': api_key,
-            'movies_to_upgrade': int(request.form.get(f'radarr{i}_movies_to_upgrade', 5)),
-            'max_download_queue': int(request.form.get(f'radarr{i}_max_download_queue', 15)),
-            'reprocess_interval_days': int(request.form.get(f'radarr{i}_reprocess_interval_days', 7)),
-        })
-        # Validate enabled instance
-        if enabled and url and api_key:
-            try:
-                test_url = url if url.startswith('http') else 'http://' + url
-                resp = requests.get(test_url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': api_key}, timeout=10)
-                if resp.status_code == 200:
-                    radarr_results.append((name, True, 'Connection successful'))
-                else:
-                    radarr_results.append((name, False, f'HTTP {resp.status_code}'))
-            except Exception as e:
-                radarr_results.append((name, False, str(e)))
-        elif enabled:
-            radarr_results.append((name, False, 'Missing URL or API key'))
-    cfg['radarr'] = radarr
+  # Radarr
+  radarr = []
+  radarr_results = []
+  for i in range(5):
+    enabled = f'radarr{i}_enabled' in request.form
+    process = f'radarr{i}_process' in request.form
+    state_mgmt = f'radarr{i}_state_mgmt' in request.form
+    name = request.form.get(f'radarr{i}_name', f'Radarr {i+1}')
+    url = request.form.get(f'radarr{i}_url', '')
+    api_key = request.form.get(f'radarr{i}_api_key', '')
+    radarr.append({
+      'enabled': enabled,
+      'process': process,
+      'state_mgmt': state_mgmt,
+      'name': name,
+      'url': url,
+      'api_key': api_key,
+      'movies_to_upgrade': int(request.form.get(f'radarr{i}_movies_to_upgrade', 5)),
+      'max_download_queue': int(request.form.get(f'radarr{i}_max_download_queue', 15)),
+      'reprocess_interval_days': int(request.form.get(f'radarr{i}_reprocess_interval_days', 7)),
+    })
+    # Validate enabled instance
+    if enabled and url and api_key:
+      try:
+        test_url = url if url.startswith('http') else 'http://' + url
+        resp = requests.get(test_url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': api_key}, timeout=10)
+        if resp.status_code == 200:
+          radarr_results.append((name, True, 'Connection successful'))
+        else:
+          radarr_results.append((name, False, f'HTTP {resp.status_code}'))
+      except Exception as e:
+        radarr_results.append((name, False, str(e)))
+    elif enabled:
+      radarr_results.append((name, False, 'Missing URL or API key'))
+  cfg['radarr'] = radarr
 
-    # Sonarr
-    sonarr = []
-    sonarr_results = []
-    for i in range(5):
-        enabled = f'sonarr{i}_enabled' in request.form
-        process = f'sonarr{i}_process' in request.form
-        name = request.form.get(f'sonarr{i}_name', f'Sonarr {i+1}')
-        url = request.form.get(f'sonarr{i}_url', '')
-        api_key = request.form.get(f'sonarr{i}_api_key', '')
-        sonarr.append({
-            'enabled': enabled,
-            'process': process,
-            'name': name,
-            'url': url,
-            'api_key': api_key,
-            'episodes_to_upgrade': int(request.form.get(f'sonarr{i}_episodes_to_upgrade', 5)),
-            'max_download_queue': int(request.form.get(f'sonarr{i}_max_download_queue', 15)),
-            'reprocess_interval_days': int(request.form.get(f'sonarr{i}_reprocess_interval_days', 7)),
-        })
-        # Validate enabled instance
-        if enabled and url and api_key:
-            try:
-                test_url = url if url.startswith('http') else 'http://' + url
-                resp = requests.get(test_url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': api_key}, timeout=10)
-                if resp.status_code == 200:
-                    sonarr_results.append((name, True, 'Connection successful'))
-                else:
-                    sonarr_results.append((name, False, f'HTTP {resp.status_code}'))
-            except Exception as e:
-                sonarr_results.append((name, False, str(e)))
-        elif enabled:
-            sonarr_results.append((name, False, 'Missing URL or API key'))
-    cfg['sonarr'] = sonarr
+  # Sonarr
+  sonarr = []
+  sonarr_results = []
+  for i in range(5):
+    enabled = f'sonarr{i}_enabled' in request.form
+    process = f'sonarr{i}_process' in request.form
+    mode = request.form.get(f'sonarr{i}_mode', 'series')
+    api_pulls = int(request.form.get(f'sonarr{i}_api_pulls', 20))
+    state_mgmt = f'sonarr{i}_state_mgmt' in request.form
+    name = request.form.get(f'sonarr{i}_name', f'Sonarr {i+1}')
+    url = request.form.get(f'sonarr{i}_url', '')
+    api_key = request.form.get(f'sonarr{i}_api_key', '')
+    sonarr.append({
+      'enabled': enabled,
+      'process': process,
+      'mode': mode,
+      'api_pulls': api_pulls,
+      'state_mgmt': state_mgmt,
+      'name': name,
+      'url': url,
+      'api_key': api_key,
+      'episodes_to_upgrade': int(request.form.get(f'sonarr{i}_episodes_to_upgrade', 5)),
+      'max_download_queue': int(request.form.get(f'sonarr{i}_max_download_queue', 15)),
+      'reprocess_interval_days': int(request.form.get(f'sonarr{i}_reprocess_interval_days', 7)),
+    })
+    # Validate enabled instance
+    if enabled and url and api_key:
+      try:
+        test_url = url if url.startswith('http') else 'http://' + url
+        resp = requests.get(test_url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': api_key}, timeout=10)
+        if resp.status_code == 200:
+          sonarr_results.append((name, True, 'Connection successful'))
+        else:
+          sonarr_results.append((name, False, f'HTTP {resp.status_code}'))
+      except Exception as e:
+        sonarr_results.append((name, False, str(e)))
+    elif enabled:
+      sonarr_results.append((name, False, 'Missing URL or API key'))
+  cfg['sonarr'] = sonarr
 
-    save_config(cfg)
-    # Compose summary message
-    summary = []
-    if radarr_results:
-        summary.append('Radarr:')
-        for name, ok, msg in radarr_results:
-            summary.append(f"{name}: {'✅' if ok else '❌'} {msg}")
-    if sonarr_results:
-        summary.append('Sonarr:')
-        for name, ok, msg in sonarr_results:
-            summary.append(f"{name}: {'✅' if ok else '❌'} {msg}")
-    if summary:
-        flash('Validation results after save:<br>' + '<br>'.join(summary), 'validate')
-    else:
-        flash('Settings saved!')
-    return redirect(url_for('index'))
+  save_config(cfg)
+  # Compose summary message
+  summary = []
+  if radarr_results:
+    summary.append('Radarr:')
+    for name, ok, msg in radarr_results:
+      summary.append(f"{name}: {'✅' if ok else '❌'} {msg}")
+  if sonarr_results:
+    summary.append('Sonarr:')
+    for name, ok, msg in sonarr_results:
+      summary.append(f"{name}: {'✅' if ok else '❌'} {msg}")
+  if summary:
+    flash('Validation results after save:<br>' + '<br>'.join(summary), 'validate')
+  else:
+    flash('Settings saved!')
+  return redirect(url_for('index'))
 
 
 @app.route('/test_connection/<service>/<int:idx>')

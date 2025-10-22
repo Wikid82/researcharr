@@ -449,7 +449,7 @@ def settings_radarr():
             "api_pulls": api_pulls,
         })
         i += 1
-  return render_template("settings_radarr.html", radarr=instances, msg=msg)
+      return render_template("settings_radarr.html", radarr=instances, msg=msg)
 
 @app.route("/settings/sonarr", methods=["GET", "POST"])
 @login_required
@@ -476,32 +476,7 @@ def settings_sonarr():
             break
         instances.append({"name": name, "url": url, "api_key": api_key})
         i += 1
-    form_html = "<h1>Sonarr</h1>"
-    if msg:
-        form_html += f"<div>{msg}</div>"
-    if error:
-        form_html += f"<div>{error}</div>"
-    form_html += '<form method="post">'
-    for idx, inst in enumerate(instances or [{}]):
-        form_html += (
-            f'<label>Name</label><input name="sonarr{idx}_name" value="{inst.get("name", "")}"'  # noqa: E501
-            f'><br>'
-        )
-        form_html += (
-            f'<label>URL</label><input name="sonarr{idx}_url" value="{inst.get("url", "")}"'  # noqa: E501
-            f'><br>'
-        )
-        form_html += (
-            f'<label>API Key</label><input name="sonarr{idx}_api_key" value="{inst.get("api_key", "")}"'  # noqa: E501
-            f'><br>'
-        )
-    form_html += '<input type="submit" value="Save"></form>'
-    for inst in instances:
-        if inst["name"]:
-            form_html += f'<div>{inst["name"]}</div>'
-        if inst["url"]:
-            form_html += f'<div>{inst["url"]}</div>'
-  return render_template("settings_sonarr.html", sonarr=instances, validate_summary=msg)
+    return render_template("settings_sonarr.html", sonarr=instances, validate_summary=msg)
 
 @app.route("/scheduling", methods=["GET", "POST"])
 @login_required
@@ -513,8 +488,8 @@ def scheduling():
         msg = "Schedule saved"
     cron = SCHEDULING_SETTINGS.get("cron_schedule", "")
     tz = SCHEDULING_SETTINGS.get("timezone", "UTC")
-  # TODO: Create scheduling.html and use render_template here
-  return render_template_string("<div class='main-content'><h2>Scheduling</h2></div>")
+    # TODO: Create scheduling.html and use render_template here
+    return render_template_string("<div class='main-content'><h2>Scheduling</h2></div>")
 
  # --- Helper Functions ---
 def login_required(f):
@@ -550,7 +525,7 @@ def user_settings():
         else:
             user["username"] = username
             user_msg = "User settings saved."
-  return render_template("user.html", user=user, user_msg=user_msg)
+    return render_template("user.html", user=user, user_msg=user_msg)
 
 
 
@@ -617,13 +592,13 @@ def login():
             return redirect("/settings/general")
         else:
             error = "Invalid username or password"
-  return render_template("login.html", error=error)
+    return render_template("login.html", error=error)
 
 @app.route("/settings/general", methods=["GET"])
 def settings_general():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
-  return render_template("settings_general.html", puid="1000", pgid="1000", msg=None)
+    return render_template("settings_general.html", puid="1000", pgid="1000", msg=None)
 
 @app.route("/save", methods=["POST"])
 @login_required
@@ -631,4 +606,4 @@ def save_general():
     puid = request.form.get("puid", "")
     pgid = request.form.get("pgid", "")
     msg = "Settings saved."
-  return render_template("settings_general.html", puid=puid, pgid=pgid, msg=msg)
+    return render_template("settings_general.html", puid=puid, pgid=pgid, msg=msg)

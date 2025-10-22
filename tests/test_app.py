@@ -2,7 +2,6 @@ import importlib
 import os
 import sqlite3
 import sys
-import tempfile
 from unittest import mock
 
 import pytest
@@ -17,7 +16,9 @@ def patch_config_paths(tmp_path_factory, monkeypatch):
         "os.environ", {**os.environ, "TZ": "America/New_York"}, raising=False
     )
     monkeypatch.setattr(
-        "researcharr.app.DB_PATH", str(temp_dir / "researcharr.db"), raising=False
+        "researcharr.app.DB_PATH",
+        str(temp_dir / "researcharr.db"),
+        raising=False,
     )
     monkeypatch.setattr("researcharr.app.main_logger", None, raising=False)
     monkeypatch.setattr("researcharr.app.radarr_logger", None, raising=False)
@@ -36,11 +37,11 @@ def patch_config_paths(tmp_path_factory, monkeypatch):
     config_path = temp_dir / "config.yml"
     with open(config_path, "w") as f:
         f.write(
-            "researcharr:\n  timezone: America/New_York\n  puid: 1000\n  pgid: 1000\n  cron_schedule: '0 * * * *'\nradarr: []\nsonarr: []\n"
+            "researcharr:\n  timezone: America/New_York\n  puid: 1000\n  pgid: 1000\n"
+            "  cron_schedule: '0 * * * *'\nradarr: []\nsonarr: []\n"
         )
-    import builtins
 
-    real_open = builtins.open
+    # ...existing code...
     # builtins.open monkeypatch is handled globally in conftest.py
     # Re-import app to apply patches
     if "researcharr.app" in sys.modules:
@@ -111,7 +112,7 @@ def test_radarr_connection_unreachable(monkeypatch):
     logger = mock.Mock()
     with mock.patch(
         "researcharr.app.requests.get", side_effect=Exception("unreachable")
-    ) as mock_get:
+    ):
         app.check_radarr_connection("http://badhost", "abc", logger)
         logger.error.assert_called()
 
@@ -122,7 +123,7 @@ def test_sonarr_connection_unreachable(monkeypatch):
     logger = mock.Mock()
     with mock.patch(
         "researcharr.app.requests.get", side_effect=Exception("unreachable")
-    ) as mock_get:
+    ):
         app.check_sonarr_connection("http://badhost", "abc", logger)
         logger.error.assert_called()
 

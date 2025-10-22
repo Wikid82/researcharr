@@ -29,9 +29,7 @@ fi
 
 
 
-# Ensure /config/config.yml exists, copy from example if missing
-if [ ! -f /config/config.yml ]; then
-  if [ -f /app/config.example.yml ]; then
+ # Ensure /config/config.yml exists, copy from example if missing
 if [ ! -f /config/config.yml ]; then
   if [ -f /app/config.example.yml ]; then
     cp /app/config.example.yml /config/config.yml

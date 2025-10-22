@@ -69,8 +69,11 @@ if [ "$CRON_FIELD_COUNT" -ne 5 ]; then
   CRON_SCHEDULE="0 * * * *"
 fi
 
-# Create cron job file that executes the python script
-echo "${CRON_SCHEDULE} python3 /app/app.py" > /etc/cron.d/researcharr-cron
+
+# Create cron job file that executes the python script (must include 'root' user field and end with newline)
+echo "${CRON_SCHEDULE} root python3 /app/app.py" > /etc/cron.d/researcharr-cron
+# Ensure file ends with a newline
+echo >> /etc/cron.d/researcharr-cron
 chmod 0644 /etc/cron.d/researcharr-cron
 crontab /etc/cron.d/researcharr-cron
 

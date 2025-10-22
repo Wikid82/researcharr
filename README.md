@@ -1,5 +1,5 @@
-[![Docker Image Version](https://img.shields.io/docker/v/wikid82/researcharr?sort=semver)](https://hub.docker.com/r/wikid82/researcharr)
-[![Docker Pulls](https://img.shields.io/docker/pulls/wikid82/researcharr)](https://hub.docker.com/r/wikid82/researcharr)
+[![Image Version](https://img.shields.io/docker/v/wikid82/researcharr?sort=semver)](https://github.com/Wikid82/researcharr)
+[![Pulls](https://img.shields.io/docker/pulls/wikid82/researcharr)](https://github.com/Wikid82/researcharr
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/Wikid82/researcharr/docker-publish.yml?branch=main)](https://github.com/Wikid82/researcharr/actions)
 [![License](https://img.shields.io/github/license/Wikid82/researcharr)](LICENSE)
 [![GitHub Release](https://img.shields.io/github/v/release/Wikid82/researcharr)](https://github.com/Wikid82/researcharr/releases)

@@ -519,73 +519,73 @@ def save():
     cfg['researcharr']['pgid'] = int(request.form.get('pgid', 1000))
     # Timezone and cron_schedule are only set in the Scheduling tab
 
-  # Radarr
-  radarr = []
-  radarr_results = []
-  for i in range(5):
-    enabled = f'radarr{i}_enabled' in request.form
-    process = f'radarr{i}_process' in request.form
-    name = request.form.get(f'radarr{i}_name', f'Radarr {i+1}')
-    url = request.form.get(f'radarr{i}_url', '')
-    api_key = request.form.get(f'radarr{i}_api_key', '')
-    radarr.append({
-      'enabled': enabled,
-      'process': process,
-      'name': name,
-      'url': url,
-      'api_key': api_key,
-      'movies_to_upgrade': int(request.form.get(f'radarr{i}_movies_to_upgrade', 5)),
-      'max_download_queue': int(request.form.get(f'radarr{i}_max_download_queue', 15)),
-      'reprocess_interval_days': int(request.form.get(f'radarr{i}_reprocess_interval_days', 7)),
-    })
-    # Validate enabled instance
-    if enabled and url and api_key:
-      try:
-        test_url = url if url.startswith('http') else 'http://' + url
-        resp = requests.get(test_url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': api_key}, timeout=10)
-        if resp.status_code == 200:
-          radarr_results.append((name, True, 'Connection successful'))
-        else:
-          radarr_results.append((name, False, f'HTTP {resp.status_code}'))
-      except Exception as e:
-        radarr_results.append((name, False, str(e)))
-    elif enabled:
-      radarr_results.append((name, False, 'Missing URL or API key'))
-  cfg['radarr'] = radarr
+    # Radarr
+    radarr = []
+    radarr_results = []
+    for i in range(5):
+        enabled = f'radarr{i}_enabled' in request.form
+        process = f'radarr{i}_process' in request.form
+        name = request.form.get(f'radarr{i}_name', f'Radarr {i+1}')
+        url = request.form.get(f'radarr{i}_url', '')
+        api_key = request.form.get(f'radarr{i}_api_key', '')
+        radarr.append({
+            'enabled': enabled,
+            'process': process,
+            'name': name,
+            'url': url,
+            'api_key': api_key,
+            'movies_to_upgrade': int(request.form.get(f'radarr{i}_movies_to_upgrade', 5)),
+            'max_download_queue': int(request.form.get(f'radarr{i}_max_download_queue', 15)),
+            'reprocess_interval_days': int(request.form.get(f'radarr{i}_reprocess_interval_days', 7)),
+        })
+        # Validate enabled instance
+        if enabled and url and api_key:
+            try:
+                test_url = url if url.startswith('http') else 'http://' + url
+                resp = requests.get(test_url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': api_key}, timeout=10)
+                if resp.status_code == 200:
+                    radarr_results.append((name, True, 'Connection successful'))
+                else:
+                    radarr_results.append((name, False, f'HTTP {resp.status_code}'))
+            except Exception as e:
+                radarr_results.append((name, False, str(e)))
+        elif enabled:
+            radarr_results.append((name, False, 'Missing URL or API key'))
+    cfg['radarr'] = radarr
 
-  # Sonarr
-  sonarr = []
-  sonarr_results = []
-  for i in range(5):
-    enabled = f'sonarr{i}_enabled' in request.form
-    process = f'sonarr{i}_process' in request.form
-    name = request.form.get(f'sonarr{i}_name', f'Sonarr {i+1}')
-    url = request.form.get(f'sonarr{i}_url', '')
-    api_key = request.form.get(f'sonarr{i}_api_key', '')
-    sonarr.append({
-      'enabled': enabled,
-      'process': process,
-      'name': name,
-      'url': url,
-      'api_key': api_key,
-      'episodes_to_upgrade': int(request.form.get(f'sonarr{i}_episodes_to_upgrade', 5)),
-      'max_download_queue': int(request.form.get(f'sonarr{i}_max_download_queue', 15)),
-      'reprocess_interval_days': int(request.form.get(f'sonarr{i}_reprocess_interval_days', 7)),
-    })
-    # Validate enabled instance
-    if enabled and url and api_key:
-      try:
-        test_url = url if url.startswith('http') else 'http://' + url
-        resp = requests.get(test_url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': api_key}, timeout=10)
-        if resp.status_code == 200:
-          sonarr_results.append((name, True, 'Connection successful'))
-        else:
-          sonarr_results.append((name, False, f'HTTP {resp.status_code}'))
-      except Exception as e:
-        sonarr_results.append((name, False, str(e)))
-    elif enabled:
-      sonarr_results.append((name, False, 'Missing URL or API key'))
-  cfg['sonarr'] = sonarr
+    # Sonarr
+    sonarr = []
+    sonarr_results = []
+    for i in range(5):
+        enabled = f'sonarr{i}_enabled' in request.form
+        process = f'sonarr{i}_process' in request.form
+        name = request.form.get(f'sonarr{i}_name', f'Sonarr {i+1}')
+        url = request.form.get(f'sonarr{i}_url', '')
+        api_key = request.form.get(f'sonarr{i}_api_key', '')
+        sonarr.append({
+            'enabled': enabled,
+            'process': process,
+            'name': name,
+            'url': url,
+            'api_key': api_key,
+            'episodes_to_upgrade': int(request.form.get(f'sonarr{i}_episodes_to_upgrade', 5)),
+            'max_download_queue': int(request.form.get(f'sonarr{i}_max_download_queue', 15)),
+            'reprocess_interval_days': int(request.form.get(f'sonarr{i}_reprocess_interval_days', 7)),
+        })
+        # Validate enabled instance
+        if enabled and url and api_key:
+            try:
+                test_url = url if url.startswith('http') else 'http://' + url
+                resp = requests.get(test_url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': api_key}, timeout=10)
+                if resp.status_code == 200:
+                    sonarr_results.append((name, True, 'Connection successful'))
+                else:
+                    sonarr_results.append((name, False, f'HTTP {resp.status_code}'))
+            except Exception as e:
+                sonarr_results.append((name, False, str(e)))
+        elif enabled:
+            sonarr_results.append((name, False, 'Missing URL or API key'))
+    cfg['sonarr'] = sonarr
 
     save_config(cfg)
     # Compose summary message

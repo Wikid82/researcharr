@@ -88,6 +88,9 @@ SETTINGS_FORM = '''
   </ul>
 </div>
 <div class="main-content">
+{% if validate_summary %}
+  <div class="validate-summary">{{ validate_summary|safe }}</div>
+{% endif %}
 {% if active_tab == 'app' %}
 <form method="post" action="/save">
   <fieldset><legend>General</legend>
@@ -109,8 +112,8 @@ SETTINGS_FORM = '''
           Reprocess Interval (days): <input name="radarr{{i}}_reprocess_interval_days" value="{{ radarr[i].reprocess_interval_days if radarr[i].get('reprocess_interval_days') is not none else 7 }}"><br>
           <button type="button" onclick="testConnection('radarr', {{i}})">Test Connection</button>
           <button type="button" onclick="validateRadarr({{i}})">Validate & Save</button>
-          <span id="radarr_status_{{i}}"></span>
-          <span id="radarr_validate_{{i}}" style="margin-left:10px;"></span>
+          <span id="radarr_status_{{i}}" class="test-result"></span>
+          <span id="radarr_validate_{{i}}" class="validate-result"></span>
         </div>
       </fieldset>
     {% endfor %}
@@ -129,8 +132,8 @@ SETTINGS_FORM = '''
           Reprocess Interval (days): <input name="sonarr{{i}}_reprocess_interval_days" value="{{ sonarr[i].reprocess_interval_days if sonarr[i].get('reprocess_interval_days') is not none else 7 }}"><br>
           <button type="button" onclick="testConnection('sonarr', {{i}})">Test Connection</button>
           <button type="button" onclick="validateSonarr({{i}})">Validate & Save</button>
-          <span id="sonarr_status_{{i}}"></span>
-          <span id="sonarr_validate_{{i}}" style="margin-left:10px;"></span>
+          <span id="sonarr_status_{{i}}" class="test-result"></span>
+          <span id="sonarr_validate_{{i}}" class="validate-result"></span>
         </div>
       </fieldset>
     {% endfor %}
@@ -162,6 +165,24 @@ SETTINGS_FORM = '''
 {% endif %}
 </div>
 <style>
+.test-result, .validate-result {
+  display: inline-block;
+  margin-left: 10px;
+  font-weight: bold;
+  padding: 2px 10px;
+  border-radius: 6px;
+  min-width: 120px;
+}
+.test-result.success, .validate-result.success {
+  background: #e6ffe6;
+  color: #217a21;
+  border: 1px solid #b2e6b2;
+}
+.test-result.error, .validate-result.error {
+  background: #ffe6e6;
+  color: #a12121;
+  border: 1px solid #e6b2b2;
+}
 body {
   background: linear-gradient(135deg, #5B6EF1 0%, #3B50C1 100%);
   font-family: 'Segoe UI', Arial, sans-serif;
@@ -303,6 +324,19 @@ input:checked + .slider:before {
   max-height: 500px;
   opacity: 1;
 }
+}
+  .validate-summary {
+  background: #f7fbe7;
+  color: #2a3b8b;
+  border: 1.5px solid #b2e6b2;
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  font-size: 1.08em;
+  font-weight: 500;
+  line-height: 1.6;
+  box-shadow: 0 2px 8px rgba(42,59,139,0.07);
+}
 </style>
 <script>
 function toggleInstance(service, idx) {
@@ -325,28 +359,50 @@ window.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
+
 function testConnection(service, idx) {
   fetch('/test_connection/' + service + '/' + idx)
     .then(r => r.json())
-    .then data => {
-      document.getElementById(service + '_status_' + idx).innerText = data.status;
+    .then(data => {
+      var el = document.getElementById(service + '_status_' + idx);
+      el.innerText = data.status;
+      el.classList.remove('success', 'error');
+      if (data.status && data.status.toLowerCase().includes('success')) {
+        el.classList.add('success');
+      } else {
+        el.classList.add('error');
+      }
     });
 }
 
 function validateRadarr(idx) {
-  document.getElementById('radarr_validate_' + idx).innerText = 'Validating...';
+  var el = document.getElementById('radarr_validate_' + idx);
+  el.innerText = 'Validating...';
+  el.classList.remove('success', 'error');
   fetch('/validate_radarr/' + idx, {method: 'POST'})
     .then(r => r.json())
     .then(data => {
-      document.getElementById('radarr_validate_' + idx).innerText = data.msg;
+      el.innerText = data.msg;
+      if (data.success) {
+        el.classList.add('success');
+      } else {
+        el.classList.add('error');
+      }
     });
 }
 function validateSonarr(idx) {
-  document.getElementById('sonarr_validate_' + idx).innerText = 'Validating...';
+  var el = document.getElementById('sonarr_validate_' + idx);
+  el.innerText = 'Validating...';
+  el.classList.remove('success', 'error');
   fetch('/validate_sonarr/' + idx, {method: 'POST'})
     .then(r => r.json())
     .then(data => {
-      document.getElementById('sonarr_validate_' + idx).innerText = data.msg;
+      el.innerText = data.msg;
+      if (data.success) {
+        el.classList.add('success');
+      } else {
+        el.classList.add('error');
+      }
     });
 }
 </script>
@@ -388,22 +444,30 @@ def save_config(cfg):
 @app.route('/', methods=['GET'])
 @login_required
 def index():
-  cfg = load_config()
-  # Pad radarr/sonarr lists to 5 for UI
-  radarr = cfg.get('radarr', [])
-  sonarr = cfg.get('sonarr', [])
-  while len(radarr) < 5:
-    radarr.append({'enabled': False, 'name': f'Radarr {len(radarr)+1}', 'url': '', 'api_key': '', 'movies_to_upgrade': 5, 'max_download_queue': 15, 'reprocess_interval_days': 7})
-  while len(sonarr) < 5:
-    sonarr.append({'enabled': False, 'name': f'Sonarr {len(sonarr)+1}', 'url': '', 'api_key': '', 'episodes_to_upgrade': 5, 'max_download_queue': 15, 'reprocess_interval_days': 7})
-  user = load_user_config()
-  return render_template_string(SETTINGS_FORM,
-    researcharr=cfg.get('researcharr', {}),
-    radarr=radarr,
-    sonarr=sonarr,
-    active_tab='app',
-    user=user,
-    user_msg=None)
+    cfg = load_config()
+    # Pad radarr/sonarr lists to 5 for UI
+    radarr = cfg.get('radarr', [])
+    sonarr = cfg.get('sonarr', [])
+    while len(radarr) < 5:
+        radarr.append({'enabled': False, 'name': f'Radarr {len(radarr)+1}', 'url': '', 'api_key': '', 'movies_to_upgrade': 5, 'max_download_queue': 15, 'reprocess_interval_days': 7})
+    while len(sonarr) < 5:
+        sonarr.append({'enabled': False, 'name': f'Sonarr {len(sonarr)+1}', 'url': '', 'api_key': '', 'episodes_to_upgrade': 5, 'max_download_queue': 15, 'reprocess_interval_days': 7})
+    user = load_user_config()
+    # Show validation summary if present
+    from flask import get_flashed_messages
+    messages = get_flashed_messages(with_categories=True)
+    validate_summary = None
+    for cat, msg in messages:
+        if cat == 'validate':
+            validate_summary = msg
+    return render_template_string(SETTINGS_FORM,
+        researcharr=cfg.get('researcharr', {}),
+        radarr=radarr,
+        sonarr=sonarr,
+        active_tab='app',
+        user=user,
+        user_msg=None,
+        validate_summary=validate_summary)
 
 @app.route('/user', methods=['GET', 'POST'])
 @login_required
@@ -435,40 +499,92 @@ def user_settings():
 @app.route('/save', methods=['POST'])
 @login_required
 def save():
-  cfg = load_config()
-  # General
-  cfg['researcharr']['puid'] = int(request.form.get('puid', 1000))
-  cfg['researcharr']['pgid'] = int(request.form.get('pgid', 1000))
-  # Timezone and cron_schedule are only set in the Scheduling tab
-  # Radarr
-  radarr = []
-  for i in range(5):
-    radarr.append({
-      'enabled': f'radarr{i}_enabled' in request.form,
-      'name': request.form.get(f'radarr{i}_name', f'Radarr {i+1}'),
-      'url': request.form.get(f'radarr{i}_url', ''),
-      'api_key': request.form.get(f'radarr{i}_api_key', ''),
-      'movies_to_upgrade': int(request.form.get(f'radarr{i}_movies_to_upgrade', 5)),
-      'max_download_queue': int(request.form.get(f'radarr{i}_max_download_queue', 15)),
-      'reprocess_interval_days': int(request.form.get(f'radarr{i}_reprocess_interval_days', 7)),
-    })
-  cfg['radarr'] = radarr
-  # Sonarr
-  sonarr = []
-  for i in range(5):
-    sonarr.append({
-      'enabled': f'sonarr{i}_enabled' in request.form,
-      'name': request.form.get(f'sonarr{i}_name', f'Sonarr {i+1}'),
-      'url': request.form.get(f'sonarr{i}_url', ''),
-      'api_key': request.form.get(f'sonarr{i}_api_key', ''),
-      'episodes_to_upgrade': int(request.form.get(f'sonarr{i}_episodes_to_upgrade', 5)),
-      'max_download_queue': int(request.form.get(f'sonarr{i}_max_download_queue', 15)),
-      'reprocess_interval_days': int(request.form.get(f'sonarr{i}_reprocess_interval_days', 7)),
-    })
-  cfg['sonarr'] = sonarr
-  save_config(cfg)
-  flash('Settings saved!')
-  return redirect(url_for('index'))
+    cfg = load_config()
+    # General
+    cfg['researcharr']['puid'] = int(request.form.get('puid', 1000))
+    cfg['researcharr']['pgid'] = int(request.form.get('pgid', 1000))
+    # Timezone and cron_schedule are only set in the Scheduling tab
+
+    # Radarr
+    radarr = []
+    radarr_results = []
+    for i in range(5):
+        enabled = f'radarr{i}_enabled' in request.form
+        name = request.form.get(f'radarr{i}_name', f'Radarr {i+1}')
+        url = request.form.get(f'radarr{i}_url', '')
+        api_key = request.form.get(f'radarr{i}_api_key', '')
+        radarr.append({
+            'enabled': enabled,
+            'name': name,
+            'url': url,
+            'api_key': api_key,
+            'movies_to_upgrade': int(request.form.get(f'radarr{i}_movies_to_upgrade', 5)),
+            'max_download_queue': int(request.form.get(f'radarr{i}_max_download_queue', 15)),
+            'reprocess_interval_days': int(request.form.get(f'radarr{i}_reprocess_interval_days', 7)),
+        })
+        # Validate enabled instance
+        if enabled and url and api_key:
+            try:
+                test_url = url if url.startswith('http') else 'http://' + url
+                resp = requests.get(test_url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': api_key}, timeout=10)
+                if resp.status_code == 200:
+                    radarr_results.append((name, True, 'Connection successful'))
+                else:
+                    radarr_results.append((name, False, f'HTTP {resp.status_code}'))
+            except Exception as e:
+                radarr_results.append((name, False, str(e)))
+        elif enabled:
+            radarr_results.append((name, False, 'Missing URL or API key'))
+    cfg['radarr'] = radarr
+
+    # Sonarr
+    sonarr = []
+    sonarr_results = []
+    for i in range(5):
+        enabled = f'sonarr{i}_enabled' in request.form
+        name = request.form.get(f'sonarr{i}_name', f'Sonarr {i+1}')
+        url = request.form.get(f'sonarr{i}_url', '')
+        api_key = request.form.get(f'sonarr{i}_api_key', '')
+        sonarr.append({
+            'enabled': enabled,
+            'name': name,
+            'url': url,
+            'api_key': api_key,
+            'episodes_to_upgrade': int(request.form.get(f'sonarr{i}_episodes_to_upgrade', 5)),
+            'max_download_queue': int(request.form.get(f'sonarr{i}_max_download_queue', 15)),
+            'reprocess_interval_days': int(request.form.get(f'sonarr{i}_reprocess_interval_days', 7)),
+        })
+        # Validate enabled instance
+        if enabled and url and api_key:
+            try:
+                test_url = url if url.startswith('http') else 'http://' + url
+                resp = requests.get(test_url.rstrip('/') + '/api/v3/system/status', headers={'Authorization': api_key}, timeout=10)
+                if resp.status_code == 200:
+                    sonarr_results.append((name, True, 'Connection successful'))
+                else:
+                    sonarr_results.append((name, False, f'HTTP {resp.status_code}'))
+            except Exception as e:
+                sonarr_results.append((name, False, str(e)))
+        elif enabled:
+            sonarr_results.append((name, False, 'Missing URL or API key'))
+    cfg['sonarr'] = sonarr
+
+    save_config(cfg)
+    # Compose summary message
+    summary = []
+    if radarr_results:
+        summary.append('Radarr:')
+        for name, ok, msg in radarr_results:
+            summary.append(f"{name}: {'✅' if ok else '❌'} {msg}")
+    if sonarr_results:
+        summary.append('Sonarr:')
+        for name, ok, msg in sonarr_results:
+            summary.append(f"{name}: {'✅' if ok else '❌'} {msg}")
+    if summary:
+        flash('Validation results after save:<br>' + '<br>'.join(summary), 'validate')
+    else:
+        flash('Settings saved!')
+    return redirect(url_for('index'))
 
 
 @app.route('/test_connection/<service>/<int:idx>')

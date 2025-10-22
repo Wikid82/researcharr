@@ -74,6 +74,7 @@ def scheduling():
 SETTINGS_FORM = '''
 <!doctype html>
 <title>researcharr Settings</title>
+<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
 <div class="topbar">
   <img src="/static/logo.png" alt="researcharr logo" class="logo">
   <span class="title-text">researcharr</span>
@@ -546,6 +547,7 @@ def validate_sonarr(idx):
 LOGIN_FORM = '''
 <!doctype html>
 <title>Login - researcharr</title>
+<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
 <div class="topbar">
   <img src="/static/logo.png" alt="researcharr logo" class="logo">
   <span class="title-text">researcharr</span>

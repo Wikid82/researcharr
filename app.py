@@ -168,10 +168,18 @@ for idx, radarr_cfg in enumerate(r for r in radarr_instances if r.get('enabled',
     num_to_upgrade = int(radarr_cfg.get('movies_to_upgrade', 5))
     max_queue = int(radarr_cfg.get('max_download_queue', 15))
     reprocess_days = int(radarr_cfg.get('reprocess_interval_days', 7))
-    if not (url and key and process):
+    # Robust validation: skip if not enabled, missing URL, missing key, or URL missing scheme
+    if not process:
+        radarr_logger.info(f"Radarr {idx+1} is not set to process; skipping.")
+        continue
+    if not url:
+        radarr_logger.warning(f"Radarr {idx+1} URL is missing; skipping this instance.")
         continue
     if not url.startswith(('http://', 'https://')):
-        radarr_logger.warning(f"Radarr {idx+1} URL is invalid or missing scheme, skipping this instance.")
+        radarr_logger.warning(f"Radarr {idx+1} URL is invalid or missing scheme (must start with http:// or https://); skipping this instance.")
+        continue
+    if not key:
+        radarr_logger.warning(f"Radarr {idx+1} API key is missing; skipping this instance.")
         continue
     API_PATH = "/api/v3/"
     COMMAND_ENDPOINT = "command"
@@ -262,10 +270,18 @@ for idx, sonarr_cfg in enumerate(s for s in sonarr_instances if s.get('enabled',
     num_to_upgrade = int(sonarr_cfg.get('episodes_to_upgrade', 5))
     max_queue = int(sonarr_cfg.get('max_download_queue', 15))
     reprocess_days = int(sonarr_cfg.get('reprocess_interval_days', 7))
-    if not (url and key and process):
+    # Robust validation: skip if not enabled, missing URL, missing key, or URL missing scheme
+    if not process:
+        sonarr_logger.info(f"Sonarr {idx+1} is not set to process; skipping.")
+        continue
+    if not url:
+        sonarr_logger.warning(f"Sonarr {idx+1} URL is missing; skipping this instance.")
         continue
     if not url.startswith(('http://', 'https://')):
-        sonarr_logger.warning(f"Sonarr {idx+1} URL is invalid or missing scheme, skipping this instance.")
+        sonarr_logger.warning(f"Sonarr {idx+1} URL is invalid or missing scheme (must start with http:// or https://); skipping this instance.")
+        continue
+    if not key:
+        sonarr_logger.warning(f"Sonarr {idx+1} API key is missing; skipping this instance.")
         continue
     API_PATH = "/api/v3/"
     COMMAND_ENDPOINT = "command"

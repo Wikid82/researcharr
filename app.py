@@ -4,8 +4,10 @@ import os
 import sqlite3
 import requests
 import yaml
+
+
 # --- Database Setup ---
-  
+
 def init_db():
     """
     Initializes the SQLite database and creates tables if they don't exist.
@@ -35,6 +37,8 @@ def init_db():
     )
     conn.commit()
     conn.close()
+
+
 # --- Connection Status Checks ---
 def check_radarr_connection(url, key, logger):
     try:
@@ -126,6 +130,7 @@ main_logger = None
 radarr_logger = None
 sonarr_logger = None
 
+
 # --- Connection Status Checks ---
 
 
@@ -165,8 +170,6 @@ def get_sonarr_queue_length(url, key):
 
 
 # --- Radarr instance processing ---
-
-
 
 
 # --- Config Loader ---

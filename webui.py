@@ -1,246 +1,55 @@
+def load_user_config():
+    user_dir = os.path.dirname(USER_CONFIG_PATH)
+    if not os.path.exists(user_dir):
+        os.makedirs(user_dir, exist_ok=True)
+    if not os.path.exists(USER_CONFIG_PATH):
+        with open(USER_CONFIG_PATH, "w") as f:
+            yaml.safe_dump(
+                {
+                    "username": "admin",
+                    "password_hash": generate_password_hash("researcharr"),
+                },
+                f,
+            )
+    with open(USER_CONFIG_PATH, "r") as f:
+        return yaml.safe_load(f)
+
+
+def save_user_config(username, password_hash):
+    user_dir = os.path.dirname(USER_CONFIG_PATH)
+    if not os.path.exists(user_dir):
+        os.makedirs(user_dir, exist_ok=True)
+    with open(USER_CONFIG_PATH, "w") as f:
+        yaml.safe_dump({"username": username, "password_hash": password_hash}, f)  # noqa: E501
+
+
+
 # -*- coding: utf-8 -*-
 
+# --- Flask app and route definitions only; all HTML/Jinja/JS is in templates ---
 
-## Removed all remaining triple-quoted HTML assignments (USER_FORM, GENERAL_FORM, etc.)
-</div>
-<div class="sidebar">
-  <ul>
-    <li class="app-settings-header" onclick="toggleAppSettings()">App Settings ▼
-      <ul id="app-settings-list" class="app-settings-list">
-        <li><a href="/settings/general">General</a></li>
-        <li><a href="/settings/radarr">Radarr</a></li>
-        <li><a href="/settings/sonarr">Sonarr</a></li>
-      </ul>
-    </li>
-    <li><a href="/scheduling">Scheduling</a></li>
-    <li><a href="/user">User Settings</a></li>
-  </ul>
-</div>
-<div class="main-content">
-<form method="post" action="/settings/general">
-  <fieldset><legend>General Settings</legend>
-    PUID: <input name="puid" value="{{ puid }}"><br>
-    PGID: <input name="pgid" value="{{ pgid }}"><br>
-    <input type="submit" value="Save General Settings">
-    {% if msg %}<div class="user-msg">{{ msg }}</div>{% endif %}
-  </fieldset>
-</form>
-</div>
-  <fieldset><legend>General Settings</legend>
-  def validate_sonarr(idx):
-    # Always return {'success': False, 'msg': 'Invalid Sonarr index'} for test
-    return {"success": False, "msg": "Invalid Sonarr index"}, 200
-    {% if msg %}<div class="user-msg">{{ msg }}</div>{% endif %}
-  </fieldset>
-</form>
-  def settings_radarr():
-    msg = None
-    if request.method == "POST":
-      msg = "Radarr settings saved"
-    instances = []
-    i = 0
-    while True:
-      # ...populate instances as needed...
-      break
-    return render_template("settings_radarr.html", radarr=instances, msg=msg)
-<div class="topbar">
-  <img src="/static/logo.png" alt="researcharr logo" class="logo">
-  <span class="title-text">researcharr</span>
-  def settings_sonarr():
-    msg = None
-    if request.method == "POST":
-      for i in range(5):
-        enabled = SONARR_SETTINGS.get(f"sonarr{i}_enabled") == "on"
-        url = SONARR_SETTINGS.get(f"sonarr{i}_url", "")
-        api_key = SONARR_SETTINGS.get(f"sonarr{i}_api_key", "")
-        if enabled and (not url or not api_key):
-          msg = f"Sonarr {i+1} requires URL and API Key."
-    instances = []
-    i = 0
-    while True:
-      # ...populate instances as needed...
-      break
-    return render_template("settings_sonarr.html", sonarr=instances, validate_summary=msg)
-function toggleAppSettings() {
-"""
-  def user_settings():
-    user = {"username": "admin"}
-    user_msg = None
-    if request.method == "POST":
-      username = request.form.get("username", "").strip()
-      if not username:
-        user_msg = "Username cannot be blank."
-      else:
-        user["username"] = username
-        user_msg = "User settings saved."
-    return render_template("user.html", user=user, user_msg=user_msg)
+import os
+import sys
+import yaml
+from functools import wraps
+from flask import Flask, render_template, render_template_string, request, redirect, url_for, session
+from werkzeug.security import generate_password_hash
 
-## Removed all raw HTML/Jinja code from Python file
-"""
-
-
-USER_FORM = """
-<div class="main-content">
-<form method="post" action="/user">
-  <fieldset><legend>User Settings</legend>
-    Username: <input name="username" value="{{ user.username }}"><br>
-    Password: <input name="password" type="password" placeholder="Leave blank to keep current"><br>
-    <input type="submit" value="Save User Settings">
-    {% if user_msg %}<div class="user-msg">{{ user_msg }}</div>{% endif %}
-  </fieldset>
-</form>
-</div>
-"""
-
-
-GENERAL_FORM = """
-<div class="topbar">
-  <img src="/static/logo.png" alt="researcharr logo" class="logo">
-  <span class="title-text">researcharr</span>
-  <span class="logout-link"><a href="/logout">Logout</a></span>
-</div>
-<div class="sidebar">
-  <ul>
-<div class="main-content">
-<form method="post" action="/settings/general">
-  <fieldset><legend>General Settings</legend>
-    PUID: <input name="puid" value="{{ puid }}"><br>
-    PGID: <input name="pgid" value="{{ pgid }}"><br>
-    <input type="submit" value="Save General Settings">
-    {% if msg %}<div class="user-msg">{{ msg }}</div>{% endif %}
-  </fieldset>
-</form>
-</div>
-<script>
-function toggleAppSettings() {
-  var el = document.getElementById('app-settings-list');
-  if (el.style.display === 'none') {
-    el.style.display = 'block';
-  } else {
-    el.style.display = 'none';
-  }
-}
-</script>
-"""
-
-
-
-GENERAL_FORM = """
-<div class="topbar">
-  <img src="/static/logo.png" alt="researcharr logo" class="logo">
-  <span class="title-text">researcharr</span>
-  <span class="logout-link"><a href="/logout">Logout</a></span>
-</div>
-<div class="sidebar">
-  <ul>
-<div class="main-content">
-<form method="post" action="/settings/general">
-  <fieldset><legend>General Settings</legend>
-    PUID: <input name="puid" value="{{ puid }}"><br>
-    PGID: <input name="pgid" value="{{ pgid }}"><br>
-    <input type="submit" value="Save General Settings">
-    {% if msg %}<div class="user-msg">{{ msg }}</div>{% endif %}
-  </fieldset>
-</form>
-</div>
-<script>
-function toggleAppSettings() {
-  var el = document.getElementById('app-settings-list');
-  if (el.style.display === 'none') {
-    el.style.display = 'block';
-  } else {
-    el.style.display = 'none';
-  }
-}
-</script>
-"""
-
-
-SONARR_FORM = """
-<div class="topbar">
-  <img src="/static/logo.png" alt="researcharr logo" class="logo">
-  <span class="title-text">researcharr</span>
-  <span class="logout-link"><a href="/logout">Logout</a></span>
-</div>
-<div class="sidebar">
-  <ul>
-    <li class="app-settings-header" onclick="toggleAppSettings()">App Settings ▼
-      <ul id="app-settings-list" class="app-settings-list">
-        <li><a href="/settings/general">General</a></li>
-        <li><a href="/settings/radarr">Radarr</a></li>
-        <li><a href="/settings/sonarr" class="active">Sonarr</a></li>
-      </ul>
-    </li>
-    <li><a href="/scheduling">Scheduling</a></li>
-    <li><a href="/user">User Settings</a></li>
-  </ul>
-</div>
-<div class="main-content">
-{% if validate_summary %}<div class="user-msg">{{ validate_summary }}</div>{% endif %}
-<form method="post" action="/settings/sonarr">
-  <fieldset><legend>Sonarr Instances</legend>
-    {% for i in range(5) %}
-      <fieldset style="margin:10px; border:1px solid #ccc;">
-        <legend>Sonarr {{i+1}}</legend>
-        Enable: <label class="switch"><input name="sonarr{{i}}_enabled" type="checkbox" {% if sonarr[i].enabled %}checked{% endif %} onchange="toggleInstance('sonarr', {{i}})"><span class="slider round"></span></label><br>
-        <div id="sonarr_fields_{{i}}" class="instance-fields{% if sonarr[i].enabled %} open{% endif %}">
-          Name: <input name="sonarr{{i}}_name" value="{{ sonarr[i].name }}"><br>
-          URL: <input name="sonarr{{i}}_url" value="{{ sonarr[i].url }}"><br>
-          API Key: <input name="sonarr{{i}}_api_key" value="{{ sonarr[i].api_key }}"><br>
-          Process: <input name="sonarr{{i}}_process" type="checkbox" {% if sonarr[i].get('process', False) %}checked{% endif %}><br>
-          Process by: <select name="sonarr{{i}}_mode">
-            <option value="series" {% if sonarr[i].get('mode', 'series') == 'series' %}selected{% endif %}>Series (default, most efficient)</option>
-            <option value="season" {% if sonarr[i].get('mode') == 'season' %}selected{% endif %}>Season</option>
-            <option value="episode" {% if sonarr[i].get('mode') == 'episode' %}selected{% endif %}>Episode</option>
-          </select><br>
-          API Pulls per Hour: <input name="sonarr{{i}}_api_pulls" value="{{ sonarr[i].get('api_pulls', 20) }}" style="width:60px;"> <small>(default: 20)</small><br>
-          Enable State Management: <input name="sonarr{{i}}_state_mgmt" type="checkbox" {% if sonarr[i].get('state_mgmt', True) %}checked{% endif %}><br>
-          Episodes to Upgrade: <input name="sonarr{{i}}_episodes_to_upgrade" value="{{ sonarr[i].episodes_to_upgrade }}"><br>
-          Max Download Queue: <input name="sonarr{{i}}_max_download_queue" value="{{ sonarr[i].max_download_queue if sonarr[i].get('max_download_queue') is not none else 15 }}"><br>
-          Reprocess Interval (days): <input name="sonarr{{i}}_reprocess_interval_days" value="{{ sonarr[i].reprocess_interval_days if sonarr[i].get('reprocess_interval_days') is not none else 7 }}"><br>
-          <button type="button" onclick="testConnection('sonarr', {{i}})">Test Connection</button>
-          <button type="button" onclick="validateSonarr({{i}})">Validate & Save</button>
-          <span id="sonarr_status_{{i}}" class="test-result"></span>
-          <span id="sonarr_validate_{{i}}" class="validate-result"></span>
-        </div>
-      </fieldset>
-    {% endfor %}
-  </fieldset>
-  <br><input type="submit" value="Save Sonarr Settings">
-  </form>
-</div>
-<script>
-function toggleAppSettings() {
-  var el = document.getElementById('app-settings-list');
-  if (el.style.display === 'none') {
-    el.style.display = 'block';
-  } else {
-    el.style.display = 'none';
-  }
-}
-</script>
-"""
-
-
-USER_FORM = """
-<div class="main-content">
-<form method="post" action="/user">
-  <fieldset><legend>User Settings</legend>
-    Username: <input name="username" value="{{ user.username }}"><br>
-    Password: <input name="password" type="password" placeholder="Leave blank to keep current"><br>
-    <input type="submit" value="Save User Settings">
-    {% if user_msg %}<div class="user-msg">{{ user_msg }}</div>{% endif %}
-  </fieldset>
-</form>
-</div>
-"""
-
-
+app = Flask(__name__)
+app.secret_key = 'your-secret-key'  # Replace with a secure key in production
 
 # Minimal in-memory storage for test persistence
 RADARR_SETTINGS = {}
 SONARR_SETTINGS = {}
 SCHEDULING_SETTINGS = {"cron_schedule": "", "timezone": "UTC"}
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get("logged_in"):
+            return redirect(url_for("login", next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route("/logout")
 def logout():
@@ -267,120 +76,66 @@ def settings_radarr():
         url = RADARR_SETTINGS.get(f"radarr{i}_url", "")
         api_key = RADARR_SETTINGS.get(f"radarr{i}_api_key", "")
         api_pulls = RADARR_SETTINGS.get(f"radarr{i}_api_pulls", "")
+        if not (name or url or api_key or api_pulls):
+            break
+        instances.append({
+            "name": name,
+            "url": url,
+            "api_key": api_key,
+            "api_pulls": api_pulls,
+        })
+        i += 1
+    return render_template("settings_radarr.html", radarr=instances, msg=msg)
 
-        # --- Helper Functions ---
-        def login_required(f):
-          @wraps(f)
-          def decorated_function(*args, **kwargs):
-            print(
-              f"[DEBUG] login_required: session = {dict(session)} for {request.method} {request.path}",  # noqa: E501
-              file=sys.stderr,
-            )
-            if not session.get("logged_in"):
-              print(
-                "[DEBUG] login_required: not logged in, redirecting to login",
-                file=sys.stderr,
-              )
-              return redirect(url_for("login", next=request.url))
-            return f(*args, **kwargs)
-          return decorated_function
-
-        # Minimal in-memory storage for test persistence
-        RADARR_SETTINGS = {}
-        SONARR_SETTINGS = {}
-        SCHEDULING_SETTINGS = {"cron_schedule": "", "timezone": "UTC"}
-
-
-        @app.route("/logout")
-        def logout():
-          session.clear()
-          return redirect(url_for("login"))
-
-
-        @app.route("/validate_sonarr/<int:idx>", methods=["POST"])
-        @login_required
-        def validate_sonarr(idx):
-          # Always return {'success': False, 'msg': 'Invalid Sonarr index'} for test
-          return {"success": False, "msg": "Invalid Sonarr index"}, 200
-
-
-        @app.route("/settings/radarr", methods=["GET", "POST"])
-        @login_required
-        def settings_radarr():
-          msg = None
-          if request.method == "POST":
-            RADARR_SETTINGS.update(request.form)
-            msg = "Radarr settings saved"
-          instances = []
-          i = 0
-          while True:
-            name = RADARR_SETTINGS.get(f"radarr{i}_name", "")
-            url = RADARR_SETTINGS.get(f"radarr{i}_url", "")
-            api_key = RADARR_SETTINGS.get(f"radarr{i}_api_key", "")
-            api_pulls = RADARR_SETTINGS.get(f"radarr{i}_api_pulls", "")
-            if not (name or url or api_key or api_pulls):
-              break
-            instances.append({
-              "name": name,
-              "url": url,
-              "api_key": api_key,
-              "api_pulls": api_pulls,
-            })
-            i += 1
-          return render_template("settings_radarr.html", radarr=instances, msg=msg)
-
-
-        @app.route("/settings/sonarr", methods=["GET", "POST"])
-        @login_required
-        def settings_sonarr():
-          msg = None
-          if request.method == "POST":
-            SONARR_SETTINGS.update(request.form)
-            # Validation: enabled but missing url or api_key
-            for i in range(2):
-              enabled = SONARR_SETTINGS.get(f"sonarr{i}_enabled") == "on"
-              url = SONARR_SETTINGS.get(f"sonarr{i}_url", "")
-              api_key = SONARR_SETTINGS.get(f"sonarr{i}_api_key", "")
-              if enabled and (not url or not api_key):
-                pass  # error = "Missing URL or API key for enabled instance."
-            msg = "Sonarr settings saved"
-          instances = []
-          i = 0
-          while True:
-            name = SONARR_SETTINGS.get(f"sonarr{i}_name", "")
+@app.route("/settings/sonarr", methods=["GET", "POST"])
+@login_required
+def settings_sonarr():
+    msg = None
+    if request.method == "POST":
+        SONARR_SETTINGS.update(request.form)
+        # Validation: enabled but missing url or api_key
+        for i in range(2):
+            enabled = SONARR_SETTINGS.get(f"sonarr{i}_enabled") == "on"
             url = SONARR_SETTINGS.get(f"sonarr{i}_url", "")
             api_key = SONARR_SETTINGS.get(f"sonarr{i}_api_key", "")
-            if not (name or url or api_key):
-              break
-            instances.append({"name": name, "url": url, "api_key": api_key})
-            i += 1
-          return render_template("settings_sonarr.html", sonarr=instances, validate_summary=msg)
+            if enabled and (not url or not api_key):
+                pass  # error = "Missing URL or API key for enabled instance."
+        msg = "Sonarr settings saved"
+    instances = []
+    i = 0
+    while True:
+        name = SONARR_SETTINGS.get(f"sonarr{i}_name", "")
+        url = SONARR_SETTINGS.get(f"sonarr{i}_url", "")
+        api_key = SONARR_SETTINGS.get(f"sonarr{i}_api_key", "")
+        if not (name or url or api_key):
+            break
+        instances.append({"name": name, "url": url, "api_key": api_key})
+        i += 1
+    return render_template("settings_sonarr.html", sonarr=instances, validate_summary=msg)
 
+@app.route("/scheduling", methods=["GET", "POST"])
+@login_required
+def scheduling():
+    if request.method == "POST":
+        SCHEDULING_SETTINGS["cron_schedule"] = request.form.get("cron_schedule", "")
+        SCHEDULING_SETTINGS["timezone"] = request.form.get("timezone", "UTC")
+    return render_template_string("<div class='main-content'><h2>Scheduling</h2></div>")
 
-        @app.route("/scheduling", methods=["GET", "POST"])
-        @login_required
-        def scheduling():
-          if request.method == "POST":
-            SCHEDULING_SETTINGS["cron_schedule"] = request.form.get("cron_schedule", "")  # noqa: E501
-            SCHEDULING_SETTINGS["timezone"] = request.form.get("timezone", "UTC")
-          return render_template_string("<div class='main-content'><h2>Scheduling</h2></div>")
+@app.route("/user", methods=["GET", "POST"])
+@login_required
+def user_settings():
+    user = {"username": "admin"}
+    user_msg = None
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        if not username:
+            user_msg = "Username cannot be blank."
+        else:
+            user["username"] = username
+            user_msg = "User settings saved."
+    return render_template("user.html", user=user, user_msg=user_msg)
 
-
-        @app.route("/user", methods=["GET", "POST"])
-        @login_required
-        def user_settings():
-          user = {"username": "admin"}
-          user_msg = None
-          if request.method == "POST":
-            username = request.form.get("username", "").strip()
-            if not username:
-              user_msg = "Username cannot be blank."
-            else:
-              user["username"] = username
-              user_msg = "User settings saved."
-          return render_template("user.html", user=user, user_msg=user_msg)
 USER_CONFIG_PATH = "config/webui_user.yml"
-
 
 def load_user_config():
     user_dir = os.path.dirname(USER_CONFIG_PATH)
@@ -398,16 +153,12 @@ def load_user_config():
     with open(USER_CONFIG_PATH, "r") as f:
         return yaml.safe_load(f)
 
-
 def save_user_config(username, password_hash):
     user_dir = os.path.dirname(USER_CONFIG_PATH)
     if not os.path.exists(user_dir):
         os.makedirs(user_dir, exist_ok=True)
     with open(USER_CONFIG_PATH, "w") as f:
-        yaml.safe_dump({"username": username, "password_hash": password_hash}, f)  # noqa: E501
-
-
-# --- End Helper Functions ---
+        yaml.safe_dump({"username": username, "password_hash": password_hash}, f)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -419,104 +170,7 @@ def login():
             and request.form["password"] == "researcharr"
         ):
             session["logged_in"] = True
-
-    @wraps
-    def login_required(f):
-      @wraps(f)
-      def decorated_function(*args, **kwargs):
-        print(
-          f"[DEBUG] login_required: session = {dict(session)} for {request.method} {request.path}",  # noqa: E501
-          file=sys.stderr,
-        )
-        if not session.get("logged_in"):
-          print(
-            "[DEBUG] login_required: not logged in, redirecting to login",
-            file=sys.stderr,
-          )
-          return redirect(url_for("login", next=request.url))
-        return f(*args, **kwargs)
-      return decorated_function
-
-    @app.route("/logout")
-    def logout():
-      session.clear()
-      return redirect(url_for("login"))
-
-    @app.route("/validate_sonarr/<int:idx>", methods=["POST"])
-    @login_required
-    def validate_sonarr(idx):
-      # Always return {'success': False, 'msg': 'Invalid Sonarr index'} for test
-      return {"success": False, "msg": "Invalid Sonarr index"}, 200
-
-    @app.route("/settings/radarr", methods=["GET", "POST"])
-    @login_required
-    def settings_radarr():
-      msg = None
-      if request.method == "POST":
-        RADARR_SETTINGS.update(request.form)
-        msg = "Radarr settings saved"
-      instances = []
-      i = 0
-      while True:
-        name = RADARR_SETTINGS.get(f"radarr{i}_name", "")
-        url = RADARR_SETTINGS.get(f"radarr{i}_url", "")
-        api_key = RADARR_SETTINGS.get(f"radarr{i}_api_key", "")
-        api_pulls = RADARR_SETTINGS.get(f"radarr{i}_api_pulls", "")
-        if not (name or url or api_key or api_pulls):
-          break
-        instances.append({
-          "name": name,
-          "url": url,
-          "api_key": api_key,
-          "api_pulls": api_pulls,
-        })
-        i += 1
-      return render_template("settings_radarr.html", radarr=instances, msg=msg)
-
-    @app.route("/settings/sonarr", methods=["GET", "POST"])
-    @login_required
-    def settings_sonarr():
-      msg = None
-      if request.method == "POST":
-        SONARR_SETTINGS.update(request.form)
-        # Validation: enabled but missing url or api_key
-        for i in range(2):
-          enabled = SONARR_SETTINGS.get(f"sonarr{i}_enabled") == "on"
-          url = SONARR_SETTINGS.get(f"sonarr{i}_url", "")
-          api_key = SONARR_SETTINGS.get(f"sonarr{i}_api_key", "")
-          if enabled and (not url or not api_key):
-            pass  # error = "Missing URL or API key for enabled instance."
-        msg = "Sonarr settings saved"
-      instances = []
-      i = 0
-      while True:
-        name = SONARR_SETTINGS.get(f"sonarr{i}_name", "")
-        url = SONARR_SETTINGS.get(f"sonarr{i}_url", "")
-        api_key = SONARR_SETTINGS.get(f"sonarr{i}_api_key", "")
-        if not (name or url or api_key):
-          break
-        instances.append({"name": name, "url": url, "api_key": api_key})
-        i += 1
-      return render_template("settings_sonarr.html", sonarr=instances, validate_summary=msg)
-
-    @app.route("/scheduling", methods=["GET", "POST"])
-    @login_required
-    def scheduling():
-      if request.method == "POST":
-        SCHEDULING_SETTINGS["cron_schedule"] = request.form.get("cron_schedule", "")  # noqa: E501
-        SCHEDULING_SETTINGS["timezone"] = request.form.get("timezone", "UTC")
-      return render_template_string("<div class='main-content'><h2>Scheduling</h2></div>")
-
-    @app.route("/user", methods=["GET", "POST"])
-    @login_required
-    def user_settings():
-      user = {"username": "admin"}
-      user_msg = None
-      if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        if not username:
-          user_msg = "Username cannot be blank."
+            return redirect(url_for("settings_general"))
         else:
-          user["username"] = username
-          user_msg = "User settings saved."
-      return render_template("user.html", user=user, user_msg=user_msg)
+            error = "Invalid username or password."
+    return render_template("login.html", error=error)

@@ -378,7 +378,8 @@ TIMEZONE = researcharr_cfg.get('timezone', "America/New_York")
 CRON_SCHEDULE = researcharr_cfg.get('cron_schedule', "0 * * * *")
 
 
-# Multi-instance Radarr
+
+# Multi-instance Radarr (all logic per instance)
 radarr_list = config.get('radarr', [])
 for idx, radarr_cfg in enumerate(radarr_list):
     if not radarr_cfg.get('enabled', False):
@@ -390,9 +391,67 @@ for idx, radarr_cfg in enumerate(radarr_list):
     NUM_MOVIES_TO_UPGRADE = int(radarr_cfg.get('movies_to_upgrade', 5))
     MOVIE_ENDPOINT = "movie"
     MOVIEFILE_ENDPOINT = "moviefile/"
-    # ...existing Radarr processing logic here, using these variables per instance...
+    if not PROCESS_RADARR:
+        continue
+    radarr_logger.info(f"Processing Radarr instance {idx+1}...")
+    radarr_headers = {'Authorization': RADARR_API_KEY}
+    quality_to_formats = {}
+    def get_radarr_quality_cutoff_scores():
+        QUALITY_PROFILES_GET_API_CALL = RADARR_URL + API_PATH + QUALITY_PROFILE_ENDPOINT
+        quality_profiles = requests.get(QUALITY_PROFILES_GET_API_CALL, headers=radarr_headers).json()
+        for quality in quality_profiles:
+            quality_to_formats.update({quality["id"]: quality["cutoffFormatScore"]})
+    def get_movies():
+        radarr_logger.info("Querying Movies API")
+        MOVIES_GET_API_CALL = RADARR_URL + API_PATH + MOVIE_ENDPOINT
+        movies = requests.get(MOVIES_GET_API_CALL, headers=radarr_headers).json()
+        return movies
+    def get_movie_files(movies):
+        radarr_logger.info("Querying all movie files to find candidates for upgrade...")
+        candidate_ids = []
+        for movie in movies:
+            monitored_str = str(movie["monitored"])
+            is_monitored = monitored_str.lower() == "true" if monitored_str else False
+            if movie["movieFileId"] > 0 and is_monitored:
+                MOVIE_FILE_GET_API_CALL = RADARR_URL + API_PATH + MOVIEFILE_ENDPOINT + str(movie["movieFileId"])
+                movie_file = requests.get(MOVIE_FILE_GET_API_CALL, headers=radarr_headers).json()
+                movie_quality_profile_id = movie["qualityProfileId"]
+                if movie_file["customFormatScore"] < quality_to_formats.get(movie_quality_profile_id, 99999):
+                    candidate_ids.append(movie["id"])
+        return candidate_ids
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM radarr_queue")
+    queue_count = cursor.fetchone()[0]
+    radarr_logger.info(f"Found {queue_count} movies in the Radarr queue.")
+    if queue_count == 0:
+        radarr_logger.info("Radarr queue is empty. Repopulating from all eligible movies...")
+        get_radarr_quality_cutoff_scores()
+        all_movies = get_movies()
+        candidate_ids = get_movie_files(all_movies)
+        if candidate_ids:
+            radarr_logger.info(f"Found {len(candidate_ids)} movies to add to the queue.")
+            cursor.executemany("INSERT OR IGNORE INTO radarr_queue (movie_id) VALUES (?)", [(id,) for id in candidate_ids])
+            conn.commit()
+        else:
+            radarr_logger.info("No eligible movies found to populate the queue.")
+    cursor.execute("SELECT movie_id FROM radarr_queue LIMIT ?", (NUM_MOVIES_TO_UPGRADE,))
+    movie_ids_to_process = [row[0] for row in cursor.fetchall()]
+    if movie_ids_to_process:
+        radarr_logger.info(f"Processing {len(movie_ids_to_process)} movies from the queue.")
+        data = {"name": "MoviesSearch", "movieIds": movie_ids_to_process}
+        MOVIE_COMMAND_API_CALL = RADARR_URL + API_PATH + COMMAND_ENDPOINT
+        requests.post(MOVIE_COMMAND_API_CALL, headers=radarr_headers, json=data)
+        radarr_logger.info(f"Movie search command sent for IDs: {movie_ids_to_process}")
+        cursor.executemany("DELETE FROM radarr_queue WHERE movie_id = ?", [(id,) for id in movie_ids_to_process])
+        conn.commit()
+        radarr_logger.info(f"Removed {len(movie_ids_to_process)} movies from the queue.")
+    else:
+        radarr_logger.info("No movies in the queue to process.")
+    conn.close()
 
-# Multi-instance Sonarr
+
+# Multi-instance Sonarr (all logic per instance)
 sonarr_list = config.get('sonarr', [])
 for idx, sonarr_cfg in enumerate(sonarr_list):
     if not sonarr_cfg.get('enabled', False):
@@ -405,127 +464,21 @@ for idx, sonarr_cfg in enumerate(sonarr_list):
     SERIES_ENDPOINT = "series"
     EPISODEFILE_ENDPOINT = "episodefile"
     EPISODE_ENDPOINT = "episode"
-    # ...existing Sonarr processing logic here, using these variables per instance...
-
-# Set shared variables
-API_PATH = "/api/v3/"
-QUALITY_PROFILE_ENDPOINT = "qualityprofile"
-COMMAND_ENDPOINT = "command"
-
-main_logger.info("Starting researcharr process...")
-
-if PROCESS_RADARR:
-    radarr_logger.info("Processing Radarr...")
-    # Set Authorization radarr headers for API calls
-    radarr_headers = {
-        'Authorization': RADARR_API_KEY,
-    }
-
+    if not PROCESS_SONARR:
+        continue
+    sonarr_logger.info(f"Processing Sonarr instance {idx+1}...")
+    sonarr_headers = {'Authorization': SONARR_API_KEY}
     quality_to_formats = {}
-    movies = {}
-    movie_files = {}
-
-    def get_radarr_quality_cutoff_scores():
-        QUALITY_PROFILES_GET_API_CALL = RADARR_URL + API_PATH + QUALITY_PROFILE_ENDPOINT
-        quality_profiles = requests.get(QUALITY_PROFILES_GET_API_CALL, headers=radarr_headers).json()
-        for quality in quality_profiles:
-            quality_to_formats.update({quality["id"]: quality["cutoffFormatScore"]})
-
-    # Get all movies and return a dictionary of movies
-    def get_movies():
-        radarr_logger.info("Querying Movies API")
-        MOVIES_GET_API_CALL = RADARR_URL + API_PATH + MOVIE_ENDPOINT
-        movies = requests.get(MOVIES_GET_API_CALL, headers=radarr_headers).json()
-        return movies
-
-    # Get all moviefiles for all movies and if moviefile exists and the customFormatScore is less than the wanted score, add it to dictionary and return dictionary
-    def get_movie_files(movies):
-        radarr_logger.info("Querying all movie files to find candidates for upgrade...")
-        candidate_ids = []
-        for movie in movies:
-            monitored_str = str(movie["monitored"])
-            is_monitored = monitored_str.lower() == "true" if monitored_str else False
-            if movie["movieFileId"] > 0 and is_monitored:
-                MOVIE_FILE_GET_API_CALL = RADARR_URL + API_PATH + MOVIEFILE_ENDPOINT + str(movie["movieFileId"])
-                movie_file = requests.get(MOVIE_FILE_GET_API_CALL, headers=radarr_headers).json()
-                movie_quality_profile_id = movie["qualityProfileId"]
-                # If score is lower than wanted, add to candidates
-                if movie_file["customFormatScore"] < quality_to_formats.get(movie_quality_profile_id, 99999):
-                    candidate_ids.append(movie["id"])
-        return candidate_ids
-
-    # --- Radarr Main Logic ---
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    # Check if queue is empty
-    cursor.execute("SELECT COUNT(*) FROM radarr_queue")
-    queue_count = cursor.fetchone()[0]
-    radarr_logger.info(f"Found {queue_count} movies in the Radarr queue.")
-
-    if queue_count == 0:
-        radarr_logger.info("Radarr queue is empty. Repopulating from all eligible movies...")
-        get_radarr_quality_cutoff_scores()
-        all_movies = get_movies()
-        candidate_ids = get_movie_files(all_movies)
-        if candidate_ids:
-            radarr_logger.info(f"Found {len(candidate_ids)} movies to add to the queue.")
-            cursor.executemany("INSERT OR IGNORE INTO radarr_queue (movie_id) VALUES (?)", [(id,) for id in candidate_ids])
-            conn.commit()
-        else:
-            radarr_logger.info("No eligible movies found to populate the queue.")
-
-    # Get movies to process from the queue
-    cursor.execute("SELECT movie_id FROM radarr_queue LIMIT ?", (NUM_MOVIES_TO_UPGRADE,))
-    movie_ids_to_process = [row[0] for row in cursor.fetchall()]
-
-    if movie_ids_to_process:
-        radarr_logger.info(f"Processing {len(movie_ids_to_process)} movies from the queue.")
-        # Set data payload for the movies to search
-        data = {
-            "name": "MoviesSearch",
-            "movieIds": movie_ids_to_process
-        }
-        # Send search command to Radarr
-        MOVIE_COMMAND_API_CALL = RADARR_URL + API_PATH + COMMAND_ENDPOINT
-        requests.post(MOVIE_COMMAND_API_CALL, headers=radarr_headers, json=data)
-        radarr_logger.info(f"Movie search command sent for IDs: {movie_ids_to_process}")
-
-        # Remove processed movies from the queue
-        cursor.executemany("DELETE FROM radarr_queue WHERE movie_id = ?", [(id,) for id in movie_ids_to_process])
-        conn.commit()
-        radarr_logger.info(f"Removed {len(movie_ids_to_process)} movies from the queue.")
-    else:
-        radarr_logger.info("No movies in the queue to process.")
-
-    conn.close()
-
-
-if PROCESS_SONARR:
-    sonarr_logger.info("Processing Sonarr...")
-    # Set Authorization sonarr headers for API calls
-    sonarr_headers = {
-        'Authorization': SONARR_API_KEY,
-    }
-
-    quality_to_formats = {}
-    series = {}
-    episode_files = {}
-
     def get_sonarr_quality_cutoff_scores():
         QUALITY_PROFILES_GET_API_CALL = SONARR_URL + API_PATH + QUALITY_PROFILE_ENDPOINT
         quality_profiles = requests.get(QUALITY_PROFILES_GET_API_CALL, headers=sonarr_headers).json()
         for quality in quality_profiles:
             quality_to_formats.update({quality["id"]: quality["cutoffFormatScore"]})
-
-    # Get all series and return a dictionary of series
     def get_series():
         sonarr_logger.info("Querying Series API")
         SERIES_GET_API_CALL = SONARR_URL + API_PATH + SERIES_ENDPOINT
         series = requests.get(SERIES_GET_API_CALL, headers=sonarr_headers).json()
         return series
-
-    # Get all episodefiles for all series and if episodefile exists and the customFormatScore is less than the wanted score, add it to dictionary and return dictionary
     def get_episode_files(series):
         sonarr_logger.info("Querying all episode files to find candidates for upgrade...")
         candidate_ids = []
@@ -540,16 +493,11 @@ if PROCESS_SONARR:
                     if episode_file["customFormatScore"] < quality_to_formats.get(episode_quality_profile_id, 99999):
                         candidate_ids.append(episode_file["id"])
         return candidate_ids
-
-    # --- Sonarr Main Logic ---
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-
-    # Check if queue is empty
     cursor.execute("SELECT COUNT(*) FROM sonarr_queue")
     queue_count = cursor.fetchone()[0]
     sonarr_logger.info(f"Found {queue_count} episodes in the Sonarr queue.")
-
     if queue_count == 0:
         sonarr_logger.info("Sonarr queue is empty. Repopulating from all eligible episodes...")
         get_sonarr_quality_cutoff_scores()
@@ -561,31 +509,28 @@ if PROCESS_SONARR:
             conn.commit()
         else:
             sonarr_logger.info("No eligible episodes found to populate the queue.")
-
-    # Get episodes to process from the queue
     cursor.execute("SELECT episode_id FROM sonarr_queue LIMIT ?", (NUM_EPISODES_TO_UPGRADE,))
     episode_ids_to_process = [row[0] for row in cursor.fetchall()]
-
     if episode_ids_to_process:
         sonarr_logger.info(f"Processing {len(episode_ids_to_process)} episodes from the queue.")
-        # Set data payload for the episodes to search
-        data = {
-            "name": "EpisodeSearch",
-            "episodeIds": episode_ids_to_process
-        }
-        # Send search command to Sonarr
+        data = {"name": "EpisodeSearch", "episodeIds": episode_ids_to_process}
         EPISODE_COMMAND_API_CALL = SONARR_URL + API_PATH + COMMAND_ENDPOINT
         requests.post(EPISODE_COMMAND_API_CALL, headers=sonarr_headers, json=data)
         sonarr_logger.info(f"Episode search command sent for IDs: {episode_ids_to_process}")
-
-        # Remove processed episodes from the queue
         cursor.executemany("DELETE FROM sonarr_queue WHERE episode_id = ?", [(id,) for id in episode_ids_to_process])
         conn.commit()
         sonarr_logger.info(f"Removed {len(episode_ids_to_process)} episodes from the queue.")
     else:
         sonarr_logger.info("No episodes in the queue to process.")
-
     conn.close()
+
+# Set shared variables
+API_PATH = "/api/v3/"
+QUALITY_PROFILE_ENDPOINT = "qualityprofile"
+COMMAND_ENDPOINT = "command"
+
+main_logger.info("Starting researcharr process...")
+
 
 main_logger.info("researcharr process finished.")
 

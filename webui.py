@@ -1,3 +1,7 @@
+# Add root route to redirect to login
+@app.route("/")
+def index():
+  return redirect(url_for("login"))
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import yaml

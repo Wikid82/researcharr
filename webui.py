@@ -1,4 +1,22 @@
 GENERAL_FORM = '''
+<div class="topbar">
+  <img src="/static/logo.png" alt="researcharr logo" class="logo">
+  <span class="title-text">researcharr</span>
+  <span class="logout-link"><a href="/logout">Logout</a></span>
+</div>
+<div class="sidebar">
+  <ul>
+    <li class="app-settings-header" onclick="toggleAppSettings()">App Settings ▼
+      <ul id="app-settings-list" class="app-settings-list">
+        <li><a href="/settings/general" class="active">General</a></li>
+        <li><a href="/settings/radarr">Radarr</a></li>
+        <li><a href="/settings/sonarr">Sonarr</a></li>
+      </ul>
+    </li>
+    <li><a href="/scheduling">Scheduling</a></li>
+    <li><a href="/user">User Settings</a></li>
+  </ul>
+</div>
 <div class="main-content">
 <form method="post" action="/settings/general">
   <fieldset><legend>General Settings</legend>
@@ -9,6 +27,16 @@ GENERAL_FORM = '''
   </fieldset>
 </form>
 </div>
+<script>
+function toggleAppSettings() {
+  var el = document.getElementById('app-settings-list');
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+</script>
 '''
 
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -21,6 +49,24 @@ import requests
 app = Flask(__name__)
 
 GENERAL_FORM = '''
+<div class="topbar">
+  <img src="/static/logo.png" alt="researcharr logo" class="logo">
+  <span class="title-text">researcharr</span>
+  <span class="logout-link"><a href="/logout">Logout</a></span>
+</div>
+<div class="sidebar">
+  <ul>
+    <li class="app-settings-header" onclick="toggleAppSettings()">App Settings ▼
+      <ul id="app-settings-list" class="app-settings-list">
+        <li><a href="/settings/general" class="active">General</a></li>
+        <li><a href="/settings/radarr">Radarr</a></li>
+        <li><a href="/settings/sonarr">Sonarr</a></li>
+      </ul>
+    </li>
+    <li><a href="/scheduling">Scheduling</a></li>
+    <li><a href="/user">User Settings</a></li>
+  </ul>
+</div>
 <div class="main-content">
 <form method="post" action="/settings/general">
   <fieldset><legend>General Settings</legend>
@@ -31,6 +77,16 @@ GENERAL_FORM = '''
   </fieldset>
 </form>
 </div>
+<script>
+function toggleAppSettings() {
+  var el = document.getElementById('app-settings-list');
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+</script>
 '''
 
 RADARR_FORM = '''
@@ -41,9 +97,13 @@ RADARR_FORM = '''
 </div>
 <div class="sidebar">
   <ul>
-    <li><a href="/settings/general">General</a></li>
-    <li><a href="/settings/radarr" class="active">Radarr</a></li>
-    <li><a href="/settings/sonarr">Sonarr</a></li>
+    <li class="app-settings-header" onclick="toggleAppSettings()">App Settings ▼
+      <ul id="app-settings-list" class="app-settings-list">
+        <li><a href="/settings/general">General</a></li>
+        <li><a href="/settings/radarr" class="active">Radarr</a></li>
+        <li><a href="/settings/sonarr">Sonarr</a></li>
+      </ul>
+    </li>
     <li><a href="/scheduling">Scheduling</a></li>
     <li><a href="/user">User Settings</a></li>
   </ul>
@@ -77,6 +137,16 @@ RADARR_FORM = '''
   <br><input type="submit" value="Save Radarr Settings">
   </form>
 </div>
+<script>
+function toggleAppSettings() {
+  var el = document.getElementById('app-settings-list');
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+</script>
 '''
 
 SONARR_FORM = '''
@@ -87,9 +157,13 @@ SONARR_FORM = '''
 </div>
 <div class="sidebar">
   <ul>
-    <li><a href="/settings/general">General</a></li>
-    <li><a href="/settings/radarr">Radarr</a></li>
-    <li><a href="/settings/sonarr" class="active">Sonarr</a></li>
+    <li class="app-settings-header" onclick="toggleAppSettings()">App Settings ▼
+      <ul id="app-settings-list" class="app-settings-list">
+        <li><a href="/settings/general">General</a></li>
+        <li><a href="/settings/radarr">Radarr</a></li>
+        <li><a href="/settings/sonarr" class="active">Sonarr</a></li>
+      </ul>
+    </li>
     <li><a href="/scheduling">Scheduling</a></li>
     <li><a href="/user">User Settings</a></li>
   </ul>
@@ -128,6 +202,16 @@ SONARR_FORM = '''
   <br><input type="submit" value="Save Sonarr Settings">
   </form>
 </div>
+<script>
+function toggleAppSettings() {
+  var el = document.getElementById('app-settings-list');
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+</script>
 '''
 
 USER_FORM = '''
@@ -141,6 +225,85 @@ USER_FORM = '''
   </fieldset>
 </form>
 </div>
+'''
+
+BASE_LAYOUT = '''
+<div class="topbar">
+  <img src="/static/logo.png" alt="researcharr logo" class="logo">
+  <span class="title-text">researcharr</span>
+  <span class="logout-link"><a href="/logout">Logout</a></span>
+</div>
+<div class="sidebar">
+  <ul>
+    <li class="app-settings-header" onclick="toggleAppSettings()">App Settings ▼
+      <ul id="app-settings-list" class="app-settings-list">
+        <li><a href="/settings/general" data-ajax>General</a></li>
+        <li><a href="/settings/radarr" data-ajax>Radarr</a></li>
+        <li><a href="/settings/sonarr" data-ajax>Sonarr</a></li>
+      </ul>
+    </li>
+    <li><a href="/scheduling" data-ajax>Scheduling</a></li>
+    <li><a href="/user" data-ajax>User Settings</a></li>
+  </ul>
+</div>
+<div id="main-content">
+  {% block main_content %}{% endblock %}
+</div>
+<script>
+function toggleAppSettings() {
+  var el = document.getElementById('app-settings-list');
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+// AJAX navigation
+function setupAjaxLinks() {
+  document.querySelectorAll('[data-ajax]').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      fetch(link.getAttribute('href'), {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(resp => resp.text())
+        .then(html => {
+          document.getElementById('main-content').innerHTML = html;
+          setupAjaxForms();
+          // Highlight active link
+          document.querySelectorAll('[data-ajax]').forEach(function(l) {
+            l.classList.remove('active');
+          });
+          link.classList.add('active');
+        });
+    });
+  });
+}
+function setupAjaxForms() {
+  document.querySelectorAll('#main-content form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var formData = new FormData(form);
+      fetch(form.action, {
+        method: form.method,
+        body: formData,
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+      })
+      .then(resp => resp.text())
+      .then(html => {
+        document.getElementById('main-content').innerHTML = html;
+        setupAjaxForms();
+      });
+    });
+  });
+}
+document.addEventListener('DOMContentLoaded', function() {
+  setupAjaxLinks();
+  setupAjaxForms();
+});
+function rebindAjaxForms() {
+  setupAjaxForms();
+}
+document.addEventListener('DOMContentLoaded', rebindAjaxForms);
+</script>
 '''
 
 
@@ -243,10 +406,14 @@ def radarr_settings():
         msg = 'Missing URL or API key for enabled instance.'
         print(f"[DEBUG] Returning error form, session: {dict(session)}", file=sys.stderr)
         flash(msg, 'error')
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+          return render_template_string(RADARR_FORM, radarr=new_radarr, active_tab='radarr', user=user, validate_summary=msg)
         return redirect(url_for('radarr_settings'))
     cfg['radarr'] = new_radarr
     save_config(cfg)
     flash('Radarr settings saved!')
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+      return render_template_string(RADARR_FORM, radarr=new_radarr, active_tab='radarr', user=user, validate_summary='Radarr settings saved!')
     return redirect(url_for('radarr_settings'))
   # GET: show form, display flashed message if present
   messages = get_flashed_messages(with_categories=True)
@@ -256,11 +423,10 @@ def radarr_settings():
       validate_summary = msg
     else:
       validate_summary = msg
-  return render_template_string(RADARR_FORM,
-    radarr=radarr,
-    active_tab='radarr',
-    user=user,
-    validate_summary=validate_summary)
+  if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+    return render_template_string(RADARR_FORM, radarr=radarr, active_tab='radarr', user=user, validate_summary=validate_summary)
+  from flask import render_template_string as rts
+  return rts(BASE_LAYOUT, main_content=rts(RADARR_FORM, radarr=radarr, active_tab='radarr', user=user, validate_summary=validate_summary))
 
 # Sonarr Settings Page
 
@@ -280,7 +446,6 @@ def sonarr_settings():
       validate_summary = msg
     else:
       validate_summary = msg
-  from flask import get_flashed_messages
   if request.method == 'POST':
     import sys
     print(f"[DEBUG] Session at POST /settings/sonarr: {dict(session)}", file=sys.stderr)
@@ -313,10 +478,14 @@ def sonarr_settings():
         msg = 'Missing URL or API key for enabled instance.'
         print(f"[DEBUG] Returning error form, session: {dict(session)}", file=sys.stderr)
         flash(msg, 'error')
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+          return render_template_string(SONARR_FORM, sonarr=new_sonarr, active_tab='sonarr', user=user, validate_summary=msg)
         return redirect(url_for('sonarr_settings'))
     cfg['sonarr'] = new_sonarr
     save_config(cfg)
     flash('Sonarr settings saved!')
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+      return render_template_string(SONARR_FORM, sonarr=new_sonarr, active_tab='sonarr', user=user, validate_summary='Sonarr settings saved!')
     return redirect(url_for('sonarr_settings'))
   # GET: show form, display flashed message if present
   messages = get_flashed_messages(with_categories=True)
@@ -326,11 +495,10 @@ def sonarr_settings():
       validate_summary = msg
     else:
       validate_summary = msg
-  return render_template_string(SONARR_FORM,
-    sonarr=sonarr,
-    active_tab='sonarr',
-    user=user,
-    validate_summary=validate_summary)
+  if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+    return render_template_string(SONARR_FORM, sonarr=sonarr, active_tab='sonarr', user=user, validate_summary=validate_summary)
+  from flask import render_template_string as rts
+  return rts(BASE_LAYOUT, main_content=rts(SONARR_FORM, sonarr=sonarr, active_tab='sonarr', user=user, validate_summary=validate_summary))
 
 
 @app.route('/user', methods=['GET', 'POST'])
@@ -351,30 +519,34 @@ def user_settings():
       save_user_config(username, password_hash)
       msg = 'User settings updated.'
       user = load_user_config()
-  return render_template_string(USER_FORM,
-    user=user,
-    user_msg=msg,
-    active_tab='user')
+  if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+    return render_template_string(USER_FORM, user=user, user_msg=msg, active_tab='user')
+  from flask import render_template_string as rts
+  return rts(BASE_LAYOUT, main_content=rts(USER_FORM, user=user, user_msg=msg, active_tab='user'))
 
 
 
-# Save endpoint for General settings form (legacy, for test compatibility)
-@app.route('/save', methods=['POST'])
+
+# General Settings Page (AJAX-aware)
+@app.route('/settings/general', methods=['GET', 'POST'])
 @login_required
-def save():
+def general_settings():
   cfg = load_config()
   msg = None
-  try:
-    cfg.setdefault('researcharr', {})['puid'] = int(request.form.get('puid', 1000))
-    cfg['researcharr']['pgid'] = int(request.form.get('pgid', 1000))
-    save_config(cfg)
-    msg = 'General settings saved!'
-  except Exception as e:
-    msg = f'Error: {e}'
-  # After saving, show the General Settings page
+  if request.method == 'POST':
+    try:
+      cfg.setdefault('researcharr', {})['puid'] = int(request.form.get('puid', 1000))
+      cfg['researcharr']['pgid'] = int(request.form.get('pgid', 1000))
+      save_config(cfg)
+      msg = 'General settings saved!'
+    except Exception as e:
+      msg = f'Error: {e}'
   puid = cfg.get('researcharr', {}).get('puid', 1000)
   pgid = cfg.get('researcharr', {}).get('pgid', 1000)
-  return render_template_string(GENERAL_FORM, puid=puid, pgid=pgid, msg=msg, active_tab='general')
+  if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+    return render_template_string(GENERAL_FORM, puid=puid, pgid=pgid, msg=msg, active_tab='general')
+  from flask import render_template_string as rts
+  return rts(BASE_LAYOUT, main_content=rts(GENERAL_FORM, puid=puid, pgid=pgid, msg=msg, active_tab='general'))
 
 
 
@@ -404,7 +576,6 @@ def validate_sonarr(idx):
   # Simulate dry run (no actual changes)
   # (No-op for now)
   return jsonify({'success': True, 'msg': 'Connection successful (dry run)'})
-
 
 from flask import Flask
 app = Flask(__name__)

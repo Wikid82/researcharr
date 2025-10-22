@@ -111,55 +111,20 @@ docker logs -f researcharr
 ---
 
 
-## Web UI
-
-The web UI runs on port **2929**. To use it, run:
-```bash
-## Example: Multiple Radarr/Sonarr Instances in config.yml
-
-```yaml
-radarr:
-  - enabled: true
-    name: "Radarr 1"
-    url: "http://radarr:7878"
-    api_key: "your_radarr_api_key"
-    movies_to_upgrade: 5
-  max_download_queue: 15  # Maximum allowed items in Radarr's download queue before skipping upgrades (default: 15)
-  reprocess_interval_days: 7  # Number of days before a movie is eligible to be reprocessed (default: 7)
-  - enabled: false
-    name: "Radarr 2"
-    url: ""
-    api_key: ""
-    movies_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
-  # ... up to 5
-sonarr:
-  - enabled: true
-    name: "Sonarr 1"
-    url: "http://sonarr:8989"
-    api_key: "your_sonarr_api_key"
-    episodes_to_upgrade: 5
-  max_download_queue: 15  # Maximum allowed items in Sonarr's download queue before skipping upgrades (default: 15)
-  reprocess_interval_days: 7  # Number of days before an episode is eligible to be reprocessed (default: 7)
-  - enabled: false
-    name: "Sonarr 2"
-    url: ""
-    api_key: ""
-    episodes_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
-  # ... up to 5
-```
-
 docker exec -it researcharr python3 /app/webui.py
-```
-and visit [http://localhost:2929](http://localhost:2929).
-```
 
-## Web UI
+## Web UI (AJAX Navigation)
 
-The web UI runs on port **2929**. To use it, run:
+The web UI runs on port **2929** and now features a modern, responsive interface with static sidebar and header. Navigation between settings pages (General, Radarr, Sonarr, Scheduling, User Settings) is instant and seamless—only the main content area reloads, with no full page refreshes. This is powered by AJAX, making the UI feel much faster and more app-like.
+
+**Key Features:**
+- **Static Sidebar & Header:** Sidebar and header never reload; only the center content changes.
+- **Instant Navigation:** Clicking any sidebar link loads the corresponding settings page instantly via AJAX.
+- **AJAX Forms:** All forms (settings, user, scheduling) submit via AJAX and update the content area with error/success feedback—no page reloads.
+- **Active Highlight:** The sidebar highlights the active section after navigation.
+- **Responsive:** The UI is optimized for both desktop and mobile browsers.
+
+To use the web UI, run:
 ```bash
 docker exec -it researcharr python3 /app/webui.py
 ```

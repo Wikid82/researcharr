@@ -1,4 +1,3 @@
-
 import os
 import sys
 from functools import wraps
@@ -10,12 +9,10 @@ from werkzeug.security import generate_password_hash
 app = Flask(__name__)
 app.secret_key = "researcharr_secret_key_for_sessions"
 
-
 # Add root route to redirect to login
 @app.route("/")
 def index():
-    return redirect(url_for("login"))
-
+  return redirect(url_for("login"))
 
 SONARR_FORM = """
 <div class="topbar">

@@ -1,5 +1,5 @@
 <p align="center" style="background: rgba(255, 255, 255, 1); padding: 16px; border-radius: 8px;">
-  <img src="static/logo.png" alt="researcharr logo" height="300"/>
+  <img src="static/logo.jpg" alt="researcharr logo" height="300"/>
 </p>
 
 # researcharr

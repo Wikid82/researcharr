@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 
 # --- Flask app and route definitions only; all HTML/Jinja/JS is in
@@ -71,6 +72,26 @@ def settings_radarr():
     )
 
 
+@app.route("/settings/general", methods=["GET", "POST"])
+@login_required
+def settings_general():
+    msg = None
+    puid = RADARR_SETTINGS.get("PUID", "")
+    pgid = RADARR_SETTINGS.get("PGID", "")
+    timezone = SCHEDULING_SETTINGS.get("timezone", "UTC")
+    if request.method == "POST":
+        puid = request.form.get("PUID", "")
+        pgid = request.form.get("PGID", "")
+        timezone = request.form.get("Timezone", "UTC")
+        RADARR_SETTINGS["PUID"] = puid
+        RADARR_SETTINGS["PGID"] = pgid
+        SCHEDULING_SETTINGS["timezone"] = timezone
+        msg = "General settings saved"
+    return render_template(
+        "settings_general.html", puid=puid, pgid=pgid, timezone=timezone, msg=msg
+    )
+
+
 @app.route("/settings/sonarr", methods=["GET", "POST"])
 @login_required
 def settings_sonarr():
@@ -111,8 +132,10 @@ def scheduling():
         SCHEDULING_SETTINGS["timezone"] = request.form.get(
             "timezone", "UTC"
         )
-    return render_template_string(
-        "<div class='main-content'><h2>Scheduling</h2></div>"
+    return render_template(
+        "base.html",
+        title="Scheduling",
+        content="<div class='main-content'><h2>Scheduling</h2></div>"
     )
 
 

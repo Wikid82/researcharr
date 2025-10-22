@@ -1,14 +1,17 @@
+
 {% extends 'base.html' %}
 {% block title %}General Settings{% endblock %}
 {% block content %}
 <form method="post" action="/settings/general">
   <fieldset><legend>General Settings</legend>
-  PUID: <input name="PUID" value="{{ puid }}"><br>
-  PGID: <input name="PGID" value="{{ pgid }}"><br>
-  Timezone: <input name="Timezone" value="UTC"><br>
-  <input type="submit" value="Save General Settings">
-  {% if msg %}<div class="user-msg">{{ msg }}</div>{% endif %}
-  <div id="sidebar">sidebar</div>
+    <label for="PUID">PUID:</label>
+    <input name="PUID" id="PUID" value="{{ puid }}"><br>
+    <label for="PGID">PGID:</label>
+    <input name="PGID" id="PGID" value="{{ pgid }}"><br>
+    <label for="Timezone">Timezone:</label>
+    <input name="Timezone" id="Timezone" value="{{ timezone|default('UTC') }}"><br>
+    <input type="submit" value="Save General Settings">
+    {% if msg %}<div class="user-msg">{{ msg }}</div>{% endif %}
   </fieldset>
 </form>
 {% endblock %}

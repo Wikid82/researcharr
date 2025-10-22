@@ -1,9 +1,11 @@
-import os
-import tempfile
-import pytest
-import sys
 import importlib
+import os
+import sys
+import tempfile
 from unittest import mock
+
+import pytest
+
 
 @pytest.fixture(autouse=True)
 def patch_config_and_loggers(tmp_path_factory, monkeypatch):
@@ -22,15 +24,21 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
     sonarr_log = str(log_dir / "sonarr.log")
     config_path = temp_dir / "config.yml"
     with open(config_path, "w") as f:
-        f.write("researcharr:\n  timezone: America/New_York\n  puid: 1000\n  pgid: 1000\n  cron_schedule: '0 * * * *'\nradarr: []\nsonarr: []\n")
+        f.write(
+            "researcharr:\n  timezone: America/New_York\n  puid: 1000\n  pgid: 1000\n  cron_schedule: '0 * * * *'\nradarr: []\nsonarr: []\n"
+        )
     # Patch open for /config/config.yml
     import builtins
+
     real_open = builtins.open
-    def patched_open(file, mode='r', *args, **kwargs):
-        if str(file) == '/config/config.yml':
+
+    def patched_open(file, mode="r", *args, **kwargs):
+        if str(file) == "/config/config.yml":
             return real_open(config_path, mode, *args, **kwargs)
         return real_open(file, mode, *args, **kwargs)
+
     monkeypatch.setattr("builtins.open", patched_open)
+
     # Patch logger setup to use temp log files
     def fake_setup_logger(name, log_file, level=None):
         logger = mock.Mock()
@@ -38,14 +46,33 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
         logger.warning = mock.Mock()
         logger.error = mock.Mock()
         return logger
+
     sys.modules.pop("researcharr.app", None)  # Ensure clean import
     monkeypatch.setattr("researcharr.app.DB_PATH", db_path, raising=False)
-    monkeypatch.setattr("researcharr.app.setup_logger", fake_setup_logger, raising=False)
-    monkeypatch.setattr("researcharr.app.main_logger", fake_setup_logger('main_logger', main_log), raising=False)
-    monkeypatch.setattr("researcharr.app.radarr_logger", fake_setup_logger('radarr_logger', radarr_log), raising=False)
-    monkeypatch.setattr("researcharr.app.sonarr_logger", fake_setup_logger('sonarr_logger', sonarr_log), raising=False)
+    monkeypatch.setattr(
+        "researcharr.app.setup_logger", fake_setup_logger, raising=False
+    )
+    monkeypatch.setattr(
+        "researcharr.app.main_logger",
+        fake_setup_logger("main_logger", main_log),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "researcharr.app.radarr_logger",
+        fake_setup_logger("radarr_logger", radarr_log),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "researcharr.app.sonarr_logger",
+        fake_setup_logger("sonarr_logger", sonarr_log),
+        raising=False,
+    )
     # Patch USER_CONFIG_PATH if needed
-    monkeypatch.setattr("researcharr.app.USER_CONFIG_PATH", str(temp_dir / "webui_user.yml"), raising=False)
+    monkeypatch.setattr(
+        "researcharr.app.USER_CONFIG_PATH",
+        str(temp_dir / "webui_user.yml"),
+        raising=False,
+    )
     # Now import app (all patches in place)
     importlib.import_module("researcharr.app")
     yield

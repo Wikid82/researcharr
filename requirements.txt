@@ -9,3 +9,5 @@ urllib3>=2.5.0
 werkzeug
 flask
 pyyaml
+black
+isort

@@ -1,7 +1,6 @@
 import importlib
 import os
 import sys
-import tempfile
 from unittest import mock
 
 import pytest
@@ -25,7 +24,8 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
     config_path = temp_dir / "config.yml"
     with open(config_path, "w") as f:
         f.write(
-            "researcharr:\n  timezone: America/New_York\n  puid: 1000\n  pgid: 1000\n  cron_schedule: '0 * * * *'\nradarr: []\nsonarr: []\n"
+            "researcharr:\n  timezone: America/New_York\n  puid: 1000\n  pgid: 1000\n"
+            "  cron_schedule: '0 * * * *'\nradarr: []\nsonarr: []\n"
         )
     # Patch open for /config/config.yml
     import builtins

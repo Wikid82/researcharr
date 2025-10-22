@@ -1,6 +1,14 @@
 #!/bin/bash
 
 # Load PUID/PGID from config.yml if present
+# Ensure /config directory exists and is writable
+if [ ! -d /config ]; then
+  mkdir -p /config
+fi
+if [ ! -w /config ]; then
+  echo "ERROR: /config directory is not writable. Check your Docker volume mount and permissions."
+  exit 1
+fi
 PUID=$(yq '.researcharr.puid' /config/config.yml)
 PUID=${PUID:-1000}
 PGID=$(yq '.researcharr.pgid' /config/config.yml)
@@ -24,15 +32,20 @@ fi
 # Ensure /config/config.yml exists, copy from example if missing
 if [ ! -f /config/config.yml ]; then
   if [ -f /app/config.example.yml ]; then
+if [ ! -f /config/config.yml ]; then
+  if [ -f /app/config.example.yml ]; then
     cp /app/config.example.yml /config/config.yml
-    echo "Copied default config.example.yml to /config/config.yml."
+    if [ $? -eq 0 ]; then
+      echo "Copied default config.example.yml to /config/config.yml."
+    else
+      echo "ERROR: Failed to copy config.example.yml to /config/config.yml. Check permissions."
+      exit 1
+    fi
   else
     echo "No config.yml or config.example.yml found!"
     exit 1
   fi
 fi
-
-# Ensure /config/logs directory exists
 mkdir -p /config/logs
 
 # Ensure /config/researcharr.db exists (touch will not overwrite if present)

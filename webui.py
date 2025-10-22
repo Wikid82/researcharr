@@ -6,6 +6,7 @@ from functools import wraps
 import yaml
 from flask import Flask, redirect, render_template_string, request, session, url_for  # noqa: E501
 from werkzeug.security import generate_password_hash
+from flask import render_template
 
 # Initialize Flask app before any usage
 app = Flask(__name__)
@@ -448,38 +449,7 @@ def settings_radarr():
             "api_pulls": api_pulls,
         })
         i += 1
-    form_html = "<h1>Radarr</h1>"
-    if msg:
-        form_html += f"<div>{msg}</div>"
-    form_html += '<form method="post">'
-    for idx, inst in enumerate(instances or [{}]):
-        form_html += (
-            f'<label>Name</label><input name="radarr{idx}_name" value="{inst.get("name", "")}"'  # noqa: E501
-            f'><br>'
-        )
-        form_html += (
-            f'<label>URL</label><input name="radarr{idx}_url" value="{inst.get("url", "")}"'  # noqa: E501
-            f'><br>'
-        )
-        form_html += (
-            f'<label>API Key</label><input name="radarr{idx}_api_key" value="{inst.get("api_key", "")}"'  # noqa: E501
-            f'><br>'
-        )
-        form_html += (
-            f'<label>API Pulls</label><input name="radarr{idx}_api_pulls" value="{inst.get("api_pulls", "")}"'  # noqa: E501
-            f'><br>'
-        )
-    form_html += '<input type="submit" value="Save"></form>'
-    for inst in instances:
-        if inst["name"]:
-            form_html += f'<div>{inst["name"]}</div>'
-        if inst["url"]:
-            form_html += f'<div>{inst["url"]}</div>'
-        if inst["api_pulls"]:
-            form_html += f'<div>{inst["api_pulls"]}</div>'
-    with open("templates/footer.html") as f:
-        footer = f.read()
-    return render_template_string(form_html + footer)
+  return render_template("settings_radarr.html", radarr=instances, msg=msg)
 
 @app.route("/settings/sonarr", methods=["GET", "POST"])
 @login_required
@@ -531,9 +501,7 @@ def settings_sonarr():
             form_html += f'<div>{inst["name"]}</div>'
         if inst["url"]:
             form_html += f'<div>{inst["url"]}</div>'
-    with open("templates/footer.html") as f:
-        footer = f.read()
-    return render_template_string(form_html + footer)
+  return render_template("settings_sonarr.html", sonarr=instances, validate_summary=msg)
 
 @app.route("/scheduling", methods=["GET", "POST"])
 @login_required
@@ -545,25 +513,8 @@ def scheduling():
         msg = "Schedule saved"
     cron = SCHEDULING_SETTINGS.get("cron_schedule", "")
     tz = SCHEDULING_SETTINGS.get("timezone", "UTC")
-    with open("templates/footer.html") as f:
-        footer = f.read()
-    page = (
-        '<div class="main-content"><h2>Scheduling</h2>'
-        + (f"<div>{msg}</div>" if msg else "")
-        + '<form method="post">'
-        + (
-            f'<label for="timezone">Timezone:</label>'
-            f'<input id="timezone" name="timezone" value="{tz}"><br>'
-        )
-        + (
-            f'<label for="cron_schedule">Cron Schedule:</label>'
-            f'<input id="cron_schedule" name="cron_schedule" value="{cron}"><br>'
-        )
-        + '<input type="submit" value="Save"></form>'
-        + (f"<div>{cron}</div>" if cron else "")
-        + "</div>"
-    )
-    return render_template_string(page + footer)
+  # TODO: Create scheduling.html and use render_template here
+  return render_template_string("<div class='main-content'><h2>Scheduling</h2></div>")
 
  # --- Helper Functions ---
 def login_required(f):
@@ -599,9 +550,7 @@ def user_settings():
         else:
             user["username"] = username
             user_msg = "User settings saved."
-    with open("templates/footer.html") as f:
-        footer = f.read()
-    return render_template_string(USER_FORM + footer, user=user, user_msg=user_msg)
+  return render_template("user.html", user=user, user_msg=user_msg)
 
 
 
@@ -668,25 +617,13 @@ def login():
             return redirect("/settings/general")
         else:
             error = "Invalid username or password"
-    with open("templates/footer.html") as f:
-        footer = f.read()
-    login_form = """
-        <form method="post">
-            <input name="username">
-            <input name="password" type="password">
-            <input type="submit" value="Login">
-            {% if error %}<div>{{ error }}</div>{% endif %}
-        </form>
-    """
-    return render_template_string(login_form + footer, error=error)
+  return render_template("login.html", error=error)
 
 @app.route("/settings/general", methods=["GET"])
 def settings_general():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
-    with open("templates/footer.html") as f:
-        footer = f.read()
-    return render_template_string(GENERAL_FORM + footer, puid="1000", pgid="1000", msg=None)
+  return render_template("settings_general.html", puid="1000", pgid="1000", msg=None)
 
 @app.route("/save", methods=["POST"])
 @login_required
@@ -694,6 +631,4 @@ def save_general():
     puid = request.form.get("puid", "")
     pgid = request.form.get("pgid", "")
     msg = "Settings saved."
-    with open("templates/footer.html") as f:
-        footer = f.read()
-    return render_template_string(GENERAL_FORM + footer, puid=puid, pgid=pgid, msg=msg)
+  return render_template("settings_general.html", puid=puid, pgid=pgid, msg=msg)

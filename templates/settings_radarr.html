@@ -6,10 +6,17 @@
     {% for i in range(5) %}
       <fieldset style="margin:10px; border:1px solid #ccc;">
         <legend>Radarr {{i+1}}</legend>
+        {% if radarr|length > i %}
         Name: <input name="radarr{{i}}_name" value="{{ radarr[i].name }}"><br>
         URL: <input name="radarr{{i}}_url" value="{{ radarr[i].url }}"><br>
         API Key: <input name="radarr{{i}}_api_key" value="{{ radarr[i].api_key }}"><br>
         API Pulls per Hour: <input name="radarr{{i}}_api_pulls" value="{{ radarr[i].get('api_pulls', 20) }}" style="width:60px;"> <small>(default: 20)</small><br>
+        {% else %}
+        Name: <input name="radarr{{i}}_name"><br>
+        URL: <input name="radarr{{i}}_url"><br>
+        API Key: <input name="radarr{{i}}_api_key"><br>
+        API Pulls per Hour: <input name="radarr{{i}}_api_pulls" value="20" style="width:60px;"> <small>(default: 20)</small><br>
+        {% endif %}
       </fieldset>
     {% endfor %}
   </fieldset>

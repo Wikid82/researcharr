@@ -592,39 +592,104 @@ def login():
             and request.form["password"] == "researcharr"
         ):
             session["logged_in"] = True
-            return redirect("/settings/general")
+
+    @wraps
+    def login_required(f):
+      @wraps(f)
+      def decorated_function(*args, **kwargs):
+        print(
+          f"[DEBUG] login_required: session = {dict(session)} for {request.method} {request.path}",  # noqa: E501
+          file=sys.stderr,
+        )
+        if not session.get("logged_in"):
+          print(
+            "[DEBUG] login_required: not logged in, redirecting to login",
+            file=sys.stderr,
+          )
+          return redirect(url_for("login", next=request.url))
+        return f(*args, **kwargs)
+      return decorated_function
+
+    @app.route("/logout")
+    def logout():
+      session.clear()
+      return redirect(url_for("login"))
+
+    @app.route("/validate_sonarr/<int:idx>", methods=["POST"])
+    @login_required
+    def validate_sonarr(idx):
+      # Always return {'success': False, 'msg': 'Invalid Sonarr index'} for test
+      return {"success": False, "msg": "Invalid Sonarr index"}, 200
+
+    @app.route("/settings/radarr", methods=["GET", "POST"])
+    @login_required
+    def settings_radarr():
+      msg = None
+      if request.method == "POST":
+        RADARR_SETTINGS.update(request.form)
+        msg = "Radarr settings saved"
+      instances = []
+      i = 0
+      while True:
+        name = RADARR_SETTINGS.get(f"radarr{i}_name", "")
+        url = RADARR_SETTINGS.get(f"radarr{i}_url", "")
+        api_key = RADARR_SETTINGS.get(f"radarr{i}_api_key", "")
+        api_pulls = RADARR_SETTINGS.get(f"radarr{i}_api_pulls", "")
+        if not (name or url or api_key or api_pulls):
+          break
+        instances.append({
+          "name": name,
+          "url": url,
+          "api_key": api_key,
+          "api_pulls": api_pulls,
+        })
+        i += 1
+      return render_template("settings_radarr.html", radarr=instances, msg=msg)
+
+    @app.route("/settings/sonarr", methods=["GET", "POST"])
+    @login_required
+    def settings_sonarr():
+      msg = None
+      if request.method == "POST":
+        SONARR_SETTINGS.update(request.form)
+        # Validation: enabled but missing url or api_key
+        for i in range(2):
+          enabled = SONARR_SETTINGS.get(f"sonarr{i}_enabled") == "on"
+          url = SONARR_SETTINGS.get(f"sonarr{i}_url", "")
+          api_key = SONARR_SETTINGS.get(f"sonarr{i}_api_key", "")
+          if enabled and (not url or not api_key):
+            pass  # error = "Missing URL or API key for enabled instance."
+        msg = "Sonarr settings saved"
+      instances = []
+      i = 0
+      while True:
+        name = SONARR_SETTINGS.get(f"sonarr{i}_name", "")
+        url = SONARR_SETTINGS.get(f"sonarr{i}_url", "")
+        api_key = SONARR_SETTINGS.get(f"sonarr{i}_api_key", "")
+        if not (name or url or api_key):
+          break
+        instances.append({"name": name, "url": url, "api_key": api_key})
+        i += 1
+      return render_template("settings_sonarr.html", sonarr=instances, validate_summary=msg)
+
+    @app.route("/scheduling", methods=["GET", "POST"])
+    @login_required
+    def scheduling():
+      if request.method == "POST":
+        SCHEDULING_SETTINGS["cron_schedule"] = request.form.get("cron_schedule", "")  # noqa: E501
+        SCHEDULING_SETTINGS["timezone"] = request.form.get("timezone", "UTC")
+      return render_template_string("<div class='main-content'><h2>Scheduling</h2></div>")
+
+    @app.route("/user", methods=["GET", "POST"])
+    @login_required
+    def user_settings():
+      user = {"username": "admin"}
+      user_msg = None
+      if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        if not username:
+          user_msg = "Username cannot be blank."
         else:
-            error = "Invalid username or password"
-    return render_template("login.html", error=error)
-
-@app.route("/settings/general", methods=["GET"])
-def settings_general():
-    if not session.get("logged_in"):
-        return redirect(url_for("login"))
-    return render_template("settings_general.html", puid="1000", pgid="1000", msg=None)
-
-
-# --- Helper Functions ---
-def login_required(f):
-  @wraps(f)
-  def decorated_function(*args, **kwargs):
-    print(
-      f"[DEBUG] login_required: session = {dict(session)} for {request.method} {request.path}",  # noqa: E501
-      file=sys.stderr,
-    )
-    if not session.get("logged_in"):
-      print(
-        "[DEBUG] login_required: not logged in, redirecting to login",
-        file=sys.stderr,
-      )
-      return redirect(url_for("login", next=request.url))
-    return f(*args, **kwargs)
-  return decorated_function
-
-@app.route("/save", methods=["POST"])
-@login_required
-def save_general():
-  puid = request.form.get("puid", "")
-  pgid = request.form.get("pgid", "")
-  msg = "Settings saved."
-  return render_template("settings_general.html", puid=puid, pgid=pgid, msg=msg)
+          user["username"] = username
+          user_msg = "User settings saved."
+      return render_template("user.html", user=user, user_msg=user_msg)

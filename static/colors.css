@@ -1,18 +1,79 @@
-/* Color scheme for researcharr */
+/* Tailwind-inspired color palette for researcharr */
 :root {
-  --color-bg: #181818;
-  --color-bg-alt: #222;
-  --color-header: #222;
-  --color-footer: #222;
-  --color-sidebar: #181818;
-  --color-main: #23272e;
-  --color-primary: #4f8cff;
-  --color-accent: #ffb347;
+  /* Cool Gray */
+  --cool-gray-100: #1d1f28;
+  --cool-gray-200: #3a3e50;
+  --cool-gray-300: #575d79;
+  --cool-gray-400: #787e9d;
+  --cool-gray-500: #a2a6bb;
+  --cool-gray-600: #b3b7c8;
+  --cool-gray-700: #c6c9d6;
+  --cool-gray-800: #d9dbe4;
+  --cool-gray-900: #ecedf1;
+  --cool-gray: #a2a6bb;
+
+  /* Green Blue */
+  --green-blue-100: #081422;
+  --green-blue-200: #102744;
+  --green-blue-300: #183b66;
+  --green-blue-400: #204e87;
+  --green-blue-500: #2864ab;
+  --green-blue-600: #3c7fd1;
+  --green-blue-700: #6d9fdd;
+  --green-blue-800: #9ebfe8;
+  --green-blue-900: #cedff4;
+  --green-blue: #2864ab;
+
+  /* White */
+  --white-100: #333333;
+  --white-200: #666666;
+  --white-300: #999999;
+  --white-400: #cccccc;
+  --white-500: #ffffff;
+  --white-600: #ffffff;
+  --white-700: #ffffff;
+  --white-800: #ffffff;
+  --white-900: #ffffff;
+  --white: #ffffff;
+
+  /* French Gray */
+  --french-gray-100: #232632;
+  --french-gray-200: #464c63;
+  --french-gray-300: #697295;
+  --french-gray-400: #9ba1b8;
+  --french-gray-500: #cbceda;
+  --french-gray-600: #d6d9e2;
+  --french-gray-700: #e1e2e9;
+  --french-gray-800: #ebecf1;
+  --french-gray-900: #f5f5f8;
+  --french-gray: #cbceda;
+
+  /* Platinum */
+  --platinum-100: #2a2a33;
+  --platinum-200: #545465;
+  --platinum-300: #818196;
+  --platinum-400: #b3b3c0;
+  --platinum-500: #e6e6ea;
+  --platinum-600: #ebebee;
+  --platinum-700: #f0f0f2;
+  --platinum-800: #f5f5f7;
+  --platinum-900: #fafafb;
+  --platinum: #e6e6ea;
+
+  /* Main theme shortcuts */
+  --color-bg: var(--cool-gray-100);
+  --color-bg-alt: var(--cool-gray-200);
+  --color-header: var(--green-blue-500);
+  --color-footer: var(--green-blue-500);
+  --color-sidebar: var(--french-gray-100);
+  --color-main: var(--platinum-500);
+  --color-primary: var(--green-blue-500);
+  --color-accent: var(--cool-gray-500);
   --color-success: #4caf50;
   --color-warning: #ff9800;
   --color-error: #f44336;
-  --color-text: #fff;
-  --color-text-muted: #bbb;
-  --color-link: #4f8cff;
-  --color-link-hover: #82b1ff;
+  --color-text: var(--white);
+  --color-text-muted: var(--cool-gray-400);
+  --color-link: var(--green-blue-500);
+  --color-link-hover: var(--green-blue-600);
 }

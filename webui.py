@@ -3,8 +3,16 @@ from functools import wraps
 
 import requests
 import yaml
-from flask import (Flask, flash, jsonify, redirect, render_template_string,
-                   request, session, url_for)
+from flask import (
+    Flask,
+    flash,
+    jsonify,
+    redirect,
+    render_template_string,
+    request,
+    session,
+    url_for,
+)
 from werkzeug.security import check_password_hash, generate_password_hash
 
 # Initialize Flask app before any usage
@@ -133,8 +141,16 @@ from functools import wraps
 
 import requests
 import yaml
-from flask import (Flask, flash, jsonify, redirect, render_template_string,
-                   request, session, url_for)
+from flask import (
+    Flask,
+    flash,
+    jsonify,
+    redirect,
+    render_template_string,
+    request,
+    session,
+    url_for,
+)
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
@@ -287,8 +303,16 @@ from functools import wraps
 
 import requests
 import yaml
-from flask import (Flask, flash, jsonify, redirect, render_template_string,
-                   request, session, url_for)
+from flask import (
+    Flask,
+    flash,
+    jsonify,
+    redirect,
+    render_template_string,
+    request,
+    session,
+    url_for,
+)
 from werkzeug.security import check_password_hash, generate_password_hash
 
 GENERAL_FORM = """
@@ -437,8 +461,16 @@ from functools import wraps
 
 import requests
 import yaml
-from flask import (Flask, flash, jsonify, redirect, render_template_string,
-                   request, session, url_for)
+from flask import (
+    Flask,
+    flash,
+    jsonify,
+    redirect,
+    render_template_string,
+    request,
+    session,
+    url_for,
+)
 from werkzeug.security import check_password_hash, generate_password_hash
 
 GENERAL_FORM = """

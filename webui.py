@@ -172,7 +172,7 @@ def login():
             and request.form["password"] == "researcharr"
         ):
             session["logged_in"] = True
-            return redirect(url_for("settings_general"))
+            return redirect(url_for("settings_radarr"))
         else:
             error = "Invalid username or password."
     return render_template("login.html", error=error)

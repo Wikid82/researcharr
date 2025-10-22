@@ -67,10 +67,10 @@ def test_general_settings_page(client):
     rv = client.get("/settings/general")
     assert rv.status_code == 200
     assert b"General" in rv.data
-        # Check for header, sidebar, and footer
-        assert b"researcharr" in rv.data  # header
-        assert b"sidebar" in rv.data      # sidebar
-        assert b"footer" in rv.data or b"footer.html" in rv.data  # footer
+    # Check for header, sidebar, and footer
+    assert b"researcharr" in rv.data  # header
+    assert b"sidebar" in rv.data      # sidebar
+    assert b"footer" in rv.data or b"footer.html" in rv.data  # footer
 
 
 def test_radarr_settings_page(client):
@@ -78,9 +78,9 @@ def test_radarr_settings_page(client):
     rv = client.get("/settings/radarr")
     assert rv.status_code == 200
     assert b"Radarr" in rv.data
-        assert b"researcharr" in rv.data
-        assert b"sidebar" in rv.data
-        assert b"footer" in rv.data or b"footer.html" in rv.data
+    assert b"researcharr" in rv.data
+    assert b"sidebar" in rv.data
+    assert b"footer" in rv.data or b"footer.html" in rv.data
 
 
 def test_sonarr_settings_page(client):
@@ -88,9 +88,9 @@ def test_sonarr_settings_page(client):
     rv = client.get("/settings/sonarr")
     assert rv.status_code == 200
     assert b"Sonarr" in rv.data
-        assert b"researcharr" in rv.data
-        assert b"sidebar" in rv.data
-        assert b"footer" in rv.data or b"footer.html" in rv.data
+    assert b"researcharr" in rv.data
+    assert b"sidebar" in rv.data
+    assert b"footer" in rv.data or b"footer.html" in rv.data
 
 
 def test_scheduling_page(client):
@@ -98,9 +98,9 @@ def test_scheduling_page(client):
     rv = client.get("/scheduling")
     assert rv.status_code == 200
     assert b"Scheduling" in rv.data
-        assert b"researcharr" in rv.data
-        assert b"sidebar" in rv.data
-        assert b"footer" in rv.data or b"footer.html" in rv.data
+    assert b"researcharr" in rv.data
+    assert b"sidebar" in rv.data
+    assert b"footer" in rv.data or b"footer.html" in rv.data
 
 
 def test_user_settings_page(client):
@@ -108,9 +108,9 @@ def test_user_settings_page(client):
     rv = client.get("/user")
     assert rv.status_code == 200
     assert b"User Settings" in rv.data
-        assert b"researcharr" in rv.data
-        assert b"sidebar" in rv.data
-        assert b"footer" in rv.data or b"footer.html" in rv.data
+    assert b"researcharr" in rv.data
+    assert b"sidebar" in rv.data
+    assert b"footer" in rv.data or b"footer.html" in rv.data
 
 
 def test_general_settings_page_content(client):

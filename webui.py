@@ -449,7 +449,7 @@ def settings_radarr():
             "api_pulls": api_pulls,
         })
         i += 1
-      return render_template("settings_radarr.html", radarr=instances, msg=msg)
+    return render_template("settings_radarr.html", radarr=instances, msg=msg)
 
 @app.route("/settings/sonarr", methods=["GET", "POST"])
 @login_required

@@ -135,23 +135,6 @@ function toggleAppSettings() {
 </script>
 """
 
-# --- Helper Functions ---
-
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        print(
-            "[DEBUG] login_required: session = {} for {} {}".format(dict(session), request.method, request.path),
-            file=sys.stderr,
-        )
-        if not session.get("logged_in"):
-            print(
-                "[DEBUG] login_required: not logged in, redirecting to login",
-                file=sys.stderr,
-            )
-            return redirect(url_for("login", next=request.url))
-        return f(*args, **kwargs)
-    return decorated_function
 
 GENERAL_FORM = """
 <div class="topbar">
@@ -436,6 +419,7 @@ USER_FORM = """
 </form>
 </div>
 """
+
 
 
 # Minimal in-memory storage for test persistence
@@ -443,12 +427,10 @@ RADARR_SETTINGS = {}
 SONARR_SETTINGS = {}
 SCHEDULING_SETTINGS = {"cron_schedule": "", "timezone": "UTC"}
 
-
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
-
 
 @app.route("/validate_sonarr/<int:idx>", methods=["POST"])
 @login_required
@@ -456,8 +438,6 @@ def validate_sonarr(idx):
     # Always return {'success': False, 'msg': 'Invalid Sonarr index'} for test
     return {"success": False, "msg": "Invalid Sonarr index"}, 200
 
-
-# Update Radarr and Sonarr routes to display all instances
 @app.route("/settings/radarr", methods=["GET", "POST"])
 @login_required
 def settings_radarr():
@@ -512,7 +492,6 @@ def settings_radarr():
             form_html += f'<div>{inst["api_pulls"]}</div>'
     return render_template_string(form_html)
 
-
 @app.route("/settings/sonarr", methods=["GET", "POST"])
 @login_required
 def settings_sonarr():
@@ -565,7 +544,6 @@ def settings_sonarr():
             form_html += f'<div>{inst["url"]}</div>'
     return render_template_string(form_html)
 
-
 @app.route("/scheduling", methods=["GET", "POST"])
 @login_required
 def scheduling():
@@ -593,8 +571,7 @@ def scheduling():
         + "</div>"
     )
 
-
-# --- Helper Functions ---
+ # --- Helper Functions ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -616,8 +593,6 @@ def register_additional_routes(app):
 
     pass
 
-
-# User settings route
 @app.route("/user", methods=["GET", "POST"])
 @login_required
 def user_settings():
@@ -631,6 +606,7 @@ def user_settings():
             user["username"] = username
             user_msg = "User settings saved."
     return render_template_string(USER_FORM, user=user, user_msg=user_msg)
+
 
 
 register_additional_routes(app)
@@ -683,7 +659,6 @@ def save_user_config(username, password_hash):
 
 # --- End Helper Functions ---
 
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
     error = None
@@ -709,13 +684,11 @@ def login():
         error=error,
     )
 
-
 @app.route("/settings/general", methods=["GET"])
 def settings_general():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
     return render_template_string(GENERAL_FORM, puid="1000", pgid="1000", msg=None)  # noqa: E501
-
 
 @app.route("/save", methods=["POST"])
 @login_required

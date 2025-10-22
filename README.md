@@ -6,6 +6,10 @@
 
 A modern, always-on utility to automatically trigger searches in the *arr suite to keep files up to date with any scoring or custom format changes. Features a secure, AJAX-powered web UI for managing all settings, per-instance validation, and robust automated test coverage.
 
+## Developer Note: Config Loader & Test Coverage
+
+The `load_config()` function now accepts an optional `path` argument, allowing tests and advanced users to load configuration from any file. This enables robust testing of config edge cases (missing, empty, malformed, or partial configs) and makes it easier to develop and validate new features. The test suite now covers config loading, error handling for connections, database integrity, and logger output.
+
 **Key Features:**
 - Modern AJAX web UI (instant navigation, no page reloads)
 - Secure login, user management, and error feedback

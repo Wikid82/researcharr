@@ -1,7 +1,5 @@
-# Add root route to redirect to login
-@app.route("/")
-def index():
-  return redirect(url_for("login"))
+
+
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import yaml
@@ -9,8 +7,16 @@ from flask import Flask, render_template_string, request, redirect, url_for, fla
 import os
 import requests
 
+# Initialize Flask app before any usage
 app = Flask(__name__)
 app.secret_key = 'researcharr_secret_key_for_sessions'
+
+
+
+# Add root route to redirect to login
+@app.route("/")
+def index():
+    return redirect(url_for("login"))
 
 
 

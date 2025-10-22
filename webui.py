@@ -18,20 +18,20 @@ def index():
 
 SONARR_FORM = """
 <div class="topbar">
-    <img src="/static/logo.png" alt="researcharr logo" class="logo">
-    <span class="title-text">researcharr</span>
-    <span class="logout-link"><a href="/logout">Logout</a></span>
-    <ul>
-        <li class="app-settings-header" onclick="toggleAppSettings()">App Settings ▼
-            <ul id="app-settings-list" class="app-settings-list">
-                <li><a href="/settings/general">General</a></li>
-                <li><a href="/settings/radarr">Radarr</a></li>
-                <li><a href="/settings/sonarr" class="active">Sonarr</a></li>
-            </ul>
-        </li>
-        <li><a href="/scheduling">Scheduling</a></li>
-        <li><a href="/user">User Settings</a></li>
-    </ul>
+  <img src="/static/logo.png" alt="researcharr logo" class="logo">
+  <span class="title-text">researcharr</span>
+  <span class="logout-link"><a href="/logout">Logout</a></span>
+</div>
+<div class="sidebar">
+  <ul>
+    <li class="app-settings-header" onclick="toggleAppSettings()">App Settings ▼
+      <ul id="app-settings-list" class="app-settings-list">
+        <li><a href="/settings/general">General</a></li>
+        <li><a href="/settings/radarr">Radarr</a></li>
+        <li><a href="/settings/sonarr" class="active">Sonarr</a></li>
+      </ul>
+    </li>
+    <li><a href="/scheduling">Scheduling</a></li>
     <li><a href="/user">User Settings</a></li>
   </ul>
 </div>
@@ -45,7 +45,10 @@ SONARR_FORM = """
         Enable: <label class="switch"><input name="sonarr{{i}}_enabled" type="checkbox" {% if sonarr[i].enabled %}checked{% endif %} onchange="toggleInstance('sonarr', {{i}})"><span class="slider round"></span></label><br>
         <div id="sonarr_fields_{{i}}" class="instance-fields{% if sonarr[i].enabled %} open{% endif %}">
           Name: <input name="sonarr{{i}}_name" value="{{ sonarr[i].name }}"><br>
-def save_config(cfg): pass
+          URL: <input name="sonarr{{i}}_url" value="{{ sonarr[i].url }}"><br>
+          API Key: <input name="sonarr{{i}}_api_key" value="{{ sonarr[i].api_key }}"><br>
+          Process: <input name="sonarr{{i}}_process" type="checkbox" {% if sonarr[i].get('process', False) %}checked{% endif %}><br>
+          Process by: <select name="sonarr{{i}}_mode">
             <option value="series" {% if sonarr[i].get('mode', 'series') == 'series' %}selected{% endif %}>Series (default, most efficient)</option>
             <option value="season" {% if sonarr[i].get('mode') == 'season' %}selected{% endif %}>Season</option>
             <option value="episode" {% if sonarr[i].get('mode') == 'episode' %}selected{% endif %}>Episode</option>
@@ -66,10 +69,8 @@ def save_config(cfg): pass
   <br><input type="submit" value="Save Sonarr Settings">
   </form>
 </div>
+<script>
 function toggleAppSettings() {
-  </script>
-
-
   var el = document.getElementById('app-settings-list');
   if (el.style.display === 'none') {
     el.style.display = 'block';
@@ -92,6 +93,7 @@ USER_FORM = """
 </div>
 """
 
+
 GENERAL_FORM = """
 <div class="topbar">
   <img src="/static/logo.png" alt="researcharr logo" class="logo">
@@ -100,6 +102,17 @@ GENERAL_FORM = """
 </div>
 <div class="sidebar">
   <ul>
+    <li class="app-settings-header" onclick="toggleAppSettings()">App Settings ▼
+      <ul id="app-settings-list" class="app-settings-list">
+        <li><a href="/settings/general">General</a></li>
+        <li><a href="/settings/radarr">Radarr</a></li>
+        <li><a href="/settings/sonarr">Sonarr</a></li>
+      </ul>
+    </li>
+    <li><a href="/scheduling">Scheduling</a></li>
+    <li><a href="/user">User Settings</a></li>
+  </ul>
+</div>
 <div class="main-content">
 <form method="post" action="/settings/general">
   <fieldset><legend>General Settings</legend>
@@ -120,7 +133,7 @@ function toggleAppSettings() {
   }
 }
 </script>
-def login_required(f):
+"""
 
 # --- Helper Functions ---
 

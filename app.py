@@ -1,9 +1,12 @@
 
 # Standard library imports
+
 import logging
 import sys
 import os
 import sqlite3
+import threading
+import time
 
 import requests
 import yaml
@@ -49,7 +52,28 @@ def setup_logging(loglevel=None):
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
+
+def watch_loglevel_config(interval=10):
+    """Background thread to watch for loglevel changes in config and update live."""
+    config_path = os.environ.get("USER_CONFIG_PATH") or globals().get("USER_CONFIG_PATH") or "/config/config.yml"
+    last_loglevel = None
+    while True:
+        try:
+            with open(config_path, "r") as f:
+                config = yaml.safe_load(f)
+            loglevel = config.get("researcharr", {}).get("loglevel", "DEBUG")
+            logger = logging.getLogger()
+            if loglevel != last_loglevel:
+                logger.setLevel(getattr(logging, loglevel, logging.DEBUG))
+                last_loglevel = loglevel
+        except Exception:
+            pass
+        time.sleep(interval)
+
 setup_logging()
+
+# Start background watcher for live loglevel changes
+threading.Thread(target=watch_loglevel_config, args=(5,), daemon=True).start()
 
 # --- Database Setup ---
 

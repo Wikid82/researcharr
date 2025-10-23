@@ -72,6 +72,17 @@ def settings_radarr():
     )
 
 
+@app.route("/save", methods=["POST"])
+@login_required
+def save_general():
+    puid = request.form.get("puid", "")
+    pgid = request.form.get("pgid", "")
+    RADARR_SETTINGS["PUID"] = puid
+    RADARR_SETTINGS["PGID"] = pgid
+    # Redirect to general settings page after save
+    return redirect(url_for("settings_general"))
+
+
 @app.route("/settings/general", methods=["GET", "POST"])
 @login_required
 def settings_general():
@@ -133,9 +144,9 @@ def scheduling():
             "timezone", "UTC"
         )
     return render_template(
-        "base.html",
-        title="Scheduling",
-        content="<div class='main-content'><h2>Scheduling</h2></div>"
+        "scheduling.html",
+        cron_schedule=SCHEDULING_SETTINGS.get("cron_schedule", ""),
+        timezone=SCHEDULING_SETTINGS.get("timezone", "UTC")
     )
 
 

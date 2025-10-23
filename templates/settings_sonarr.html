@@ -1,13 +1,14 @@
 {% extends 'base.html' %}
 {% block title %}Sonarr Settings{% endblock %}
 {% block content %}
+{% if error %}<div class="error-msg" style="color:red; margin-bottom:10px;">{{ error }}</div>{% endif %}
 <form method="post" action="/settings/sonarr">
   <fieldset><legend>Sonarr Instances</legend>
     {% for i in range(5) %}
       <fieldset style="margin:10px; border:1px solid #ccc;">
         <legend>Sonarr {{i+1}}</legend>
         {% if sonarr|length > i %}
-        Enable: <label class="switch"><input name="sonarr{{i}}_enabled" type="checkbox" {% if sonarr[i]['enabled'] %}checked{% endif %} onchange="toggleInstance('sonarr', {{i}})"><span class="slider round"></span></label><br>
+  Enable: <label class="switch"><input name="sonarr{{i}}_enabled" type="checkbox" {% if sonarr[i]['enabled'] %}checked{% endif %} onchange="toggleInstance('sonarr', '{{i}}')"><span class="slider round"></span></label><br>
         <div id="sonarr_fields_{{i}}" class="instance-fields{% if sonarr[i]['enabled'] %} open{% endif %}">
           Name: <input name="sonarr{{i}}_name" value="{{ sonarr[i]['name'] }}"><br>
           URL: <input name="sonarr{{i}}_url" value="{{ sonarr[i]['url'] }}"><br>
@@ -23,13 +24,13 @@
           Episodes to Upgrade: <input name="sonarr{{i}}_episodes_to_upgrade" value="{{ sonarr[i].get('episodes_to_upgrade', '') }}"><br>
           Max Download Queue: <input name="sonarr{{i}}_max_download_queue" value="{{ sonarr[i].get('max_download_queue', 15) }}"><br>
           Reprocess Interval (days): <input name="sonarr{{i}}_reprocess_interval_days" value="{{ sonarr[i].get('reprocess_interval_days', 7) }}"><br>
-          <button type="button" onclick="testConnection('sonarr', {{i}})">Test Connection</button>
-          <button type="button" onclick="validateSonarr({{i}})">Validate & Save</button>
+          <button type="button" onclick="testConnection('sonarr', '{{i}}')">Test Connection</button>
+          <button type="button" onclick="validateSonarr('{{i}}')">Validate & Save</button>
           <span id="sonarr_status_{{i}}" class="test-result"></span>
           <span id="sonarr_validate_{{i}}" class="validate-result"></span>
         </div>
         {% else %}
-        Enable: <label class="switch"><input name="sonarr{{i}}_enabled" type="checkbox" onchange="toggleInstance('sonarr', {{i}})"><span class="slider round"></span></label><br>
+  Enable: <label class="switch"><input name="sonarr{{i}}_enabled" type="checkbox" onchange="toggleInstance('sonarr', '{{i}}')"><span class="slider round"></span></label><br>
         <div id="sonarr_fields_{{i}}" class="instance-fields">
           Name: <input name="sonarr{{i}}_name"><br>
           URL: <input name="sonarr{{i}}_url"><br>
@@ -45,8 +46,8 @@
           Episodes to Upgrade: <input name="sonarr{{i}}_episodes_to_upgrade"><br>
           Max Download Queue: <input name="sonarr{{i}}_max_download_queue" value="15"><br>
           Reprocess Interval (days): <input name="sonarr{{i}}_reprocess_interval_days" value="7"><br>
-          <button type="button" onclick="testConnection('sonarr', {{i}})">Test Connection</button>
-          <button type="button" onclick="validateSonarr({{i}})">Validate & Save</button>
+          <button type="button" onclick="testConnection('sonarr', '{{i}}')">Test Connection</button>
+          <button type="button" onclick="validateSonarr('{{i}}')">Validate & Save</button>
           <span id="sonarr_status_{{i}}" class="test-result"></span>
           <span id="sonarr_validate_{{i}}" class="validate-result"></span>
         </div>

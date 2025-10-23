@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Scheduling{% endblock %}
+{% block content %}
+<h2>Scheduling</h2>
+<form method="post" action="/scheduling">
+  <label for="cron_schedule">Cron Schedule:</label>
+  <input name="cron_schedule" id="cron_schedule" value="{{ cron_schedule|default('') }}"><br>
+  <label for="timezone">Timezone:</label>
+  <input name="timezone" id="timezone" value="{{ timezone|default('UTC') }}"><br>
+  <input type="submit" value="Save Schedule">
+</form>
+{% if cron_schedule %}
+  <div>Current Schedule: {{ cron_schedule }}</div>
+{% endif %}
+{% if timezone %}
+  <div>Current Timezone: {{ timezone }}</div>
+{% endif %}
+{% endblock %}

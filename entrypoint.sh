@@ -28,23 +28,41 @@ if [ ! -f /config/config.yml ]; then
 fi
 
 ## Read PUID/PGID and timezone from the now-present config file. Use
-## sensible defaults if the values are missing or yq fails to return
-## something parseable.
-PUID=$(yq '.researcharr.puid' /config/config.yml 2>/dev/null)
-PUID=${PUID:-1000}
-PGID=$(yq '.researcharr.pgid' /config/config.yml 2>/dev/null)
-PGID=${PGID:-1000}
+## sensible defaults if the values are missing. We parse YAML with Python
+## so we don't need to install an extra dependency (yq) in the image.
+if [ -f /config/config.yml ]; then
+  read -r PUID PGID TZ <<'PY'
+import yaml,sys
+try:
+    cfg = yaml.safe_load(open('/config/config.yml')) or {}
+except Exception:
+    cfg = {}
+rs = cfg.get('researcharr', {})
+print(rs.get('puid',''))
+print(rs.get('pgid',''))
+print(rs.get('timezone',''))
+PY
+  PUID=${PUID:-1000}
+  PGID=${PGID:-1000}
+else
+  PUID=1000
+  PGID=1000
+  TZ=""
+fi
 
 ## Set ownership of /config and subfolders
 chown -R $PUID:$PGID /config
 
-## Set timezone from config.yml
-TZ=$(yq '.researcharr.timezone' /config/config.yml 2>/dev/null)
+## Set timezone from parsed value (if available). Only set it when the
+## zoneinfo file exists inside the image. If tzdata is not installed the
+## path may be absent; we handle that gracefully.
 TZ=${TZ:-America/New_York}
-if [ -n "$TZ" ]; then
+if [ -n "$TZ" ] && [ -f "/usr/share/zoneinfo/$TZ" ]; then
   ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
-  echo $TZ > /etc/timezone
+  echo "$TZ" > /etc/timezone
   echo "Timezone set to: $TZ"
+else
+  echo "Timezone $TZ not available in image; leaving system timezone unchanged"
 fi
 
 

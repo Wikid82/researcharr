@@ -135,16 +135,22 @@ def settings_general():
     puid = RADARR_SETTINGS.get("PUID", "")
     pgid = RADARR_SETTINGS.get("PGID", "")
     timezone = SCHEDULING_SETTINGS.get("timezone", "UTC")
+    loglevel = SCHEDULING_SETTINGS.get("loglevel", "DEBUG")
     if request.method == "POST":
         puid = request.form.get("PUID", "")
         pgid = request.form.get("PGID", "")
         timezone = request.form.get("Timezone", "UTC")
+        loglevel = request.form.get("LogLevel", "DEBUG")
         RADARR_SETTINGS["PUID"] = puid
         RADARR_SETTINGS["PGID"] = pgid
         SCHEDULING_SETTINGS["timezone"] = timezone
+        SCHEDULING_SETTINGS["loglevel"] = loglevel
         msg = "General settings saved"
+        # Apply log level immediately
+        root_logger = logging.getLogger()
+        root_logger.setLevel(getattr(logging, loglevel, logging.DEBUG))
     return render_template(
-        "settings_general.html", puid=puid, pgid=pgid, timezone=timezone, msg=msg
+        "settings_general.html", puid=puid, pgid=pgid, timezone=timezone, loglevel=loglevel, msg=msg
     )
 
 

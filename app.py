@@ -1,10 +1,44 @@
+
 # Standard library imports
 import logging
+import sys
 import os
 import sqlite3
 
 import requests
 import yaml
+from logging.handlers import RotatingFileHandler
+
+try:
+    from pythonjsonlogger import jsonlogger
+    _HAS_JSON_LOGGER = True
+except ImportError:
+    _HAS_JSON_LOGGER = False
+# --- Database Setup ---
+
+def setup_logging():
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    # Remove all handlers associated with the root logger object (avoid duplicate logs)
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+
+    # Console handler (stdout)
+    console_handler = logging.StreamHandler(sys.stdout)
+    if _HAS_JSON_LOGGER:
+        formatter = jsonlogger.JsonFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
+    else:
+        formatter = logging.Formatter('[%(asctime)s] %(levelname)s in %(name)s: %(message)s')
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    # Rotating file handler
+    file_handler = RotatingFileHandler('app.log', maxBytes=2*1024*1024, backupCount=2)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+setup_logging()
 
 # --- Database Setup ---
 
@@ -87,52 +121,15 @@ def check_sonarr_connection(url, key, logger):
 DB_PATH = "/config/researcharr.db"
 
 
-# Create loggers
-def setup_logger(name, log_file, level=logging.INFO):
-    """Function to setup as many loggers as you want"""
-    # Create logs directory if it doesn't exist
-    log_dir = os.path.dirname(log_file)
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
 
-    handler = logging.FileHandler(log_file, encoding="utf-8")
-    # Add timezone info to log messages
-    handler.setFormatter(
-        logging.Formatter(
-            "%(asctime)s %(message)s [%(levelname)s] [%(name)s] "
-            "[%(process)d] [%(thread)d] [%(timezone)s]",
-            datefmt="%m/%d/%Y %I:%M:%S %p",
-        )
-    )
-    # Patch LogRecord to add timezone
-    old_factory = logging.getLogRecordFactory()
-    import time
-
-    def record_factory(*args, **kwargs):
-        record = old_factory(*args, **kwargs)
-        try:
-            record.timezone = time.tzname[0]
-        except Exception:
-            record.timezone = "Unknown"
-        return record
-
-    logging.setLogRecordFactory(record_factory)
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    logger.addHandler(handler)
-    return logger
-
-
-main_logger = None
-radarr_logger = None
-sonarr_logger = None
 
 
 # --- Connection Status Checks ---
 
 
 # --- New: Download queue check and main logic for each instance ---
-def get_radarr_queue_length(url, key):
+
+def get_radarr_queue_length(url, key, logger):
     try:
         resp = requests.get(
             url + "/api/v3/queue", headers={"Authorization": key}, timeout=10
@@ -141,15 +138,16 @@ def get_radarr_queue_length(url, key):
             queue = resp.json()
             return len(queue)
         else:
-            radarr_logger.warning(
+            logger.warning(
                 f"Failed to get Radarr queue: HTTP {resp.status_code}"
             )
     except Exception as e:
-        radarr_logger.warning(f"Error getting Radarr queue: {e}")
+        logger.warning(f"Error getting Radarr queue: {e}")
     return 0
 
 
-def get_sonarr_queue_length(url, key):
+
+def get_sonarr_queue_length(url, key, logger):
     try:
         resp = requests.get(
             url + "/api/v3/queue", headers={"Authorization": key}, timeout=10
@@ -158,11 +156,11 @@ def get_sonarr_queue_length(url, key):
             queue = resp.json()
             return len(queue)
         else:
-            sonarr_logger.warning(
+            logger.warning(
                 f"Failed to get Sonarr queue: HTTP {resp.status_code}"
             )
     except Exception as e:
-        sonarr_logger.warning(f"Error getting Sonarr queue: {e}")
+        logger.warning(f"Error getting Sonarr queue: {e}")
     return 0
 
 
@@ -222,24 +220,21 @@ def has_valid_url_and_key(instances):
     return False
 
 
-def main():
-    global main_logger, radarr_logger, sonarr_logger
 
+def main():
     # --- Force TZ environment variable and tzset at startup ---
     try:
         config = load_config()
         _tz = config.get("researcharr", {}).get("timezone", "America/New_York")
         os.environ["TZ"] = _tz
         import time as _time
-
         _time.tzset()
     except Exception as e:
         print(f"[WARNING] Could not set TZ at startup: {e}")
 
-    # Setup loggers
-    main_logger = setup_logger("main_logger", "/config/logs/researcharr.log")
-    radarr_logger = setup_logger("radarr_logger", "/config/logs/radarr.log")
-    sonarr_logger = setup_logger("sonarr_logger", "/config/logs/sonarr.log")
+    main_logger = logging.getLogger("main_logger")
+    radarr_logger = logging.getLogger("radarr_logger")
+    sonarr_logger = logging.getLogger("sonarr_logger")
 
     # Initialize the database
     init_db()

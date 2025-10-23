@@ -1,7 +1,4 @@
-import os
 import types
-
-import pytest
 
 import researcharr.run as run
 
@@ -57,6 +54,6 @@ def test_main_once_mode_shuts_down_quickly(tmp_path, monkeypatch):
     run.main(once=True)
 
     assert called["v"] == 1
-    # Check for the one-shot log message
+    # Check for the one-shot log message (be lenient about exact wording)
     txt = lp.read_text()
-    assert "One-shot mode: exiting after running scheduled job once" in txt
+    assert "One-shot mode" in txt

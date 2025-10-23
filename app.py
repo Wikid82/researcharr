@@ -16,9 +16,20 @@ except ImportError:
     _HAS_JSON_LOGGER = False
 # --- Database Setup ---
 
-def setup_logging():
+def setup_logging(loglevel=None):
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+    # Set log level from config or default to DEBUG
+    if loglevel is None:
+        # Try to read from config file
+        try:
+            import yaml
+            config_path = os.environ.get("USER_CONFIG_PATH") or globals().get("USER_CONFIG_PATH") or "/config/config.yml"
+            with open(config_path, "r") as f:
+                config = yaml.safe_load(f)
+            loglevel = config.get("researcharr", {}).get("loglevel", "DEBUG")
+        except Exception:
+            loglevel = "DEBUG"
+    logger.setLevel(getattr(logging, loglevel, logging.DEBUG))
 
     # Remove all handlers associated with the root logger object (avoid duplicate logs)
     for handler in logger.handlers[:]:

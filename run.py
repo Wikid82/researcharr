@@ -6,17 +6,28 @@ APScheduler BackgroundScheduler that invokes the existing
 `/app/researcharr.py` script on the configured cron schedule. Logs from
 scheduled runs are written to `/config/cron.log`.
 """
-import os
-import sys
-import yaml
+import argparse
+import importlib.util
 import logging
+import os
 import subprocess
 import sys
-import importlib.util
-import argparse
+
+import yaml
+from typing import TYPE_CHECKING
+
+# For static type checkers (Pylance/pyright) import the names only when
+# type-checking so the language server can resolve them if the package is
+# installed in the workspace environment. The runtime import remains in a
+# try/except block below so the module still works when APScheduler is not
+# available.
+if TYPE_CHECKING:
+    from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore
+    from apscheduler.triggers.cron import CronTrigger  # type: ignore
+
 try:
-    from apscheduler.schedulers.background import BackgroundScheduler
-    from apscheduler.triggers.cron import CronTrigger
+    from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore[reportMissingImports]
+    from apscheduler.triggers.cron import CronTrigger  # type: ignore[reportMissingImports]
 except Exception:
     # Provide lightweight fallbacks when APScheduler is not available
     # (useful for unit tests that don't install all runtime deps).
@@ -37,8 +48,10 @@ except Exception:
 
         def shutdown(self, wait=False):
             return
-import signal
-import time
+
+
+# signal and time are not used in this module; keep imports out to satisfy
+# linters.
 
 WEBUI_SCRIPT = "/app/webui.py"
 
@@ -50,13 +63,34 @@ SCRIPT = "/app/researcharr.py"
 def setup_logger():
     logger = logging.getLogger("researcharr.cron")
     logger.setLevel(logging.INFO)
-    # Avoid duplicate handlers when reloading in tests
-    if not logger.handlers:
+    # Ensure the logger writes to the current LOG_PATH. If handlers already
+    # exist (from prior tests), replace them if they point to a different
+    # file so tests that monkeypatch LOG_PATH see the new file.
+
+    def _add_file_handler():
         fh = logging.FileHandler(LOG_PATH)
         fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
         fh.setFormatter(fmt)
         logger.addHandler(fh)
         logger.propagate = False
+
+    if not logger.handlers:
+        _add_file_handler()
+    else:
+        # If an existing FileHandler writes to a different filename, reset
+        # handlers so the logger writes to the updated LOG_PATH.
+        try:
+            first = logger.handlers[0]
+            current = getattr(first, "baseFilename", None)
+        except Exception:
+            current = None
+        if current != LOG_PATH:
+            for h in list(logger.handlers):
+                try:
+                    logger.removeHandler(h)
+                except Exception:
+                    pass
+            _add_file_handler()
     return logger
 
 
@@ -76,7 +110,14 @@ def run_job():
     logger = logging.getLogger("researcharr.cron")
     logger.info("Starting scheduled job: running %s", SCRIPT)
     try:
-        res = subprocess.run([sys.executable, SCRIPT], capture_output=True, text=True)
+        res = subprocess.run(
+            [
+                sys.executable,
+                SCRIPT,
+            ],
+            capture_output=True,
+            text=True,
+        )
         if res.stdout:
             logger.info("Job stdout:\n%s", res.stdout.strip())
         if res.stderr:
@@ -109,10 +150,18 @@ def main(once: bool = False):
         try:
             trigger = CronTrigger.from_crontab(cron_schedule, timezone="UTC")
         except Exception:
-            logger.exception("Invalid cron schedule '%s', falling back to hourly", cron_schedule)
+            logger.exception(
+                "Invalid cron schedule '%s', falling back to hourly",
+                cron_schedule,
+            )
             trigger = CronTrigger.from_crontab("0 * * * *", timezone="UTC")
 
-        scheduler.add_job(run_job, trigger, id="researcharr_job", replace_existing=True)
+        scheduler.add_job(
+            run_job,
+            trigger,
+            id="researcharr_job",
+            replace_existing=True,
+        )
         scheduler.start()
 
         # Run the job once at startup to preserve previous behaviour
@@ -120,7 +169,7 @@ def main(once: bool = False):
 
         # If the user requested a one-shot run, exit after running the job
         if once:
-            logger.info("One-shot mode: exiting after running scheduled job once")
+            logger.info("One-shot mode: exiting after running job once")
             try:
                 scheduler.shutdown(wait=False)
             except Exception:
@@ -131,7 +180,9 @@ def main(once: bool = False):
         # import conflicts with the top-level `researcharr.py` module. We
         # load it as a separate module and call its create_app() function.
         try:
-            spec = importlib.util.spec_from_file_location("factory_mod", "/app/factory.py")
+            spec = importlib.util.spec_from_file_location(
+                "factory_mod", "/app/factory.py"
+            )
             factory_mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(factory_mod)
             app = factory_mod.create_app()
@@ -151,7 +202,13 @@ def main(once: bool = False):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run researcharr web UI and scheduler")
-    parser.add_argument("--once", action="store_true", help="Run scheduled job once and exit (no web UI)")
+    parser = argparse.ArgumentParser(
+        description=("Run researcharr web UI and scheduler")
+    )
+    parser.add_argument(
+        "--once",
+        action="store_true",
+        help="Run scheduled job once and exit (no web UI)",
+    )
     args = parser.parse_args()
     main(once=args.once)

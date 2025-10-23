@@ -106,18 +106,49 @@ See the new `Health-and-Metrics.md` wiki page for full details.
 
 ## CI and Docker publishing (CI updates)
 
-The project now runs continuous integration on every push and every pull request via `.github/workflows/ci.yml`. The CI job runs linting (flake8), formatting checks (black/isort), type checks (mypy), and the test suite (pytest). The workflow uses pip caching to speed up dependency installation.
+The project runs continuous integration on every push and every pull request via `.github/workflows/ci.yml` (root and project-level workflows).
+
+CI highlights for contributors:
+
+- Linting: `flake8` (style and simple mistakes).
+- Formatting checks: `black` and `isort` are run in check-only mode in CI. `isort` is configured to use Black's import formatting via `researcharr/.isort.cfg`.
+- Type checks: `mypy` where configured.
+- Tests: `pytest` runs the full test suite.
+- Caching: The workflow uses pip caching to speed up dependency installs.
+
+Local developer quick-start:
+
+1. Install dependencies into a virtualenv:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+2. Run the repo formatting and tests (CI uses check-only for formatting; locally run the auto-fixers before committing):
+
+```bash
+isort --profile=black .
+black .
+python -m pytest tests/
+```
+
+3. Use `pre-commit` (recommended) to run checks before committing. See `.pre-commit-config.yaml` in the repository root.
+
+Docker publishing and tags:
 
 Docker images are built and published for branches via `researcharr/.github/workflows/docker-publish.yml`. Images are tagged per-branch and pushed to GitHub Container Registry (GHCR):
 
 - `ghcr.io/wikid82/researcharr:<branch>`
 - `ghcr.io/wikid82/researcharr:branch-<branch>`
 
-Special tags are still pushed for important branches:
+Special tags are pushed for these branches:
+
 - `main` → `:latest`
 - `development` → `:development`
 
-If you'd rather avoid publishing images from forks or PRs, we can tighten the workflow to only push images when the event is a repository `push` on `Wikid82/researcharr`.
+If you prefer not to publish images from forks or pull requests, update the workflow to only push images when the event is a repository `push` and optionally restrict to certain branches.
 
 ## How to Use
 

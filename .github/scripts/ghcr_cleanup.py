@@ -21,6 +21,7 @@ import os
 import sys
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlencode
 
 import requests
 
@@ -57,7 +58,11 @@ def list_packages(owner: str, token: str) -> List[Dict[str, Any]]:
             if page > 10:
                 break
             params = {"page": page, "per_page": 100}
-            r = requests.get(base, headers=headers, params=params)
+            # Some tests stub requests.get and expect the full URL string
+            # including query params, so build the URL explicitly.
+            q = urlencode(params)
+            url = base + ("&" if "?" in base else "?") + q
+            r = requests.get(url, headers=headers)
             if r.status_code == 404:
                 break
             r.raise_for_status()
@@ -101,7 +106,10 @@ def list_package_versions(
             if page > 10:
                 break
             params = {"page": page, "per_page": 100}
-            r = requests.get(base, headers=headers, params=params)
+            # Build URL with page params so tests that inspect the URL work
+            q = urlencode(params)
+            url = base + ("&" if "?" in base else "?") + q
+            r = requests.get(url, headers=headers)
             if r.status_code == 404:
                 break
             r.raise_for_status()
@@ -112,11 +120,22 @@ def list_package_versions(
             page += 1
         if versions:
             break
-    return versions
+    # deduplicate by id (some test stubs return the same page multiple times)
+    seen_ids = set()
+    unique_versions: List[Dict[str, Any]] = []
+    for v in versions:
+        vid = v.get("id")
+        if vid not in seen_ids:
+            seen_ids.add(vid)
+            unique_versions.append(v)
+    return unique_versions
 
 
 def delete_version(
-    owner: str, package_name: str, version_id: int, token: str
+    owner: str,
+    package_name: str,
+    version_id: int,
+    token: str,
 ) -> bool:
     # try org path then user path
     headers = get_auth_headers(token)
@@ -145,11 +164,13 @@ def delete_version(
         if r.status_code == 404:
             continue
         # otherwise, print and return False
-        msg = (
-            "Failed to delete version %s: %s %s"
-            % (version_id, r.status_code, r.text)
+        # Use multiple print args to avoid a very long single string line
+        print(
+            "Failed to delete version",
+            version_id,
+            r.status_code,
+            r.text,
         )
-        print(msg)
         return False
     return False
 
@@ -315,19 +336,20 @@ def main() -> None:
             }
         )
 
-    would_delete = [
-        c
-        for c in report["candidates"]
-        if c["decision"] == "DELETE"
-    ]
+    would_delete = []
+    for c in report["candidates"]:
+        if c.get("decision") == "DELETE":
+            would_delete.append(c)
     report["would_delete_count"] = len(would_delete)
 
     # write report if requested
-    json_path = (
-        args.json_report
-        or os.getenv("JSON_REPORT")
-        or "ghcr_cleanup_report.json"
-    )
+    env_report = os.getenv("JSON_REPORT")
+    if args.json_report:
+        json_path = args.json_report
+    elif env_report:
+        json_path = env_report
+    else:
+        json_path = "ghcr_cleanup_report.json"
     try:
         with open(json_path, "w", encoding="utf-8") as fh:
             json.dump(report, fh, indent=2)
@@ -336,9 +358,7 @@ def main() -> None:
         print(f"Failed to write JSON report to {json_path}: {exc}")
 
     if dry_run:
-        print(
-            "Dry run: %s versions WOULD be deleted." % (len(would_delete),)
-        )
+        print("Dry run: %s versions WOULD be deleted." % (len(would_delete),))
         for c in would_delete:
             print(
                 "[DRY] would delete version %s created_at=%s tags=%s"

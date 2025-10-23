@@ -61,13 +61,16 @@ jobs:
     - name: Extract branch name
       id: extract_branch
       run: echo "::set-output name=branch::${GITHUB_REF#refs/heads/}"
+    - name: Set lowercase repository name
+      id: repo_name
+      run: echo "REPO_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
     - name: Build and push Docker image (main)
       if: github.ref == 'refs/heads/main'
       run: |
-        docker build -t ghcr.io/${{ github.repository }}:latest .
-        docker push ghcr.io/${{ github.repository }}:latest
+        docker build -t ghcr.io/${{ env.REPO_NAME }}:latest .
+        docker push ghcr.io/${{ env.REPO_NAME }}:latest
     - name: Build and push Docker image (development)
       if: github.ref == 'refs/heads/development'
       run: |
-        docker build -t ghcr.io/${{ github.repository }}:development .
-        docker push ghcr.io/${{ github.repository }}:development
+        docker build -t ghcr.io/${{ env.REPO_NAME }}:development .
+        docker push ghcr.io/${{ env.REPO_NAME }}:development

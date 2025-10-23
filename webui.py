@@ -37,10 +37,17 @@ stream_handler = logging.StreamHandler(sys.stdout)
 stream_handler.setFormatter(formatter)
 
 
-# Ensure log directory exists
+
+# Ensure log directory exists, fallback to ./logs if /config/logs is not writable
 log_dir = "/config/logs"
-os.makedirs(log_dir, exist_ok=True)
-file_handler = RotatingFileHandler(os.path.join(log_dir, "webui.log"), maxBytes=1024*1024, backupCount=3)
+fallback_log_dir = os.path.join(os.path.dirname(__file__), "logs")
+try:
+    os.makedirs(log_dir, exist_ok=True)
+    log_path = os.path.join(log_dir, "webui.log")
+except (PermissionError, OSError):
+    os.makedirs(fallback_log_dir, exist_ok=True)
+    log_path = os.path.join(fallback_log_dir, "webui.log")
+file_handler = RotatingFileHandler(log_path, maxBytes=1024*1024, backupCount=3)
 file_handler.setFormatter(formatter)
 
 root_logger = logging.getLogger()

@@ -11,26 +11,36 @@ import sys
 import yaml
 import logging
 import subprocess
-import importlib.util
 import sys
+import importlib.util
+import argparse
+try:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from apscheduler.triggers.cron import CronTrigger
+except Exception:
+    # Provide lightweight fallbacks when APScheduler is not available
+    # (useful for unit tests that don't install all runtime deps).
+    class CronTrigger:
+        @staticmethod
+        def from_crontab(expr, timezone=None):
+            return object()
 
-# Ensure the `researcharr` package directory is loaded as a package name so
-# imports like `from researcharr import webui` resolve to the package in
-# /app/researcharr instead of the top-level /app/researcharr.py script
-# which would otherwise shadow the package.
-pkg_init = "/app/researcharr/__init__.py"
-if os.path.exists(pkg_init):
-    spec = importlib.util.spec_from_file_location(
-        "researcharr", pkg_init, submodule_search_locations=["/app/researcharr"]
-    )
-    pkg = importlib.util.module_from_spec(spec)
-    sys.modules["researcharr"] = pkg
-    spec.loader.exec_module(pkg)
+    class BackgroundScheduler:
+        def __init__(self, timezone=None):
+            self._jobs = []
 
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
+        def add_job(self, func, trigger, id=None, replace_existing=False):
+            self._jobs.append((func, trigger))
 
-from factory import create_app
+        def start(self):
+            return
+
+        def shutdown(self, wait=False):
+            return
+import signal
+import time
+
+WEBUI_SCRIPT = "/app/webui.py"
 
 CONFIG_PATH = "/config/config.yml"
 LOG_PATH = "/config/cron.log"
@@ -76,16 +86,13 @@ def run_job():
         logger.exception("Scheduled job failed to execute")
 
 
-def main():
+def main(once: bool = False):
     # Ensure log file exists
     os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
     open(LOG_PATH, "a").close()
 
     setup_logger()
     logger = logging.getLogger("researcharr.cron")
-
-    # Create the Flask application
-    app = create_app()
 
     cfg = load_config()
     cron_schedule = None
@@ -95,14 +102,15 @@ def main():
     if not cron_schedule:
         cron_schedule = "0 * * * *"
 
-    # Start scheduler
-    scheduler = BackgroundScheduler()
+    # Start scheduler (use UTC to avoid relying on system tzdata inside the
+    # container; the web UI timezone setting can be honored later if desired)
+    scheduler = BackgroundScheduler(timezone="UTC")
     try:
         try:
-            trigger = CronTrigger.from_crontab(cron_schedule)
+            trigger = CronTrigger.from_crontab(cron_schedule, timezone="UTC")
         except Exception:
             logger.exception("Invalid cron schedule '%s', falling back to hourly", cron_schedule)
-            trigger = CronTrigger.from_crontab("0 * * * *")
+            trigger = CronTrigger.from_crontab("0 * * * *", timezone="UTC")
 
         scheduler.add_job(run_job, trigger, id="researcharr_job", replace_existing=True)
         scheduler.start()
@@ -110,9 +118,31 @@ def main():
         # Run the job once at startup to preserve previous behaviour
         run_job()
 
-        # Run the Flask app in the foreground so Docker PID 1 stays alive
-        app.run(host="0.0.0.0", port=2929, threaded=True)
+        # If the user requested a one-shot run, exit after running the job
+        if once:
+            logger.info("One-shot mode: exiting after running scheduled job once")
+            try:
+                scheduler.shutdown(wait=False)
+            except Exception:
+                pass
+            return
 
+        # Load the Flask app factory directly from /app/factory.py to avoid
+        # import conflicts with the top-level `researcharr.py` module. We
+        # load it as a separate module and call its create_app() function.
+        try:
+            spec = importlib.util.spec_from_file_location("factory_mod", "/app/factory.py")
+            factory_mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(factory_mod)
+            app = factory_mod.create_app()
+            # Run the Flask app in the foreground (this keeps PID 1 alive).
+            print("[run.py] Starting Flask app...")
+            sys.stdout.flush()
+            app.run(host="0.0.0.0", port=2929, threaded=True)
+            print("[run.py] Flask app terminated")
+            sys.stdout.flush()
+        except Exception:
+            logger.exception("Failed to start web UI from factory.py")
     finally:
         try:
             scheduler.shutdown(wait=False)
@@ -121,4 +151,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Run researcharr web UI and scheduler")
+    parser.add_argument("--once", action="store_true", help="Run scheduled job once and exit (no web UI)")
+    args = parser.parse_args()
+    main(once=args.once)

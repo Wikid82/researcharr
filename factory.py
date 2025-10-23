@@ -11,7 +11,7 @@ def create_app():
         "radarr": [],
         "sonarr": [],
         "scheduling": {"cron_schedule": "0 0 * * *", "timezone": "UTC"},
-        "user": {"username": "admin", "password": "admin"},
+        "user": {"username": "admin", "password": "researcharr"},
     }
 
     # In-memory metrics for test isolation

@@ -56,39 +56,8 @@ mkdir -p /config/logs
 # Ensure /config/researcharr.db exists (touch will not overwrite if present)
 touch /config/researcharr.db
 
-# Start the web UI in the background
-echo "Starting researcharr web UI on port 2929..."
-python3 /app/webui.py &
-
-# Run the main script once at startup (use researcharr.py which replaced
-# the old app.py filename in the project). This keeps the container
-# behaviour aligned with the current repository layout.
-echo "Running researcharr at startup..."
-python3 /app/researcharr.py
-
-# Get cron schedule from config.yml (settable in the web UI Scheduling tab)
-CRON_SCHEDULE=$(yq '.researcharr.cron_schedule' /config/config.yml 2>/dev/null)
-CRON_SCHEDULE=${CRON_SCHEDULE:-"0 * * * *"}
-# Strip any surrounding quotes and CRLFs that can confuse cron
-CRON_SCHEDULE=$(echo "$CRON_SCHEDULE" | tr -d '"' | tr -d '\r')
-echo "Using cron schedule: $CRON_SCHEDULE"
-
-# Validate cron schedule (basic check: must have 5 fields)
-CRON_FIELD_COUNT=$(echo "$CRON_SCHEDULE" | awk '{print NF}')
-if [ "$CRON_FIELD_COUNT" -ne 5 ]; then
-  echo "Warning: Invalid cron schedule '$CRON_SCHEDULE'. Falling back to '0 * * * *' (hourly)."
-  CRON_SCHEDULE="0 * * * *"
-fi
-
-
-# Create cron job file that executes the python script (must include 'root' user field and end with newline)
-echo "${CRON_SCHEDULE} root python3 /app/researcharr.py" > /etc/cron.d/researcharr-cron
-# Ensure file ends with a newline
-echo >> /etc/cron.d/researcharr-cron
-chmod 0644 /etc/cron.d/researcharr-cron
-crontab /etc/cron.d/researcharr-cron
-
-# Start cron in the foreground and tail the logs to make them visible with `docker logs`
-echo "Starting cron..."
-cron -f &
-tail -f /config/logs/*.log 2>/dev/null
+# Start the application (Flask + in-process scheduler) in the foreground.
+# We exec here so the Python process becomes PID 1 and receives signals
+# directly from Docker.
+echo "Starting researcharr (web UI + scheduler)..."
+exec python3 /app/run.py

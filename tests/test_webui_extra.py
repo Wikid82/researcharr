@@ -1,7 +1,7 @@
 import pytest
 
 
-from researcharr.webui import create_app
+from researcharr.factory import create_app
 
 
 

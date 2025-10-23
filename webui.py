@@ -284,9 +284,7 @@ def login():
         def metrics():
             return jsonify(METRICS)
 
-        else:
-            error = "Invalid username or password."
-    return render_template("login.html", error=error)
+
 
 
 if __name__ == "__main__":

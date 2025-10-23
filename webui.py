@@ -13,8 +13,9 @@ from werkzeug.security import generate_password_hash
 app = Flask(__name__)
 app.secret_key = "your-secret-key"  # Replace with a secure key in production
 
+
 # Redirect root URL to login (must be after app is defined)
-# Redirect root URL to login (must be after app is defined)
+
 
 @app.route("/")
 def index():
@@ -66,14 +67,12 @@ def settings_radarr():
         api_pulls = RADARR_SETTINGS.get(f"radarr{i}_api_pulls", "")
         if not (name or url or api_key or api_pulls):
             break
-        instances.append(
-            {
-                "name": name,
-                "url": url,
-                "api_key": api_key,
-                "api_pulls": api_pulls,
-            }
-        )
+        instances.append({
+            "name": name,
+            "url": url,
+            "api_key": api_key,
+            "api_pulls": api_pulls,
+        })
         i += 1
     return render_template("settings_radarr.html", radarr=instances, msg=msg)
 

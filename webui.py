@@ -24,19 +24,18 @@ def load_user_config():
         alphabet = string.ascii_letters + string.digits
         generated = "".join(secrets.choice(alphabet) for _ in range(16))
         password_hash = generate_password_hash(generated)
+        data = {
+            "username": "researcharr",
+            "password_hash": password_hash,
+        }
         with open(USER_CONFIG_PATH, "w") as f:
-            yaml.safe_dump(
-                {
-                    "username": "researcharr",
-                    "password_hash": password_hash,
-                },
-                f,
-            )
+            yaml.safe_dump(data, f)
+        # Log the generated plaintext once for operators to copy from logs.
         logger = logging.getLogger("researcharr")
-        logger.info(
-            "Generated web UI initial password for researcharr: %s",
-            generated,
-        )
+        logger.info("Generated web UI initial password for %s: %s", data["username"], generated)
+        # Return the generated plaintext to the caller so the running app can
+        # set its in-memory password for immediate login.
+        data["password"] = generated
     with open(USER_CONFIG_PATH, "r") as f:
         return yaml.safe_load(f)
 

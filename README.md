@@ -33,7 +33,7 @@ researcharr/
 ├── Dockerfile
 ├── LICENSE
 ├── README.md
-├── app.py
+├── researcharr.py
 ├── docker-compose.yml
 ├── entrypoint.sh
 └── requirements.txt
@@ -74,7 +74,7 @@ For the main app (recommended):
 services:
   researcharr:
     # ...other config...
-    command: python app.py serve
+  command: python researcharr.py serve
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
       interval: 30s

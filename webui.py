@@ -8,7 +8,7 @@ import os
 import yaml
 from functools import wraps
 from flask import (
-    Flask, render_template, render_template_string, request,
+    Flask, render_template, request,
     redirect, url_for, session
 )
 from werkzeug.security import generate_password_hash

@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.13-slim
 ARG BUILD_DATE
 LABEL org.opencontainers.image.created=$BUILD_DATE
 ENV RESEARCHARR_VERSION=$BUILD_DATE

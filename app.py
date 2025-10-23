@@ -1,3 +1,47 @@
+# --- Health and Metrics Endpoints ---
+from flask import Flask, jsonify, request
+
+APP_METRICS = {
+    "requests_total": 0,
+    "errors_total": 0,
+    "last_health_check": None,
+    "radarr_queue_length": 0,
+    "sonarr_queue_length": 0,
+}
+
+def increment_metric(name):
+    if name in APP_METRICS:
+        APP_METRICS[name] += 1
+
+def create_metrics_app():
+    app = Flask("metrics")
+
+    @app.before_request
+    def before_any_request():
+        APP_METRICS["requests_total"] += 1
+
+    @app.errorhandler(Exception)
+    def handle_error(e):
+        APP_METRICS["errors_total"] += 1
+        return str(e), 500
+
+    @app.route("/health", methods=["GET"])
+    def health():
+        APP_METRICS["last_health_check"] = time.time()
+        status = {
+            "status": "ok",
+            "db": True,
+            "config": True,
+            "threads": True,
+            "time": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
+        }
+        return jsonify(status)
+
+    @app.route("/metrics", methods=["GET"])
+    def metrics():
+        return jsonify(APP_METRICS)
+
+    return app
 
 # Standard library imports
 
@@ -321,5 +365,12 @@ def main():
         countdown(5, main_logger)  # 5 minute countdown for test/demo
 
 
+
 if __name__ == "__main__":
-    main()
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "serve":
+        # Run Flask metrics/health endpoints
+        metrics_app = create_metrics_app()
+        metrics_app.run(host="0.0.0.0", port=5001)
+    else:
+        main()

@@ -21,11 +21,16 @@ app.secret_key = "your-secret-key"  # Replace with a secure key in production
 def index():
     return redirect(url_for("login"))
 
+def login_required(f):
 # Minimal in-memory storage for test persistence
 RADARR_SETTINGS = {}
 SONARR_SETTINGS = {}
 SCHEDULING_SETTINGS = {"cron_schedule": "", "timezone": "UTC"}
 
+# Minimal in-memory storage for test persistence
+RADARR_SETTINGS = {}
+SONARR_SETTINGS = {}
+SCHEDULING_SETTINGS = {"cron_schedule": "", "timezone": "UTC"}
 
 
 def login_required(f):

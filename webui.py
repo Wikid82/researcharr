@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 
 # --- Flask app and route definitions only; all HTML/Jinja/JS is in
@@ -7,14 +6,11 @@
 import os
 import yaml
 from functools import wraps
-from flask import (
-    Flask, render_template, request,
-    redirect, url_for, session
-)
+from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key'  # Replace with a secure key in production
+app.secret_key = "your-secret-key"  # Replace with a secure key in production
 
 # Minimal in-memory storage for test persistence
 RADARR_SETTINGS = {}
@@ -28,6 +24,7 @@ def login_required(f):
         if not session.get("logged_in"):
             return redirect(url_for("login", next=request.url))
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -60,16 +57,16 @@ def settings_radarr():
         api_pulls = RADARR_SETTINGS.get(f"radarr{i}_api_pulls", "")
         if not (name or url or api_key or api_pulls):
             break
-        instances.append({
-            "name": name,
-            "url": url,
-            "api_key": api_key,
-            "api_pulls": api_pulls,
-        })
+        instances.append(
+            {
+                "name": name,
+                "url": url,
+                "api_key": api_key,
+                "api_pulls": api_pulls,
+            }
+        )
         i += 1
-    return render_template(
-        "settings_radarr.html", radarr=instances, msg=msg
-    )
+    return render_template("settings_radarr.html", radarr=instances, msg=msg)
 
 
 @app.route("/save", methods=["POST"])
@@ -137,16 +134,12 @@ def settings_sonarr():
 @login_required
 def scheduling():
     if request.method == "POST":
-        SCHEDULING_SETTINGS["cron_schedule"] = request.form.get(
-            "cron_schedule", ""
-        )
-        SCHEDULING_SETTINGS["timezone"] = request.form.get(
-            "timezone", "UTC"
-        )
+        SCHEDULING_SETTINGS["cron_schedule"] = request.form.get("cron_schedule", "")
+        SCHEDULING_SETTINGS["timezone"] = request.form.get("timezone", "UTC")
     return render_template(
         "scheduling.html",
         cron_schedule=SCHEDULING_SETTINGS.get("cron_schedule", ""),
-        timezone=SCHEDULING_SETTINGS.get("timezone", "UTC")
+        timezone=SCHEDULING_SETTINGS.get("timezone", "UTC"),
     )
 
 
@@ -162,9 +155,7 @@ def user_settings():
         else:
             user["username"] = username
             user_msg = "User settings saved."
-    return render_template(
-        "user.html", user=user, user_msg=user_msg
-    )
+    return render_template("user.html", user=user, user_msg=user_msg)
 
 
 USER_CONFIG_PATH = "config/webui_user.yml"
@@ -192,9 +183,7 @@ def save_user_config(username, password_hash):
     if not os.path.exists(user_dir):
         os.makedirs(user_dir, exist_ok=True)
     with open(USER_CONFIG_PATH, "w") as f:
-        yaml.safe_dump(
-            {"username": username, "password_hash": password_hash}, f
-        )
+        yaml.safe_dump({"username": username, "password_hash": password_hash}, f)
 
 
 @app.route("/login", methods=["GET", "POST"])

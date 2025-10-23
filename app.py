@@ -8,6 +8,7 @@ import yaml
 
 # --- Database Setup ---
 
+
 def init_db():
     """
     Initializes the SQLite database and creates tables if they don't exist.
@@ -56,9 +57,7 @@ def check_radarr_connection(url, key, logger):
                     f"{resp.text}"
                 )
         else:
-            logger.warning(
-                "Radarr URL or API key not set; skipping connection test."
-            )
+            logger.warning("Radarr URL or API key not set; skipping connection test.")
     except Exception as e:
         logger.error(f"Radarr connection error: {e}")
 
@@ -79,9 +78,7 @@ def check_sonarr_connection(url, key, logger):
                     f"{resp.text}"
                 )
         else:
-            logger.warning(
-                "Sonarr URL or API key not set; skipping connection test."
-            )
+            logger.warning("Sonarr URL or API key not set; skipping connection test.")
     except Exception as e:
         logger.error(f"Sonarr connection error: {e}")
 
@@ -195,10 +192,10 @@ def load_config(path=None):
 def countdown(minutes, logger=None):
     import sys
     import time
+
     if logger:
         logger.info(
-            f"Countdown: {minutes} minutes until next scheduled run "
-            f"(test mode)"
+            f"Countdown: {minutes} minutes until next scheduled run " f"(test mode)"
         )
     for i in range(minutes, 0, -1):
         sys.stdout.write(f"\rNext run in {i} minute(s)... ")
@@ -234,6 +231,7 @@ def main():
         _tz = config.get("researcharr", {}).get("timezone", "America/New_York")
         os.environ["TZ"] = _tz
         import time as _time
+
         _time.tzset()
     except Exception as e:
         print(f"[WARNING] Could not set TZ at startup: {e}")
@@ -271,9 +269,8 @@ def main():
         check_sonarr_connection(url, key, sonarr_logger)
 
     # --- Startup validation for Radarr/Sonarr config ---
-    if (
-        not has_valid_url_and_key(radarr_instances)
-        and not has_valid_url_and_key(sonarr_instances)
+    if not has_valid_url_and_key(radarr_instances) and not has_valid_url_and_key(
+        sonarr_instances
     ):
         main_logger.warning(
             "No enabled Radarr or Sonarr instance has a valid URL "

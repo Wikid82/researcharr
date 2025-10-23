@@ -69,7 +69,7 @@ def test_general_settings_page(client):
     assert b"General" in rv.data
     # Check for header, sidebar, and footer
     assert b"researcharr" in rv.data  # header
-    assert b"sidebar" in rv.data      # sidebar
+    assert b"sidebar" in rv.data  # sidebar
     assert b"footer" in rv.data or b"footer.html" in rv.data  # footer
 
 

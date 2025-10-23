@@ -17,6 +17,8 @@ Highlights
   - Docker images are built and pushed to GHCR per-branch. Branch-specific tags are used and special tags exist for `main` and `development`.
   - The Docker build workflow uses build-cache and pip cache to speed up CI.
 
+Note: Branch images are published automatically after CI passes for a push. This enables QA teams and contributors to pull a branch-tagged image for testing (e.g., `ghcr.io/wikid82/researcharr:plugins`).
+
 - Documentation & Roadmap
   - `researcharr/ROADMAP.md` and wiki `Roadmap.md` updated to include Packaging & Distribution notes and reprioritized feature goals (app-first focus, move away from cron jobs for scheduling over time, add WebSocket-based UI improvements, release-aware processing, and webhook/Apprise notifications).
 

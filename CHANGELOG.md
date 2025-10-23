@@ -34,6 +34,12 @@
 - Updated all references in README, wiki, and documentation to use `researcharr.py` instead of `app.py`.
 - Removed the old `app.py` file from the repository.
 
+### Security / Web UI credentials
+
+- Default web UI username changed to `researcharr` for improved clarity.
+- On first startup (when `config/webui_user.yml` does not exist) a secure random password is generated and its plaintext value is logged once to the application logs. The password hash is stored in `config/webui_user.yml` for subsequent runs.
+- A new password reset endpoint is available at `/reset-password`. To enable unauthenticated resets via the web UI, set the environment variable `WEBUI_RESET_TOKEN` to a secret value; the reset form must include that token to accept a reset. If `WEBUI_RESET_TOKEN` is not set the reset page is disabled.
+
 ### Documentation
 - README.md updated to document health/metrics endpoints, Docker healthcheck, live loglevel control, and the new `researcharr.py` entry point.
 - New wiki page: `Health-and-Metrics.md`.

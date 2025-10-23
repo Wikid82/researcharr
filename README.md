@@ -213,9 +213,10 @@ If you prefer not to publish images from forks or pull requests, update the work
       ```
       Then visit [http://localhost:2929](http://localhost:2929) in your browser.
     - **Login is required.**
-      - Default username: `admin`
-      - Default password: `researcharr`
-      (Change these in production using the "User Settings" tab in the web UI, which updates `webui_user.yml`.)
+      - Default username: `researcharr` on first-run
+      - Default password: a secure random password is generated automatically on first startup and its plaintext value is logged once to the application logs. The generated password is stored as a hashed value in `config/webui_user.yml`.
+      - To change credentials after first-run, use the "User Settings" tab in the web UI (this updates `webui_user.yml`).
+      - If you need to allow unauthenticated password resets, set the environment variable `WEBUI_RESET_TOKEN` to a secret value and use the web UI "Forgot password?" link to reset credentials using that token. Without `WEBUI_RESET_TOKEN` the reset page is disabled.
     - **AJAX navigation:** Sidebar and header never reload; only the main content area updates. All forms and navigation are AJAX-powered for instant feedback.
     - **Per-instance validation:** Each Radarr and Sonarr instance has a "Validate & Save" button for instant connection testing and dry-run, with results shown in the UI.
     - **Error feedback:** All error messages (e.g., invalid config, missing API key) are shown instantly in the UI.

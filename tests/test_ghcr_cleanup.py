@@ -47,10 +47,21 @@ def run_script_capture(
         argv.extend(args)
     argv.extend(["--json-report", str(report_path)])
 
-    # run the script as a module by exec file for __main__ behavior
+    # run the script as a module but call its main() to ensure it executes
     spec = importlib.util.spec_from_file_location("ghcr_cleanup", SCRIPT)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    # monkeypatch sys.argv so argument parsing picks up our argv
+    import sys
+
+    old_argv = sys.argv[:]
+    try:
+        sys.argv = argv
+        # call main if present
+        if hasattr(module, "main"):
+            module.main()
+    finally:
+        sys.argv = old_argv
 
     # restore env
     os.environ.clear()
@@ -71,9 +82,27 @@ def test_dry_run_writes_report(monkeypatch, tmp_path):
     ]
 
     def fake_get(url, headers=None):
+        print(f"DEBUG: fake_get called with url={url}")
+        # parse page param explicitly
+        page = None
+        if "?" in url:
+            q = url.split("?", 1)[1]
+            for part in q.split("&"):
+                if part.startswith("page="):
+                    try:
+                        page = int(part.split("=", 1)[1])
+                    except Exception:
+                        page = None
+        # return packages/versions only for page=1 or when page is None
         if "packages" in url and "versions" not in url:
-            return _fake_response([{"name": "researcharr", "id": 123}])
-        return _fake_response(versions)
+            if page in (None, 1):
+                return _fake_response([{"name": "researcharr", "id": 123}])
+            return _fake_response([])
+        if "versions" in url:
+            if page in (None, 1):
+                return _fake_response(versions)
+            return _fake_response([])
+        return _fake_response([], status_code=404)
 
     def fake_delete(url, headers=None):
         raise AssertionError("delete should not be called in dry-run")
@@ -82,7 +111,7 @@ def test_dry_run_writes_report(monkeypatch, tmp_path):
         "GHCR_PAT": "token",
         "OWNER": "Wikid82",
         "REPO": "researcharr",
-        "DAYS": "90",
+        "DAYS": "365",
         "DRY_RUN": "true",
     }
 
@@ -111,9 +140,25 @@ def test_protected_tag_skipped(monkeypatch, tmp_path):
     ]
 
     def fake_get(url, headers=None):
+        print(f"DEBUG: fake_get called with url={url}")
+        page = None
+        if "?" in url:
+            q = url.split("?", 1)[1]
+            for part in q.split("&"):
+                if part.startswith("page="):
+                    try:
+                        page = int(part.split("=", 1)[1])
+                    except Exception:
+                        page = None
         if "packages" in url and "versions" not in url:
-            return _fake_response([{"name": "researcharr", "id": 123}])
-        return _fake_response(versions)
+            if page in (None, 1):
+                return _fake_response([{"name": "researcharr", "id": 123}])
+            return _fake_response([])
+        if "versions" in url:
+            if page in (None, 1):
+                return _fake_response(versions)
+            return _fake_response([])
+        return _fake_response([], status_code=404)
 
     env = {
         "GHCR_PAT": "token",
@@ -150,9 +195,25 @@ def test_deletion_calls_delete_endpoint(monkeypatch, tmp_path):
     ]
 
     def fake_get(url, headers=None):
+        print(f"DEBUG: fake_get called with url={url}")
+        page = None
+        if "?" in url:
+            q = url.split("?", 1)[1]
+            for part in q.split("&"):
+                if part.startswith("page="):
+                    try:
+                        page = int(part.split("=", 1)[1])
+                    except Exception:
+                        page = None
         if "packages" in url and "versions" not in url:
-            return _fake_response([{"name": "researcharr", "id": 123}])
-        return _fake_response(versions)
+            if page in (None, 1):
+                return _fake_response([{"name": "researcharr", "id": 123}])
+            return _fake_response([])
+        if "versions" in url:
+            if page in (None, 1):
+                return _fake_response(versions)
+            return _fake_response([])
+        return _fake_response([], status_code=404)
 
     deleted = []
 

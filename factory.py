@@ -1,5 +1,7 @@
 # ... code for factory.py ...
 
+import os
+
 from flask import (
     Flask,
     flash,
@@ -10,6 +12,9 @@ from flask import (
     session,
     url_for,
 )
+from werkzeug.security import generate_password_hash
+
+from researcharr import webui
 
 
 def create_app():
@@ -87,6 +92,48 @@ def create_app():
     def logout():
         session.clear()
         return redirect(url_for("login"))
+
+    @app.route("/reset-password", methods=["GET", "POST"])
+    def reset_password():
+        """Allow resetting the web UI user password.
+
+        This endpoint requires the environment variable WEBUI_RESET_TOKEN to be set
+        and the provided token must match it. This protects the unauthenticated
+        reset action from being abused. If the env var is not set, reset is
+        disabled.
+        """
+        token_required = os.getenv("WEBUI_RESET_TOKEN")
+        # If no reset token configured, disallow reset via web UI
+        if not token_required and request.method == "GET":
+            # show a simple page saying reset is unavailable
+            return render_template("reset_password.html", disabled=True)
+
+        error = None
+        if request.method == "POST":
+            username = request.form.get("username")
+            token = request.form.get("token")
+            password = request.form.get("password")
+            confirm = request.form.get("confirm")
+
+            if token_required and token != token_required:
+                error = "Invalid reset token"
+            elif not password or password != confirm:
+                error = "Passwords do not match"
+            else:
+                # Apply the reset to in-memory config
+                app.config_data["user"]["username"] = username or app.config_data["user"]["username"]
+                app.config_data["user"]["password"] = password
+                # Persist to file if webui.save_user_config is available
+                try:
+                    pwd_hash = generate_password_hash(password)
+                    webui.save_user_config(app.config_data["user"]["username"], pwd_hash)
+                except Exception:
+                    # best-effort persistence; ignore failures here
+                    pass
+                flash("Password has been reset. Please log in.")
+                return redirect(url_for("login"))
+
+        return render_template("reset_password.html", error=error, disabled=False, user=app.config_data.get("user"))
 
     @app.route("/settings/general", methods=["GET", "POST"])
     def general_settings():

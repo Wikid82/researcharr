@@ -45,6 +45,9 @@ def list_packages(owner: str, token: str) -> List[Dict[str, Any]]:
     ):
         page = 1
         while True:
+            # safety cap to avoid infinite loops in case of bad responses
+            if page > 10:
+                break
             r = requests.get(base + f"&page={page}&per_page=100", headers=headers)
             if r.status_code == 404:
                 break
@@ -71,6 +74,9 @@ def list_package_versions(
     ):
         page = 1
         while True:
+            # safety cap to avoid infinite loops in case of bad responses
+            if page > 10:
+                break
             r = requests.get(base + f"?page={page}&per_page=100", headers=headers)
             if r.status_code == 404:
                 break

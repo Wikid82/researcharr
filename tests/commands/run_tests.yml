@@ -1,1 +1,1 @@
-python -m pytest tests/
+isort --profile=black . && black . && python -m pytest tests/

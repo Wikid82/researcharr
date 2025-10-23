@@ -30,7 +30,7 @@ jobs:
         black --check .
     - name: Check import order with isort
       run: |
-        isort --check-only .
+        isort --profile=black --check-only .
     - name: Type check with mypy
       run: |
         mypy .

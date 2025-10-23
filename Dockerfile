@@ -5,7 +5,7 @@ ENV RESEARCHARR_VERSION=$BUILD_DATE
 EXPOSE 2929
 
 RUN apt-get update && \
-    apt-get install -y cron yq && \
+    apt-get install -y yq && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -15,8 +15,6 @@ COPY . /app
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install pyyaml
-
-COPY cronjob.template /etc/cron.d/my-cron-job
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

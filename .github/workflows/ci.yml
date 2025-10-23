@@ -54,8 +54,6 @@ jobs:
         echo "Coverage report files (in repo root):" && ls -l coverage.xml || true
         echo "Coverage report files (in researcharr/):" && ls -l researcharr/coverage.xml || true
     - name: Upload coverage to Codecov
-      # Run codecov from the package directory so it finds the generated coverage.xml
-      working-directory: .
       uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}

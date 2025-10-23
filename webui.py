@@ -5,6 +5,7 @@
 # Keep route helpers and config management small and testable
 
 import os
+
 import yaml
 from werkzeug.security import generate_password_hash
 

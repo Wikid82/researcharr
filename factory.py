@@ -1,20 +1,13 @@
 # ... code for factory.py ...
 
-from flask import (
-    Flask,
-    render_template,
-    redirect,
-    url_for,
-    request,
-    session,
-    jsonify,
-    flash,
-)
+from flask import (Flask, flash, jsonify, redirect, render_template, request,
+                   session, url_for)
 
 
 def create_app():
     def logout_link():
         return '<a href="/logout">Logout</a>'
+
     app = Flask(__name__)
     app.secret_key = "dev"
     # Simulated in-memory config for tests
@@ -77,7 +70,8 @@ def create_app():
                 session["logged_in"] = True
                 return redirect(url_for("general_settings"))
             return render_template(
-                "login.html", error="Invalid username or password"
+                "login.html",
+                error="Invalid username or password",
             )
         return render_template("login.html")
 
@@ -113,8 +107,8 @@ def create_app():
             flash("Radarr settings saved")
         radarrs = app.config_data.get("radarr", [])
 
-    # Convert stored dicts to objects for template attribute-style access
-    # and provide a .get() method used by templates
+        # Convert stored dicts to objects for template attribute-style access
+        # and provide a .get() method used by templates
 
         class _Obj:
             def __init__(self, d):
@@ -149,8 +143,8 @@ def create_app():
         if request.method == "POST":
             # Basic validation: if enabled but missing url/api_key, set error
             if request.form.get("sonarr0_enabled") and (
-                not request.form.get("sonarr0_url") or
-                not request.form.get("sonarr0_api_key")
+                not request.form.get("sonarr0_url")
+                or not request.form.get("sonarr0_api_key")
             ):
                 error = "Missing URL or API key for enabled instance."
                 flash(error)
@@ -172,7 +166,9 @@ def create_app():
         cron = app.config_data.get("scheduling", {}).get("cron_schedule", "")
         timezone = app.config_data.get("scheduling", {}).get("timezone", "")
         return render_template(
-            "scheduling.html", cron_schedule=cron, timezone=timezone
+            "scheduling.html",
+            cron_schedule=cron,
+            timezone=timezone,
         )
 
     @app.route("/user", methods=["GET", "POST"])
@@ -212,13 +208,15 @@ def create_app():
     @app.route("/health")
     def health():
         # Simulate DB/config/threads/time check for tests
-        return jsonify({
-            "status": "ok",
-            "db": "ok",
-            "config": "ok",
-            "threads": 1,
-            "time": "2025-10-23T00:00:00Z"
-        })
+        return jsonify(
+            {
+                "status": "ok",
+                "db": "ok",
+                "config": "ok",
+                "threads": 1,
+                "time": "2025-10-23T00:00:00Z",
+            }
+        )
 
     @app.route("/metrics")
     def metrics():
@@ -244,19 +242,23 @@ def create_app():
         # Simulate validation
         sonarrs = app.config_data.get("sonarr", [])
         if idx >= len(sonarrs):
-            resp = jsonify({
-                "success": False,
-                "msg": "Invalid Sonarr index",
-            })
+            resp = jsonify(
+                {
+                    "success": False,
+                    "msg": "Invalid Sonarr index",
+                }
+            )
             return resp, 400
         s = sonarrs[idx]
         if not s.get("sonarr0_url") or not s.get("sonarr0_api_key"):
             # Also show error on settings page for test
             error_msg = "Missing URL or API key for enabled instance."
-            resp = jsonify({
-                "success": False,
-                "msg": error_msg,
-            })
+            resp = jsonify(
+                {
+                    "success": False,
+                    "msg": error_msg,
+                }
+            )
             return resp, 400
 
         return jsonify({"success": True})

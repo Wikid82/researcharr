@@ -1,11 +1,11 @@
 # ... code for researcharr.py ...
 # ... code for app.py ...
 
-import requests
-import sqlite3
-import yaml
 import os
+import sqlite3
 
+import requests
+import yaml
 
 DB_PATH = "researcharr.db"
 
@@ -32,9 +32,8 @@ def init_db(db_path=None):
 
 def has_valid_url_and_key(instances):
     return all(
-        not i.get("enabled") or (
-            i.get("url", "").startswith("http") and i.get("api_key")
-        )
+        not i.get("enabled")
+        or (i.get("url", "").startswith("http") and i.get("api_key"))
         for i in instances
     )
 
@@ -50,7 +49,8 @@ def check_radarr_connection(url, api_key, logger):
             return True
         else:
             logger.error(
-                "Radarr connection failed with status %s", r.status_code
+                "Radarr connection failed with status %s",
+                r.status_code,
             )
             return False
     except Exception as e:
@@ -69,7 +69,8 @@ def check_sonarr_connection(url, api_key, logger):
             return True
         else:
             logger.error(
-                "Sonarr connection failed with status %s", r.status_code
+                "Sonarr connection failed with status %s",
+                r.status_code,
             )
             return False
     except Exception as e:
@@ -93,6 +94,7 @@ def load_config(path="config.yml"):
 
 def create_metrics_app():
     from flask import Flask, jsonify
+
     app = Flask("metrics")
     app.metrics = {"requests_total": 0, "errors_total": 0}
 

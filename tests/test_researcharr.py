@@ -156,7 +156,9 @@ def test_radarr_connection_timeout(monkeypatch):
     logger = mock.Mock()
     import requests
 
-    with mock.patch("researcharr.researcharr.requests.get", side_effect=requests.Timeout):
+    with mock.patch(
+        "researcharr.researcharr.requests.get", side_effect=requests.Timeout
+    ):
         app.check_radarr_connection("http://localhost", "abc", logger)
         logger.error.assert_called()
 
@@ -167,7 +169,9 @@ def test_sonarr_connection_timeout(monkeypatch):
     logger = mock.Mock()
     import requests
 
-    with mock.patch("researcharr.researcharr.requests.get", side_effect=requests.Timeout):
+    with mock.patch(
+        "researcharr.researcharr.requests.get", side_effect=requests.Timeout
+    ):
         app.check_sonarr_connection("http://localhost", "abc", logger)
         logger.error.assert_called()
 

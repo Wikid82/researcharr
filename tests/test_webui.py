@@ -6,7 +6,6 @@ from werkzeug.security import generate_password_hash
 
 from researcharr.factory import create_app
 
-
 # Always reset user config to default before each test
 
 

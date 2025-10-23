@@ -2,7 +2,6 @@ import pytest
 
 from researcharr.factory import create_app
 
-
 # Add client fixture for Flask test client
 
 
@@ -51,9 +50,17 @@ def test_metrics_error_increment(client):
 def test_loglevel_change_live(client):
     login(client)
     # Change loglevel to ERROR
-    rv = client.post("/settings/general", data={"PUID": "1", "PGID": "1", "Timezone": "UTC", "LogLevel": "ERROR"}, follow_redirects=True)
+    rv = client.post(
+        "/settings/general",
+        data={"PUID": "1", "PGID": "1", "Timezone": "UTC", "LogLevel": "ERROR"},
+        follow_redirects=True,
+    )
     assert rv.status_code == 200
     # Change loglevel to DEBUG
-    rv = client.post("/settings/general", data={"PUID": "1", "PGID": "1", "Timezone": "UTC", "LogLevel": "DEBUG"}, follow_redirects=True)
+    rv = client.post(
+        "/settings/general",
+        data={"PUID": "1", "PGID": "1", "Timezone": "UTC", "LogLevel": "DEBUG"},
+        follow_redirects=True,
+    )
     assert rv.status_code == 200
     assert rv.status_code == 200

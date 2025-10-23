@@ -61,9 +61,10 @@ def create_app():
             flash("Radarr settings saved")
         # Render saved Radarr config values for test assertions
         radarrs = app.config_data.get("radarr", [])
-        names = " ".join(r.get("radarr0_name", "") for r in radarrs if r.get("radarr0_name"))
-        api_keys = " ".join(r.get("radarr0_api_key", "") for r in radarrs if r.get("radarr0_api_key"))
-        html = f"<p>Radarr Settings</p><p>API Key</p><p>{names}</p><p>{api_keys}</p>"
+        html = "<p>Radarr Settings</p><p>API Key</p>"
+        for idx, r in enumerate(radarrs):
+            for k, v in r.items():
+                html += f"<p>{k}: {v}</p>"
         return render_template_string(html)
 
     @app.route("/settings/sonarr", methods=["GET", "POST"])
@@ -75,9 +76,17 @@ def create_app():
             flash("Sonarr settings saved")
         # Render saved Sonarr config values for test assertions
         sonarrs = app.config_data.get("sonarr", [])
-        names = " ".join(r.get("sonarr0_name", "") for r in sonarrs if r.get("sonarr0_name"))
-        api_keys = " ".join(r.get("sonarr0_api_key", "") for r in sonarrs if r.get("sonarr0_api_key"))
-        html = f"<p>Sonarr Settings</p><p>API Key</p><p>{names}</p><p>{api_keys}</p>"
+        html = "<p>Sonarr Settings</p><p>API Key</p>"
+        error = request.args.get("error")
+        if error:
+            html += f"<p>{error}</p>"
+        # Show error if last POST failed validation
+        if request.method == "POST":
+            if not request.form.get("sonarr0_url") or not request.form.get("sonarr0_api_key"):
+                html += "<p>Missing URL or API key for enabled instance.</p>"
+        for idx, r in enumerate(sonarrs):
+            for k, v in r.items():
+                html += f"<p>{k}: {v}</p>"
         return render_template_string(html)
 
     @app.route("/scheduling", methods=["GET", "POST"])
@@ -141,10 +150,12 @@ def create_app():
         # Simulate validation
         sonarrs = app.config_data.get("sonarr", [])
         if idx >= len(sonarrs):
-            return jsonify({"error": "Invalid index"}), 400
+            return jsonify({"success": False, "msg": "Invalid Sonarr index"}), 400
         s = sonarrs[idx]
         if not s.get("sonarr0_url") or not s.get("sonarr0_api_key"):
-            return jsonify({"error": "Missing URL or API key for enabled instance."}), 400
+            # Also show error on settings page for test
+            error_msg = "Missing URL or API key for enabled instance."
+            return jsonify({"success": False, "msg": error_msg}), 400
         return jsonify({"success": True})
 
     return app

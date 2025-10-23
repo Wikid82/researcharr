@@ -43,7 +43,18 @@ jobs:
         mypy .
     - name: Run tests with pytest
       run: |
-        pytest tests/ --maxfail=3 --disable-warnings -v --cov=researcharr
+        # Run tests and produce an XML coverage report for Codecov
+        pytest tests/ \
+          --maxfail=3 --disable-warnings -v \
+          --cov=researcharr --cov-report=xml:coverage.xml
+    - name: Show coverage file
+      run: |
+        echo "Coverage report files:" && ls -l coverage.xml || true
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+      continue-on-error: true
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:

@@ -32,7 +32,11 @@ def load_user_config():
             yaml.safe_dump(data, f)
         # Log the generated plaintext once for operators to copy from logs.
         logger = logging.getLogger("researcharr")
-        logger.info("Generated web UI initial password for %s: %s", data["username"], generated)
+        logger.info(
+            "Generated web UI initial password for %s: %s",
+            data["username"],
+            generated,
+        )
         # Return the generated plaintext to the caller so the running app can
         # set its in-memory password for immediate login.
         data["password"] = generated

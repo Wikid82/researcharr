@@ -59,8 +59,12 @@ def create_app():
             # Save radarr settings (simulate)
             app.config_data["radarr"] = [dict(request.form)]
             flash("Radarr settings saved")
-        # Simulate showing API Key
-        return render_template_string("<p>Radarr Settings</p><p>API Key</p>")
+        # Render saved Radarr config values for test assertions
+        radarrs = app.config_data.get("radarr", [])
+        names = " ".join(r.get("radarr0_name", "") for r in radarrs if r.get("radarr0_name"))
+        api_keys = " ".join(r.get("radarr0_api_key", "") for r in radarrs if r.get("radarr0_api_key"))
+        html = f"<p>Radarr Settings</p><p>API Key</p><p>{names}</p><p>{api_keys}</p>"
+        return render_template_string(html)
 
     @app.route("/settings/sonarr", methods=["GET", "POST"])
     def sonarr_settings():
@@ -69,7 +73,12 @@ def create_app():
         if request.method == "POST":
             app.config_data["sonarr"] = [dict(request.form)]
             flash("Sonarr settings saved")
-        return render_template_string("<p>Sonarr Settings</p><p>API Key</p>")
+        # Render saved Sonarr config values for test assertions
+        sonarrs = app.config_data.get("sonarr", [])
+        names = " ".join(r.get("sonarr0_name", "") for r in sonarrs if r.get("sonarr0_name"))
+        api_keys = " ".join(r.get("sonarr0_api_key", "") for r in sonarrs if r.get("sonarr0_api_key"))
+        html = f"<p>Sonarr Settings</p><p>API Key</p><p>{names}</p><p>{api_keys}</p>"
+        return render_template_string(html)
 
     @app.route("/scheduling", methods=["GET", "POST"])
     def scheduling():
@@ -78,7 +87,11 @@ def create_app():
         if request.method == "POST":
             app.config_data["scheduling"].update(request.form)
             flash("Schedule saved")
-        return render_template_string("<p>Scheduling</p><p>Timezone</p>")
+        # Render saved scheduling config for test assertions
+        cron = app.config_data.get("scheduling", {}).get("cron_schedule", "")
+        timezone = app.config_data.get("scheduling", {}).get("timezone", "")
+        html = f"<p>Scheduling</p><p>Timezone</p><p>{cron}</p><p>{timezone}</p>"
+        return render_template_string(html)
 
     @app.route("/user", methods=["GET", "POST"])
     def user_settings():

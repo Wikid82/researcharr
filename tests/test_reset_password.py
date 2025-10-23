@@ -1,6 +1,3 @@
-import os
-
-import pytest
 import yaml
 
 from researcharr import webui
@@ -33,6 +30,8 @@ def test_reset_password_updates_config(tmp_path, monkeypatch):
         },
         follow_redirects=True,
     )
+    # Response should be OK
+    assert rv.status_code == 200
 
     # After reset, the in-memory config should be updated
     assert app.config_data["user"]["username"] == "researcharr"

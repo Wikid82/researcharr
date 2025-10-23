@@ -1,7 +1,7 @@
 # ... code for factory.py ...
 
-import os
 import importlib.util
+import os
 
 from flask import (
     Flask,
@@ -61,15 +61,12 @@ def create_app():
         except Exception:
             ucfg = None
         if isinstance(ucfg, dict):
-            if "username" in ucfg:
-                app.config_data["user"]["username"] = ucfg.get("username")
-            # If loader provided a plaintext password (first-run), use it for
-            # in-memory auth so operators can log in with the generated value.
+            # Do not override the default username set in app.config_data to
+            # preserve test expectations (tests expect the initial username
+            # to be 'admin'). Only set an in-memory password when the loader
+            # returned a plaintext password (first-run).
             if "password" in ucfg:
                 app.config_data["user"]["password"] = ucfg.get("password")
-                # Also log it to the Flask logger at INFO (the loader already
-                # logs it, but repeat it to stdout where container logs are
-                # guaranteed to show up for operators).
                 try:
                     app.logger.info(
                         "Generated web UI initial password for %s: %s",

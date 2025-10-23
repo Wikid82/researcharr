@@ -21,7 +21,6 @@ def index():
     return redirect(url_for("login"))
 
 
-
 # Minimal in-memory storage for test persistence
 RADARR_SETTINGS: dict[str, str] = {}
 SONARR_SETTINGS: dict[str, str] = {}

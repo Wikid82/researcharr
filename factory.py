@@ -52,6 +52,38 @@ def create_app():
     # In-memory metrics for test isolation
     app.metrics = {"requests_total": 0, "errors_total": 0}
 
+    # Ensure web UI user config exists on startup. If a first-run password is
+    # generated, the loader returns the plaintext as `password` so we can set
+    # the in-memory auth to allow immediate login using that password.
+    try:
+        try:
+            ucfg = webui.load_user_config()
+        except Exception:
+            ucfg = None
+        if isinstance(ucfg, dict):
+            if "username" in ucfg:
+                app.config_data["user"]["username"] = ucfg.get("username")
+            # If loader provided a plaintext password (first-run), use it for
+            # in-memory auth so operators can log in with the generated value.
+            if "password" in ucfg:
+                app.config_data["user"]["password"] = ucfg.get("password")
+                # Also log it to the Flask logger at INFO (the loader already
+                # logs it, but repeat it to stdout where container logs are
+                # guaranteed to show up for operators).
+                try:
+                    app.logger.info(
+                        "Generated web UI initial password for %s: %s",
+                        app.config_data["user"]["username"],
+                        ucfg.get("password"),
+                    )
+                except Exception:
+                    pass
+    except Exception:
+        # best-effort; if loading the user config fails we continue with the
+        # default in-memory credentials to avoid preventing the UI from
+        # starting.
+        pass
+
     def is_logged_in():
         return session.get("logged_in")
 

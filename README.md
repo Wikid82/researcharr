@@ -58,6 +58,52 @@ If running outside Docker, install dependencies with:
 pip install -r requirements.txt
 ```
 
+
+## Health & Metrics Endpoints (NEW)
+
+researcharr now provides built-in `/health` and `/metrics` endpoints for both the main app and the web UI. These endpoints are designed for Docker healthchecks, monitoring, and debugging.
+
+- `/health`: Returns a JSON object indicating the health of the service (DB, config, background threads, and current time).
+- `/metrics`: Returns a JSON object with basic metrics such as total requests, errors, and (for the app) queue lengths.
+
+**Docker Compose Healthcheck Example:**
+
+For the main app (recommended):
+
+```yaml
+services:
+  researcharr:
+    # ...other config...
+    command: python app.py serve
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+```
+
+For the web UI (optional):
+
+```yaml
+services:
+  webui:
+    # ...other config...
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2929/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+```
+
+You can also check these endpoints manually:
+
+```bash
+curl http://localhost:5001/health
+curl http://localhost:5001/metrics
+```
+
+See the new `Health-and-Metrics.md` wiki page for full details.
+
 ## How to Use
 
 1.  **Create a configuration directory:**
@@ -73,8 +119,10 @@ pip install -r requirements.txt
 3.  **Run the container:**
     You can use either Docker Compose (recommended) or a `docker run` command. See the examples below. The first time the script runs, it will create a `researcharr.db` file and a `logs` directory inside your config volume.
 
-4.  **Check the logs:**
-  Live logs are streamed and can be viewed using the `docker logs` command. See the Logging section for more details.
+
+4.  **Check the logs and health:**
+  - Live logs are streamed and can be viewed using the `docker logs` command. See the Logging section for more details.
+  - Health and metrics endpoints are available for monitoring and Docker healthchecks (see above).
 
 5.  **Use the Web UI (AJAX-powered, always-on):**
     - Launch with:
@@ -112,7 +160,10 @@ This application uses a **SQLite database** (`researcharr.db`) to manage a persi
     2.  On all subsequent runs, the script simply takes the next batch of items from the queue, triggers a search, and removes them from the queue. These runs are very fast.
 *   **Persistence:** The database file is stored in your main config volume (`/path/to/config/researcharr.db`), so the queue is maintained even if you restart or update the container.
 
-## Logging
+
+## Logging & Live Log Level Control (NEW)
+
+The log level for both the app and web UI can now be set from the General Settings page in the web UI. Changes are applied live (no restart required). This allows you to increase verbosity for debugging or reduce log volume in production.
 
 The application creates three separate log files inside a `logs` directory within your main config volume (`/path/to/config/logs/`):
 
@@ -169,7 +220,11 @@ docker run -d \
 ```
 **Note:** All configuration is handled in `/path/to/config/config.yml`. If this file is missing, it will be auto-created from `config.example.yml` at container startup. No environment variables or `.env` file are required.
 
+
 ## Important Notes
+
+- Health and metrics endpoints are now available for both the app and web UI. Use them for Docker healthchecks, monitoring, and debugging.
+- Log level can be changed live from the web UI General Settings page.
 
 - The container and web UI will always stay up, even if no valid Radarr/Sonarr config is present. You can fix your configuration at any time using the web UI.
 - Each Radarr and Sonarr instance in the web UI now has a "Validate & Save" button. This tests the connection and performs a dry run for that instance, showing the result instantly.

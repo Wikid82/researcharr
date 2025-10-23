@@ -6,7 +6,7 @@ import sys
 @pytest.fixture
 def app_client(monkeypatch):
     # Import the app and create a test client for the metrics Flask app
-    from researcharr import app as researcharr_app
+    from researcharr import researcharr as researcharr_app
     metrics_app = researcharr_app.create_metrics_app()
     metrics_app.config["TESTING"] = True
     with metrics_app.test_client() as client:

@@ -9,7 +9,7 @@ import pytest
 @pytest.fixture(autouse=True)
 def patch_config_and_loggers(tmp_path_factory, monkeypatch):
     temp_dir = tmp_path_factory.mktemp("config")
-    # Patch environment and paths before any import of researcharr.app
+    # Patch environment and paths before any import of researcharr.researcharr
     monkeypatch.setenv("TZ", "America/New_York")
     # Patch os.environ for tzset
     os.environ["TZ"] = "America/New_York"
@@ -47,33 +47,33 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
         logger.error = mock.Mock()
         return logger
 
-    sys.modules.pop("researcharr.app", None)  # Ensure clean import
-    monkeypatch.setattr("researcharr.app.DB_PATH", db_path, raising=False)
+    sys.modules.pop("researcharr.researcharr", None)  # Ensure clean import
+    monkeypatch.setattr("researcharr.researcharr.DB_PATH", db_path, raising=False)
     monkeypatch.setattr(
-        "researcharr.app.setup_logger", fake_setup_logger, raising=False
+        "researcharr.researcharr.setup_logger", fake_setup_logger, raising=False
     )
     monkeypatch.setattr(
-        "researcharr.app.main_logger",
+        "researcharr.researcharr.main_logger",
         fake_setup_logger("main_logger", main_log),
         raising=False,
     )
     monkeypatch.setattr(
-        "researcharr.app.radarr_logger",
+        "researcharr.researcharr.radarr_logger",
         fake_setup_logger("radarr_logger", radarr_log),
         raising=False,
     )
     monkeypatch.setattr(
-        "researcharr.app.sonarr_logger",
+        "researcharr.researcharr.sonarr_logger",
         fake_setup_logger("sonarr_logger", sonarr_log),
         raising=False,
     )
     # Patch USER_CONFIG_PATH if needed
     monkeypatch.setattr(
-        "researcharr.app.USER_CONFIG_PATH",
+        "researcharr.researcharr.USER_CONFIG_PATH",
         str(temp_dir / "webui_user.yml"),
         raising=False,
     )
-    # Now import app (all patches in place)
-    importlib.import_module("researcharr.app")
+    # Now import researcharr (all patches in place)
+    importlib.import_module("researcharr.researcharr")
     yield
     # Cleanup handled by tmp_path_factory

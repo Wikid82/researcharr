@@ -2,9 +2,9 @@
 import logging
 import os
 import sqlite3
+
 import requests
 import yaml
-
 
 # --- Database Setup ---
 

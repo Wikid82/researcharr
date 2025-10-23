@@ -4,9 +4,10 @@
 # templates ---
 
 import os
-import yaml
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, session
+
+import yaml
+from flask import Flask, redirect, render_template, request, session, url_for
 from werkzeug.security import generate_password_hash
 
 app = Flask(__name__)

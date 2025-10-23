@@ -196,7 +196,7 @@ If you prefer not to publish images from forks or pull requests, update the work
   ```
 
 2.  **Edit your configuration:**
-  Open `/path/to/config/config.yml` in your favorite editor and fill in the values for up to 5 Radarr and 5 Sonarr instances, schedule, and timezone. Each instance can be enabled or disabled. All options are documented in the example file. The cron job schedule can also be edited from the "Scheduling" tab in the web UI, with changes reflected in the config and container behavior.
+  Open `/path/to/config/config.yml` in your favorite editor and fill in the values for up to 5 Radarr and 5 Sonarr instances, schedule, and timezone. Each instance can be enabled or disabled. All options are documented in the example file. The scheduler expression (cron-like) can also be edited from the "Scheduling" tab in the web UI; the app uses an in-process scheduler (APScheduler) to run the background processing according to that expression.
 
 3.  **Run the container:**
     You can use either Docker Compose (recommended) or a `docker run` command. See the examples below. The first time the script runs, it will create a `researcharr.db` file and a `logs` directory inside your config volume.
@@ -215,6 +215,22 @@ If you prefer not to publish images from forks or pull requests, update the work
     - **Login is required.**
       - Default username: `researcharr` on first-run
       - Default password: a secure random password is generated automatically on first startup and its plaintext value is logged once to the application logs. The generated password is stored as a hashed value in `config/webui_user.yml`.
+      - Troubleshooting / retrieving the initial password:
+
+        If you start the full web UI (not a one-shot scheduler run) the first-run password will be logged once to container logs. To retrieve it:
+
+        ```bash
+        # If running detached:
+        docker logs --tail 200 researcharr | grep -i "Generated web UI initial password" -A1 -B1
+
+        # If you prefer to persist the config directory to inspect files locally:
+        mkdir -p ./config
+        docker run --rm -v "$(pwd)/config:/config" researcharr:local python3 /app/run.py &
+        # then check the generated file locally after startup:
+        cat ./config/webui_user.yml
+        ```
+
+        Note: the plaintext password is only logged once for operator convenience; only the hash is persisted in `webui_user.yml`.
       - To change credentials after first-run, use the "User Settings" tab in the web UI (this updates `webui_user.yml`).
       - If you need to allow unauthenticated password resets, set the environment variable `WEBUI_RESET_TOKEN` to a secret value and use the web UI "Forgot password?" link to reset credentials using that token. Without `WEBUI_RESET_TOKEN` the reset page is disabled.
     - **AJAX navigation:** Sidebar and header never reload; only the main content area updates. All forms and navigation are AJAX-powered for instant feedback.
@@ -230,8 +246,7 @@ If you prefer not to publish images from forks or pull requests, update the work
 All configuration is now managed in a single YAML file: `/path/to/config/config.yml`.
 
 - See `config.example.yml` for a fully documented template.
-- You can set your timezone, cron schedule (or edit both from the Scheduling tab in the web UI), Radarr/Sonarr URLs, API keys, and processing options in this file.
-- The Scheduling tab in the web UI now allows you to edit both the cron job schedule and the timezone. Changes are saved to config and used by the app and entrypoint script. See the wiki page [Scheduling and Timezone](wiki/Scheduling-and-Timezone.md) for details.
+- You can set your timezone and the scheduler expression (cron-like) from the Scheduling tab in the web UI; changes are saved to config and applied by the in-process scheduler (APScheduler) that runs inside the container. See the wiki page [Scheduling and Timezone](wiki/Scheduling-and-Timezone.md) for details.
 - Example URLs for Docker default network: `http://radarr:7878` and `http://sonarr:8989`.
 
 ## State Management

@@ -30,7 +30,6 @@ def init_db(db_path=None):
     conn.close()
 
 
-
 def has_valid_url_and_key(instances):
     return all(
         not i.get("enabled") or (
@@ -38,7 +37,6 @@ def has_valid_url_and_key(instances):
         )
         for i in instances
     )
-
 
 
 def check_radarr_connection(url, api_key, logger):
@@ -60,7 +58,6 @@ def check_radarr_connection(url, api_key, logger):
         return False
 
 
-
 def check_sonarr_connection(url, api_key, logger):
     if not url or not api_key:
         logger.warning("Missing Sonarr URL or API key")
@@ -80,7 +77,6 @@ def check_sonarr_connection(url, api_key, logger):
         return False
 
 
-
 def load_config(path="config.yml"):
     if not os.path.exists(path):
         raise FileNotFoundError(path)
@@ -93,7 +89,6 @@ def load_config(path="config.yml"):
         # Don't raise on missing fields; return whatever is present. Tests
         # expect partial configs to be accepted.
         return config
-
 
 
 def create_metrics_app():

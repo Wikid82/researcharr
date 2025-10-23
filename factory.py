@@ -116,7 +116,6 @@ def create_app():
     # Convert stored dicts to objects for template attribute-style access
     # and provide a .get() method used by templates
 
-        
         class _Obj:
             def __init__(self, d):
                 self._d = dict(d)
@@ -135,6 +134,7 @@ def create_app():
             "settings_radarr.html",
             radarr=_wrap_list(radarrs),
         )
+
     @app.route("/settings/sonarr", methods=["GET", "POST"])
     def sonarr_settings():
         if not is_logged_in():
@@ -195,7 +195,7 @@ def create_app():
             user=type("U", (), app.config_data["user"]),
             user_msg=error,
         )
-    
+
     @app.route("/save", methods=["POST"])
     def save():
         # Simulate saving general settings
@@ -224,8 +224,8 @@ def create_app():
     def metrics():
         # Return and increment metrics
         return jsonify(app.metrics)
+
     # Increment requests_total for every request
-    
     @app.before_request
     def before_any_request():
         app.metrics["requests_total"] += 1

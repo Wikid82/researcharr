@@ -10,6 +10,7 @@ from werkzeug.security import generate_password_hash
 
 USER_CONFIG_PATH = "config/webui_user.yml"
 
+
 def load_user_config():
     user_dir = os.path.dirname(USER_CONFIG_PATH)
     if not os.path.exists(user_dir):
@@ -26,14 +27,14 @@ def load_user_config():
     with open(USER_CONFIG_PATH, "r") as f:
         return yaml.safe_load(f)
 
+
 def save_user_config(username, password_hash):
 
     user_dir = os.path.dirname(USER_CONFIG_PATH)
     if not os.path.exists(user_dir):
         os.makedirs(user_dir, exist_ok=True)
     with open(USER_CONFIG_PATH, "w") as f:
-        yaml.safe_dump({"username": username, "password_hash": password_hash}, f)
-
-
-
-
+        yaml.safe_dump(
+            {"username": username, "password_hash": password_hash},
+            f,
+        )

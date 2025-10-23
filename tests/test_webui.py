@@ -33,7 +33,6 @@ def reset_user_config():
     yield
 
 
-
 @pytest.fixture
 def client():
     app = create_app()
@@ -90,6 +89,7 @@ def test_radarr_settings_page(client):
 def test_sonarr_settings_page(client):
     login(client)
     rv = client.get("/settings/sonarr")
+
     assert rv.status_code == 200
     assert b"Sonarr" in rv.data
     assert b"researcharr" in rv.data
@@ -230,6 +230,6 @@ def test_sonarr_settings_save_invalid(client):
         },
         follow_redirects=True,
     )
+
     assert rv.status_code == 200
     assert b"Sonarr" in rv.data
-

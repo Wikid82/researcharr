@@ -25,19 +25,19 @@ jobs:
         pip install black isort flake8 mypy pytest pytest-cov
     - name: Lint with flake8
       run: |
-  flake8 . --count --show-source --statistics
+        flake8 . --count --show-source --statistics
     - name: Check formatting with black
       run: |
-  black --check .
+        black --check .
     - name: Check import order with isort
       run: |
-  isort --check-only .
+        isort --check-only .
     - name: Type check with mypy
       run: |
-  mypy .
+        mypy .
     - name: Run tests with pytest
       run: |
-  pytest tests/ --maxfail=3 --disable-warnings -v --cov=researcharr
+        pytest tests/ --maxfail=3 --disable-warnings -v --cov=researcharr
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:

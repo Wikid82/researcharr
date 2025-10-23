@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 
+# -*- coding: utf-8 -*-
 # --- Flask app and route definitions only; all HTML/Jinja/JS is in
 # templates ---
 
@@ -12,6 +12,11 @@ from werkzeug.security import generate_password_hash
 
 app = Flask(__name__)
 app.secret_key = "your-secret-key"  # Replace with a secure key in production
+
+# Redirect root URL to login (must be after app is defined)
+@app.route("/")
+def index():
+    return redirect(url_for("login"))
 
 # Minimal in-memory storage for test persistence
 RADARR_SETTINGS = {}

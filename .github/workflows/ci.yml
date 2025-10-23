@@ -42,6 +42,8 @@ jobs:
       run: |
         mypy .
     - name: Run tests with pytest
+      # Ensure we run pytest from the package directory so coverage files are generated where codecov expects
+      working-directory: .
       run: |
         # Run tests and produce an XML coverage report for Codecov
         pytest tests/ \
@@ -49,8 +51,11 @@ jobs:
           --cov=researcharr --cov-report=xml:coverage.xml
     - name: Show coverage file
       run: |
-        echo "Coverage report files:" && ls -l coverage.xml || true
+        echo "Coverage report files (in repo root):" && ls -l coverage.xml || true
+        echo "Coverage report files (in researcharr/):" && ls -l researcharr/coverage.xml || true
     - name: Upload coverage to Codecov
+      # Run codecov from the package directory so it finds the generated coverage.xml
+      working-directory: .
       uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -113,9 +118,9 @@ jobs:
         fi
 
   docs-linkcheck:
-    # Run only for pull requests and only when docs/ changed
+    # Run for pull requests, and for pushes to main/development (so docs previews and main site are checked)
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' }}
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')) }}
     steps:
     - uses: actions/checkout@v4
       with:
@@ -124,14 +129,25 @@ jobs:
       id: docs_changed
       run: |
         set -euo pipefail
-        BASE=${{ github.event.pull_request.base.ref }}
-        git fetch origin "$BASE"
-        CHANGED=$(git diff --name-only origin/$BASE...HEAD | grep -E '^docs/' || true)
+        echo "Event: $GITHUB_EVENT_NAME"
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          BASE=${{ github.event.pull_request.base.ref }}
+          echo "Comparing against base branch: $BASE"
+          git fetch origin "$BASE"
+          DIFF=$(git diff --name-only origin/$BASE...HEAD || true)
+        else
+          # For push events compare the previous commit (github.event.before) to HEAD
+          BEFORE=${{ github.event.before }}
+          echo "Comparing commits: $BEFORE..HEAD"
+          DIFF=$(git diff --name-only $BEFORE...HEAD || true)
+        fi
+        CHANGED=$(echo "$DIFF" | grep -E '^docs/' || true)
         if [ -z "$CHANGED" ]; then
           echo "docs_changed=false" >> $GITHUB_OUTPUT
           echo "No docs changes detected, skipping linkcheck."
         else
           echo "docs_changed=true" >> $GITHUB_OUTPUT
+          echo "Docs changed:\n$CHANGED"
         fi
     - name: Setup Ruby (for html-proofer)
       if: steps.docs_changed.outputs.docs_changed == 'true'

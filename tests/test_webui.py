@@ -4,7 +4,12 @@ import pytest
 import yaml
 from werkzeug.security import generate_password_hash
 
-from researcharr import webui
+
+import importlib
+import pytest
+import yaml
+from werkzeug.security import generate_password_hash
+from researcharr.webui import create_app
 
 
 # Always reset user config to default before each test
@@ -31,10 +36,12 @@ def reset_user_config():
     yield
 
 
+
 @pytest.fixture
 def client():
-    webui.app.config["TESTING"] = True
-    with webui.app.test_client() as client:
+    app = create_app()
+    app.config["TESTING"] = True
+    with app.test_client() as client:
         yield client
 
 

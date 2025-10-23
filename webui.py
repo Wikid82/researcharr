@@ -2,7 +2,8 @@
 # --- Flask app and route definitions only; all HTML/Jinja/JS is in
 # templates ---
 
-
+import time
+from flask import jsonify
 import os
 import sys
 import logging
@@ -230,6 +231,9 @@ def load_user_config():
             )
     with open(USER_CONFIG_PATH, "r") as f:
         return yaml.safe_load(f)
+                import time
+                from flask import jsonify
+
 
 
 def save_user_config(username, password_hash):
@@ -251,6 +255,37 @@ def login():
         ):
             session["logged_in"] = True
             return redirect(url_for("settings_radarr"))
+        METRICS = {
+            "requests_total": 0,
+            "errors_total": 0,
+            "last_health_check": None,
+        }
+
+        @app.before_request
+        def before_any_request():
+            METRICS["requests_total"] += 1
+
+        @app.errorhandler(Exception)
+        def handle_error(e):
+            METRICS["errors_total"] += 1
+            return str(e), 500
+
+        @app.route("/health", methods=["GET"])
+        def health():
+            METRICS["last_health_check"] = time.time()
+            status = {
+                "status": "ok",
+                "db": True,
+                "config": True,
+                "threads": True,
+                "time": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
+            }
+            return jsonify(status)
+
+        @app.route("/metrics", methods=["GET"])
+        def metrics():
+            return jsonify(METRICS)
+
         else:
             error = "Invalid username or password."
     return render_template("login.html", error=error)

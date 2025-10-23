@@ -55,11 +55,6 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
       continue-on-error: true
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-      continue-on-error: true
 
   docker:
     needs: build
@@ -105,5 +100,54 @@ jobs:
       run: |
         REPO=ghcr.io/${{ env.REPO_NAME }}
         BRANCH=${{ env.BRANCH }}
-        if [ "$BRANCH" = "main" ]; then docker tag $REPO:main $REPO:latest && docker push $REPO:latest; fi
-        if [ "$BRANCH" = "development" ]; then docker tag $REPO:development $REPO:development && docker push $REPO:development; fi
+        if [ "$BRANCH" = "main" ]; then
+          # Ensure the image exists locally (pull from registry if necessary), then tag and push latest
+          docker pull $REPO:main || true
+          docker tag $REPO:main $REPO:latest
+          docker push $REPO:latest
+        fi
+        if [ "$BRANCH" = "development" ]; then
+          # Ensure the image exists locally (pull from registry if necessary) then push the development tag
+          docker pull $REPO:development || true
+          docker push $REPO:development
+        fi
+
+  docs-linkcheck:
+    # Run only for pull requests and only when docs/ changed
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Detect docs changes
+      id: docs_changed
+      run: |
+        set -euo pipefail
+        BASE=${{ github.event.pull_request.base.ref }}
+        git fetch origin "$BASE"
+        CHANGED=$(git diff --name-only origin/$BASE...HEAD | grep -E '^docs/' || true)
+        if [ -z "$CHANGED" ]; then
+          echo "docs_changed=false" >> $GITHUB_OUTPUT
+          echo "No docs changes detected, skipping linkcheck."
+        else
+          echo "docs_changed=true" >> $GITHUB_OUTPUT
+        fi
+    - name: Setup Ruby (for html-proofer)
+      if: steps.docs_changed.outputs.docs_changed == 'true'
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.2'
+    - name: Install html-proofer
+      if: steps.docs_changed.outputs.docs_changed == 'true'
+      run: |
+        gem install html-proofer
+    - name: Build site (no-op for raw markdown)
+      if: steps.docs_changed.outputs.docs_changed == 'true'
+      run: |
+        mkdir -p site
+        cp -a docs/. site/
+    - name: Run html-proofer link check
+      if: steps.docs_changed.outputs.docs_changed == 'true'
+      run: |
+        htmlproofer site --check-external-hash=false --allow-hash-href

@@ -2,8 +2,9 @@ import json
 import os
 from types import SimpleNamespace
 
-
-SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "..", "..", ".github", "scripts", "ghcr_cleanup.py")
+SCRIPT_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "..", ".github", "scripts", "ghcr_cleanup.py"
+)
 
 
 def load_module(tmp_path, monkeypatch, responses):
@@ -63,7 +64,11 @@ def test_dry_run_writes_report(tmp_path, monkeypatch):
     responses = {
         "packages": [{"name": "researcharr", "id": 1}],
         "versions": [
-            {"id": 101, "created_at": "2020-01-01T00:00:00Z", "metadata": {"container": {"tags": []}}}
+            {
+                "id": 101,
+                "created_at": "2020-01-01T00:00:00Z",
+                "metadata": {"container": {"tags": []}},
+            }
         ],
     }
 
@@ -71,7 +76,14 @@ def test_dry_run_writes_report(tmp_path, monkeypatch):
 
     out = tmp_path / "report.json"
     # call main with dry-run via args
-    mod.main.__globals__["sys"].argv = ["ghcr_cleanup.py", "--days", "90", "--json-report", str(out), "--dry-run"]
+    mod.main.__globals__["sys"].argv = [
+        "ghcr_cleanup.py",
+        "--days",
+        "90",
+        "--json-report",
+        str(out),
+        "--dry-run",
+    ]
     mod.main()
 
     assert out.exists()
@@ -84,13 +96,24 @@ def test_protected_tags_are_skipped(tmp_path, monkeypatch):
     responses = {
         "packages": [{"name": "researcharr", "id": 1}],
         "versions": [
-            {"id": 201, "created_at": "2020-01-01T00:00:00Z", "metadata": {"container": {"tags": ["main"]}}}
+            {
+                "id": 201,
+                "created_at": "2020-01-01T00:00:00Z",
+                "metadata": {"container": {"tags": ["main"]}},
+            }
         ],
     }
 
     mod, deleted = load_module(tmp_path, monkeypatch, responses)
     out = tmp_path / "report2.json"
-    mod.main.__globals__["sys"].argv = ["ghcr_cleanup.py", "--days", "90", "--json-report", str(out), "--dry-run"]
+    mod.main.__globals__["sys"].argv = [
+        "ghcr_cleanup.py",
+        "--days",
+        "90",
+        "--json-report",
+        str(out),
+        "--dry-run",
+    ]
     mod.main()
     report = json.loads(out.read_text(encoding="utf-8"))
     assert report["would_delete_count"] == 0
@@ -103,15 +126,30 @@ def test_deletion_calls_delete_endpoint(tmp_path, monkeypatch):
     responses = {
         "packages": [{"name": "researcharr", "id": 1}],
         "versions": [
-            {"id": 301, "created_at": "2020-01-01T00:00:00Z", "metadata": {"container": {"tags": []}}},
-            {"id": 302, "created_at": "2025-01-01T00:00:00Z", "metadata": {"container": {"tags": []}}},
+            {
+                "id": 301,
+                "created_at": "2020-01-01T00:00:00Z",
+                "metadata": {"container": {"tags": []}},
+            },
+            {
+                "id": 302,
+                "created_at": "2025-01-01T00:00:00Z",
+                "metadata": {"container": {"tags": []}},
+            },
         ],
     }
 
     mod, deleted = load_module(tmp_path, monkeypatch, responses)
     out = tmp_path / "report3.json"
     # run with no-dry-run to perform deletions
-    mod.main.__globals__["sys"].argv = ["ghcr_cleanup.py", "--days", "365", "--json-report", str(out), "--no-dry-run"]
+    mod.main.__globals__["sys"].argv = [
+        "ghcr_cleanup.py",
+        "--days",
+        "365",
+        "--json-report",
+        str(out),
+        "--no-dry-run",
+    ]
     mod.main()
     report = json.loads(out.read_text(encoding="utf-8"))
     # only the old 301 should have been deleted

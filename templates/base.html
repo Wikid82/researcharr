@@ -7,10 +7,10 @@
   <link rel="stylesheet" href="/static/colors.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body style="margin:0;">
+<body>
   {% include 'header.html' %}
   {% include 'sidebar.html' %}
-  <main style="margin-left:220px; margin-top:64px; min-height:calc(100vh - 64px);">
+  <main class="main-content" style="margin-left:220px; margin-top:64px;">
     {% block content %}{% endblock %}
   </main>
   {% include 'footer.html' %}

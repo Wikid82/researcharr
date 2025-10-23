@@ -2,15 +2,49 @@
 # --- Flask app and route definitions only; all HTML/Jinja/JS is in
 # templates ---
 
+
 import os
+import sys
+import logging
+from logging.handlers import RotatingFileHandler
+try:
+    from pythonjsonlogger import jsonlogger
+    JSON_LOGGING = True
+except ImportError:
+    JSON_LOGGING = False
 from functools import wraps
 
 import yaml
 from flask import Flask, redirect, render_template, request, session, url_for
 from werkzeug.security import generate_password_hash
 
+
 app = Flask(__name__)
 app.secret_key = "your-secret-key"  # Replace with a secure key in production
+
+# --- Logging setup ---
+LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+LOG_LEVEL = logging.INFO
+
+if JSON_LOGGING:
+    formatter = jsonlogger.JsonFormatter()
+else:
+    formatter = logging.Formatter(LOG_FORMAT)
+
+# StreamHandler for Docker logs (stdout)
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(formatter)
+
+# RotatingFileHandler for persistent logs (optional, can be removed if not needed)
+file_handler = RotatingFileHandler("/config/logs/webui.log", maxBytes=1024*1024, backupCount=3)
+file_handler.setFormatter(formatter)
+
+root_logger = logging.getLogger()
+root_logger.setLevel(LOG_LEVEL)
+root_logger.addHandler(stream_handler)
+root_logger.addHandler(file_handler)
+
+# Example usage: logging.info("Web UI started")
 
 
 # Redirect root URL to login (must be after app is defined)

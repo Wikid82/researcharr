@@ -10,6 +10,14 @@
     <input name="PGID" id="PGID" value="{{ pgid }}"><br>
     <label for="Timezone">Timezone:</label>
     <input name="Timezone" id="Timezone" value="{{ timezone|default('UTC') }}"><br>
+    <label for="LogLevel">Logging Level:</label>
+    <select name="LogLevel" id="LogLevel">
+      <option value="DEBUG" {% if loglevel == 'DEBUG' %}selected{% endif %}>DEBUG (most detailed)</option>
+      <option value="INFO" {% if loglevel == 'INFO' %}selected{% endif %}>INFO</option>
+      <option value="WARNING" {% if loglevel == 'WARNING' %}selected{% endif %}>WARNING</option>
+      <option value="ERROR" {% if loglevel == 'ERROR' %}selected{% endif %}>ERROR</option>
+      <option value="CRITICAL" {% if loglevel == 'CRITICAL' %}selected{% endif %}>CRITICAL (least)</option>
+    </select><br>
     <input type="submit" value="Save General Settings">
     {% if msg %}<div class="user-msg">{{ msg }}</div>{% endif %}
   </fieldset>

@@ -1,6 +1,7 @@
 # ... code for factory.py ...
 
 import os
+import importlib.util
 
 from flask import (
     Flask,
@@ -14,7 +15,18 @@ from flask import (
 )
 from werkzeug.security import generate_password_hash
 
-from researcharr import webui
+try:
+    # Prefer importing webui from the package if available
+    from researcharr import webui  # type: ignore
+except Exception:
+    # Fallback: load the top-level webui.py module directly (this keeps
+    # compatibility with how the project is laid out in the Docker image
+    # where webui.py lives at /app/webui.py).
+    spec = importlib.util.spec_from_file_location(
+        "webui", os.path.join(os.path.dirname(__file__), "webui.py")
+    )
+    webui = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(webui)  # type: ignore
 
 
 def create_app():

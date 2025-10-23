@@ -42,11 +42,11 @@ services:
 
 ### Manual Check
 
-You can also check the endpoints manually:
+You can also check the endpoints manually (web UI runs on port 2929 by default):
 
 ```bash
-curl http://localhost:5001/health
-curl http://localhost:5001/metrics
+curl http://localhost:2929/health
+curl http://localhost:2929/metrics
 ```
 
 ## Live Log Level Control

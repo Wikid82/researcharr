@@ -121,19 +121,28 @@ def create_app():
                 error = "Passwords do not match"
             else:
                 # Apply the reset to in-memory config
-                app.config_data["user"]["username"] = username or app.config_data["user"]["username"]
+                app.config_data["user"]["username"] = (
+                    username or app.config_data["user"]["username"]
+                )
                 app.config_data["user"]["password"] = password
                 # Persist to file if webui.save_user_config is available
                 try:
                     pwd_hash = generate_password_hash(password)
-                    webui.save_user_config(app.config_data["user"]["username"], pwd_hash)
+                    webui.save_user_config(
+                        app.config_data["user"]["username"], pwd_hash
+                    )
                 except Exception:
                     # best-effort persistence; ignore failures here
                     pass
                 flash("Password has been reset. Please log in.")
                 return redirect(url_for("login"))
 
-        return render_template("reset_password.html", error=error, disabled=False, user=app.config_data.get("user"))
+        return render_template(
+            "reset_password.html",
+            error=error,
+            disabled=False,
+            user=app.config_data.get("user"),
+        )
 
     @app.route("/settings/general", methods=["GET", "POST"])
     def general_settings():

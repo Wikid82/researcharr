@@ -8,6 +8,7 @@ SCRIPT = os.path.join(
 
 def _fake_response(json_data, status_code=200):
     from types import SimpleNamespace
+
     r = SimpleNamespace()
     r.status_code = status_code
 
@@ -238,5 +239,3 @@ def test_deletion_calls_delete_endpoint(monkeypatch, tmp_path):
     data = json.loads(report.read_text())
     assert data["would_delete_count"] == 1
     assert len(data["deleted"]) == 1
-
-

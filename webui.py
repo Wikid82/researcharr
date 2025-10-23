@@ -4,12 +4,12 @@
 # --- Flask app and route definitions only; all HTML/Jinja/JS is in templates
 # Keep route helpers and config management small and testable
 
-import os
-
-import yaml
 import logging
+import os
 import secrets
 import string
+
+import yaml
 from werkzeug.security import generate_password_hash
 
 USER_CONFIG_PATH = "config/webui_user.yml"

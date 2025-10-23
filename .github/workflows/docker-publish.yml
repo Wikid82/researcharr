@@ -6,12 +6,17 @@ on:
     workflows: [ "CI" ]
     types:
     - completed
+  push:
+    branches:
+    - main
+    - development
 
 jobs:
   docker:
-    # Only run when the upstream CI workflow finished successfully and the event was a push.
-    # This allows publishing branch-tagged images for any branch after CI passes.
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
+    # Run when either:
+    # - the upstream CI workflow finished successfully (and that workflow was a push), OR
+    # - this workflow was triggered by a direct push to main/development.
+    if: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')) }}
     runs-on: ubuntu-latest
     concurrency:
       group: docker-publish-${{ github.ref }}
@@ -21,6 +26,13 @@ jobs:
       packages: write
       id-token: write
     steps:
+    - name: Debug trigger
+      run: |
+        echo "Event name: $GITHUB_EVENT_NAME"
+        echo "Ref: $GITHUB_REF"
+        echo "Workflow run head_branch: ${{ github.event.workflow_run.head_branch }}"
+        echo "Actor: $GITHUB_ACTOR"
+
     - uses: actions/checkout@v4
     - name: Cache pip
       uses: actions/cache@v4

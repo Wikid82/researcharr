@@ -27,48 +27,52 @@ app.secret_key = "your-secret-key"  # Replace with a secure key in production
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 LOG_LEVEL = logging.INFO
 
-if JSON_LOGGING:
-    formatter = jsonlogger.JsonFormatter()
-else:
-    formatter = logging.Formatter(LOG_FORMAT)
 
-# StreamHandler for Docker logs (stdout)
-stream_handler = logging.StreamHandler(sys.stdout)
-stream_handler.setFormatter(formatter)
+METRICS = {
+    "requests_total": 0,
+    "errors_total": 0,
+    "last_health_check": None,
+}
 
+@app.before_request
+def before_any_request():
+    METRICS["requests_total"] += 1
 
+@app.errorhandler(Exception)
+def handle_error(e):
+    METRICS["errors_total"] += 1
+    return str(e), 500
 
-# Ensure log directory exists, fallback to ./logs if /config/logs is not writable
-log_dir = "/config/logs"
-fallback_log_dir = os.path.join(os.path.dirname(__file__), "logs")
-try:
-    os.makedirs(log_dir, exist_ok=True)
-    log_path = os.path.join(log_dir, "webui.log")
-except (PermissionError, OSError):
-    os.makedirs(fallback_log_dir, exist_ok=True)
-    log_path = os.path.join(fallback_log_dir, "webui.log")
-file_handler = RotatingFileHandler(log_path, maxBytes=1024*1024, backupCount=3)
-file_handler.setFormatter(formatter)
+@app.route("/health", methods=["GET"])
+def health():
+    METRICS["last_health_check"] = time.time()
+    status = {
+        "status": "ok",
+        "db": True,
+        "config": True,
+        "threads": True,
+        "time": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
+    }
+    return jsonify(status)
 
-root_logger = logging.getLogger()
-root_logger.setLevel(LOG_LEVEL)
-root_logger.addHandler(stream_handler)
-root_logger.addHandler(file_handler)
+@app.route("/metrics", methods=["GET"])
+def metrics():
+    return jsonify(METRICS)
 
-# Example usage: logging.info("Web UI started")
-
-
-# Redirect root URL to login (must be after app is defined)
-
-
-@app.route("/")
-def index():
-    return redirect(url_for("login"))
-
-
-# Minimal in-memory storage for test persistence
-RADARR_SETTINGS: dict[str, str] = {}
-SONARR_SETTINGS: dict[str, str] = {}
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        user = load_user_config()
+        if (
+            request.form["username"] == user["username"]
+            and request.form["password"] == "researcharr"
+        ):
+            session["logged_in"] = True
+            return redirect(url_for("settings_radarr"))
+        else:
+            error = "Invalid username or password."
+    return render_template("login.html", error=error)
 SCHEDULING_SETTINGS = {"cron_schedule": "", "timezone": "UTC"}
 
 # Minimal in-memory storage for test persistence

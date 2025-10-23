@@ -12,7 +12,7 @@ import string
 import yaml
 from werkzeug.security import generate_password_hash
 
-USER_CONFIG_PATH = "config/webui_user.yml"
+USER_CONFIG_PATH = "/config/webui_user.yml"
 
 
 def load_user_config():

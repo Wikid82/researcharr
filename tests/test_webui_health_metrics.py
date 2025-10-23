@@ -1,12 +1,15 @@
 
 import pytest
-from researcharr import webui
+
+from researcharr.webui import create_app
 
 # Add client fixture for Flask test client
+
 @pytest.fixture
 def client():
-    webui.app.config["TESTING"] = True
-    with webui.app.test_client() as client:
+    app = create_app()
+    app.config["TESTING"] = True
+    with app.test_client() as client:
         yield client
 
 def login(client, username="admin", password="researcharr"):

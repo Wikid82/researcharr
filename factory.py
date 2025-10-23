@@ -1,6 +1,6 @@
 # ... code for factory.py ...
 
-from flask import Flask, render_template_string, redirect, url_for, request, session, jsonify, flash
+from flask import Flask, render_template, render_template_string, redirect, url_for, request, session, jsonify, flash
 
 def create_app():
     def logout_link():
@@ -22,6 +22,32 @@ def create_app():
     def is_logged_in():
         return session.get("logged_in")
 
+    def _parse_instances(form, prefix, max_instances=5):
+        instances = []
+        for i in range(max_instances):
+            key_base = f"{prefix}{i}_"
+            # determine if this instance has any submitted fields
+            has_any = any(k.startswith(key_base) for k in form.keys())
+            if not has_any:
+                continue
+            inst = {}
+            # common fields
+            inst["enabled"] = bool(form.get(f"{prefix}{i}_enabled"))
+            inst["name"] = form.get(f"{prefix}{i}_name", "")
+            inst["url"] = form.get(f"{prefix}{i}_url", "")
+            inst["api_key"] = form.get(f"{prefix}{i}_api_key", "")
+            inst["process"] = bool(form.get(f"{prefix}{i}_process"))
+            inst["state_mgmt"] = bool(form.get(f"{prefix}{i}_state_mgmt"))
+            # numeric-ish fields (store as provided)
+            inst["api_pulls"] = form.get(f"{prefix}{i}_api_pulls")
+            inst["movies_to_upgrade"] = form.get(f"{prefix}{i}_movies_to_upgrade")
+            inst["episodes_to_upgrade"] = form.get(f"{prefix}{i}_episodes_to_upgrade")
+            inst["max_download_queue"] = form.get(f"{prefix}{i}_max_download_queue")
+            inst["reprocess_interval_days"] = form.get(f"{prefix}{i}_reprocess_interval_days")
+            inst["mode"] = form.get(f"{prefix}{i}_mode")
+            instances.append(inst)
+        return instances
+
     @app.route("/login", methods=["GET", "POST"])
     def login():
         if request.method == "POST":
@@ -30,14 +56,8 @@ def create_app():
             if username == app.config_data["user"]["username"] and password == app.config_data["user"]["password"]:
                 session["logged_in"] = True
                 return redirect(url_for("general_settings"))
-            return render_template_string("<p>Invalid username or password</p>")
-        return render_template_string("""
-            <form method='post'>
-                <input name='username'>
-                <input name='password' type='password'>
-                <input type='submit' value='Login'>
-            </form>
-        """)
+            return render_template("login.html", error="Invalid username or password")
+        return render_template("login.html")
 
     @app.route("/logout")
     def logout():
@@ -51,67 +71,62 @@ def create_app():
         if request.method == "POST":
             app.config_data["general"].update(request.form)
             flash("General settings saved")
-        # Header / sidebar / footer placeholders to satisfy tests expecting layout
-        html = (
-            "<div class='header'>researcharr</div>"
-            "<div class='sidebar'>sidebar</div>"
-            "<h1>General</h1>"
-            f"<p>Username: {app.config_data['user']['username']}</p>"
-            "<p>PUID</p><p>PGID</p><p>Timezone</p>"
-            f"{logout_link()}"
-            "<div class='footer'>footer</div>"
+        return render_template(
+            "settings_general.html",
+            puid=app.config_data["general"].get("PUID"),
+            pgid=app.config_data["general"].get("PGID"),
+            timezone=app.config_data["general"].get("Timezone"),
+            loglevel=app.config_data["general"].get("LogLevel"),
+            msg=None,
         )
-        return render_template_string(html)
 
     @app.route("/settings/radarr", methods=["GET", "POST"])
     def radarr_settings():
         if not is_logged_in():
             return redirect(url_for("login"))
         if request.method == "POST":
-            # Save radarr settings (simulate)
-            app.config_data["radarr"] = [dict(request.form)]
+            # Parse and save radarr instances
+            app.config_data["radarr"] = _parse_instances(request.form, "radarr")
             flash("Radarr settings saved")
-        # Header / sidebar / footer placeholders to satisfy tests expecting layout
         radarrs = app.config_data.get("radarr", [])
-        html = (
-            "<div class='header'>researcharr</div>"
-            "<div class='sidebar'>sidebar</div>"
-            "<h1>Radarr</h1><p>Radarr Settings</p><p>API Key</p>"
-            f"<p>Username: {app.config_data['user']['username']}</p>"
-        )
-        for idx, r in enumerate(radarrs):
-            for k, v in r.items():
-                html += f"<p>{k}: {v}</p>"
-        html += "<div class='footer'>footer</div>"
-        return render_template_string(html)
+        # Convert stored dicts to objects for template attribute-style access and
+        # provide a .get() method used by templates.
+        class _Obj:
+            def __init__(self, d):
+                self._d = dict(d)
+
+            def __getattr__(self, name):
+                # allow attribute access like obj.name
+                return self._d.get(name)
+
+            def get(self, key, default=None):
+                return self._d.get(key, default)
+
+        def _wrap_list(lst):
+            return [_Obj(r) if isinstance(r, dict) else r for r in lst]
+
+        return render_template("settings_radarr.html", radarr=_wrap_list(radarrs))
 
     @app.route("/settings/sonarr", methods=["GET", "POST"])
     def sonarr_settings():
         if not is_logged_in():
             return redirect(url_for("login"))
         if request.method == "POST":
-            app.config_data["sonarr"] = [dict(request.form)]
+            # Parse and save sonarr instances
+            app.config_data["sonarr"] = _parse_instances(request.form, "sonarr")
             flash("Sonarr settings saved")
-        # Header / sidebar / footer placeholders to satisfy tests expecting layout
         sonarrs = app.config_data.get("sonarr", [])
-        html = (
-            "<div class='header'>researcharr</div>"
-            "<div class='sidebar'>sidebar</div>"
-            "<h1>Sonarr</h1><p>Sonarr Settings</p><p>API Key</p>"
-            f"<p>Username: {app.config_data['user']['username']}</p>"
-        )
-        error = request.args.get("error")
-        if error:
-            html += f"<p>{error}</p>"
-        # Show error if last POST failed validation
+        error = None
         if request.method == "POST":
-            if not request.form.get("sonarr0_url") or not request.form.get("sonarr0_api_key"):
-                html += "<p>Missing URL or API key for enabled instance.</p>"
-        for idx, r in enumerate(sonarrs):
-            for k, v in r.items():
-                html += f"<p>{k}: {v}</p>"
-        html += "<div class='footer'>footer</div>"
-        return render_template_string(html)
+            # Basic validation: if enabled but missing url or api_key, set error
+            if request.form.get("sonarr0_enabled") and (
+                not request.form.get("sonarr0_url") or not request.form.get("sonarr0_api_key")
+            ):
+                error = "Missing URL or API key for enabled instance."
+                flash(error)
+            sonarrs = app.config_data.get("sonarr", [])
+
+        return render_template("settings_sonarr.html", sonarr=sonarrs, error=error)
 
     @app.route("/scheduling", methods=["GET", "POST"])
     def scheduling():
@@ -120,18 +135,9 @@ def create_app():
         if request.method == "POST":
             app.config_data["scheduling"].update(request.form)
             flash("Schedule saved")
-        # Render saved scheduling config for test assertions
         cron = app.config_data.get("scheduling", {}).get("cron_schedule", "")
         timezone = app.config_data.get("scheduling", {}).get("timezone", "")
-        html = (
-            "<div class='header'>researcharr</div>"
-            "<div class='sidebar'>sidebar</div>"
-            f"<h1>Scheduling</h1><p>Scheduling</p><p>Timezone</p><p>{cron}</p><p>{timezone}</p>"
-            f"<p>Username: {app.config_data['user']['username']}</p>"
-            f"{logout_link()}"
-            "<div class='footer'>footer</div>"
-        )
-        return render_template_string(html)
+        return render_template("scheduling.html", cron_schedule=cron, timezone=timezone)
 
     @app.route("/user", methods=["GET", "POST"])
     def user_settings():
@@ -148,31 +154,19 @@ def create_app():
                 if password:
                     app.config_data["user"]["password"] = password
                 error = "User settings updated"
-        html = (
-            "<div class='header'>researcharr</div>"
-            "<div class='sidebar'>sidebar</div>"
-            "<h1>User Settings</h1>"
-            f"<p>Username: {app.config_data['user']['username']}</p>"
-            "<p>User Settings</p><p>Username</p>"
-            f"<p>{error}</p>"
-            f"{logout_link()}"
-            "<div class='footer'>footer</div>"
-        )
-        return render_template_string(html)
+        return render_template("user.html", user=type("U", (), app.config_data["user"]), user_msg=error)
     @app.route("/save", methods=["POST"])
     def save():
         # Simulate saving general settings
         app.config_data["general"].update(request.form)
-        html = (
-            "<div class='header'>researcharr</div>"
-            "<div class='sidebar'>sidebar</div>"
-            "<h1>General</h1>"
-            f"<p>Username: {app.config_data['user']['username']}</p>"
-            "<p>PUID</p><p>PGID</p><p>Timezone</p>"
-            f"{logout_link()}"
-            "<div class='footer'>footer</div>"
+        return render_template(
+            "settings_general.html",
+            puid=app.config_data["general"].get("PUID"),
+            pgid=app.config_data["general"].get("PGID"),
+            timezone=app.config_data["general"].get("Timezone"),
+            loglevel=app.config_data["general"].get("LogLevel"),
+            msg="Saved",
         )
-        return render_template_string(html)
 
     @app.route("/health")
     def health():

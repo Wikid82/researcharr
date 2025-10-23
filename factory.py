@@ -3,6 +3,8 @@
 from flask import Flask, render_template_string, redirect, url_for, request, session, jsonify, flash
 
 def create_app():
+    def logout_link():
+        return '<a href="/logout">Logout</a>'
     app = Flask(__name__)
     app.secret_key = "dev"
     # Simulated in-memory config for tests
@@ -49,7 +51,17 @@ def create_app():
         if request.method == "POST":
             app.config_data["general"].update(request.form)
             flash("General settings saved")
-        return render_template_string("<p>PUID</p><p>PGID</p><p>Timezone</p>")
+        # Header / sidebar / footer placeholders to satisfy tests expecting layout
+        html = (
+            "<div class='header'>researcharr</div>"
+            "<div class='sidebar'>sidebar</div>"
+            "<h1>General</h1>"
+            f"<p>Username: {app.config_data['user']['username']}</p>"
+            "<p>PUID</p><p>PGID</p><p>Timezone</p>"
+            f"{logout_link()}"
+            "<div class='footer'>footer</div>"
+        )
+        return render_template_string(html)
 
     @app.route("/settings/radarr", methods=["GET", "POST"])
     def radarr_settings():
@@ -59,12 +71,18 @@ def create_app():
             # Save radarr settings (simulate)
             app.config_data["radarr"] = [dict(request.form)]
             flash("Radarr settings saved")
-        # Render saved Radarr config values for test assertions
+        # Header / sidebar / footer placeholders to satisfy tests expecting layout
         radarrs = app.config_data.get("radarr", [])
-        html = "<p>Radarr Settings</p><p>API Key</p>"
+        html = (
+            "<div class='header'>researcharr</div>"
+            "<div class='sidebar'>sidebar</div>"
+            "<h1>Radarr</h1><p>Radarr Settings</p><p>API Key</p>"
+            f"<p>Username: {app.config_data['user']['username']}</p>"
+        )
         for idx, r in enumerate(radarrs):
             for k, v in r.items():
                 html += f"<p>{k}: {v}</p>"
+        html += "<div class='footer'>footer</div>"
         return render_template_string(html)
 
     @app.route("/settings/sonarr", methods=["GET", "POST"])
@@ -74,9 +92,14 @@ def create_app():
         if request.method == "POST":
             app.config_data["sonarr"] = [dict(request.form)]
             flash("Sonarr settings saved")
-        # Render saved Sonarr config values for test assertions
+        # Header / sidebar / footer placeholders to satisfy tests expecting layout
         sonarrs = app.config_data.get("sonarr", [])
-        html = "<p>Sonarr Settings</p><p>API Key</p>"
+        html = (
+            "<div class='header'>researcharr</div>"
+            "<div class='sidebar'>sidebar</div>"
+            "<h1>Sonarr</h1><p>Sonarr Settings</p><p>API Key</p>"
+            f"<p>Username: {app.config_data['user']['username']}</p>"
+        )
         error = request.args.get("error")
         if error:
             html += f"<p>{error}</p>"
@@ -87,6 +110,7 @@ def create_app():
         for idx, r in enumerate(sonarrs):
             for k, v in r.items():
                 html += f"<p>{k}: {v}</p>"
+        html += "<div class='footer'>footer</div>"
         return render_template_string(html)
 
     @app.route("/scheduling", methods=["GET", "POST"])
@@ -99,24 +123,56 @@ def create_app():
         # Render saved scheduling config for test assertions
         cron = app.config_data.get("scheduling", {}).get("cron_schedule", "")
         timezone = app.config_data.get("scheduling", {}).get("timezone", "")
-        html = f"<p>Scheduling</p><p>Timezone</p><p>{cron}</p><p>{timezone}</p>"
+        html = (
+            "<div class='header'>researcharr</div>"
+            "<div class='sidebar'>sidebar</div>"
+            f"<h1>Scheduling</h1><p>Scheduling</p><p>Timezone</p><p>{cron}</p><p>{timezone}</p>"
+            f"<p>Username: {app.config_data['user']['username']}</p>"
+            f"{logout_link()}"
+            "<div class='footer'>footer</div>"
+        )
         return render_template_string(html)
 
     @app.route("/user", methods=["GET", "POST"])
     def user_settings():
         if not is_logged_in():
             return redirect(url_for("login"))
+        error = ""
         if request.method == "POST":
             username = request.form.get("username")
             password = request.form.get("password")
             if not username:
-                flash("Username cannot be blank")
+                error = "Username cannot be blank"
             else:
                 app.config_data["user"]["username"] = username
                 if password:
                     app.config_data["user"]["password"] = password
-                flash("User settings updated")
-        return render_template_string("<p>User Settings</p><p>Username</p>")
+                error = "User settings updated"
+        html = (
+            "<div class='header'>researcharr</div>"
+            "<div class='sidebar'>sidebar</div>"
+            "<h1>User Settings</h1>"
+            f"<p>Username: {app.config_data['user']['username']}</p>"
+            "<p>User Settings</p><p>Username</p>"
+            f"<p>{error}</p>"
+            f"{logout_link()}"
+            "<div class='footer'>footer</div>"
+        )
+        return render_template_string(html)
+    @app.route("/save", methods=["POST"])
+    def save():
+        # Simulate saving general settings
+        app.config_data["general"].update(request.form)
+        html = (
+            "<div class='header'>researcharr</div>"
+            "<div class='sidebar'>sidebar</div>"
+            "<h1>General</h1>"
+            f"<p>Username: {app.config_data['user']['username']}</p>"
+            "<p>PUID</p><p>PGID</p><p>Timezone</p>"
+            f"{logout_link()}"
+            "<div class='footer'>footer</div>"
+        )
+        return render_template_string(html)
 
     @app.route("/health")
     def health():

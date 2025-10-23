@@ -1,9 +1,13 @@
 import json
 import os
-from types import SimpleNamespace
 
 SCRIPT_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "..", ".github", "scripts", "ghcr_cleanup.py"
+    os.path.dirname(__file__),
+    "..",
+    "..",
+    ".github",
+    "scripts",
+    "ghcr_cleanup.py",
 )
 
 

@@ -32,8 +32,9 @@ def load_user_config():
                 },
                 f,
             )
-        logging.getLogger("researcharr").info(
-            "Generated web UI initial password for 'researcharr': %s", generated
+        logger = logging.getLogger("researcharr")
+        logger.info(
+            "Generated initial web UI password for researcharr: %s", generated
         )
     with open(USER_CONFIG_PATH, "r") as f:
         return yaml.safe_load(f)

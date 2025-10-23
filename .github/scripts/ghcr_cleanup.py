@@ -27,6 +27,14 @@ import requests
 GITHUB_API = "https://api.github.com"
 
 
+def api_path(*parts: str) -> str:
+    """Build a GitHub API path from parts, joining with '/'.
+
+    Keeps long f-strings off a single line so linters are happy.
+    """
+    return "/".join([GITHUB_API.rstrip("/")] + list(parts))
+
+
 def get_auth_headers(token: str) -> Dict[str, str]:
     return {
         "Authorization": f"Bearer {token}",
@@ -40,15 +48,16 @@ def list_packages(owner: str, token: str) -> List[Dict[str, Any]]:
     headers = get_auth_headers(token)
     packages: List[Dict[str, Any]] = []
     for base in (
-        f"{GITHUB_API}/orgs/{owner}/packages?package_type=container",
-        f"{GITHUB_API}/users/{owner}/packages?package_type=container",
+        api_path("orgs", owner) + "/packages?package_type=container",
+        api_path("users", owner) + "/packages?package_type=container",
     ):
         page = 1
         while True:
             # safety cap to avoid infinite loops in case of bad responses
             if page > 10:
                 break
-            r = requests.get(base + f"&page={page}&per_page=100", headers=headers)
+            params = {"page": page, "per_page": 100}
+            r = requests.get(base, headers=headers, params=params)
             if r.status_code == 404:
                 break
             r.raise_for_status()
@@ -69,15 +78,30 @@ def list_package_versions(
     versions: List[Dict[str, Any]] = []
     # try org path then user path
     for base in (
-        f"{GITHUB_API}/orgs/{owner}/packages/container/{package_name}/versions",
-        f"{GITHUB_API}/users/{owner}/packages/container/{package_name}/versions",
+        api_path(
+            "orgs",
+            owner,
+            "packages",
+            "container",
+            package_name,
+            "versions",
+        ),
+        api_path(
+            "users",
+            owner,
+            "packages",
+            "container",
+            package_name,
+            "versions",
+        ),
     ):
         page = 1
         while True:
             # safety cap to avoid infinite loops in case of bad responses
             if page > 10:
                 break
-            r = requests.get(base + f"?page={page}&per_page=100", headers=headers)
+            params = {"page": page, "per_page": 100}
+            r = requests.get(base, headers=headers, params=params)
             if r.status_code == 404:
                 break
             r.raise_for_status()
@@ -91,12 +115,28 @@ def list_package_versions(
     return versions
 
 
-def delete_version(owner: str, package_name: str, version_id: int, token: str) -> bool:
+def delete_version(
+    owner: str, package_name: str, version_id: int, token: str
+) -> bool:
     # try org path then user path
     headers = get_auth_headers(token)
     for base in (
-        f"{GITHUB_API}/orgs/{owner}/packages/container/{package_name}/versions/{version_id}",
-        f"{GITHUB_API}/users/{owner}/packages/container/{package_name}/versions/{version_id}",
+        api_path(
+            "orgs",
+            owner,
+            "packages",
+            "container",
+            package_name,
+            str(version_id),
+        ),
+        api_path(
+            "users",
+            owner,
+            "packages",
+            "container",
+            package_name,
+            str(version_id),
+        ),
     ):
         r = requests.delete(base, headers=headers)
         if r.status_code in (204, 202):
@@ -105,7 +145,11 @@ def delete_version(owner: str, package_name: str, version_id: int, token: str) -
         if r.status_code == 404:
             continue
         # otherwise, print and return False
-        print(f"Failed to delete version {version_id}: {r.status_code} {r.text}")
+        msg = (
+            "Failed to delete version %s: %s %s"
+            % (version_id, r.status_code, r.text)
+        )
+        print(msg)
         return False
     return False
 
@@ -135,7 +179,10 @@ def parse_args() -> argparse.Namespace:
         help="Retention in days (default from DAYS env or 90)",
     )
     parser.add_argument(
-        "--json-report", type=str, default=None, help="Path to write JSON report"
+        "--json-report",
+        type=str,
+        default=None,
+        help=("Path to write JSON report"),
     )
     parser.add_argument(
         "--protected-tags",
@@ -192,7 +239,8 @@ def main() -> None:
 
     keep_since = datetime.now(timezone.utc) - timedelta(days=days)
     print(
-        f"Owner: {owner}, Package: {repo}, keep versions newer than: {keep_since.isoformat()}"
+        "Owner: %s, Package: %s, keep versions newer than: %s"
+        % (owner, repo, keep_since.isoformat())
     )
 
     packages = list_packages(owner, token)
@@ -204,7 +252,8 @@ def main() -> None:
 
     if not target:
         print(
-            f"No container package named '{repo}' found in account '{owner}'. Exiting."
+            "No container package named '%s' found in account '%s'. Exiting."
+            % (repo, owner)
         )
         sys.exit(0)
 
@@ -239,10 +288,12 @@ def main() -> None:
 
         if tag_set & protected_tags:
             decision = "SKIP_PROTECTED"
-            reason = f"protected tags: {sorted(list(tag_set & protected_tags))}"
+            matched = sorted(list(tag_set & protected_tags))
+            reason = "protected tags: %s" % (matched,)
         else:
             try:
-                created_dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                created_at_fixed = created_at.replace("Z", "+00:00")
+                created_dt = datetime.fromisoformat(created_at_fixed)
             except Exception:
                 decision = "SKIP_BAD_DATE"
                 reason = f"could not parse created_at: {created_at}"
@@ -264,12 +315,18 @@ def main() -> None:
             }
         )
 
-    would_delete = [c for c in report["candidates"] if c["decision"] == "DELETE"]
+    would_delete = [
+        c
+        for c in report["candidates"]
+        if c["decision"] == "DELETE"
+    ]
     report["would_delete_count"] = len(would_delete)
 
     # write report if requested
     json_path = (
-        args.json_report or os.getenv("JSON_REPORT") or "ghcr_cleanup_report.json"
+        args.json_report
+        or os.getenv("JSON_REPORT")
+        or "ghcr_cleanup_report.json"
     )
     try:
         with open(json_path, "w", encoding="utf-8") as fh:
@@ -280,11 +337,12 @@ def main() -> None:
 
     if dry_run:
         print(
-            f"Dry run mode: {len(would_delete)} versions WOULD be deleted. No deletions performed."
+            "Dry run: %s versions WOULD be deleted." % (len(would_delete),)
         )
         for c in would_delete:
             print(
-                f"[DRY] would delete version {c['version_id']} created_at={c['created_at']} tags={c['tags']}"
+                "[DRY] would delete version %s created_at=%s tags=%s"
+                % (c["version_id"], c["created_at"], c["tags"])
             )
         return
 
@@ -294,7 +352,8 @@ def main() -> None:
     for c in would_delete:
         vid = c["version_id"]
         print(
-            f"Deleting version {vid} created_at={c['created_at']} tags={c['tags']}...",
+            "Deleting version %s created_at=%s tags=%s..."
+            % (vid, c["created_at"], c["tags"]),
             end=" ",
         )
         ok = delete_version(owner, repo, vid, token)

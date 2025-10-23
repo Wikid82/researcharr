@@ -97,10 +97,9 @@ def create_app():
     def reset_password():
         """Allow resetting the web UI user password.
 
-        This endpoint requires the environment variable WEBUI_RESET_TOKEN to be set
-        and the provided token must match it. This protects the unauthenticated
-        reset action from being abused. If the env var is not set, reset is
-        disabled.
+        Requires the `WEBUI_RESET_TOKEN` env var. The provided token must match
+        the configured value. If the variable is not set the reset page is
+        disabled to avoid exposing an unauthenticated reset endpoint.
         """
         token_required = os.getenv("WEBUI_RESET_TOKEN")
         # If no reset token configured, disallow reset via web UI

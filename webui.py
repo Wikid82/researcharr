@@ -36,8 +36,11 @@ else:
 stream_handler = logging.StreamHandler(sys.stdout)
 stream_handler.setFormatter(formatter)
 
-# RotatingFileHandler for persistent logs (optional, can be removed if not needed)
-file_handler = RotatingFileHandler("/config/logs/webui.log", maxBytes=1024*1024, backupCount=3)
+
+# Ensure log directory exists
+log_dir = "/config/logs"
+os.makedirs(log_dir, exist_ok=True)
+file_handler = RotatingFileHandler(os.path.join(log_dir, "webui.log"), maxBytes=1024*1024, backupCount=3)
 file_handler.setFormatter(formatter)
 
 root_logger = logging.getLogger()

@@ -4,6 +4,8 @@ script.sh
 __pycache__/
 *.pyc
 .pytest_cache/
+researcharr/__pycache__/
+.pytest_cache/
 *.pyo
 *.pyd
 *.log

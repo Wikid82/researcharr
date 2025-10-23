@@ -14,6 +14,8 @@ app = Flask(__name__)
 app.secret_key = "your-secret-key"  # Replace with a secure key in production
 
 # Redirect root URL to login (must be after app is defined)
+# Redirect root URL to login (must be after app is defined)
+
 @app.route("/")
 def index():
     return redirect(url_for("login"))
@@ -22,6 +24,7 @@ def index():
 RADARR_SETTINGS = {}
 SONARR_SETTINGS = {}
 SCHEDULING_SETTINGS = {"cron_schedule": "", "timezone": "UTC"}
+
 
 
 def login_required(f):

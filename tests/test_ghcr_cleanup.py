@@ -92,7 +92,9 @@ def test_dry_run_writes_report(monkeypatch, tmp_path):
     )
 
     report = tmp_path / "report.json"
-    assert report.exists()
+    if not report.exists():
+        print(f"DEBUG: Contents of {tmp_path}: {list(tmp_path.iterdir())}")
+    assert report.exists(), f"report.json not found in {tmp_path}"
     data = json.loads(report.read_text())
     assert data["scanned"] == 1
     assert data["would_delete_count"] == 1
@@ -122,7 +124,10 @@ def test_protected_tag_skipped(monkeypatch, tmp_path):
     }
 
     run_script_capture(monkeypatch, tmp_path, fake_get, env=env, args=["--dry-run"])
-    data = json.loads((tmp_path / "report.json").read_text())
+    report = tmp_path / "report.json"
+    if not report.exists():
+        print(f"DEBUG: Contents of {tmp_path}: {list(tmp_path.iterdir())}")
+    data = json.loads(report.read_text())
     assert data["scanned"] == 1
     assert data["would_delete_count"] == 0
     cand = data["candidates"][0]
@@ -166,8 +171,10 @@ def test_deletion_calls_delete_endpoint(monkeypatch, tmp_path):
     run_script_capture(
         monkeypatch, tmp_path, fake_get, fake_delete, env=env, args=["--no-dry-run"]
     )
-
-    data = json.loads((tmp_path / "report.json").read_text())
+    report = tmp_path / "report.json"
+    if not report.exists():
+        print(f"DEBUG: Contents of {tmp_path}: {list(tmp_path.iterdir())}")
+    data = json.loads(report.read_text())
     assert data["would_delete_count"] == 1
     assert len(data["deleted"]) == 1
 

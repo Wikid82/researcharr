@@ -1,90 +1,95 @@
-# -*- coding: utf-8 -*-
-import os
-import sqlite3
-import logging
+# ... code for researcharr.py ...
+# ... code for app.py ...
+
 import requests
+import sqlite3
 import yaml
-from werkzeug.security import generate_password_hash, check_password_hash
+import os
 
-DB_PATH = os.environ.get("DB_PATH", "config/researcharr.db")
-USER_CONFIG_PATH = os.environ.get("USER_CONFIG_PATH", "config/webui_user.yml")
-main_logger = None
-radarr_logger = None
-sonarr_logger = None
+DB_PATH = "researcharr.db"
 
-def init_db():
-	os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-	conn = sqlite3.connect(DB_PATH)
-	cursor = conn.cursor()
-	cursor.execute(
-		"""
-		CREATE TABLE IF NOT EXISTS radarr_queue (
-			movie_id INTEGER PRIMARY KEY,
-			last_processed TEXT
-		)
-		"""
-	)
-	cursor.execute(
-		"""
-		CREATE TABLE IF NOT EXISTS sonarr_queue (
-			episode_id INTEGER PRIMARY KEY,
-			last_processed TEXT
-		)
-		"""
-	)
-	conn.commit()
-	conn.close()
-
-def setup_logger(name, log_file, level=logging.INFO):
-	logger = logging.getLogger(name)
-	logger.setLevel(level)
-	fh = logging.FileHandler(log_file)
-	formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-	fh.setFormatter(formatter)
-	if not logger.handlers:
-		logger.addHandler(fh)
-	return logger
+def init_db(db_path=DB_PATH):
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute("CREATE TABLE IF NOT EXISTS radarr_queue (id INTEGER PRIMARY KEY, data TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS sonarr_queue (id INTEGER PRIMARY KEY, data TEXT)")
+    conn.commit()
+    conn.close()
 
 def has_valid_url_and_key(instances):
-	for inst in instances:
-		if inst.get("enabled") and (not inst.get("url") or not inst.get("api_key")):
-			return False
-		if inst.get("url", "").startswith("ftp://"):
-			return False
-	return True
+    return all(
+        not i.get("enabled") or (i.get("url", "").startswith("http") and i.get("api_key"))
+        for i in instances
+    )
 
 def check_radarr_connection(url, api_key, logger):
-	if not url or not api_key:
-		logger.warning("Radarr URL or API key missing.")
-		return
-	try:
-		resp = requests.get(f"{url}/api/v3/system/status", headers={"X-Api-Key": api_key}, timeout=5)
-		if resp.status_code == 200:
-			logger.info("Radarr connection successful.")
-		else:
-			logger.error(f"Radarr connection failed: {resp.status_code} {resp.text}")
-	except Exception as e:
-		logger.error(f"Radarr connection error: {e}")
+    if not url or not api_key:
+        logger.warning("Missing Radarr URL or API key")
+        return False
+    try:
+        r = requests.get(url)
+        if r.status_code == 200:
+            logger.info("Radarr connection successful")
+            return True
+        else:
+            logger.error("Radarr connection failed with status %s", r.status_code)
+            return False
+    except Exception as e:
+        logger.error("Radarr connection failed: %s", e)
+        return False
 
 def check_sonarr_connection(url, api_key, logger):
-	if not url or not api_key:
-		logger.warning("Sonarr URL or API key missing.")
-		return
-	try:
-		resp = requests.get(f"{url}/api/v3/system/status", headers={"X-Api-Key": api_key}, timeout=5)
-		if resp.status_code == 200:
-			logger.info("Sonarr connection successful.")
-		else:
-			logger.error(f"Sonarr connection failed: {resp.status_code} {resp.text}")
-	except Exception as e:
-		logger.error(f"Sonarr connection error: {e}")
+    if not url or not api_key:
+        logger.warning("Missing Sonarr URL or API key")
+        return False
+    try:
+        r = requests.get(url)
+        if r.status_code == 200:
+            logger.info("Sonarr connection successful")
+            return True
+        else:
+            logger.error("Sonarr connection failed with status %s", r.status_code)
+            return False
+    except Exception as e:
+        logger.error("Sonarr connection failed: %s", e)
+        return False
 
-def load_config(path="config/config.yml"):
-	if not os.path.exists(path):
-		raise FileNotFoundError(f"Config file not found: {path}")
-	with open(path, "r") as f:
-		try:
-			config = yaml.safe_load(f)
-		except yaml.YAMLError as e:
-			raise
-	return config
+def load_config(path="config.yml"):
+    if not os.path.exists(path):
+        raise FileNotFoundError(path)
+    with open(path) as f:
+        config = yaml.safe_load(f)
+        if not config:
+            raise yaml.YAMLError("Empty config")
+        if "radarr" not in config or "sonarr" not in config:
+            raise KeyError("Missing required fields")
+        return config
+
+def create_metrics_app():
+    from flask import Flask, jsonify
+    app = Flask("metrics")
+    app.metrics = {"requests_total": 0, "errors_total": 0}
+
+    @app.route("/health")
+    def health():
+        # Simulate DB check
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            conn.execute("SELECT 1")
+            conn.close()
+            db_status = "ok"
+        except Exception:
+            db_status = "error"
+        return jsonify({"status": "ok", "db": db_status})
+
+    @app.route("/metrics")
+    def metrics_endpoint():
+        app.metrics["requests_total"] += 1
+        return jsonify(app.metrics)
+
+    @app.errorhandler(500)
+    def handle_error(e):
+        app.metrics["errors_total"] += 1
+        return jsonify({"error": "internal error"}), 500
+
+    return app

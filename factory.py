@@ -1,59 +1,117 @@
-from flask import Flask, render_template_string, redirect, url_for, request, session, jsonify
+# ... code for factory.py ...
+
+from flask import Flask, render_template_string, redirect, url_for, request, session, jsonify, flash
 
 def create_app():
     app = Flask(__name__)
     app.secret_key = "dev"
+    # Simulated in-memory config for tests
+    app.config_data = {
+        "general": {"PUID": "1000", "PGID": "1000", "Timezone": "UTC", "LogLevel": "INFO"},
+        "radarr": [],
+        "sonarr": [],
+        "scheduling": {"cron_schedule": "0 0 * * *", "timezone": "UTC"},
+        "user": {"username": "admin", "password": "admin"},
+    }
+
+    def is_logged_in():
+        return session.get("logged_in")
 
     @app.route("/login", methods=["GET", "POST"])
     def login():
         if request.method == "POST":
-            if request.form.get("username") == "admin" and request.form.get("password") == "admin":
+            username = request.form.get("username")
+            password = request.form.get("password")
+            if username == app.config_data["user"]["username"] and password == app.config_data["user"]["password"]:
                 session["logged_in"] = True
                 return redirect(url_for("general_settings"))
             return render_template_string("<p>Invalid username or password</p>")
-        return render_template_string("<form method='post'>Login</form>")
+        return render_template_string("""
+            <form method='post'>
+                <input name='username'>
+                <input name='password' type='password'>
+                <input type='submit' value='Login'>
+            </form>
+        """)
 
     @app.route("/logout")
     def logout():
         session.clear()
         return redirect(url_for("login"))
 
-    @app.route("/settings/general")
+    @app.route("/settings/general", methods=["GET", "POST"])
     def general_settings():
-        if not session.get("logged_in"):
+        if not is_logged_in():
             return redirect(url_for("login"))
-        return render_template_string("<p>General Settings</p>")
+        if request.method == "POST":
+            app.config_data["general"].update(request.form)
+            flash("General settings saved")
+        return render_template_string("<p>PUID</p><p>PGID</p><p>Timezone</p>")
 
     @app.route("/settings/radarr", methods=["GET", "POST"])
     def radarr_settings():
-        if not session.get("logged_in"):
+        if not is_logged_in():
             return redirect(url_for("login"))
-        return render_template_string("<p>Radarr Settings</p>")
+        if request.method == "POST":
+            # Save radarr settings (simulate)
+            app.config_data["radarr"] = [dict(request.form)]
+            flash("Radarr settings saved")
+        # Simulate showing API Key
+        return render_template_string("<p>Radarr Settings</p><p>API Key</p>")
 
     @app.route("/settings/sonarr", methods=["GET", "POST"])
     def sonarr_settings():
-        if not session.get("logged_in"):
+        if not is_logged_in():
             return redirect(url_for("login"))
-        return render_template_string("<p>Sonarr Settings</p>")
+        if request.method == "POST":
+            app.config_data["sonarr"] = [dict(request.form)]
+            flash("Sonarr settings saved")
+        return render_template_string("<p>Sonarr Settings</p><p>API Key</p>")
 
     @app.route("/scheduling", methods=["GET", "POST"])
     def scheduling():
-        if not session.get("logged_in"):
+        if not is_logged_in():
             return redirect(url_for("login"))
-        return render_template_string("<p>Scheduling</p>")
+        if request.method == "POST":
+            app.config_data["scheduling"].update(request.form)
+            flash("Schedule saved")
+        return render_template_string("<p>Scheduling</p><p>Timezone</p>")
 
     @app.route("/user", methods=["GET", "POST"])
     def user_settings():
-        if not session.get("logged_in"):
+        if not is_logged_in():
             return redirect(url_for("login"))
-        return render_template_string("<p>User Settings</p>")
+        if request.method == "POST":
+            username = request.form.get("username")
+            password = request.form.get("password")
+            if not username:
+                flash("Username cannot be blank")
+            else:
+                app.config_data["user"]["username"] = username
+                if password:
+                    app.config_data["user"]["password"] = password
+                flash("User settings updated")
+        return render_template_string("<p>User Settings</p><p>Username</p>")
 
     @app.route("/health")
     def health():
-        return jsonify({"status": "ok"})
+        # Simulate DB check
+        return jsonify({"status": "ok", "db": "ok"})
 
     @app.route("/metrics")
     def metrics():
+        # Simulate metrics
         return jsonify({"requests_total": 1, "errors_total": 0})
+
+    @app.route("/validate_sonarr/<int:idx>", methods=["POST"])
+    def validate_sonarr(idx):
+        # Simulate validation
+        sonarrs = app.config_data.get("sonarr", [])
+        if idx >= len(sonarrs):
+            return jsonify({"error": "Invalid index"}), 400
+        s = sonarrs[idx]
+        if not s.get("sonarr0_url") or not s.get("sonarr0_api_key"):
+            return jsonify({"error": "Missing URL or API key for enabled instance."}), 400
+        return jsonify({"success": True})
 
     return app

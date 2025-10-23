@@ -3,7 +3,16 @@ name: GHCR cleanup
 on:
   schedule:
   - cron: '0 3 * * 0' # every Sunday at 03:00 UTC
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Retention days (integer)'
+        required: false
+        default: '90'
+      dry_run:
+        description: 'If true, will not delete (default true)'
+        required: false
+        default: 'true'
 
 permissions:
   packages: write
@@ -26,11 +35,21 @@ jobs:
         python -m pip install --upgrade pip
         pip install requests
 
-    - name: Run GHCR cleanup
+    - name: Run GHCR cleanup (dry-run by default)
+      id: run_cleanup
       env:
         GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
         OWNER: ${{ github.repository_owner }}
         REPO: ${{ github.event.repository.name || github.repository }}
-        DAYS: '90'
+        DAYS: ${{ github.event.inputs.days || github.event.inputs.days || '90' }}
+        DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
+        JSON_REPORT: ghcr_cleanup_report.json
       run: |
-        python .github/scripts/ghcr_cleanup.py
+        python .github/scripts/ghcr_cleanup.py --json-report $JSON_REPORT --days $DAYS $( [ "$DRY_RUN" = "true" ] && echo --dry-run || echo --no-dry-run )
+
+    - name: Upload report artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ghcr-cleanup-report
+        path: ghcr_cleanup_report.json

@@ -21,9 +21,10 @@ def index():
     return redirect(url_for("login"))
 
 
+
 # Minimal in-memory storage for test persistence
-RADARR_SETTINGS = {}
-SONARR_SETTINGS = {}
+RADARR_SETTINGS: dict[str, str] = {}
+SONARR_SETTINGS: dict[str, str] = {}
 SCHEDULING_SETTINGS = {"cron_schedule": "", "timezone": "UTC"}
 
 # Minimal in-memory storage for test persistence

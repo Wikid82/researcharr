@@ -9,7 +9,7 @@ import importlib
 import pytest
 import yaml
 from werkzeug.security import generate_password_hash
-from researcharr.webui import create_app
+from researcharr.factory import create_app
 
 
 # Always reset user config to default before each test

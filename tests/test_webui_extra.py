@@ -1,8 +1,6 @@
 import pytest
 
-
 from researcharr.factory import create_app
-
 
 
 @pytest.fixture

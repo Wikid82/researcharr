@@ -6,28 +6,40 @@ import sqlite3
 import yaml
 import os
 
+
 DB_PATH = "researcharr.db"
 
+
 def init_db(db_path=None):
-    # Use the passed path if provided, otherwise use the current module DB_PATH.
+    # Use the passed path if provided, otherwise use the module-level DB_PATH.
     db_path = db_path or DB_PATH
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     # Create tables with the columns expected by the test suite
-    c.execute(
-        "CREATE TABLE IF NOT EXISTS radarr_queue (movie_id INTEGER PRIMARY KEY, last_processed TEXT)"
+    sql = (
+        "CREATE TABLE IF NOT EXISTS radarr_queue ("
+        "movie_id INTEGER PRIMARY KEY, last_processed TEXT)"
     )
-    c.execute(
-        "CREATE TABLE IF NOT EXISTS sonarr_queue (episode_id INTEGER PRIMARY KEY, last_processed TEXT)"
+    c.execute(sql)
+    sql = (
+        "CREATE TABLE IF NOT EXISTS sonarr_queue ("
+        "episode_id INTEGER PRIMARY KEY, last_processed TEXT)"
     )
+    c.execute(sql)
     conn.commit()
     conn.close()
 
+
+
 def has_valid_url_and_key(instances):
     return all(
-        not i.get("enabled") or (i.get("url", "").startswith("http") and i.get("api_key"))
+        not i.get("enabled") or (
+            i.get("url", "").startswith("http") and i.get("api_key")
+        )
         for i in instances
     )
+
+
 
 def check_radarr_connection(url, api_key, logger):
     if not url or not api_key:
@@ -39,11 +51,15 @@ def check_radarr_connection(url, api_key, logger):
             logger.info("Radarr connection successful.")
             return True
         else:
-            logger.error("Radarr connection failed with status %s", r.status_code)
+            logger.error(
+                "Radarr connection failed with status %s", r.status_code
+            )
             return False
     except Exception as e:
         logger.error("Radarr connection failed: %s", e)
         return False
+
+
 
 def check_sonarr_connection(url, api_key, logger):
     if not url or not api_key:
@@ -55,24 +71,30 @@ def check_sonarr_connection(url, api_key, logger):
             logger.info("Sonarr connection successful.")
             return True
         else:
-            logger.error("Sonarr connection failed with status %s", r.status_code)
+            logger.error(
+                "Sonarr connection failed with status %s", r.status_code
+            )
             return False
     except Exception as e:
         logger.error("Sonarr connection failed: %s", e)
         return False
+
+
 
 def load_config(path="config.yml"):
     if not os.path.exists(path):
         raise FileNotFoundError(path)
     with open(path) as f:
         config = yaml.safe_load(f)
-        # If the file is empty or evaluates to None, return empty dict to allow
-        # callers/tests to handle missing values gracefully.
+        # If the file is empty or evaluates to None, return an empty dict so
+        # callers/tests can handle missing values gracefully.
         if not config:
             return {}
-        # Don't raise on missing fields; return whatever is present. Tests expect
-        # partial configs to be accepted.
+        # Don't raise on missing fields; return whatever is present. Tests
+        # expect partial configs to be accepted.
         return config
+
+
 
 def create_metrics_app():
     from flask import Flask, jsonify

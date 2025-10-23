@@ -1,7 +1,5 @@
 import pytest
-from flask import Flask
-import importlib
-import sys
+
 
 @pytest.fixture
 def app_client(monkeypatch):
@@ -30,3 +28,4 @@ def test_metrics_error_increment_app(app_client):
     app_client.get("/doesnotexist")
     after = app_client.get("/metrics").get_json()["errors_total"]
     assert after > before
+

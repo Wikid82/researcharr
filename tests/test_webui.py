@@ -4,15 +4,12 @@ import pytest
 import yaml
 from werkzeug.security import generate_password_hash
 
-
-import importlib
-import pytest
-import yaml
-from werkzeug.security import generate_password_hash
 from researcharr.factory import create_app
 
 
 # Always reset user config to default before each test
+
+
 @pytest.fixture(autouse=True)
 def reset_user_config():
     # Use the same path as the app: config/webui_user.yml relative to project root
@@ -235,3 +232,4 @@ def test_sonarr_settings_save_invalid(client):
     )
     assert rv.status_code == 200
     assert b"Sonarr" in rv.data
+

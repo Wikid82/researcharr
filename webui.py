@@ -1,7 +1,8 @@
 # ... code for webui.py ...
 
 # -*- coding: utf-8 -*-
-# --- Flask app and route definitions only; all HTML/Jinja/JS is in templates ---
+# --- Flask app and route definitions only; all HTML/Jinja/JS is in templates
+# Keep route helpers and config management small and testable
 
 import os
 import yaml
@@ -32,6 +33,7 @@ def save_user_config(username, password_hash):
         os.makedirs(user_dir, exist_ok=True)
     with open(USER_CONFIG_PATH, "w") as f:
         yaml.safe_dump({"username": username, "password_hash": password_hash}, f)
+
 
 
 

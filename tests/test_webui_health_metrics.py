@@ -3,7 +3,9 @@ import pytest
 
 from researcharr.factory import create_app
 
+
 # Add client fixture for Flask test client
+
 
 @pytest.fixture
 def client():
@@ -11,6 +13,7 @@ def client():
     app.config["TESTING"] = True
     with app.test_client() as client:
         yield client
+
 
 def login(client, username="admin", password="researcharr"):
     return client.post(

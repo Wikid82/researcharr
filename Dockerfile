@@ -4,9 +4,8 @@ LABEL org.opencontainers.image.created=$BUILD_DATE
 ENV RESEARCHARR_VERSION=$BUILD_DATE
 EXPOSE 2929
 
-RUN apt-get update && \
-    apt-get install -y yq && \
-    rm -rf /var/lib/apt/lists/*
+## No system packages required for scheduling; we rely on Python for
+## config parsing inside the entrypoint to keep the image minimal.
 
 WORKDIR /app
 

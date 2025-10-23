@@ -23,8 +23,14 @@
     retries: 3
   ```
 
+
+### Refactoring and Naming
+- Renamed `app.py` to `researcharr.py` for clarity and project consistency.
+- Updated all references in README, wiki, and documentation to use `researcharr.py` instead of `app.py`.
+- Removed the old `app.py` file from the repository.
+
 ### Documentation
-- README.md updated to document health/metrics endpoints, Docker healthcheck, and live loglevel control.
+- README.md updated to document health/metrics endpoints, Docker healthcheck, live loglevel control, and the new `researcharr.py` entry point.
 - New wiki page: `Health-and-Metrics.md`.
 - All relevant usage and configuration docs updated.
 

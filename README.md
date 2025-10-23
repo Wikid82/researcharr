@@ -56,6 +56,25 @@ Docs validation
 
 - Pull requests to `development` and `main` run a docs link-checker that validates internal and external links in the `docs/` site; fix any reported link errors before merging.
 
+Docker images per-branch (automated)
+
+- When CI completes successfully for a push, a Docker image is automatically published to GitHub Container Registry and tagged with the branch name. Example tags:
+  - `ghcr.io/wikid82/researcharr:plugins`
+  - `ghcr.io/wikid82/researcharr:branch-plugins`
+- Special branch tags: when the branch is `development` or `main`, the workflow also publishes additional tags (`:development` and `:latest` respectively).
+
+How to pull & run a branch image:
+
+```bash
+docker pull ghcr.io/wikid82/researcharr:plugins
+docker run --rm -v /path/to/config:/config -p 2929:2929 ghcr.io/wikid82/researcharr:plugins
+```
+
+Notes:
+
+- Images are only published after CI passes for push events (not for PRs from forks) to protect secrets and avoid accidental publishes.
+- Branch images are useful for QA/testing feature branches. Consider cleaning up unused images periodically.
+
 
 ## Requirements
 

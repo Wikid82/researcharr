@@ -64,6 +64,26 @@ Branching and PRs
 - Create feature branches for larger changes. Keep PRs small and focused where possible.
 - CI will run on the PR; address any style/type/test failures before requesting final review.
 
+Docker publishing & branch images
+
+- After CI completes successfully for a push, the repository will automatically build and publish a Docker image tagged with the branch name to GitHub Container Registry. This lets contributors push branch images for QA.
+- Example tags:
+  - `ghcr.io/wikid82/researcharr:<branch>`
+  - `ghcr.io/wikid82/researcharr:branch-<branch>`
+- Special tags: merges to `development` and `main` will also publish `:development` and `:latest` tags respectively.
+
+How to pull a branch image:
+
+```bash
+docker pull ghcr.io/wikid82/researcharr:plugins
+docker run --rm -v /path/to/config:/config -p 2929:2929 ghcr.io/wikid82/researcharr:plugins
+```
+
+Security and housekeeping
+
+- The publisher checks that CI passed and the upstream event was a push; PRs from forks do not publish images.
+- Branch images can accumulate in GHCR. Consider a cleanup policy or retention strategy (we can add a scheduled cleanup job if desired).
+
 Contact and help
 
 If you're stuck, open an issue or ask in the PR discussion. Include the failing CI log snippets and the output of `pre-commit run --all-files` if applicable.

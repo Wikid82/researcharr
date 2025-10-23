@@ -104,6 +104,21 @@ curl http://localhost:5001/metrics
 
 See the new `Health-and-Metrics.md` wiki page for full details.
 
+## CI and Docker publishing (CI updates)
+
+The project now runs continuous integration on every push and every pull request via `.github/workflows/ci.yml`. The CI job runs linting (flake8), formatting checks (black/isort), type checks (mypy), and the test suite (pytest). The workflow uses pip caching to speed up dependency installation.
+
+Docker images are built and published for branches via `researcharr/.github/workflows/docker-publish.yml`. Images are tagged per-branch and pushed to GitHub Container Registry (GHCR):
+
+- `ghcr.io/wikid82/researcharr:<branch>`
+- `ghcr.io/wikid82/researcharr:branch-<branch>`
+
+Special tags are still pushed for important branches:
+- `main` → `:latest`
+- `development` → `:development`
+
+If you'd rather avoid publishing images from forks or PRs, we can tighten the workflow to only push images when the event is a repository `push` on `Wikid82/researcharr`.
+
 ## How to Use
 
 1.  **Create a configuration directory:**

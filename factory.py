@@ -14,6 +14,9 @@ def create_app():
         "user": {"username": "admin", "password": "admin"},
     }
 
+    # In-memory metrics for test isolation
+    app.metrics = {"requests_total": 0, "errors_total": 0}
+
     def is_logged_in():
         return session.get("logged_in")
 
@@ -95,13 +98,30 @@ def create_app():
 
     @app.route("/health")
     def health():
-        # Simulate DB check
-        return jsonify({"status": "ok", "db": "ok"})
+        # Simulate DB/config/threads/time check for tests
+        return jsonify({
+            "status": "ok",
+            "db": "ok",
+            "config": "ok",
+            "threads": 1,
+            "time": "2025-10-23T00:00:00Z"
+        })
 
     @app.route("/metrics")
     def metrics():
-        # Simulate metrics
-        return jsonify({"requests_total": 1, "errors_total": 0})
+        # Return and increment metrics
+        return jsonify(app.metrics)
+    # Increment requests_total for every request
+    @app.before_request
+    def before_any_request():
+        app.metrics["requests_total"] += 1
+
+    # Increment errors_total for 404/500
+    @app.errorhandler(404)
+    @app.errorhandler(500)
+    def handle_error(error):
+        app.metrics["errors_total"] += 1
+        return ("Not found", 404) if error.code == 404 else ("Server error", 500)
 
     @app.route("/validate_sonarr/<int:idx>", methods=["POST"])
     def validate_sonarr(idx):

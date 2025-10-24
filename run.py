@@ -7,12 +7,13 @@ APScheduler BackgroundScheduler that invokes the existing
 scheduled runs are written to `/config/cron.log`.
 """
 import argparse
+import importlib
 import importlib.util
 import logging
 import os
 import subprocess
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
@@ -27,37 +28,45 @@ if TYPE_CHECKING:
     # complaints.
     pass
 
-# Load APScheduler classes at runtime using importlib to avoid static
-# analysis/import-time errors in environments where APScheduler stubs
-# are missing. If the import fails, provide lightweight fallbacks
-# (useful for unit tests that don't install the runtime deps).
-BackgroundScheduler = None
-CronTrigger = None
-try:
-    sched_mod = importlib.import_module("apscheduler.schedulers.background")
-    BackgroundScheduler = getattr(sched_mod, "BackgroundScheduler")
-    cron_mod = importlib.import_module("apscheduler.triggers.cron")
-    CronTrigger = getattr(cron_mod, "CronTrigger")
-except Exception:
 
-    class CronTrigger:
-        @staticmethod
-        def from_crontab(expr, timezone=None):
-            return object()
+def _load_scheduler_classes():
+    """Dynamically load APScheduler classes or provide lightweight fallbacks.
 
-    class BackgroundScheduler:
-        def __init__(self, timezone=None):
-            self._jobs = []
+    Returning the classes from a helper avoids defining the same name more
+    than once at module scope which confuses static analyzers (mypy).
+    """
+    try:
+        sched_mod = importlib.import_module("apscheduler.schedulers.background")
+        cron_mod = importlib.import_module("apscheduler.triggers.cron")
+        return getattr(sched_mod, "BackgroundScheduler"), getattr(
+            cron_mod, "CronTrigger"
+        )
+    except Exception:
+        # Lightweight fallback implementations used for tests or minimal
+        # environments where APScheduler is not installed.
+        class _CronTrigger:
+            @staticmethod
+            def from_crontab(expr, timezone=None):
+                return object()
 
-        def add_job(self, func, trigger, id=None, replace_existing=False):
-            self._jobs.append((func, trigger))
+        class _BackgroundScheduler:
+            def __init__(self, timezone=None):
+                self._jobs = []
 
-        def start(self):
-            return
+            def add_job(self, func, trigger, id=None, replace_existing=False):
+                self._jobs.append((func, trigger))
 
-        def shutdown(self, wait=False):
-            return
+            def start(self):
+                return
 
+            def shutdown(self, wait=False):
+                return
+
+        return _BackgroundScheduler, _CronTrigger
+
+
+# Obtain the scheduler classes once.
+BackgroundScheduler, CronTrigger = _load_scheduler_classes()
 
 # signal and time are not used in this module; keep imports out to satisfy
 # linters.
@@ -192,8 +201,13 @@ def main(once: bool = False):
             spec = importlib.util.spec_from_file_location(
                 "factory_mod", "/app/factory.py"
             )
+            if spec is None or spec.loader is None:
+                logger.error("Failed to create ModuleSpec for factory.py")
+                return
             factory_mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(factory_mod)
+            loader = spec.loader
+            assert loader is not None
+            loader.exec_module(factory_mod)
             app = factory_mod.create_app()
             # Run the Flask app in the foreground (this keeps PID 1 alive).
             print("[run.py] Starting Flask app...")

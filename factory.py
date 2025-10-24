@@ -25,8 +25,12 @@ except Exception:
     spec = importlib.util.spec_from_file_location(
         "webui", os.path.join(os.path.dirname(__file__), "webui.py")
     )
+    if spec is None or spec.loader is None:
+        raise ImportError("Failed to load webui module from file")
     webui = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(webui)  # type: ignore
+    loader = spec.loader
+    assert loader is not None
+    loader.exec_module(webui)  # type: ignore
 
 
 def create_app():

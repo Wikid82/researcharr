@@ -380,6 +380,32 @@ def create_app():
             timezone=timezone,
         )
 
+    @app.route("/settings/plugins", methods=["GET"])
+    def plugins_settings():
+        if not is_logged_in():
+            return redirect(url_for("login"))
+        registry = getattr(app, "plugin_registry", None)
+        plugins = []
+        if registry is not None:
+            for name in registry.list_plugins():
+                instances = app.config_data.get(name, [])
+                plugins.append({"name": name, "instances": instances})
+        return render_template("settings_plugins.html", plugins=plugins)
+
+    @app.route("/api/plugins", methods=["GET"])
+    def api_plugins():
+        """Return discovered plugins and configured instances as JSON.
+
+        This is intentionally a read-only endpoint used by the UI and tests.
+        """
+        registry = getattr(app, "plugin_registry", None)
+        data = {"plugins": []}
+        if registry is not None:
+            for name in registry.list_plugins():
+                instances = app.config_data.get(name, [])
+                data["plugins"].append({"name": name, "instances": instances})
+        return jsonify(data)
+
     @app.route("/user", methods=["GET", "POST"])
     def user_settings():
         if not is_logged_in():

@@ -38,7 +38,43 @@ def create_app():
         return '<a href="/logout">Logout</a>'
 
     app = Flask(__name__)
-    app.secret_key = "dev"
+    # SECRET_KEY must be provided in production. In development/test the
+    # default 'dev' key is used but a warning is emitted. Use an
+    # environment variable to supply a strong secret in production.
+    secret = os.getenv("SECRET_KEY")
+    # Determine if running in production via common env markers.
+    env_prod = (
+        os.getenv("ENV", "").lower() == "production"
+        or os.getenv("FLASK_ENV", "").lower() == "production"
+    )
+    if not secret and env_prod:
+        # Fail fast in production if SECRET_KEY is missing.
+        raise SystemExit(
+            "SECRET_KEY environment variable is required in production. Set SECRET_KEY and restart."
+        )
+    if not secret:
+        secret = "dev"
+        # Will be visible in logs once the app logger is configured; use
+        # print as a fallback in early startup paths.
+        try:
+            print("WARNING: using insecure default SECRET_KEY; set SECRET_KEY in production")
+        except Exception:
+            pass
+    app.secret_key = secret
+
+    # Session cookie configuration — configurable via env vars but default
+    # to secure settings suitable for production behind TLS.
+    app.config["SESSION_COOKIE_SECURE"] = os.getenv("SESSION_COOKIE_SECURE", "true").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    app.config["SESSION_COOKIE_HTTPONLY"] = os.getenv("SESSION_COOKIE_HTTPONLY", "true").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    app.config["SESSION_COOKIE_SAMESITE"] = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
     # Simulated in-memory config for tests. PUID/PGID/Timezone are sourced
     # from environment variables to avoid managing these sensitive runtime
     # settings via the web UI. This prevents accidental permission/timezone

@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Plugins{% endblock %}
+{% block content %}
+<h1>Plugins</h1>
+{% if plugins %}
+  <ul>
+  {% for p in plugins %}
+    <li>
+      <h3>{{ p.name }}</h3>
+      {% if p.instances %}
+        <ul>
+        {% for i in p.instances %}
+          <li>{{ i.get('name', 'instance') }} - enabled: {{ i.get('enabled', False) }}</li>
+        {% endfor %}
+        </ul>
+      {% else %}
+        <p><em>No configured instances</em></p>
+      {% endif %}
+    </li>
+  {% endfor %}
+  </ul>
+{% else %}
+  <p>No plugins discovered.</p>
+{% endif %}
+{% endblock %}

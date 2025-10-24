@@ -1,5 +1,6 @@
-from flask import Flask
 import json
+
+from flask import Flask
 
 from researcharr.plugins.example_sonarr import Plugin
 

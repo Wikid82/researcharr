@@ -7,7 +7,7 @@
 - **Health and Metrics Endpoints**
   - `/health` and `/metrics` endpoints are now available in both the main app and the web UI.
   - Designed for Docker healthchecks, monitoring, and debugging.
-  - See the new `Health-and-Metrics.md` wiki page for details and usage examples.
+  - See `docs/Health-and-Metrics.md` for details and usage examples.
 
 - **Live Log Level Control**
   - The log level for both the app and web UI can now be set from the General Settings page in the web UI.
@@ -46,7 +46,7 @@
 
 ### Documentation
 - README.md updated to document health/metrics endpoints, Docker healthcheck, live loglevel control, and the new `researcharr.py` entry point.
-- New wiki page: `Health-and-Metrics.md`.
+- New docs page: `Health-and-Metrics.md` (moved from the wiki).
 - All relevant usage and configuration docs updated.
 
 ---

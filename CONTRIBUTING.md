@@ -1,8 +1,6 @@
 Contributing to researcharr
 
-Thank you for your interest in contributing. The canonical, detailed contributor guidelines live in the repository wiki. Please read the wiki `Contributing.md` for full guidance:
-
-- researcharr wiki: https://github.com/Wikid82/researcharr/wiki/Contributing
+Thank you for your interest in contributing. The canonical contributor guidelines are included in this repository under `docs/`. Please read `docs/Contributing.md` for full guidance.
 
 Quick start (developer checklist)
 

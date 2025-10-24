@@ -138,7 +138,7 @@ curl http://localhost:2929/health
 curl http://localhost:2929/metrics
 ```
 
-See the new `Health-and-Metrics.md` wiki page for full details.
+See `docs/Health-and-Metrics.md` for full details.
 
 ## CI and Docker publishing (CI updates)
 
@@ -263,7 +263,7 @@ If you prefer not to publish images from forks or pull requests, update the work
 All configuration is now managed in a single YAML file: `/path/to/config/config.yml`.
 
 - See `config.example.yml` for a fully documented template.
-- You can set your timezone and the scheduler expression (cron-like) from the Scheduling tab in the web UI; changes are saved to config and applied by the in-process scheduler (APScheduler) that runs inside the container. See the wiki page [Scheduling and Timezone](wiki/Scheduling-and-Timezone.md) for details.
+  - You can set your timezone and the scheduler expression (cron-like) from the Scheduling tab in the web UI; changes are saved to config and applied by the in-process scheduler (APScheduler) that runs inside the container. See `docs/Getting-Started.md` for scheduling details and examples.
 - Example URLs for Docker default network: `http://radarr:7878` and `http://sonarr:8989`.
 
 ## State Management

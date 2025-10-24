@@ -211,11 +211,18 @@ def main(once: bool = False):
             app = factory_mod.create_app()
             # Run the Flask app in the foreground (this keeps PID 1 alive).
             # The container and documentation expect the web UI to be
-            # reachable on port 5001 (used by the Docker healthcheck), so
-            # bind to that port here.
-            print("[run.py] Starting Flask app on port 5001...")
+            # reachable on port 2929 by default (used by the Docker
+            # healthcheck). Make the port configurable via the
+            # WEBUI_PORT environment variable so operators can override it.
+            port_env = os.getenv("WEBUI_PORT")
+            try:
+                port = int(port_env) if port_env else 2929
+            except Exception:
+                port = 2929
+
+            print(f"[run.py] Starting Flask app on port {port}...")
             sys.stdout.flush()
-            app.run(host="0.0.0.0", port=5001, threaded=True)
+            app.run(host="0.0.0.0", port=port, threaded=True)
             print("[run.py] Flask app terminated")
             sys.stdout.flush()
         except Exception:

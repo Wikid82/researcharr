@@ -206,6 +206,10 @@ If you prefer not to publish images from forks or pull requests, update the work
   - Live logs are streamed and can be viewed using the `docker logs` command. See the Logging section for more details.
   - Health and metrics endpoints are available for monitoring and Docker healthchecks (see above).
 
+  ## Environment variables
+
+  See `docs/Environment-Variables.md` for the full list of runtime environment variables (PUID, PGID, TIMEZONE, LOGLEVEL, WEBUI_PORT, WEBUI_RESET_TOKEN) and examples for Docker Compose. These variables must be set before container start; the web UI no longer allows editing PUID/PGID/Timezone.
+
 5.  **Use the Web UI (AJAX-powered, always-on):**
     - Launch with:
       ```bash

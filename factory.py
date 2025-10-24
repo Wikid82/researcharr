@@ -398,6 +398,10 @@ def create_app():
 
         This is intentionally a read-only endpoint used by the UI and tests.
         """
+        # Require login to access plugin metadata
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+
         registry = getattr(app, "plugin_registry", None)
         data = {"plugins": []}
         if registry is not None:
@@ -405,6 +409,44 @@ def create_app():
                 instances = app.config_data.get(name, [])
                 data["plugins"].append({"name": name, "instances": instances})
         return jsonify(data)
+
+    @app.route("/api/plugins/<plugin_name>/validate/<int:idx>", methods=["POST"])
+    def api_plugin_validate(plugin_name: str, idx: int):
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        registry = getattr(app, "plugin_registry", None)
+        if registry is None or registry.get(plugin_name) is None:
+            return jsonify({"error": "unknown_plugin"}), 404
+        instances = app.config_data.get(plugin_name, [])
+        if idx < 0 or idx >= len(instances):
+            return jsonify({"error": "invalid_instance"}), 400
+        inst_cfg = instances[idx]
+        try:
+            pl = registry.create_instance(plugin_name, inst_cfg)
+            result = pl.validate()
+            return jsonify({"result": result})
+        except Exception as e:
+            app.logger.exception("Plugin validate failed: %s", e)
+            return jsonify({"error": "validate_failed", "msg": str(e)}), 500
+
+    @app.route("/api/plugins/<plugin_name>/sync/<int:idx>", methods=["POST"])
+    def api_plugin_sync(plugin_name: str, idx: int):
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        registry = getattr(app, "plugin_registry", None)
+        if registry is None or registry.get(plugin_name) is None:
+            return jsonify({"error": "unknown_plugin"}), 404
+        instances = app.config_data.get(plugin_name, [])
+        if idx < 0 or idx >= len(instances):
+            return jsonify({"error": "invalid_instance"}), 400
+        inst_cfg = instances[idx]
+        try:
+            pl = registry.create_instance(plugin_name, inst_cfg)
+            result = pl.sync()
+            return jsonify({"result": result})
+        except Exception as e:
+            app.logger.exception("Plugin sync failed: %s", e)
+            return jsonify({"error": "sync_failed", "msg": str(e)}), 500
 
     @app.route("/user", methods=["GET", "POST"])
     def user_settings():

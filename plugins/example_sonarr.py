@@ -1,8 +1,8 @@
 from typing import Any, Dict
+
 from flask import Blueprint, jsonify
 
 from researcharr.plugins.base import BasePlugin
-
 
 PLUGIN_NAME = "sonarr"
 

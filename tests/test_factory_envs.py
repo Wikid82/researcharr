@@ -1,5 +1,6 @@
-import os
 import importlib
+import os
+
 import pytest
 from flask import Flask
 

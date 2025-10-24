@@ -83,7 +83,8 @@ def create_app():
         "general": {
             "PUID": os.getenv("PUID", "1000"),
             "PGID": os.getenv("PGID", "1000"),
-            "Timezone": os.getenv("TIMEZONE", "UTC"),
+            # Default timezone when not provided via env var
+            "Timezone": os.getenv("TIMEZONE", "America/New_York"),
             "LogLevel": os.getenv("LOGLEVEL", "INFO"),
         },
         "radarr": [],

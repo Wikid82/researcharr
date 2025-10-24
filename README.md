@@ -210,6 +210,19 @@ If you prefer not to publish images from forks or pull requests, update the work
 
   See `docs/Environment-Variables.md` for the full list of runtime environment variables (PUID, PGID, TIMEZONE, LOGLEVEL, WEBUI_PORT, WEBUI_RESET_TOKEN) and examples for Docker Compose. These variables must be set before container start; the web UI no longer allows editing PUID/PGID/Timezone.
 
+  ## Production deployment (recommended)
+
+  For production use, run the web UI under a WSGI server such as Gunicorn instead of the Flask development server. Example:
+
+  ```bash
+  # Run with 3 workers and thread-based workers; tune GUNICORN_WORKERS/GUNICORN_THREADS
+  gunicorn -w ${GUNICORN_WORKERS:-3} -k gthread --threads ${GUNICORN_THREADS:-4} \
+    --timeout ${GUNICORN_TIMEOUT:-30} \
+    researcharr.factory:app
+  ```
+
+  Set `GUNICORN_WORKERS`, `GUNICORN_THREADS`, and `GUNICORN_TIMEOUT` via environment variables in your production deployment to tune concurrency and timeouts.
+
 5.  **Use the Web UI (AJAX-powered, always-on):**
     - Launch with:
       ```bash

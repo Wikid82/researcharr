@@ -210,9 +210,12 @@ def main(once: bool = False):
             loader.exec_module(factory_mod)
             app = factory_mod.create_app()
             # Run the Flask app in the foreground (this keeps PID 1 alive).
-            print("[run.py] Starting Flask app...")
+            # The container and documentation expect the web UI to be
+            # reachable on port 5001 (used by the Docker healthcheck), so
+            # bind to that port here.
+            print("[run.py] Starting Flask app on port 5001...")
             sys.stdout.flush()
-            app.run(host="0.0.0.0", port=2929, threaded=True)
+            app.run(host="0.0.0.0", port=5001, threaded=True)
             print("[run.py] Flask app terminated")
             sys.stdout.flush()
         except Exception:

@@ -118,6 +118,32 @@ def create_app():
         # If plugin machinery isn't available, continue silently.
         pass
 
+    # Validate runtime env vars (PUID/PGID) and warn if they are invalid.
+    try:
+        # Use app.logger so warnings appear in application logs.
+        try:
+            puid_val = int(app.config_data["general"].get("PUID", "1000"))
+            app.config_data["general"]["PUID"] = str(puid_val)
+        except Exception:
+            app.logger.warning(
+                "Invalid PUID '%s' — falling back to 1000. Set PUID env var to a valid integer.",
+                app.config_data["general"].get("PUID"),
+            )
+            app.config_data["general"]["PUID"] = "1000"
+
+        try:
+            pgid_val = int(app.config_data["general"].get("PGID", "1000"))
+            app.config_data["general"]["PGID"] = str(pgid_val)
+        except Exception:
+            app.logger.warning(
+                "Invalid PGID '%s' — falling back to 1000. Set PGID env var to a valid integer.",
+                app.config_data["general"].get("PGID"),
+            )
+            app.config_data["general"]["PGID"] = "1000"
+    except Exception:
+        # If logging or access fails for any reason, don't prevent startup.
+        pass
+
     def is_logged_in():
         return session.get("logged_in")
 

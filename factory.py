@@ -57,19 +57,25 @@ def create_app():
         # Will be visible in logs once the app logger is configured; use
         # print as a fallback in early startup paths.
         try:
-            print("WARNING: using insecure default SECRET_KEY; set SECRET_KEY in production")
+            print(
+                "WARNING: using insecure default SECRET_KEY; set SECRET_KEY in production"
+            )
         except Exception:
             pass
     app.secret_key = secret
 
     # Session cookie configuration — configurable via env vars but default
     # to secure settings suitable for production behind TLS.
-    app.config["SESSION_COOKIE_SECURE"] = os.getenv("SESSION_COOKIE_SECURE", "true").lower() in (
+    app.config["SESSION_COOKIE_SECURE"] = os.getenv(
+        "SESSION_COOKIE_SECURE", "true"
+    ).lower() in (
         "1",
         "true",
         "yes",
     )
-    app.config["SESSION_COOKIE_HTTPONLY"] = os.getenv("SESSION_COOKIE_HTTPONLY", "true").lower() in (
+    app.config["SESSION_COOKIE_HTTPONLY"] = os.getenv(
+        "SESSION_COOKIE_HTTPONLY", "true"
+    ).lower() in (
         "1",
         "true",
         "yes",
@@ -127,8 +133,8 @@ def create_app():
 
     # --- Plugin registry wiring (discover local example plugins) ---
     try:
-        from researcharr.plugins.registry import PluginRegistry
         from researcharr.plugins import example_sonarr
+        from researcharr.plugins.registry import PluginRegistry
 
         registry = PluginRegistry()
         # Discover any local plugin modules placed under researcharr/plugins

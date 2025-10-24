@@ -112,7 +112,7 @@ services:
     # ...other config...
   command: python researcharr.py serve
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+  test: ["CMD", "curl", "-f", "http://localhost:2929/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -134,8 +134,8 @@ services:
 You can also check these endpoints manually:
 
 ```bash
-curl http://localhost:5001/health
-curl http://localhost:5001/metrics
+curl http://localhost:2929/health
+curl http://localhost:2929/metrics
 ```
 
 See the new `Health-and-Metrics.md` wiki page for full details.

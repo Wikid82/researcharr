@@ -27,15 +27,18 @@ if TYPE_CHECKING:
     # complaints.
     pass
 
+# Load APScheduler classes at runtime using importlib to avoid static
+# analysis/import-time errors in environments where APScheduler stubs
+# are missing. If the import fails, provide lightweight fallbacks
+# (useful for unit tests that don't install the runtime deps).
+BackgroundScheduler = None
+CronTrigger = None
 try:
-    # type: ignore[reportMissingImports]
-    from apscheduler.schedulers.background import BackgroundScheduler
-
-    # type: ignore[reportMissingImports]
-    from apscheduler.triggers.cron import CronTrigger
+    sched_mod = importlib.import_module("apscheduler.schedulers.background")
+    BackgroundScheduler = getattr(sched_mod, "BackgroundScheduler")
+    cron_mod = importlib.import_module("apscheduler.triggers.cron")
+    CronTrigger = getattr(cron_mod, "CronTrigger")
 except Exception:
-    # Provide lightweight fallbacks when APScheduler is not available
-    # (useful for unit tests that don't install all runtime deps).
     class CronTrigger:
         @staticmethod
         def from_crontab(expr, timezone=None):

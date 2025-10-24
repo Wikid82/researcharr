@@ -30,6 +30,36 @@ This document lists runtime environment variables used by researcharr. Set these
   - Default: not set
   - Description: If set, enables the unauthenticated reset-password web form. The reset form must include this token to perform password resets via the UI.
 
+- SECRET_KEY
+  - Default: not set (required in production)
+  - Description: Cryptographic secret used by Flask to sign sessions and other secrets. Must be a long, random value in production. The application will refuse to start in production mode if this is not set.
+
+- SESSION_COOKIE_SECURE
+  - Default: `true`
+  - Description: If `true`, the session cookie will only be sent over HTTPS. Set to `false` only for local development without TLS.
+
+- SESSION_COOKIE_HTTPONLY
+  - Default: `true`
+  - Description: If `true`, the session cookie will not be accessible to JavaScript.
+
+- SESSION_COOKIE_SAMESITE
+  - Default: `Lax`
+  - Description: Controls SameSite attribute of the session cookie. Typical values: `Lax`, `Strict`, `None`.
+
+## Production server / performance (recommended env vars)
+
+- WEB_CONCURRENCY / GUNICORN_WORKERS
+  - Default: not set (choose based on CPU)
+  - Description: Number of Gunicorn worker processes to run.
+
+- GUNICORN_THREADS
+  - Default: not set
+  - Description: Number of threads per Gunicorn worker when using the gthread worker class.
+
+- GUNICORN_TIMEOUT
+  - Default: 30
+  - Description: Request timeout for Gunicorn workers in seconds.
+
 ## Notes & best practices
 
 - Do not manage PUID/PGID via the web UI; they are intentionally sourced from environment variables so ownership is deterministic for mounted volumes.

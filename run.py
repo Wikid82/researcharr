@@ -29,13 +29,10 @@ if TYPE_CHECKING:
 
 try:
     # type: ignore[reportMissingImports]
-    from apscheduler.schedulers.background import (
-        BackgroundScheduler
-    )
+    from apscheduler.schedulers.background import BackgroundScheduler
+
     # type: ignore[reportMissingImports]
-    from apscheduler.triggers.cron import (
-        CronTrigger
-    )
+    from apscheduler.triggers.cron import CronTrigger
 except Exception:
     # Provide lightweight fallbacks when APScheduler is not available
     # (useful for unit tests that don't install all runtime deps).

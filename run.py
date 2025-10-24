@@ -12,9 +12,9 @@ import logging
 import os
 import subprocess
 import sys
+from typing import TYPE_CHECKING
 
 import yaml
-from typing import TYPE_CHECKING
 
 # For static type checkers (Pylance/pyright) we could import the names only
 # when type-checking, but that caused conflicting lint warnings. We rely on

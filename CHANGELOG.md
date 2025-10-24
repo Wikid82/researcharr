@@ -17,7 +17,7 @@
 - The recommended healthcheck for the main app is now:
   ```yaml
   healthcheck:
-    test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+    test: ["CMD", "curl", "-f", "http://localhost:2929/health"]
     interval: 30s
     timeout: 5s
     retries: 3

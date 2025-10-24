@@ -39,13 +39,16 @@ def create_app():
 
     app = Flask(__name__)
     app.secret_key = "dev"
-    # Simulated in-memory config for tests
+    # Simulated in-memory config for tests. PUID/PGID/Timezone are sourced
+    # from environment variables to avoid managing these sensitive runtime
+    # settings via the web UI. This prevents accidental permission/timezone
+    # mismatches when the container is started.
     app.config_data = {
         "general": {
-            "PUID": "1000",
-            "PGID": "1000",
-            "Timezone": "UTC",
-            "LogLevel": "INFO",
+            "PUID": os.getenv("PUID", "1000"),
+            "PGID": os.getenv("PGID", "1000"),
+            "Timezone": os.getenv("TIMEZONE", "UTC"),
+            "LogLevel": os.getenv("LOGLEVEL", "INFO"),
         },
         "radarr": [],
         "sonarr": [],
@@ -83,6 +86,36 @@ def create_app():
         # best-effort; if loading the user config fails we continue with the
         # default in-memory credentials to avoid preventing the UI from
         # starting.
+        pass
+
+    # --- Plugin registry wiring (discover local example plugins) ---
+    try:
+        from researcharr.plugins.registry import PluginRegistry
+        from researcharr.plugins import example_sonarr
+
+        registry = PluginRegistry()
+        # Discover any local plugin modules placed under researcharr/plugins
+        pkg_dir = os.path.dirname(__file__)
+        plugins_dir = os.path.join(pkg_dir, "plugins")
+        registry.discover_local(plugins_dir)
+        # For tests we may want to instantiate configured plugin instances
+        app.plugin_registry = registry
+        # Example: if there are configured sonarr instances in config_data,
+        # create plugin instances and register their blueprints.
+        try:
+            for inst in app.config_data.get("sonarr", []):
+                try:
+                    pl = registry.create_instance("sonarr", inst)
+                    bp = pl.blueprint()
+                    if bp is not None:
+                        app.register_blueprint(bp)
+                except Exception:
+                    # ignore plugin instantiation failures for now
+                    pass
+        except Exception:
+            pass
+    except Exception:
+        # If plugin machinery isn't available, continue silently.
         pass
 
     def is_logged_in():
@@ -193,7 +226,12 @@ def create_app():
         if not is_logged_in():
             return redirect(url_for("login"))
         if request.method == "POST":
-            app.config_data["general"].update(request.form)
+            # Only allow editing of non-runtime values via the UI. Do not
+            # accept PUID/PGID/Timezone from the form — they are set via
+            # environment variables. Accept only LogLevel here.
+            loglevel = request.form.get("LogLevel")
+            if loglevel:
+                app.config_data["general"]["LogLevel"] = loglevel
             flash("General settings saved")
         return render_template(
             "settings_general.html",
@@ -303,7 +341,11 @@ def create_app():
     @app.route("/save", methods=["POST"])
     def save():
         # Simulate saving general settings
-        app.config_data["general"].update(request.form)
+        # Only allow saving of non-runtime fields. Do not overwrite
+        # PUID/PGID/Timezone which are controlled via environment variables.
+        loglevel = request.form.get("LogLevel")
+        if loglevel:
+            app.config_data["general"]["LogLevel"] = loglevel
         return render_template(
             "settings_general.html",
             puid=app.config_data["general"].get("PUID"),

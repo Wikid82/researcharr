@@ -1,0 +1,40 @@
+# Ignore git and CI
+.git
+.gitignore
+.github
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+.env/
+.env.*
+venv/
+
+# Tests, docs and development files (not needed in image)
+tests/
+docs/
+*.md
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+
+# pytest cache
+.pytest_cache/
+
+# Local files
+config/
+logs/
+researcharr.db
+
+# OS
+.DS_Store
+*** End Patch

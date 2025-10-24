@@ -39,6 +39,7 @@ try:
     cron_mod = importlib.import_module("apscheduler.triggers.cron")
     CronTrigger = getattr(cron_mod, "CronTrigger")
 except Exception:
+
     class CronTrigger:
         @staticmethod
         def from_crontab(expr, timezone=None):

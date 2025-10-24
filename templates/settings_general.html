@@ -10,7 +10,7 @@
   <input id="PGID" value="{{ pgid }}" disabled><br>
   <label for="Timezone">Timezone (set via env var):</label>
   <input id="Timezone" value="{{ timezone|default('UTC') }}" disabled><br>
-  <small>To change PUID/PGID/Timezone, set the environment variables <code>PUID</code>, <code>PGID</code>, and <code>TIMEZONE</code> and restart the service.</small>
+  <small>To change PUID/PGID/Timezone, set the environment variables <code>PUID</code>, <code>PGID</code>, and <code>TIMEZONE</code> and restart the service. See <a href="/docs/Environment-Variables.md">environment variables docs</a> for details.</small>
     <label for="LogLevel">Logging Level:</label>
     <select name="LogLevel" id="LogLevel">
       <option value="DEBUG" {% if loglevel == 'DEBUG' %}selected{% endif %}>DEBUG (most detailed)</option>

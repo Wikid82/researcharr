@@ -9,8 +9,8 @@
 </head>
 <body>
   {% include 'header.html' %}
-  {% include 'sidebar.html' %}
-  <main class="main-content" style="margin-left:220px; margin-top:64px;">
+  {% block sidebar %}{% include 'sidebar.html' %}{% endblock %}
+  <main class="main-content" {% block main_style %}style="margin-left:220px; margin-top:64px;"{% endblock %}>
     {% block content %}{% endblock %}
   </main>
   {% include 'footer.html' %}

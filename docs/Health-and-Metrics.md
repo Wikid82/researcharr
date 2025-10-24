@@ -21,7 +21,7 @@ services:
     # ...other config...
   command: python researcharr.py serve
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+  test: ["CMD", "curl", "-f", "http://localhost:2929/health"]
       interval: 30s
       timeout: 5s
       retries: 3

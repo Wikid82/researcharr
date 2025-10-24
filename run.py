@@ -16,18 +16,26 @@ import sys
 import yaml
 from typing import TYPE_CHECKING
 
-# For static type checkers (Pylance/pyright) import the names only when
-# type-checking so the language server can resolve them if the package is
-# installed in the workspace environment. The runtime import remains in a
-# try/except block below so the module still works when APScheduler is not
-# available.
+# For static type checkers (Pylance/pyright) we could import the names only
+# when type-checking, but that caused conflicting lint warnings. We rely on
+# runtime imports below and provide lightweight fallbacks so the module
+# functions in environments without APScheduler.
 if TYPE_CHECKING:
-    from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore
-    from apscheduler.triggers.cron import CronTrigger  # type: ignore
+    # If you want editor-level type checks, install APScheduler in the
+    # development environment or add minimal type stubs; otherwise leave
+    # this block empty to avoid static-analysis redefinition/unused-import
+    # complaints.
+    pass
 
 try:
-    from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore[reportMissingImports]
-    from apscheduler.triggers.cron import CronTrigger  # type: ignore[reportMissingImports]
+    # type: ignore[reportMissingImports]
+    from apscheduler.schedulers.background import (
+        BackgroundScheduler
+    )
+    # type: ignore[reportMissingImports]
+    from apscheduler.triggers.cron import (
+        CronTrigger
+    )
 except Exception:
     # Provide lightweight fallbacks when APScheduler is not available
     # (useful for unit tests that don't install all runtime deps).

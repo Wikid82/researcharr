@@ -17,3 +17,5 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./docs
+        # Allow GitHub Pages to run Jekyll so Markdown in `docs/` is rendered to HTML.
+        enable_jekyll: true

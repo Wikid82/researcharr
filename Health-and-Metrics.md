@@ -2,7 +2,7 @@
 
 ## Overview
 
-researcharr now provides built-in health and metrics endpoints for both the main app and the web UI. These endpoints are designed for use with Docker healthchecks, monitoring tools, and debugging.
+researcharr exposes built-in health and metrics endpoints on port `2929` (the combined web UI + scheduler service). These endpoints are designed for use with Docker healthchecks, monitoring tools, and debugging.
 
 ## Endpoints
 
@@ -13,26 +13,13 @@ researcharr now provides built-in health and metrics endpoints for both the main
 
 ### Docker Compose Healthcheck Example
 
-For the main app (recommended):
+Configure the single `researcharr` service to use the `/health` endpoint on port `2929`:
 
 ```yaml
 services:
   researcharr:
     # ...other config...
-  command: python researcharr.py serve
-    healthcheck:
-  test: ["CMD", "curl", "-f", "http://localhost:2929/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-```
-
-For the web UI (if desired):
-
-```yaml
-services:
-  webui:
-    # ...other config...
+    command: python researcharr.py serve
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:2929/health"]
       interval: 30s

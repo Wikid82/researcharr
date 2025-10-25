@@ -42,6 +42,7 @@ researcharr/
 Documentation
 
 - Local docs: see the `docs/` folder in this repository for contributor and user documentation.
+- FAQ: see `docs/FAQ.md` for common questions and troubleshooting tips.
 - Published docs (GitHub Pages): https://wikid82.github.io/researcharr/  (deployed from `docs/` on `main` via GitHub Actions)
 
 ![GitHub Pages](https://github.com/Wikid82/researcharr/workflows/Deploy%20docs%20to%20GitHub%20Pages/badge.svg)

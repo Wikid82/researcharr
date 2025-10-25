@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """Run the Flask web UI and an in-process scheduler.
 
-This module starts the Flask app (from `factory.create_app`) and an
-APScheduler BackgroundScheduler that invokes `/app/researcharr.py` on the
-configured cron schedule. Scheduled runs are logged to `/config/cron.log`.
+Starts the Flask app (from `factory.create_app`) and an
+APScheduler BackgroundScheduler that invokes `/app/researcharr.py` on a
+cron schedule. Scheduled runs log to `/config/cron.log`.
 """
 import argparse
 import importlib
 import importlib.util
-        if not acquired:
-            logger.info("Previous job still running; skipping run")
+import logging
+import os
+import subprocess
+import sys
 import threading
-from typing import TYPE_CHECKING
 
 try:
     import resource
@@ -22,19 +23,13 @@ import yaml
 
 
 def _load_scheduler_classes():
-    """Dynamically load APScheduler classes or provide lightweight fallbacks.
-
-    Returns tuple (BackgroundScheduler, CronTrigger).
-    """
+    """Load APScheduler classes or provide fallbacks."""
     try:
         sched_name = "apscheduler.schedulers.background"
         cron_name = "apscheduler.triggers.cron"
         sched_mod = importlib.import_module(sched_name)
         cron_mod = importlib.import_module(cron_name)
-        return (
-            getattr(sched_mod, "BackgroundScheduler"),
-            getattr(cron_mod, "CronTrigger"),
-        )
+        return sched_mod.BackgroundScheduler, cron_mod.CronTrigger
     except Exception:
 
         class _CronTrigger:
@@ -88,8 +83,10 @@ def setup_logger():
         if current != LOG_PATH:
             for h in list(logger.handlers):
                 try:
-                logger.exception("Invalid cron schedule; falling back to hourly")
-                logger.debug("Bad cron schedule: %s", cron_schedule)
+                    logger.removeHandler(h)
+                except Exception:
+                    pass
+            _add_file_handler()
     return logger
 
 
@@ -106,7 +103,7 @@ def load_config():
 
 
 def run_job():
-    """Run scheduled job with optional timeout and resource limits."""
+    """Run scheduled job with timeout and optional RLIMITs."""
     logger = logging.getLogger("researcharr.cron")
 
     global _run_job_lock
@@ -119,17 +116,17 @@ def run_job():
     if concurrency <= 1:
         acquired = _run_job_lock.acquire(blocking=False)
         if not acquired:
-            logger.info("Previous scheduled job still running; skipping this run")
+            logger.info("Previous job still running; skipping run")
             return
 
     try:
         logger.info("Starting scheduled job: running %s", SCRIPT)
 
         rlimit_as_mb = os.getenv("JOB_RLIMIT_AS_MB")
-        rlimit_cpu_sec = os.getenv("JOB_RLIMIT_CPU_SECONDS")
+        rlimit_cpu = os.getenv("JOB_RLIMIT_CPU_SECONDS")
 
         preexec = None
-        if resource is not None and (rlimit_as_mb or rlimit_cpu_sec):
+        if resource is not None and (rlimit_as_mb or rlimit_cpu):
             if rlimit_as_mb:
                 try:
                     as_bytes = int(rlimit_as_mb) * 1024 * 1024
@@ -138,9 +135,9 @@ def run_job():
             else:
                 as_bytes = None
 
-            if rlimit_cpu_sec:
+            if rlimit_cpu:
                 try:
-                    cpu_seconds = int(rlimit_cpu_sec)
+                    cpu_seconds = int(rlimit_cpu)
                 except Exception:
                     cpu_seconds = None
             else:
@@ -179,10 +176,7 @@ def run_job():
                 logger.error("Job stderr:\n%s", res.stderr.strip())
             logger.info("Job finished with returncode %s", res.returncode)
         except subprocess.TimeoutExpired:
-            logger.error(
-                "Scheduled job exceeded timeout (%s seconds) and was killed",
-                timeout_arg,
-            )
+            logger.error("Scheduled job exceeded timeout and was killed")
         except Exception:
             logger.exception("Scheduled job failed to execute")
     finally:
@@ -231,17 +225,16 @@ def main(once: bool = False):
         try:
             trigger = CronTrigger.from_crontab(cron_schedule, timezone="UTC")
         except Exception:
-            logger.exception(
-                "Invalid cron schedule '%s', falling back to hourly", cron_schedule
-            )
+            logger.exception("Invalid cron schedule; falling back to hourly")
+            logger.debug("Bad cron schedule: %s", cron_schedule)
             trigger = CronTrigger.from_crontab("0 * * * *", timezone="UTC")
 
-            scheduler.add_job(
-                run_job,
-                trigger,
-                id="researcharr_job",
-                replace_existing=True,
-            )
+        scheduler.add_job(
+            run_job,
+            trigger,
+            id="researcharr_job",
+            replace_existing=True,
+        )
         scheduler.start()
 
         run_job()

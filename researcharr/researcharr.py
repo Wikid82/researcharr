@@ -1,5 +1,5 @@
-"""Wrapper so `researcharr.researcharr` points at the top-level `researcharr.py` module.
-"""
+"""Wrapper so `researcharr.researcharr` points at the top-level `researcharr.py` module."""
+
 import importlib.util
 import os
 from types import ModuleType
@@ -10,9 +10,13 @@ _mod: ModuleType | None = None
 # Candidate locations for the top-level module. We prefer the current working
 # directory (CI/test runners commonly run from the repo root) and then fall
 # back to paths relative to this file.
-cwd_candidate = os.path.join(os.getcwd(), 'researcharr.py')
-rel_candidate = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'researcharr.py'))
-rel_candidate2 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'researcharr.py'))
+cwd_candidate = os.path.join(os.getcwd(), "researcharr.py")
+rel_candidate = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "researcharr.py")
+)
+rel_candidate2 = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "researcharr.py")
+)
 TOP_LEVEL = None
 for c in (cwd_candidate, rel_candidate, rel_candidate2):
     if os.path.isfile(c):
@@ -22,7 +26,7 @@ for c in (cwd_candidate, rel_candidate, rel_candidate2):
 if TOP_LEVEL:
     # Use the package module name so importlib.reload and sys.modules behave
     # as callers expect (i.e. the module is known as 'researcharr.researcharr').
-    spec = importlib.util.spec_from_file_location('researcharr.researcharr', TOP_LEVEL)
+    spec = importlib.util.spec_from_file_location("researcharr.researcharr", TOP_LEVEL)
     if spec and spec.loader:
         _mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(_mod)  # type: ignore[arg-type]

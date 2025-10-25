@@ -46,4 +46,6 @@ Health & Metrics
 
 Support
 
-- See the `Roadmap.md` and other files in this `docs/` folder for additional project information. If you still have questions, open an issue on GitHub.
+- See the `Roadmap.md` and other files in this `docs/` folder for additional project information. See `FAQ.md` for common questions and quick troubleshooting.
+
+If you still have questions, open an issue on GitHub.

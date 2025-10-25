@@ -155,6 +155,26 @@ def main(once: bool = False):
     setup_logger()
     logger = logging.getLogger("researcharr.cron")
 
+    # Log build/version info from /app/VERSION (created at image build time)
+    try:
+        ver_path = "/app/VERSION"
+        if os.path.exists(ver_path):
+            info = {}
+            with open(ver_path) as vf:
+                for line in vf.read().splitlines():
+                    if "=" in line:
+                        k, v = line.split("=", 1)
+                        info[k.strip()] = v.strip()
+            # Log to both the cron logger (file) and stdout for container logs
+            logger.info("Image build info: %s", info)
+            try:
+                print(f"[run.py] Image build info: {info}")
+                sys.stdout.flush()
+            except Exception:
+                pass
+    except Exception:
+        logger.exception("Failed to read /app/VERSION for build info")
+
     cfg = load_config()
     cron_schedule = None
     if isinstance(cfg, dict):

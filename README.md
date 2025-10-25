@@ -358,4 +358,12 @@ docker run -d \
 - Each Radarr and Sonarr instance in the web UI now has a "Validate & Save" button. This tests the connection and performs a dry run for that instance, showing the result instantly.
 - Radarr and Sonarr URLs must start with `http://` or `https://` and have a valid API key. If not, the instance will be skipped and a warning will be shown in the UI and logs.
 
+Deployment & resource guidance
+
+See `docs/Deployment-and-Resources.md` for examples and recommendations on
+how to run researcharr with Docker, Docker Compose, or Kubernetes and how
+to use the `JOB_TIMEOUT`, `JOB_RLIMIT_AS_MB`, `JOB_RLIMIT_CPU_SECONDS`,
+and `RUN_JOB_CONCURRENCY` environment variables to control job runtime
+and resource usage.
+
 

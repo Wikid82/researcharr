@@ -13,7 +13,13 @@ import logging
 import os
 import subprocess
 import sys
+import threading
 from typing import TYPE_CHECKING
+
+try:
+    import resource
+except Exception:
+    resource = None
 
 import yaml
 
@@ -39,9 +45,12 @@ def _load_scheduler_classes():
         sched_mod = importlib.import_module(
             "apscheduler.schedulers.background"
         )
-        cron_mod = importlib.import_module("apscheduler.triggers.cron")
-        return getattr(sched_mod, "BackgroundScheduler"), getattr(
-            cron_mod, "CronTrigger"
+        cron_mod = importlib.import_module(
+            "apscheduler.triggers.cron"
+        )
+        return (
+            getattr(sched_mod, "BackgroundScheduler"),
+            getattr(cron_mod, "CronTrigger"),
         )
     except Exception:
         # Lightweight fallback implementations used for tests or minimal
@@ -128,23 +137,102 @@ def load_config():
 
 def run_job():
     logger = logging.getLogger("researcharr.cron")
-    logger.info("Starting scheduled job: running %s", SCRIPT)
+
+    # Prevent overlapping runs if a previous job is still executing.
+    # Controlled by env var RUN_JOB_CONCURRENCY (default 1 => no overlap).
+    global _run_job_lock
     try:
-        res = subprocess.run(
-            [
-                sys.executable,
-                SCRIPT,
-            ],
-            capture_output=True,
-            text=True,
-        )
-        if res.stdout:
-            logger.info("Job stdout:\n%s", res.stdout.strip())
-        if res.stderr:
-            logger.error("Job stderr:\n%s", res.stderr.strip())
-        logger.info("Job finished with returncode %s", res.returncode)
-    except Exception:
-        logger.exception("Scheduled job failed to execute")
+        _run_job_lock
+    except NameError:
+        _run_job_lock = threading.Lock()
+
+    concurrency = int(os.getenv("RUN_JOB_CONCURRENCY", "1"))
+    # If concurrency is 1, use the lock to skip overlapping runs.
+    if concurrency <= 1:
+        acquired = _run_job_lock.acquire(blocking=False)
+        if not acquired:
+            logger.info(
+                "Previous scheduled job still running; skipping this run"
+            )
+            return
+
+    try:
+        logger.info("Starting scheduled job: running %s", SCRIPT)
+        # Build resource limits if configured
+        rlimit_as_mb = os.getenv("JOB_RLIMIT_AS_MB")
+        rlimit_cpu_sec = os.getenv("JOB_RLIMIT_CPU_SECONDS")
+
+        preexec = None
+        if resource is not None and (rlimit_as_mb or rlimit_cpu_sec):
+            if rlimit_as_mb:
+                try:
+                    as_bytes = int(rlimit_as_mb) * 1024 * 1024
+                except Exception:
+                    as_bytes = None
+            else:
+                as_bytes = None
+
+            if rlimit_cpu_sec:
+                try:
+                    cpu_seconds = int(rlimit_cpu_sec)
+                except Exception:
+                    cpu_seconds = None
+            else:
+                cpu_seconds = None
+
+            def _limit_resources():
+                # Called in child process just before exec.
+                try:
+                    if as_bytes is not None:
+                        # Address space (virtual memory) limit in bytes.
+                        resource.setrlimit(
+                            resource.RLIMIT_AS, (as_bytes, as_bytes)
+                        )
+                    if cpu_seconds is not None:
+                        # CPU time limit in seconds.
+                        resource.setrlimit(
+                            resource.RLIMIT_CPU, (cpu_seconds, cpu_seconds)
+                        )
+                except Exception:
+                    # If setting limits fails, allow the child to continue.
+                    pass
+
+            preexec = _limit_resources
+
+    # Configure job timeout (seconds). 0 or missing means no timeout.
+        try:
+            timeout_val = int(os.getenv("JOB_TIMEOUT", "0"))
+            timeout_arg = timeout_val if timeout_val > 0 else None
+        except Exception:
+            timeout_arg = None
+
+        try:
+            res = subprocess.run(
+                [sys.executable, SCRIPT],
+                capture_output=True,
+                text=True,
+                timeout=timeout_arg,
+                preexec_fn=preexec,
+            )
+            if res.stdout:
+                logger.info("Job stdout:\n%s", res.stdout.strip())
+            if res.stderr:
+                logger.error("Job stderr:\n%s", res.stderr.strip())
+            logger.info("Job finished with returncode %s", res.returncode)
+        except subprocess.TimeoutExpired:
+            logger.error(
+                "Scheduled job exceeded timeout (%s seconds) "
+                "and was killed",
+                timeout_arg,
+            )
+        except Exception:
+            logger.exception("Scheduled job failed to execute")
+    finally:
+        if concurrency <= 1:
+            try:
+                _run_job_lock.release()
+            except Exception:
+                pass
 
 
 def main(once: bool = False):

@@ -1,8 +1,8 @@
 import json
-
-from researcharr.factory import create_app
 import os
 import tempfile
+
+from researcharr.factory import create_app
 
 
 def test_api_version_defaults():

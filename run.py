@@ -14,6 +14,7 @@ import subprocess
 import sys
 import threading
 from types import ModuleType
+
 import yaml
 
 # `resource` is a platform-specific stdlib module (POSIX). Annotate a

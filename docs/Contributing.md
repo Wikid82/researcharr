@@ -88,7 +88,7 @@ Suggested commit message style:
 - See the [Roadmap](Roadmap.md) in this `docs/` folder for project direction and priorities.
 
 ## Questions or Help?
-- Check the documentation in this `docs/` folder (for example `Getting-Started.md`) or open an issue on GitHub.
+- Check the documentation in this `docs/` folder (for example `Getting-Started.md`) or read the `FAQ.md` for common questions. If that doesn't help, open an issue on GitHub.
 - For major changes, open a discussion or issue first to get feedback.
 
 ---

@@ -185,46 +185,19 @@ Special tags are pushed for these branches:
 - `main` → `:latest`
 - `development` → `:development`
 
-## Versioning & Releases
+## Versioning & Releases (summary)
 
-This project embeds build metadata into Docker images and exposes it at
-runtime for easier support and traceability.
+We include build metadata with each image and expose it at runtime for
+traceability. For full details (CI tagging, labels, manifest inspection,
+and troubleshooting) see `docs/Versioning.md`.
 
-- Image tags: CI pushes semantic tags (from git tags where available),
-  build-specific tags (e.g. `1.2.3-build45`) and short-GIT-SHA tags. These
-  allow humans and automated systems to identify a release and the exact
-  build.
-- OCI labels: images include standard OCI labels such as
-  `org.opencontainers.image.version` and `org.opencontainers.image.revision`.
-- Version file: the image contains `/app/VERSION` (created at build time)
-  containing key=value lines (version, build, sha). The Flask app exposes
-  a read-only endpoint at `/api/version` which returns the parsed values as JSON.
-
-CI changes: the GitHub Actions build prints the pushed image digest to the
-job log. The digest is immutable and can be used together with the
-`/api/version` output to confirm the exact image a user is running.
-
-Runtime override (testing): the file path for the version file can be
-overridden using the `RESEARCHARR_VERSION_FILE` environment variable. This
-is primarily used by tests and by alternative image layouts.
-
-Example: query the running app for its build info
+Quick check (run locally):
 
 ```bash
 curl http://localhost:2929/api/version
 ```
 
-This will return JSON such as:
-
-```json
-{
-  "version": "1.2.3",
-  "build": "45",
-  "sha": "abcdef12"
-}
-```
-
-If you prefer not to publish images from forks or pull requests, update the workflow to only push images when the event is a repository `push` and optionally restrict to certain branches.
+The detailed policy and examples are in `docs/Versioning.md`.
 
 ## How to Use
 

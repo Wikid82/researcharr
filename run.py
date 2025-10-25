@@ -163,19 +163,22 @@ def run_job():
             timeout_arg = None
 
         try:
-            res = subprocess.run(
-                [sys.executable, SCRIPT],
-                capture_output=True,
-                text=True,
-                timeout=timeout_arg,
-                preexec_fn=preexec,
-            )
+            # Build kwargs only with keys supported/needed. Tests may monkeypatch
+            # the subprocess module with a simple object that doesn't accept
+            # `timeout` or `preexec_fn`.
+            run_kwargs = {"capture_output": True, "text": True}
+            if timeout_arg is not None:
+                run_kwargs["timeout"] = timeout_arg
+            if preexec is not None:
+                run_kwargs["preexec_fn"] = preexec
+
+            res = subprocess.run([sys.executable, SCRIPT], **run_kwargs)
             if res.stdout:
                 logger.info("Job stdout:\n%s", res.stdout.strip())
             if res.stderr:
                 logger.error("Job stderr:\n%s", res.stderr.strip())
             logger.info("Job finished with returncode %s", res.returncode)
-        except subprocess.TimeoutExpired:
+        except getattr(subprocess, "TimeoutExpired", Exception):
             logger.error("Scheduled job exceeded timeout and was killed")
         except Exception:
             logger.exception("Scheduled job failed to execute")

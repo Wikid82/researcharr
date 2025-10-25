@@ -19,12 +19,19 @@ EXPOSE 2929
 
 WORKDIR /app
 
+COPY requirements.txt /app/requirements.txt
+# Refresh and upgrade OS packages to reduce base-image CVEs, then install Python deps
+# Note: this increases build time and image size slightly but reduces outdated OS package CVEs
+RUN apt-get update && \
+	DEBIAN_FRONTEND=noninteractive apt-get upgrade -y && \
+	apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Use the python -m pip module and install from requirements with no cache
+RUN python -m pip install --upgrade pip setuptools wheel && \
+	python -m pip install --no-cache-dir -r /app/requirements.txt
+
+# Copy application source after dependencies are installed
 COPY . /app
-
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install pyyaml
-
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

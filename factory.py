@@ -437,7 +437,11 @@ def create_app():
         """
         info = {"version": "dev", "build": "0", "sha": "unknown"}
         try:
-            p = pathlib.Path("/app/VERSION")
+            # Allow overriding the version file path via env for testing or
+            # alternative layouts. Default to /app/VERSION which is created
+            # at image build time by CI.
+            ver_file = os.getenv("RESEARCHARR_VERSION_FILE", "/app/VERSION")
+            p = pathlib.Path(ver_file)
             if p.exists():
                 for line in p.read_text().splitlines():
                     if "=" in line:

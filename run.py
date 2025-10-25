@@ -157,7 +157,7 @@ def main(once: bool = False):
 
     # Log build/version info from /app/VERSION (created at image build time)
     try:
-        ver_path = "/app/VERSION"
+        ver_path = os.getenv("RESEARCHARR_VERSION_FILE", "/app/VERSION")
         if os.path.exists(ver_path):
             info = {}
             with open(ver_path) as vf:

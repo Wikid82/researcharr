@@ -147,9 +147,9 @@ jobs:
         echo "Pushed image tags:"
         echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}"
         echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-build${{ env.BUILD_NUMBER }}"
-  echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}"
-  echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.SAFE_BRANCH }}"
-  echo "  - ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.SAFE_BRANCH }}"
+        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}"
+        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.SAFE_BRANCH }}"
+        echo "  - ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.SAFE_BRANCH }}"
     - name: Additional tags for main/development
       if: ${{ env.BRANCH == 'main' || env.BRANCH == 'development' }}
       run: |

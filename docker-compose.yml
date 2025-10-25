@@ -1,28 +1,22 @@
----
 services:
   researcharr:
     image: ghcr.io/wikid82/researcharr:latest
     container_name: researcharr
     restart: unless-stopped
-    env_file:
-      - /path/to/config/.env
     ports:
       - "2929:2929" # Expose web UI on port 2929
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - LOGLEVEL=INFO
+      - WEBUI_PORT=2929
     volumes:
-      - /path/to/config:/config # This directory will contain your .env file
-    depends_on:
-        <downlod_client>:
-          condition: service_started
-        radarr:
-          condition: service_started
-        sonarr:
-          condition: service_started
-    deploy:
-        resources:
-          limits:
-            cpus: '1.0'
-            memory: 2G
-          reservations:
-            cpus: '0.5'
-            memory: 512M
-      
+      - ./config:/config    # application config and database (copy config.example.yml -> ./config/config.yml)
+      - ./logs:/logs        # optional: persist runtime logs
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:2929/ || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+   

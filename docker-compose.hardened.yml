@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  researcharr:
+    # This hardened override is opt-in: use with
+    # docker compose -f docker-compose.yml -f docker-compose.hardened.yml up
+    # It reduces capabilities and runs the container as the current user where possible.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: false # /app may need write access for logs/config; adjust if your entrypoint writes to other paths
+    tmpfs:
+      - /tmp
+    user: "1000:1000" # run as non-root (adjust UID:GID to match host user)
+    restart: unless-stopped
+    # For extra isolation, you can disable networking to external services during tests
+    #network_mode: "none"

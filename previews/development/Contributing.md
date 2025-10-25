@@ -85,10 +85,10 @@ Suggested commit message style:
 - Squash commits if requested.
 
 ## Project Roadmap & Goals
-- See the [Roadmap](../researcharr.wiki/Roadmap.md) for project direction and priorities.
+- See the [Roadmap](Roadmap.md) in this `docs/` folder for project direction and priorities.
 
 ## Questions or Help?
-- Check the [FAQ](../researcharr.wiki/FAQ.md) or open an issue.
+- Check the documentation in this `docs/` folder (for example `Getting-Started.md`) or read the `FAQ.md` for common questions. If that doesn't help, open an issue on GitHub.
 - For major changes, open a discussion or issue first to get feedback.
 
 ---

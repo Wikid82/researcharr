@@ -36,7 +36,9 @@ def _load_scheduler_classes():
     than once at module scope which confuses static analyzers (mypy).
     """
     try:
-        sched_mod = importlib.import_module("apscheduler.schedulers.background")
+        sched_mod = importlib.import_module(
+            "apscheduler.schedulers.background"
+        )
         cron_mod = importlib.import_module("apscheduler.triggers.cron")
         return getattr(sched_mod, "BackgroundScheduler"), getattr(
             cron_mod, "CronTrigger"

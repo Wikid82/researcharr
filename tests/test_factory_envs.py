@@ -1,8 +1,6 @@
 import importlib
-import os
 
 import pytest
-from flask import Flask
 
 import researcharr.factory as factory_module
 

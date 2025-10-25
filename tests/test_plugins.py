@@ -1,5 +1,3 @@
-import pytest
-
 from researcharr.plugins.registry import PluginRegistry
 
 

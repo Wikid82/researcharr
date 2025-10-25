@@ -50,7 +50,10 @@ def create_app():
     if not secret and env_prod:
         # Fail fast in production if SECRET_KEY is missing.
         raise SystemExit(
-            "SECRET_KEY environment variable is required in production. Set SECRET_KEY and restart."
+            (
+                "SECRET_KEY environment variable is required in production."
+                " Set SECRET_KEY and restart."
+            )
         )
     if not secret:
         secret = "dev"
@@ -58,7 +61,10 @@ def create_app():
         # print as a fallback in early startup paths.
         try:
             print(
-                "WARNING: using insecure default SECRET_KEY; set SECRET_KEY in production"
+                (
+                    "WARNING: using insecure default SECRET_KEY; "
+                    "set SECRET_KEY in production"
+                )
             )
         except Exception:
             pass
@@ -80,7 +86,8 @@ def create_app():
         "true",
         "yes",
     )
-    app.config["SESSION_COOKIE_SAMESITE"] = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
+    samesite_val = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
+    app.config["SESSION_COOKIE_SAMESITE"] = samesite_val
     # Simulated in-memory config for tests. PUID/PGID/Timezone are sourced
     # from environment variables to avoid managing these sensitive runtime
     # settings via the web UI. This prevents accidental permission/timezone
@@ -133,7 +140,6 @@ def create_app():
 
     # --- Plugin registry wiring (discover local example plugins) ---
     try:
-        from researcharr.plugins import example_sonarr
         from researcharr.plugins.registry import PluginRegistry
 
         registry = PluginRegistry()
@@ -169,7 +175,10 @@ def create_app():
             app.config_data["general"]["PUID"] = str(puid_val)
         except Exception:
             app.logger.warning(
-                "Invalid PUID '%s' — falling back to 1000. Set PUID env var to a valid integer.",
+                (
+                    "Invalid PUID '%s' — falling back to 1000. "
+                    "Set PUID env var to a valid integer."
+                ),
                 app.config_data["general"].get("PUID"),
             )
             app.config_data["general"]["PUID"] = "1000"
@@ -179,7 +188,10 @@ def create_app():
             app.config_data["general"]["PGID"] = str(pgid_val)
         except Exception:
             app.logger.warning(
-                "Invalid PGID '%s' — falling back to 1000. Set PGID env var to a valid integer.",
+                (
+                    "Invalid PGID '%s' — falling back to 1000. "
+                    "Set PGID env var to a valid integer."
+                ),
                 app.config_data["general"].get("PGID"),
             )
             app.config_data["general"]["PGID"] = "1000"
@@ -416,7 +428,10 @@ def create_app():
                 data["plugins"].append({"name": name, "instances": instances})
         return jsonify(data)
 
-    @app.route("/api/plugins/<plugin_name>/validate/<int:idx>", methods=["POST"])
+    @app.route(
+        "/api/plugins/<plugin_name>/validate/<int:idx>",
+        methods=["POST"],
+    )
     def api_plugin_validate(plugin_name: str, idx: int):
         if not is_logged_in():
             return jsonify({"error": "unauthorized"}), 401
@@ -435,7 +450,10 @@ def create_app():
             app.logger.exception("Plugin validate failed: %s", e)
             return jsonify({"error": "validate_failed", "msg": str(e)}), 500
 
-    @app.route("/api/plugins/<plugin_name>/sync/<int:idx>", methods=["POST"])
+    @app.route(
+        "/api/plugins/<plugin_name>/sync/<int:idx>",
+        methods=["POST"],
+    )
     def api_plugin_sync(plugin_name: str, idx: int):
         if not is_logged_in():
             return jsonify({"error": "unauthorized"}), 401

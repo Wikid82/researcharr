@@ -29,7 +29,8 @@ class PluginRegistry:
                 continue
             path = os.path.join(plugins_dir, fn)
             name = os.path.splitext(fn)[0]
-            spec = importlib.util.spec_from_file_location(f"plugins.{name}", path)
+            mod_name = f"plugins.{name}"
+            spec = importlib.util.spec_from_file_location(mod_name, path)
             if spec is None or spec.loader is None:
                 continue
             mod = importlib.util.module_from_spec(spec)

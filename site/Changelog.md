@@ -7,7 +7,7 @@ For a short, contributor-focused summary of the most recent changes (formatting/
 ## 2025-10-23
 
 ### Major Features Added
-- **Health and Metrics Endpoints**: `/health` and `/metrics` endpoints for both the main app and web UI. Designed for Docker healthchecks, monitoring, and debugging. See `docs/Health-and-Metrics.md` for details.
+- **Health and Metrics Endpoints**: `/health` and `/metrics` endpoints are provided by the combined service (web UI + scheduler) and are exposed on port `2929`. Designed for Docker healthchecks, monitoring, and debugging. See `docs/Health-and-Metrics.md` for details.
 - **Live Log Level Control**: Log level for both the app and web UI can now be set from the General Settings page in the web UI. Changes are applied live (no restart required).
 - **Documentation**: README and docs/wiki updated to document new endpoints, Docker healthcheck, and live loglevel control.
 

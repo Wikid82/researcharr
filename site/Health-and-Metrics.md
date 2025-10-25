@@ -2,7 +2,7 @@
 
 ## Overview
 
-researcharr now provides built-in health and metrics endpoints for both the main app and the web UI. These endpoints are designed for use with Docker healthchecks, monitoring tools, and debugging.
+researcharr exposes built-in health and metrics endpoints on port `2929` (the combined web UI + scheduler service). These endpoints are designed for use with Docker healthchecks, monitoring tools, and debugging.
 
 ## Endpoints
 

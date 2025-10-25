@@ -23,6 +23,3 @@ Below is a suggested table of contents (order follows the README and operator/de
 ## How this page is used
 
 - GitHub Pages: The `docs/` folder is published to GitHub Pages. `index.md` is the landing page used when the docs site is served from this folder.
-- Local preview: You can preview the site locally by running a static site preview (or building the docs with a static site generator if you use one). The simplest preview is to open the Markdown directly in your editor or use a lightweight preview server.
-
-If you'd like me to also create a lightweight navbar or front-matter for a static site generator (Jekyll, MkDocs, or similar), tell me which generator you prefer and I will add the config and nav structure.

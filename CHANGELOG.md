@@ -5,7 +5,7 @@
 ### Major Features Added
 
 - **Health and Metrics Endpoints**
-  - `/health` and `/metrics` endpoints are now available in both the main app and the web UI.
+  - `/health` and `/metrics` endpoints are now available on the combined service (web UI + scheduler) and are exposed on port `2929`.
   - Designed for Docker healthchecks, monitoring, and debugging.
   - See `docs/Health-and-Metrics.md` for details and usage examples.
 

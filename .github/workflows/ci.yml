@@ -83,7 +83,13 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Determine branch name
-      run: echo "BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+      run: |
+        # Extract branch name from ref and create a sanitized, tag-safe variant
+        BRANCH=${GITHUB_REF#refs/heads/}
+        # Lowercase and replace slashes or any disallowed char with hyphens to make a safe Docker tag
+        SAFE_BRANCH=$(echo "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed 's|/|-|g; s|[^a-z0-9._-]|-|g')
+        echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+        echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
     - name: Set lowercase repository name
       run: echo "REPO_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
     - name: Build and push Docker image (all branches)
@@ -124,8 +130,8 @@ jobs:
           ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}
           ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-build${{ env.BUILD_NUMBER }}
           ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}
-          ghcr.io/${{ env.REPO_NAME }}:${{ env.BRANCH }}
-          ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.BRANCH }}
+          ghcr.io/${{ env.REPO_NAME }}:${{ env.SAFE_BRANCH }}
+          ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.SAFE_BRANCH }}
         cache-from: type=gha,scope=researcharr-build-cache
         cache-to: type=gha,mode=max,scope=researcharr-build-cache
         build-args: |
@@ -141,9 +147,9 @@ jobs:
         echo "Pushed image tags:"
         echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}"
         echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-build${{ env.BUILD_NUMBER }}"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.BRANCH }}"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.BRANCH }}"
+  echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}"
+  echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.SAFE_BRANCH }}"
+  echo "  - ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.SAFE_BRANCH }}"
     - name: Additional tags for main/development
       if: ${{ env.BRANCH == 'main' || env.BRANCH == 'development' }}
       run: |

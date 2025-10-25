@@ -17,6 +17,7 @@ WORKDIR /app
 
 # Alpine uses apk; install build deps that some wheels may need
 RUN apk add --no-cache \
+    bash \
     build-base \
     libffi-dev \
     musl-dev \

@@ -1,12 +1,22 @@
-"""Wrapper so `researcharr.researcharr` points at the top-level `researcharr.py` module."""
+"""Wrapper so `researcharr.researcharr` points at the top-level `researcharr.py` module.
+
+This file loads the top-level ``researcharr.py`` by file path and inserts the
+loaded module into ``sys.modules`` under the package name so imports and
+``importlib.reload`` behave the same as when the project is installed.
+"""
 
 import importlib.util
 import os
+import sys
 from types import ModuleType
+from typing import Optional
 
 # Load the top-level `researcharr.py` module by file path to avoid importing
 # this package (which would otherwise shadow the module name).
-_mod: ModuleType | None = None
+_mod: Optional[ModuleType] = None
+# Exposed name for the loaded module (or None when not found).
+module: Optional[ModuleType] = None
+
 # Candidate locations for the top-level module. We prefer the current working
 # directory (CI/test runners commonly run from the repo root) and then fall
 # back to paths relative to this file.
@@ -35,7 +45,6 @@ if _mod:
     # Replace this shim module in sys.modules with the loaded top-level
     # module so callers receive the real module object (functions will use
     # the correct globals and monkeypatching will work as expected).
-    import sys
 
     sys.modules[__name__] = _mod
 

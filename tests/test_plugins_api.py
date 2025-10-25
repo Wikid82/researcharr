@@ -6,6 +6,9 @@ from researcharr.factory import create_app
 def test_api_plugins_endpoint():
     app = create_app()
     client = app.test_client()
+    # Simulate logged-in session for endpoints that require authentication
+    with client.session_transaction() as sess:
+        sess["logged_in"] = True
     resp = client.get("/api/plugins")
     assert resp.status_code == 200
     data = json.loads(resp.data)

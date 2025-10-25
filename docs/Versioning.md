@@ -34,7 +34,27 @@ sha=abcdef12
 In GitHub Actions, set these environment values before the Docker build:
 
 ```bash
-VERSION=$(git describe --tags --dirty --always || echo "0.0.0")
+# CI versioning policy (pre-release behavior):
+# - If the current commit has an exact tag, CI will use that tag as the
+#   canonical semantic version (a leading 'v' is stripped, e.g. v1.2.3 -> 1.2.3).
+# - If there is no exact tag but a nearby descriptive tag exists and looks
+#   like semver, CI will prefer that derived value.
+# - Otherwise CI will emit a reproducible pre-release version so non-tag
+#   builds are traceable. The default format is `0.0.0-alpha.<GITHUB_RUN_NUMBER>`.
+
+# Example POSIX-friendly derivation used in our workflow (simplified):
+RAW_TAG=$(git describe --tags --exact-match 2>/dev/null || true)
+if [ -n "$RAW_TAG" ]; then
+  VERSION=${RAW_TAG#v}
+else
+  DESC=$(git describe --tags --dirty --always 2>/dev/null || true)
+  if printf '%s' "$DESC" | grep -Eq '^[v]?[0-9]+\.[0-9]+\.[0-9]'; then
+    VERSION=${DESC#v}
+  else
+    VERSION="0.0.0-alpha.${GITHUB_RUN_NUMBER}"
+  fi
+fi
+
 BUILD_NUMBER=${GITHUB_RUN_NUMBER}
 GIT_SHA=${GITHUB_SHA::8}
 BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -101,3 +121,27 @@ This will show labels and the manifest digest.
 - Prefer semantic version tags for releases. Use build-specific tags for
   traceability between CI runs and pushed images.
 - Keep the README concise; this document contains the full guidance.
+
+### Pre-release policy for non-tag builds
+
+To make CI builds discoverable and sortable even when they are not produced
+from a tagged release, the CI generates a small, predictable pre-release
+version. The current policy is:
+
+- If the workflow run is for a commit that has an exact tag, that tag (with a
+  leading `v` stripped) becomes the canonical `VERSION` used for image labels
+  and tags.
+- If no exact tag is present, CI will attempt to derive a semver-like string
+  from `git describe`. If that fails, CI falls back to the pre-release form
+  `0.0.0-alpha.<GITHUB_RUN_NUMBER>` where `<GITHUB_RUN_NUMBER>` is the numeric
+  run id for the current workflow. This keeps non-tag builds unique and
+  human-readable.
+
+Examples:
+
+- Tagged release: commit has `v1.2.3` → image tag `1.2.3` and `1.2.3-build45`.
+- Non-tag build: no tag → image tag `0.0.0-alpha.45` and `0.0.0-alpha.45-build45`.
+
+These values are written into the image `/app/VERSION` file and exposed by
+`GET /api/version` so both operators and automated systems can determine the
+running build.

@@ -91,8 +91,23 @@ jobs:
 
     - name: Set image metadata
       run: |
-        # Determine a semantic version from tags when available, otherwise fall back to a short sha
-        VERSION=$(git describe --tags --dirty --always || echo "0.0.0")
+        # If the current commit has an exact tag (preferred for releases) use it
+        # otherwise fall back to a semantic pre-release version so CI builds
+        # are discoverable (e.g. 0.0.0-alpha.<run-number>).
+        RAW_TAG=$(git describe --tags --exact-match 2>/dev/null || true)
+        if [ -n "$RAW_TAG" ]; then
+          # Strip a leading 'v' if present (v1.2.3 -> 1.2.3)
+          VERSION=${RAW_TAG#v}
+        else
+          # Try to derive a descriptive version from nearby tags/commit, but
+          # prefer a stable pre-release format when nothing looks like semver.
+          DESC=$(git describe --tags --dirty --always 2>/dev/null || true)
+          if printf '%s' "$DESC" | grep -Eq '^[v]?[0-9]+\.[0-9]+\.[0-9]'; then
+            VERSION=${DESC#v}
+          else
+            VERSION="0.0.0-alpha.${GITHUB_RUN_NUMBER}"
+          fi
+        fi
         echo "VERSION=$VERSION" >> $GITHUB_ENV
         echo "BUILD_NUMBER=${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
         echo "GIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV

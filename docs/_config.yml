@@ -1,4 +1,3 @@
-
 title: researcharr
 # For GitHub project pages the site is served under /<repo-name>/ so set
 # baseurl to the repository name. This ensures `{{ site.baseurl }}` is

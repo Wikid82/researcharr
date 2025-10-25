@@ -42,7 +42,7 @@ Configuration and config files
 
 Health & Metrics
 
-- The app exposes `/health` and `/metrics` for monitoring and Docker healthchecks.
+- researcharr exposes `/health` and `/metrics` on port `2929` for monitoring and Docker healthchecks.
 
 Support
 

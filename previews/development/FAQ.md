@@ -47,7 +47,7 @@ python -m pytest -q
 If you use the repository helpers or CI snippets, see `tests/commands/run_tests.yml` for a sample developer command.
 
 ## Q: Where are the health and metrics endpoints?
-- The web UI and main app expose `/health` and `/metrics` for use in Docker healthchecks and monitoring. See `docs/Health-and-Metrics.md` for examples and recommended Docker healthcheck configuration.
+- researcharr exposes `/health` and `/metrics` on port `2929` for Docker healthchecks and monitoring. See `docs/Health-and-Metrics.md` for examples and recommended Docker healthcheck configuration.
 
 ## Q: Where are the plugin docs and examples?
 - The repository contains a `researcharr/plugins` package with an example and the plugin contract. See `docs/` and `README.md` for high-level info. If you plan to write or install third-party plugins, see the `docs/` notes and consider using the plugin registry system (planned/implemented depending on your branch).

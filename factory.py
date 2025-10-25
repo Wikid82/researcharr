@@ -2,6 +2,7 @@
 
 import importlib.util
 import os
+import pathlib
 
 from flask import (
     Flask,
@@ -427,6 +428,25 @@ def create_app():
                 instances = app.config_data.get(name, [])
                 data["plugins"].append({"name": name, "instances": instances})
         return jsonify(data)
+
+    @app.route("/api/version", methods=["GET"])
+    def api_version():
+        """Return build/version metadata baked into the image at build time.
+
+        Reads `/app/VERSION` if present, otherwise returns sensible defaults.
+        """
+        info = {"version": "dev", "build": "0", "sha": "unknown"}
+        try:
+            p = pathlib.Path("/app/VERSION")
+            if p.exists():
+                for line in p.read_text().splitlines():
+                    if "=" in line:
+                        k, v = line.split("=", 1)
+                        info[k.strip()] = v.strip()
+        except Exception:
+            # best-effort; do not fail the endpoint on read errors
+            pass
+        return jsonify(info)
 
     @app.route(
         "/api/plugins/<plugin_name>/validate/<int:idx>",

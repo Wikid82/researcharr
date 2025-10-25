@@ -184,6 +184,21 @@ curl http://localhost:2929/api/version
 
 The detailed policy and examples are in `docs/Versioning.md`.
 
+Notes about CI pre-release behavior:
+
+- If a commit is decorated with an exact tag (for example `v1.2.3`), the CI
+  build will use that tag (stripping a leading `v`) as the canonical version
+  added to labels and tags.
+- For non-tag builds CI will generate a small pre-release version so images
+  remain traceable. The format used by CI is `0.0.0-alpha.<run>` by default
+  (where `<run>` is the GitHub Actions run number). CI will also create a
+  build-specific tag such as `0.0.0-alpha.45-build45` so you can correlate an
+  image with a particular workflow run.
+
+All of these values are written into `/app/VERSION` in the image and are
+exposed via `GET /api/version`. Use that endpoint (or the image digest from
+CI) to confirm exactly which build you are running.
+
 ## How to Use
 
 1.  **Create a configuration directory:**

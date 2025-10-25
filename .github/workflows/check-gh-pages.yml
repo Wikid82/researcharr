@@ -1,0 +1,32 @@
+name: Check gh-pages for .nojekyll
+
+on:
+  pull_request:
+    # Run checks for PRs targeting main so merges don't accidentally keep .nojekyll
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  nojekyll-check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Ensure git can see remote branches
+      run: |
+        git config --global --add safe.directory "$GITHUB_WORKSPACE" || true
+        git fetch origin gh-pages --depth=1 || true
+
+    - name: List gh-pages root files (for diagnostics)
+      run: |
+        echo "Files on origin/gh-pages (root):"
+        git ls-tree --name-only origin/gh-pages | sed -n '1,200p' || true
+
+    - name: Fail if .nojekyll exists on gh-pages
+      run: |
+        if git ls-tree --name-only origin/gh-pages | grep -xq '\.nojekyll'; then
+          echo "ERROR: gh-pages branch contains a .nojekyll file which prevents Jekyll from rendering docs. Remove it and re-run deploy.";
+          git ls-tree -r --name-only origin/gh-pages | sed -n '1,200p';
+          exit 1;
+        else
+          echo "gh-pages is clean: no .nojekyll found.";
+        fi

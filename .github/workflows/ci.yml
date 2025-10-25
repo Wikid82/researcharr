@@ -83,7 +83,13 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Determine branch name
-      run: echo "BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+      run: |
+        # Extract branch name from ref and create a sanitized, tag-safe variant
+        BRANCH=${GITHUB_REF#refs/heads/}
+        # Lowercase and replace slashes or any disallowed char with hyphens to make a safe Docker tag
+        SAFE_BRANCH=$(echo "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed 's|/|-|g; s|[^a-z0-9._-]|-|g')
+        echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+        echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
     - name: Set lowercase repository name
       run: echo "REPO_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
     - name: Build and push Docker image (all branches)
@@ -91,8 +97,23 @@ jobs:
 
     - name: Set image metadata
       run: |
-        # Determine a semantic version from tags when available, otherwise fall back to a short sha
-        VERSION=$(git describe --tags --dirty --always || echo "0.0.0")
+        # If the current commit has an exact tag (preferred for releases) use it
+        # otherwise fall back to a semantic pre-release version so CI builds
+        # are discoverable (e.g. 0.0.0-alpha.<run-number>).
+        RAW_TAG=$(git describe --tags --exact-match 2>/dev/null || true)
+        if [ -n "$RAW_TAG" ]; then
+          # Strip a leading 'v' if present (v1.2.3 -> 1.2.3)
+          VERSION=${RAW_TAG#v}
+        else
+          # Try to derive a descriptive version from nearby tags/commit, but
+          # prefer a stable pre-release format when nothing looks like semver.
+          DESC=$(git describe --tags --dirty --always 2>/dev/null || true)
+          if printf '%s' "$DESC" | grep -Eq '^[v]?[0-9]+\.[0-9]+\.[0-9]'; then
+            VERSION=${DESC#v}
+          else
+            VERSION="0.0.0-alpha.${GITHUB_RUN_NUMBER}"
+          fi
+        fi
         echo "VERSION=$VERSION" >> $GITHUB_ENV
         echo "BUILD_NUMBER=${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
         echo "GIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
@@ -109,8 +130,8 @@ jobs:
           ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}
           ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-build${{ env.BUILD_NUMBER }}
           ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}
-          ghcr.io/${{ env.REPO_NAME }}:${{ env.BRANCH }}
-          ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.BRANCH }}
+          ghcr.io/${{ env.REPO_NAME }}:${{ env.SAFE_BRANCH }}
+          ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.SAFE_BRANCH }}
         cache-from: type=gha,scope=researcharr-build-cache
         cache-to: type=gha,mode=max,scope=researcharr-build-cache
         build-args: |
@@ -126,9 +147,9 @@ jobs:
         echo "Pushed image tags:"
         echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}"
         echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-build${{ env.BUILD_NUMBER }}"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.BRANCH }}"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.BRANCH }}"
+  echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}"
+  echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.SAFE_BRANCH }}"
+  echo "  - ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.SAFE_BRANCH }}"
     - name: Additional tags for main/development
       if: ${{ env.BRANCH == 'main' || env.BRANCH == 'development' }}
       run: |

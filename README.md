@@ -98,33 +98,18 @@ pip install -r requirements.txt
 
 ## Health & Metrics Endpoints (NEW)
 
-researcharr now provides built-in `/health` and `/metrics` endpoints for both the main app and the web UI. These endpoints are designed for Docker healthchecks, monitoring, and debugging.
+researcharr exposes a single set of `/health` and `/metrics` endpoints on port `2929` (the combined web UI + scheduler service). Use these endpoints for Docker healthchecks, monitoring, and basic debugging.
 
 - `/health`: Returns a JSON object indicating the health of the service (DB, config, background threads, and current time).
-- `/metrics`: Returns a JSON object with basic metrics such as total requests, errors, and (for the app) queue lengths.
+- `/metrics`: Returns a JSON object with basic metrics such as total requests, errors, and queue lengths.
 
 **Docker Compose Healthcheck Example:**
-
-For the main app (recommended):
 
 ```yaml
 services:
   researcharr:
     # ...other config...
-  command: python researcharr.py serve
-    healthcheck:
-  test: ["CMD", "curl", "-f", "http://localhost:2929/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-```
-
-For the web UI (optional):
-
-```yaml
-services:
-  webui:
-    # ...other config...
+    command: python researcharr.py serve
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:2929/health"]
       interval: 30s
@@ -349,9 +334,9 @@ docker run -d \
 **Note:** All configuration is handled in `/path/to/config/config.yml`. If this file is missing, it will be auto-created from `config.example.yml` at container startup. No environment variables or `.env` file are required.
 
 
-## Important Notes
+  ## Important Notes
 
-- Health and metrics endpoints are now available for both the app and web UI. Use them for Docker healthchecks, monitoring, and debugging.
+  - The service exposes `/health` and `/metrics` on port `2929`. Use them for Docker healthchecks, monitoring, and debugging.
 - Log level can be changed live from the web UI General Settings page.
 
 - The container and web UI will always stay up, even if no valid Radarr/Sonarr config is present. You can fix your configuration at any time using the web UI.

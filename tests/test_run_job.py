@@ -1,17 +1,20 @@
-import os
 import logging
+import os
 
 
 def _write_sleep_script(path, sleep_seconds=2):
     with open(path, "w") as f:
-        f.write("""
+        f.write(
+            """
 import time
 import sys
 print('start')
 sys.stdout.flush()
 time.sleep(%d)
 print('end')
-""" % sleep_seconds)
+"""
+            % sleep_seconds
+        )
     os.chmod(path, 0o755)
 
 

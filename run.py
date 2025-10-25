@@ -13,11 +13,18 @@ import os
 import subprocess
 import sys
 import threading
+from types import ModuleType
 
+# `resource` is a platform-specific stdlib module (POSIX). Annotate a
+# temporary name as optional before attempting the import so mypy knows
+# it may be None in non-POSIX environments.
+_resource: ModuleType | None = None
 try:
-    import resource
+    import resource as _resource  # type: ignore
 except Exception:
-    resource = None
+    _resource = None
+
+resource: ModuleType | None = _resource
 
 import yaml
 

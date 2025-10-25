@@ -14,6 +14,7 @@ import subprocess
 import sys
 import threading
 from types import ModuleType
+import yaml
 
 # `resource` is a platform-specific stdlib module (POSIX). Annotate a
 # temporary name as optional before attempting the import so mypy knows
@@ -25,8 +26,6 @@ except Exception:
     _resource = None
 
 resource: ModuleType | None = _resource
-
-import yaml
 
 
 def _load_scheduler_classes():
@@ -170,8 +169,9 @@ def run_job():
             timeout_arg = None
 
         try:
-            # Build kwargs only with keys supported/needed. Tests may monkeypatch
-            # the subprocess module with a simple object that doesn't accept
+            # Build kwargs only with keys supported/needed.
+            # Tests may monkeypatch the subprocess module with a simple
+            # object that doesn't accept
             # `timeout` or `preexec_fn`.
             run_kwargs = {"capture_output": True, "text": True}
             if timeout_arg is not None:

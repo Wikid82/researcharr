@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Plugins{% endblock %}
+{% block content %}
+<h1>Plugins</h1>
+{% if plugins %}
+  <ul>
+  {% for p in plugins %}
+    <li>
+      <h3>{{ p.name }}</h3>
+      {% if p.instances %}
+        <ul>
+        {% for i in p.instances %}
+          <li>
+            <strong>{{ i.get('name', 'instance') }}</strong> - enabled: {{ i.get('enabled', False) }}
+            <button class="plugin-validate" data-plugin="{{ p.name }}" data-idx="{{ loop.index0 }}">Validate</button>
+            <button class="plugin-sync" data-plugin="{{ p.name }}" data-idx="{{ loop.index0 }}">Sync</button>
+            <span class="plugin-result" id="result-{{ p.name }}-{{ loop.index0 }}"></span>
+          </li>
+        {% endfor %}
+        </ul>
+      {% else %}
+        <p><em>No configured instances</em></p>
+      {% endif %}
+    </li>
+  {% endfor %}
+  </ul>
+{% else %}
+  <p>No plugins discovered.</p>
+{% endif %}
+<script>
+document.addEventListener('click', function (e) {
+  if (e.target.matches('.plugin-validate') || e.target.matches('.plugin-sync')) {
+    const isValidate = e.target.matches('.plugin-validate')
+    const plugin = e.target.dataset.plugin
+    const idx = e.target.dataset.idx
+    const url = `/api/plugins/${plugin}/${isValidate ? 'validate' : 'sync'}/${idx}`
+    const targetSpan = document.getElementById(`result-${plugin}-${idx}`)
+    targetSpan.textContent = '...working...'
+    fetch(url, {method: 'POST', credentials: 'same-origin'})
+      .then(r => r.json())
+      .then(j => {
+        if (j.error) {
+          targetSpan.textContent = 'Error: ' + (j.msg || j.error)
+        } else {
+          targetSpan.textContent = JSON.stringify(j.result)
+        }
+      })
+      .catch(err => { targetSpan.textContent = 'Request failed' })
+  }
+})
+</script>
+{% endblock %}

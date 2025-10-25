@@ -1,0 +1,204 @@
+name: CI
+
+on:
+  push: {}
+  pull_request: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ 3.13 ]
+    steps:
+    - name: Cache pip
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install black isort flake8 mypy pytest pytest-cov
+    - name: Lint with flake8
+      run: |
+        flake8 . --count --show-source --statistics
+    - name: Check formatting with black
+      run: |
+        black --check .
+    - name: Check import order with isort
+      run: |
+        isort --check-only .
+    - name: Type check with mypy
+      run: |
+        mypy .
+    - name: Run tests with pytest
+      # Ensure we run pytest from the package directory so coverage files are generated where codecov expects
+      working-directory: .
+      run: |
+        # Run tests and produce an XML coverage report for Codecov
+        pytest tests/ \
+          --maxfail=3 --disable-warnings -v \
+          --cov=researcharr --cov-report=xml:coverage.xml
+    - name: Show coverage file
+      run: |
+        echo "Coverage report files (in repo root):" && ls -l coverage.xml || true
+        echo "Coverage report files (in researcharr/):" && ls -l researcharr/coverage.xml || true
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+      continue-on-error: true
+
+  docker:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver: docker-container
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Determine branch name
+      run: echo "BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+    - name: Set lowercase repository name
+      run: echo "REPO_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+    - name: Build and push Docker image (all branches)
+      run: echo "Preparing to build..."
+
+    - name: Set image metadata
+      run: |
+        # Determine a semantic version from tags when available, otherwise fall back to a short sha
+        VERSION=$(git describe --tags --dirty --always || echo "0.0.0")
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "BUILD_NUMBER=${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
+        echo "GIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
+        echo "BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
+
+    - name: Build and push Docker image (all branches)
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        platforms: linux/amd64,linux/arm64
+        tags: |
+          ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}
+          ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-build${{ env.BUILD_NUMBER }}
+          ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}
+          ghcr.io/${{ env.REPO_NAME }}:${{ env.BRANCH }}
+          ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.BRANCH }}
+        cache-from: type=gha,scope=researcharr-build-cache
+        cache-to: type=gha,mode=max,scope=researcharr-build-cache
+        build-args: |
+          BUILD_VERSION=${{ env.VERSION }}
+          BUILD_NUMBER=${{ env.BUILD_NUMBER }}
+          GIT_SHA=${{ env.GIT_SHA }}
+          BUILD_DATE=${{ env.BUILD_DATE }}
+          PYTHON_VERSION=3.13
+
+    - name: Show pushed image digest and tags
+      run: |
+        echo "Pushed image digest: ${{ steps.build.outputs.digest }}"
+        echo "Pushed image tags:"
+        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}"
+        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-build${{ env.BUILD_NUMBER }}"
+        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}"
+        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.BRANCH }}"
+        echo "  - ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.BRANCH }}"
+    - name: Additional tags for main/development
+      if: ${{ env.BRANCH == 'main' || env.BRANCH == 'development' }}
+      run: |
+        REPO=ghcr.io/${{ env.REPO_NAME }}
+        BRANCH=${{ env.BRANCH }}
+        if [ "$BRANCH" = "main" ]; then
+          # Ensure the image exists locally (pull from registry if necessary), then tag and push latest
+          docker pull $REPO:main || true
+          docker tag $REPO:main $REPO:latest
+          docker push $REPO:latest
+        fi
+        if [ "$BRANCH" = "development" ]; then
+          # Ensure the image exists locally (pull from registry if necessary) then push the development tag
+          docker pull $REPO:development || true
+          docker push $REPO:development
+        fi
+
+  docs-linkcheck:
+    # Run for pull requests, and for pushes to main/development (so docs previews and main site are checked)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')) }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Detect docs changes
+      id: docs_changed
+      run: |
+        set -euo pipefail
+        echo "Event: $GITHUB_EVENT_NAME"
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          BASE=${{ github.event.pull_request.base.ref }}
+          echo "Comparing against base branch: $BASE"
+          git fetch origin "$BASE"
+          DIFF=$(git diff --name-only origin/$BASE...HEAD || true)
+        else
+          # For push events compare the previous commit (github.event.before) to HEAD
+          BEFORE=${{ github.event.before }}
+          echo "Comparing commits: $BEFORE..HEAD"
+          DIFF=$(git diff --name-only $BEFORE...HEAD || true)
+        fi
+        CHANGED=$(echo "$DIFF" | grep -E '^docs/' || true)
+        if [ -z "$CHANGED" ]; then
+          echo "docs_changed=false" >> $GITHUB_OUTPUT
+          echo "No docs changes detected, skipping linkcheck."
+        else
+          echo "docs_changed=true" >> $GITHUB_OUTPUT
+          echo "Docs changed:\n$CHANGED"
+        fi
+    - name: Setup Ruby (for html-proofer)
+      if: steps.docs_changed.outputs.docs_changed == 'true'
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.2'
+    - name: Install html-proofer
+      if: steps.docs_changed.outputs.docs_changed == 'true'
+      run: |
+        gem install html-proofer
+    - name: Build site (no-op for raw markdown)
+      if: steps.docs_changed.outputs.docs_changed == 'true'
+      run: |
+        mkdir -p site
+        cp -a docs/. site/
+    - name: Run html-proofer link check
+      if: steps.docs_changed.outputs.docs_changed == 'true'
+      run: |
+        # html-proofer uses OptionParser booleans; passing --check-external-hash=false
+        # is treated as an argument to the flag and causes an error. Use the
+        # explicit no-flag or omit the flag entirely to disable the check.
+        #
+        # Use --no-check-external-hash to explicitly disable the check (preferred),
+        # and keep --allow-hash-href as before.
+        htmlproofer site --no-check-external-hash --allow-hash-href

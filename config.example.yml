@@ -5,8 +5,9 @@ researcharr:
   pgid: 1000 # Set to your host group ID
   # See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for a list of valid timezones
   timezone: "America/New_York"
-  # Cron schedule for how often to run the script.
-  # See https://crontab.guru/ for help generating a schedule.
+  # Scheduler expression (cron-like) that controls how often the in-process
+  # APScheduler job will run the background processing.
+  # See https://crontab.guru/ for help generating a cron expression.
   cron_schedule: "0 * * * *"
 
 # Radarr instances (up to 5 supported)

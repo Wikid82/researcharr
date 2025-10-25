@@ -87,17 +87,48 @@ jobs:
     - name: Set lowercase repository name
       run: echo "REPO_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
     - name: Build and push Docker image (all branches)
+      run: echo "Preparing to build..."
+
+    - name: Set image metadata
+      run: |
+        # Determine a semantic version from tags when available, otherwise fall back to a short sha
+        VERSION=$(git describe --tags --dirty --always || echo "0.0.0")
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "BUILD_NUMBER=${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
+        echo "GIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
+        echo "BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
+
+    - name: Build and push Docker image (all branches)
+      id: build
       uses: docker/build-push-action@v5
       with:
         context: .
         push: true
+        platforms: linux/amd64,linux/arm64
         tags: |
+          ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}
+          ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-build${{ env.BUILD_NUMBER }}
+          ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}
           ghcr.io/${{ env.REPO_NAME }}:${{ env.BRANCH }}
           ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.BRANCH }}
         cache-from: type=gha,scope=researcharr-build-cache
         cache-to: type=gha,mode=max,scope=researcharr-build-cache
         build-args: |
+          BUILD_VERSION=${{ env.VERSION }}
+          BUILD_NUMBER=${{ env.BUILD_NUMBER }}
+          GIT_SHA=${{ env.GIT_SHA }}
+          BUILD_DATE=${{ env.BUILD_DATE }}
           PYTHON_VERSION=3.13
+
+    - name: Show pushed image digest and tags
+      run: |
+        echo "Pushed image digest: ${{ steps.build.outputs.digest }}"
+        echo "Pushed image tags:"
+        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}"
+        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-build${{ env.BUILD_NUMBER }}"
+        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}"
+        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.BRANCH }}"
+        echo "  - ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.BRANCH }}"
     - name: Additional tags for main/development
       if: ${{ env.BRANCH == 'main' || env.BRANCH == 'development' }}
       run: |

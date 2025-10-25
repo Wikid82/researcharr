@@ -8,7 +8,7 @@ requests>=2.32.4
 urllib3>=2.5.0
 werkzeug
 flask
-pyyaml
+pyyaml==6.0.3
 
 black
 isort

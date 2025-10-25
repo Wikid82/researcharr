@@ -195,4 +195,10 @@ jobs:
     - name: Run html-proofer link check
       if: steps.docs_changed.outputs.docs_changed == 'true'
       run: |
-        htmlproofer site --check-external-hash=false --allow-hash-href
+        # html-proofer uses OptionParser booleans; passing --check-external-hash=false
+        # is treated as an argument to the flag and causes an error. Use the
+        # explicit no-flag or omit the flag entirely to disable the check.
+        #
+        # Use --no-check-external-hash to explicitly disable the check (preferred),
+        # and keep --allow-hash-href as before.
+        htmlproofer site --no-check-external-hash --allow-hash-href

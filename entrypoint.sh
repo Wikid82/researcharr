@@ -31,7 +31,11 @@ fi
 ## sensible defaults if the values are missing. We parse YAML with Python
 ## so we don't need to install an extra dependency (yq) in the image.
 if [ -f /config/config.yml ]; then
-  read -r PUID PGID TZ <<'PY'
+  # Run the small Python snippet and read its stdout into the three variables.
+  # Previously the Python source was fed directly into `read`, which caused
+  # shell variables like PUID to contain the literal Python code (e.g.
+  # "import yaml,sys") and made `chown` fail with an invalid user error.
+  read -r PUID PGID TZ < <(python3 - <<'PY'
 import yaml,sys
 try:
     cfg = yaml.safe_load(open('/config/config.yml')) or {}
@@ -42,6 +46,7 @@ print(rs.get('puid',''))
 print(rs.get('pgid',''))
 print(rs.get('timezone',''))
 PY
+)
   PUID=${PUID:-1000}
   PGID=${PGID:-1000}
 else

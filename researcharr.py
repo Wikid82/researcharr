@@ -1,9 +1,9 @@
 # ... code for researcharr.py ...
 # ... code for app.py ...
 
+import logging
 import os
 import sqlite3
-import logging
 
 # Allow test fixtures to monkeypatch top-level names before the module is
 # (re)loaded. If a name already exists in globals() (for example because a
@@ -40,6 +40,7 @@ def init_db(db_path=None):
 
 
 if "setup_logger" not in globals():
+
     def setup_logger(name: str, log_file: str, level: int | None = None):
         """Create and return a simple logger for the application.
 
@@ -123,6 +124,7 @@ def load_config(path="config.yml"):
 
 
 if "create_metrics_app" not in globals():
+
     def create_metrics_app():
         from flask import Flask, jsonify
 

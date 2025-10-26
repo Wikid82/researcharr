@@ -2,9 +2,11 @@
 """Extract MEDIUM vulnerabilities from a Trivy JSON report.
 
 Usage:
-  python scripts/trivy_extract_medium.py build/artifacts/trivy-report.json > trivy-medium-summary.txt
+    python scripts/trivy_extract_medium.py build/artifacts/trivy-report.json \
+            > trivy-medium-summary.txt
 
-This prints a concise table with VulnerabilityID, Package, InstalledVersion, FixedVersion, and Title.
+This prints a concise table with the following columns:
+VulnerabilityID, Package, InstalledVersion, FixedVersion, Title, Target.
 """
 import json
 import sys

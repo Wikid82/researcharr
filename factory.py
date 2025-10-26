@@ -164,16 +164,17 @@ def create_app():
                     try:
                         with open(cfg_file) as fh:
                             data = yaml.safe_load(fh) or []
-                            # Set into in-memory config_data so UI and APIs use it
+                            # Set in-memory config_data so UI and APIs use it
                             app.config_data[name] = data
                     except Exception:
                         app.logger.exception(
                             "Failed to load plugin config %s", cfg_file
                         )
         except Exception:
-            # best-effort; don't prevent startup if the config path is unwritable
+            # best-effort; don't prevent startup if config path is unwritable
             app.logger.debug(
-                "Could not ensure plugins config dir %s", plugins_config_dir
+                "Could not ensure plugins config dir %s",
+                plugins_config_dir,
             )
         # Example: if there are configured sonarr instances in config_data,
         # create plugin instances and register their blueprints.
@@ -525,7 +526,12 @@ def create_app():
     def api_plugin_instances(plugin_name: str):
         """Add/update/delete plugin instances via JSON POST.
 
-        Expected JSON shape: { action: 'add'|'update'|'delete', idx: int|null, instance: {...} }
+        Expected JSON shape:
+        {
+            "action": "add" | "update" | "delete",
+            "idx": int | None,
+            "instance": {...},
+        }
         """
         if not is_logged_in():
             return jsonify({"error": "unauthorized"}), 401

@@ -28,7 +28,14 @@ def _is_impl_module(mod: ModuleType) -> bool:
     be present. If the names are missing we treat the module as a shim and
     attempt file-based loading instead.
     """
-    return any(hasattr(mod, name) for name in ("init_db", "create_metrics_app", "check_radarr_connection"))
+    return any(
+        hasattr(mod, name)
+        for name in (
+            "init_db",
+            "create_metrics_app",
+            "check_radarr_connection",
+        )
+    )
 
 
 def _load_by_path(candidates: list[str]) -> Optional[ModuleType]:
@@ -37,7 +44,9 @@ def _load_by_path(candidates: list[str]) -> Optional[ModuleType]:
             continue
         if os.path.isfile(path):
             try:
-                spec = importlib.util.spec_from_file_location("researcharr.researcharr", path)
+                spec = importlib.util.spec_from_file_location(
+                    "researcharr.researcharr", path
+                )
                 if spec and spec.loader:
                     mod = importlib.util.module_from_spec(spec)
                     # Execute module in its own namespace

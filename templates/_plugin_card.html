@@ -5,7 +5,7 @@
       <div class="muted">{{ plugin.description }}</div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
-      <a href="{{ plugin.docs_url }}" class="btn ghost">Docs</a>
+      {% if plugin.docs_url %}<a href="{{ plugin.docs_url }}" class="btn ghost">Docs</a>{% endif %}
       {% if plugin.enabled %}
         <form method="post" action="/settings/plugins/{{ plugin.id }}/disable" style="display:inline">
           <button class="btn">Disable</button>
@@ -17,4 +17,21 @@
       {% endif %}
     </div>
   </div>
+  {% if plugin.instances %}
+    <div class="instance-list">
+      {% for i in plugin.instances %}
+        <div class="instance-row">
+          <div class="meta">
+            <strong>{{ i.get('name', 'instance') }}</strong>
+            <div class="muted">Status: {{ 'enabled' if i.get('enabled') else 'disabled' }} • Last sync: {{ i.get('last_sync') or 'never' }}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="btn plugin-validate" data-plugin="{{ plugin.name }}" data-idx="{{ loop.index0 }}">Validate</button>
+            <button class="btn plugin-sync" data-plugin="{{ plugin.name }}" data-idx="{{ loop.index0 }}">Sync</button>
+            <span class="plugin-result" id="result-{{ plugin.name }}-{{ loop.index0 }}"></span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
 </div>

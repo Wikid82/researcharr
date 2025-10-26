@@ -32,6 +32,13 @@ body{margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "
 .form-label{font-size:0.9rem;color:var(--muted)}
 .user-msg{margin-top:12px;color:#9ae6b4}
 .chip{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.04);color:var(--muted)}
+/* plugin card */
+.plugin-card{padding:12px;display:flex;flex-direction:column;gap:10px}
+.plugin-card .muted{color:var(--muted);font-size:0.9rem}
+.instance-list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.instance-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px;border-radius:6px;background:rgba(255,255,255,0.01)}
+.instance-row .meta{display:flex;flex-direction:column}
+.plugin-result{font-family:monospace;font-size:0.85rem;color:var(--muted);margin-left:8px}
 /* Responsive */
 @media (max-width:900px){
   .site-sidebar{transform:translateX(-100%);position:fixed;left:0;top:56px;transition:transform .18s ease}

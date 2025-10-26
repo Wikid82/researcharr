@@ -9,7 +9,7 @@ theme:
   name: readthedocs
 
 extra_css:
-  - assets/css/researcharr.css
+- assets/css/researcharr.css
 
 # Navigation (optional). MkDocs will auto-generate nav from docs/ if not provided.
 

@@ -76,6 +76,74 @@ Notes:
 - Images are only published after CI passes for push events (not for PRs from forks) to protect secrets and avoid accidental publishes.
 - Branch images are useful for QA/testing feature branches. Consider cleaning up unused images periodically.
 
+## Runtime image variants (production vs development)
+
+We now publish and maintain two first-class runtime variants to balance security and developer ergonomics:
+
+- **Distroless** (recommended for production): a minimal, glibc-compatible runtime image produced by a multi-stage build. It contains only the Python interpreter and your application files — small attack surface and better compatibility with many binary wheels.
+- **Alpine** (developer-friendly alternative): a lightweight musl-based image useful for debugging and contributor workflows. Some wheels may require extra build deps on Alpine.
+
+Tags published (examples):
+
+- `ghcr.io/wikid82/researcharr:<version>-distroless` and `ghcr.io/wikid82/researcharr:distroless`
+- `ghcr.io/wikid82/researcharr:<version>-alpine` and `ghcr.io/wikid82/researcharr:alpine`
+
+Default policy
+
+We validate both variants in CI. Once the distroless variant passes CI validation and scheduled scans for a couple of releases it will become the recommended default for production deployments.
+
+Which to run locally (quick guide)
+
+- Production / operator (recommended): use the `distroless` image and mount a persistent `/config` directory on the host (example below).
+- Development / debugging: use the `alpine` image or build the `builder` stage from `Dockerfile.distroless` to get a shell and dev tools.
+
+Examples
+
+1) Run the recommended production image (distroless):
+
+```bash
+mkdir -p /path/to/config /path/to/logs
+docker run -d \
+  --name researcharr \
+  -v /path/to/config:/config \
+  -v /path/to/logs:/logs \
+  -p 2929:2929 \
+  --restart unless-stopped \
+  ghcr.io/wikid82/researcharr:distroless
+```
+
+2) Developer quick-run (alpine, with interactive shell):
+
+```bash
+# Mount your source tree and use the alpine image's shell for iterative dev
+docker run --rm -it \
+  -v "$(pwd)":/app -w /app \
+  -v /path/to/config:/config \
+  -p 2929:2929 \
+  local/researcharr:alpine /bin/bash
+# inside the container you can run tests, linters and the app directly:
+python -m pip install -r requirements.txt
+python -m pytest tests/
+python -u /app/run.py
+```
+
+3) Builder-stage testing (matches CI environment):
+
+```bash
+# Build the builder image (installs build deps + packages)
+docker build --target builder -f Dockerfile.distroless -t local/researcharr:builder .
+
+# Run tests in the builder image (no need to install dev tools locally)
+docker run --rm --entrypoint "" -v "$(pwd)":/src -w /src local/researcharr:builder \
+  sh -lc "python -m pip install --upgrade pip && pip install mypy pytest && mypy . && pytest tests/"
+```
+
+Development config vs user config
+
+- **User / operator config:** mount a persistent host directory at `/config` and let the container populate `config.yml` from `config.example.yml` on first-run. This is the simplest and safest setup for operators.
+- **Development config:** when contributing, mount your repo into the container and use the `builder` or `alpine` images. Use your host editor to change files and run the in-container test commands. Avoid using the distroless runtime for active development because it lacks a shell and dev tooling.
+
+
 
 ## Requirements
 

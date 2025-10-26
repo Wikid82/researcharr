@@ -47,6 +47,29 @@ jobs:
         name: trivy-report-alpine
         path: build/artifacts/trivy-report-alpine.json
 
+    - name: Prepare minimal config for smoke-test
+      run: |
+        mkdir -p build/smoke-config
+        cp config.example.yml build/smoke-config/config.yml || true
+
+    - name: Run Alpine smoke-test (health endpoint)
+      run: |
+        set -euo pipefail
+        docker run --rm -d --name smoke_test_instance -v "${{ github.workspace }}/build/smoke-config":/config -e CONFIG_PATH=/config/config.yml -p 2929:2929 local/researcharr:alpine || true
+        for i in $(seq 1 30); do
+          if curl -sS -f http://127.0.0.1:2929/health >/dev/null 2>&1; then
+            echo "smoke-test: health ok"
+            break
+          fi
+          sleep 1
+        done
+        if ! curl -sS -f http://127.0.0.1:2929/health >/dev/null 2>&1; then
+          docker logs smoke_test_instance || true
+          docker stop smoke_test_instance || true
+          exit 1
+        fi
+        docker stop smoke_test_instance || true
+
     - name: Compute VERSION
       id: version
       run: |
@@ -64,13 +87,16 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Publish Alpine image to GHCR (main/development/tags only)
+    - name: Tag and push alpine image to GHCR (main/development/tags only)
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/')
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: Dockerfile.alpine
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository }}:${{ env.VERSION }}-alpine
-          ghcr.io/${{ github.repository }}:alpine
+      run: |
+        docker tag local/researcharr:alpine ghcr.io/${{ github.repository }}:${{ env.VERSION }}-alpine
+        docker tag local/researcharr:alpine ghcr.io/${{ github.repository }}:alpine
+        docker push ghcr.io/${{ github.repository }}:${{ env.VERSION }}-alpine
+        docker push ghcr.io/${{ github.repository }}:alpine
+
+    - name: Publish dev tag (development branch only)
+      if: github.ref == 'refs/heads/development'
+      run: |
+        docker tag local/researcharr:alpine ghcr.io/${{ github.repository }}:dev-${{ github.run_id }}
+        docker push ghcr.io/${{ github.repository }}:dev-${{ github.run_id }}

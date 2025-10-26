@@ -28,6 +28,10 @@ docker-compose up -d --build
 
 2. The web UI is available on port `2929` by default.
 
+Runtime variants
+
+The project publishes two runtime variants: `distroless` (recommended for production, minimal runtime) and `alpine` (developer-friendly). For production runs use the `distroless` image and mount a persistent `/config` directory. For development, use `alpine` or the `builder` stage so you have a shell and dev tooling available.
+
 - Security and initial credentials
 
 - On first startup, if `config/webui_user.yml` does not exist, the web UI will create one and set the default username to `researcharr` and generate a secure random password. The plaintext password is logged once to the application logs to allow initial login; the password hash is stored in `config/webui_user.yml`.

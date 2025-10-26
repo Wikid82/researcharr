@@ -106,5 +106,29 @@ Operational guidance
 - `RUN_JOB_CONCURRENCY=1` is the safest default for single-instance
   deployments. Increase only if you explicitly want concurrent runs.
 
+Image variants
+
+The project publishes multiple runtime variants; choose the one that best fits your deployment:
+
+- `:distroless` — Recommended for production: minimal runtime, glibc compatibility, small attack surface. Built via `Dockerfile.distroless` (multi-stage).
+- `:alpine` — Useful for development and quick debugging; may require additional build deps for some wheels.
+
+Production deploy example (distroless):
+
+```bash
+docker run -d \
+  --name researcharr \
+  -v /path/to/config:/config \
+  -p 2929:2929 \
+  --restart unless-stopped \
+  ghcr.io/wikid82/researcharr:distroless
+```
+
+Developer example (build/test in builder stage):
+
+```bash
+docker build --target builder -f Dockerfile.distroless -t local/researcharr:builder .
+docker run --rm -v "$(pwd)":/src -w /src local/researcharr:builder sh -c "pip install -r requirements.txt && pytest"
+```
 See `docs/Environment-Variables.md` for the full list of environment
 variables and their defaults.

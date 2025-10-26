@@ -1,5 +1,17 @@
 # Changelog
 
+## 2025-10-25
+
+### Packaging & CI
+
+- Added a `Dockerfile.distroless` multi-stage build that produces a minimal distroless runtime image. The final image copies runtime packages from the builder stage into `/install` and sets `PYTHONPATH` so the distroless Python interpreter can import dependencies.
+- Added `.github/workflows/distroless-ci.yml` to validate the distroless build in CI: it builds the builder stage, runs mypy + pytest inside that builder, builds the final distroless image, runs Trivy, uploads the JSON artifact, and publishes the distroless image on successful trusted refs.
+- Continued support for `Dockerfile.alpine` and the `alpine-ci` workflow for developer-friendly and alternate-variant validation.
+
+### Notes
+
+- We recommend adopting the distroless image for production after CI validation; the repo now publishes both `-distroless` and `-alpine` variants and validates both in CI.
+
 ## 2025-10-23
 
 ### Major Features Added

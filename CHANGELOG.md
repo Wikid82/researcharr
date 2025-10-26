@@ -12,6 +12,19 @@
 
 - We recommend adopting the distroless image for production after CI validation; the repo now publishes both `-distroless` and `-alpine` variants and validates both in CI.
 
+## 2025-10-26
+
+### Developer / CI
+
+- Enforced the developer pipeline (isort + black → flake8 → mypy → pytest + coverage) in CI and locally. Project `.flake8` now excludes virtualenv directories and enforces E501 so line-length violations are surfaced and fixed.
+- Hardened the compatibility import shim used by the `researcharr` package so the real implementation module is deterministically loaded and registered in `sys.modules`. This fixes intermittent test failures caused by import/monkeypatch ordering.
+- Updated docs/README guidance with recommended debug image tags: `local/researcharr:builder` (CI-like builder), `local/researcharr:alpine` (interactive debugging), and `ghcr.io/wikid82/researcharr:distroless` (production).
+
+### Notes for contributors
+
+- If you run the developer pipeline locally, use the project's `.venv` and install the dev tools there (mypy, pytest-cov, etc.) to avoid system package manager restrictions.
+- If you'd like me to push the verified changes to `development` and watch CI, I can do that next — confirm and I'll push and monitor the workflows.
+
 ## 2025-10-23
 
 ### Major Features Added

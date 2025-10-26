@@ -22,6 +22,18 @@ The `load_config()` function now accepts an optional `path` argument, allowing t
 - Enable/disable and validate up to 5 Radarr & 5 Sonarr instances
 - All endpoints and UI behaviors are covered by automated tests
 
+## Developer Note: Linting, typing, and import-shim hardening
+
+We recently enforced the repository linting and typing pipeline locally and in CI: formatters (isort + black), flake8 (E501 now enforced), mypy, and pytest with coverage. During that work we hardened the compatibility import shim used to expose the top-level module as a package so tests and monkeypatching are deterministic across import orders. This resolved an intermittent AttributeError seen in the test suite.
+
+Recommended debug image tags for reproducing CI or running interactively:
+
+- `local/researcharr:builder` — builds a developer image (matches CI builder stage) and is the recommended tag for reproducing CI validation (mypy + pytest).
+- `local/researcharr:alpine` — fast interactive debugging; useful for iterative development.
+- `ghcr.io/wikid82/researcharr:distroless` — production runtime (distroless) image.
+
+If you'd like, I can push the verified changes to the `development` branch and monitor CI runs (alpine & distroless workflows) and add a short changelog note — confirm and I'll proceed.
+
 ## Project Structure
 
 ```

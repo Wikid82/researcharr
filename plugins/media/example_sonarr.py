@@ -4,14 +4,14 @@ from flask import Blueprint, jsonify
 
 from researcharr.plugins.base import BasePlugin
 
-PLUGIN_NAME = "nzbget"
+PLUGIN_NAME = "sonarr"
 
 
 class Plugin(BasePlugin):
     name = PLUGIN_NAME
-    category = "clients"
-    description = "Example NZBGet plugin (download client)"
-    docs_url = "https://nzbget.net/"
+    category = "media"
+    description = "Example Sonarr plugin (test harness)"
+    docs_url = "https://sonarr.video/"
 
     def validate(self) -> Dict[str, Any]:
         url = self.config.get("url")
@@ -21,16 +21,16 @@ class Plugin(BasePlugin):
         return {"success": True}
 
     def sync(self) -> Dict[str, Any]:
-        return {"success": True, "details": "nzbget sync (noop)"}
+        return {"success": True, "details": "sonarr sync (noop)"}
 
     def health(self) -> Dict[str, Any]:
         return {"status": "ok", "name": self.config.get("name")}
 
     def blueprint(self):
-        bp = Blueprint("nzbget_plugin", __name__, url_prefix="/plugin/nzbget")
+        bp = Blueprint("sonarr_plugin", __name__, url_prefix="/plugin/sonarr")
 
         @bp.route("/info")
         def info():
-            return jsonify({"plugin": "nzbget", "config": self.config})
+            return jsonify({"plugin": "sonarr", "config": self.config})
 
         return bp

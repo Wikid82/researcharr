@@ -430,12 +430,43 @@ def create_app():
         if not is_logged_in():
             return redirect(url_for("login"))
         registry = getattr(app, "plugin_registry", None)
-        plugins = []
+        # Build a mapping category -> list[plugin_entry]
+        plugins_by_category = {}
         if registry is not None:
             for name in registry.list_plugins():
                 instances = app.config_data.get(name, [])
-                plugins.append({"name": name, "instances": instances})
-        return render_template("settings_plugins.html", plugins=plugins)
+                cls = registry.get(name)
+                # Prefer a class-level category attribute, default to 'plugins'
+                category = getattr(cls, "category", "plugins") if cls is not None else "plugins"
+                description = getattr(cls, "description", "") if cls is not None else ""
+                docs_url = getattr(cls, "docs_url", None) if cls is not None else None
+                plugins_by_category.setdefault(category, []).append(
+                    {
+                        "name": name,
+                        "instances": instances,
+                        "description": description,
+                        "docs_url": docs_url,
+                    }
+                )
+
+        # Allow filtering by category via ?category=media
+        selected_category = request.args.get("category")
+
+        # Human-friendly titles for known categories
+        category_titles = {
+            "media": "Media",
+            "scrapers": "Scrapers",
+            "clients": "Clients",
+            "notifications": "Notifications",
+            "plugins": "Plugins",
+        }
+
+        return render_template(
+            "settings_plugins.html",
+            plugins=plugins_by_category,
+            selected_category=selected_category,
+            category_titles=category_titles,
+        )
 
     @app.route("/api/plugins", methods=["GET"])
     def api_plugins():

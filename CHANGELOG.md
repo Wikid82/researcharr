@@ -20,6 +20,16 @@
 - Hardened the compatibility import shim used by the `researcharr` package so the real implementation module is deterministically loaded and registered in `sys.modules`. This fixes intermittent test failures caused by import/monkeypatch ordering.
 - Updated docs/README guidance with recommended debug image tags: `local/researcharr:builder` (CI-like builder), `local/researcharr:alpine` (interactive debugging), and `ghcr.io/wikid82/researcharr:distroless` (production).
 
+### Plugins (alpha)
+
+- Added a large set of example integrations (alpha/test harnesses) under `plugins/` grouped by category:
+  - `media/`: Radarr, Sonarr, Lidarr, Readarr, Whisparr, Headphones, Sick Beard, SickRage, Mylar3, Bobarr — read & safe-search examples.
+  - `clients/`: NZBGet, SABnzbd, qBittorrent, uTorrent, Deluge, Transmission, BitTorrent — read-only queue examples.
+  - `scrapers/`: Prowlarr, Jackett — read-only indexer/status examples.
+  - `notifications/`: Apprise — notifications integration (requires `apprise==1.9.4`).
+
+Notes: These plugins are experimental and intended for development and UI testing. Remote actions that can modify upstream databases are disabled by default and gated behind the `allow_remote_actions` config flag. Back up upstream service databases before enabling remote actions.
+
 ### Notes for contributors
 
 - If you run the developer pipeline locally, use the project's `.venv` and install the dev tools there (mypy, pytest-cov, etc.) to avoid system package manager restrictions.

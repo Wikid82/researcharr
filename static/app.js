@@ -153,9 +153,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
       const next = h.nextElementSibling
       if (next) {
         next.classList.add('collapsible-content')
-        // Start expanded by default; tests expect visible content. If
-        // you'd prefer collapsed default, remove the following line.
-        // next.classList.remove('collapsed')
+        // Start collapsed by default. This is the requested behavior
+        // so the UI shows headers in a compact form on first render.
+        next.classList.add('collapsed')
+        // Ensure header arrow state reflects collapsed state (no 'open')
+        h.classList.remove('open')
       }
       h.addEventListener('click', () => {
         if (next) next.classList.toggle('collapsed')

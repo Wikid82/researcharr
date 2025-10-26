@@ -1,0 +1,31 @@
+name: Dockerfile lint (hadolint)
+
+on:
+  push:
+    branches: [ main, development ]
+    tags: [ 'v*', '*' ]
+  pull_request:
+    branches: [ main, development ]
+
+jobs:
+  hadolint:
+    name: Lint Dockerfiles with hadolint
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Lint root Dockerfile
+      uses: hadolint/hadolint-action@v2
+      with:
+        dockerfile: Dockerfile
+
+    - name: Lint Alpine Dockerfile
+      uses: hadolint/hadolint-action@v2
+      with:
+        dockerfile: Dockerfile.alpine
+
+    - name: Lint Distroless Dockerfile
+      uses: hadolint/hadolint-action@v2
+      with:
+        dockerfile: Dockerfile.distroless

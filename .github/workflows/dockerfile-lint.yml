@@ -12,15 +12,15 @@ jobs:
     name: Lint Dockerfiles with hadolint
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Lint root Dockerfile (hadolint image)
-        run: |
-          docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace hadolint/hadolint:latest hadolint Dockerfile || true
-      - name: Lint Alpine Dockerfile (hadolint image)
-        run: |
-          docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace hadolint/hadolint:latest hadolint Dockerfile.alpine || true
-      - name: Lint Distroless Dockerfile (hadolint image)
-        run: |
-          docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace hadolint/hadolint:latest hadolint Dockerfile.distroless || true
+    - name: Lint root Dockerfile (hadolint image)
+      run: |
+        docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace hadolint/hadolint:latest hadolint Dockerfile || true
+    - name: Lint Alpine Dockerfile (hadolint image)
+      run: |
+        docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace hadolint/hadolint:latest hadolint Dockerfile.alpine || true
+    - name: Lint Distroless Dockerfile (hadolint image)
+      run: |
+        docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace hadolint/hadolint:latest hadolint Dockerfile.distroless || true

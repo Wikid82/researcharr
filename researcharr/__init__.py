@@ -94,7 +94,10 @@ if TOP_LEVEL:
 			# Fallback: locate the implementation file by scanning plausible
 			# locations (cwd, package-relative, and some ancestors). This keeps the
 			# compatibility behaviour for older test/CI layouts.
-			TOP_LEVEL: Optional[str] = None
+			# Avoid re-declaring the type-annotated name (mypy flags a
+			# redefinition). Use a simple assignment here instead so the
+			# variable can be set at runtime without redefining the name.
+			TOP_LEVEL = None
 			candidates = [
 				os.path.join(os.getcwd(), "researcharr.py"),
 				os.path.abspath(os.path.join(os.path.dirname(__file__), "researcharr.py")),

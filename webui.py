@@ -24,9 +24,13 @@ def load_user_config():
         alphabet = string.ascii_letters + string.digits
         generated = "".join(secrets.choice(alphabet) for _ in range(16))
         password_hash = generate_password_hash(generated)
+        # Also generate an API key for first-run so operators can use the
+        # API immediately. The key is stored alongside the user config.
+        api_key = secrets.token_urlsafe(32)
         data = {
             "username": "researcharr",
             "password_hash": password_hash,
+            "api_key": api_key,
         }
         with open(USER_CONFIG_PATH, "w") as f:
             yaml.safe_dump(data, f)
@@ -44,13 +48,15 @@ def load_user_config():
         return yaml.safe_load(f)
 
 
-def save_user_config(username, password_hash):
+def save_user_config(username, password_hash, api_key=None):
 
     user_dir = os.path.dirname(USER_CONFIG_PATH)
     if not os.path.exists(user_dir):
         os.makedirs(user_dir, exist_ok=True)
+    data = {"username": username, "password_hash": password_hash}
+    # Persist the API key if provided (keep existing behaviour when not
+    # supplied for backwards compatibility with older callers/tests).
+    if api_key is not None:
+        data["api_key"] = api_key
     with open(USER_CONFIG_PATH, "w") as f:
-        yaml.safe_dump(
-            {"username": username, "password_hash": password_hash},
-            f,
-        )
+        yaml.safe_dump(data, f)

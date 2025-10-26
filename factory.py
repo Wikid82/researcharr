@@ -134,6 +134,12 @@ def create_app():
                     )
                 except Exception:
                     pass
+            # If an API key was persisted in the user config, expose it to the
+            # application so API endpoints can validate requests.
+            if "api_key" in ucfg:
+                app.config_data.setdefault("general", {})["api_key"] = ucfg.get(
+                    "api_key"
+                )
     except Exception:
         # best-effort; if loading the user config fails we continue with the
         # default in-memory credentials to avoid preventing the UI from
@@ -334,19 +340,36 @@ def create_app():
         if not is_logged_in():
             return redirect(url_for("login"))
         if request.method == "POST":
-            # Only allow editing of non-runtime values via the UI. Do not
-            # accept PUID/PGID/Timezone from the form — they are set via
-            # environment variables. Accept only LogLevel here.
-            loglevel = request.form.get("LogLevel")
-            if loglevel:
-                app.config_data["general"]["LogLevel"] = loglevel
-            flash("General settings saved")
+            # Regenerate API key when requested via the UI
+            if request.form.get("regen_api"):
+                import secrets
+
+                new_key = secrets.token_urlsafe(32)
+                app.config_data.setdefault("general", {})["api_key"] = new_key
+                # Persist to the user config so the key survives restarts
+                try:
+                    ucfg = webui.load_user_config() or {}
+                    username = ucfg.get("username", app.config_data["user"]["username"])
+                    pwd_hash = ucfg.get("password_hash")
+                    webui.save_user_config(username, pwd_hash, api_key=new_key)
+                except Exception:
+                    app.logger.exception("Failed to persist regenerated API key")
+                flash("API key regenerated")
+            else:
+                # Only allow editing of non-runtime values via the UI. Do not
+                # accept PUID/PGID/Timezone from the form — they are set via
+                # environment variables. Accept only LogLevel here.
+                loglevel = request.form.get("LogLevel")
+                if loglevel:
+                    app.config_data["general"]["LogLevel"] = loglevel
+                flash("General settings saved")
         return render_template(
             "settings_general.html",
             puid=app.config_data["general"].get("PUID"),
             pgid=app.config_data["general"].get("PGID"),
             timezone=app.config_data["general"].get("Timezone"),
             loglevel=app.config_data["general"].get("LogLevel"),
+            api_key=app.config_data.get("general", {}).get("api_key"),
             msg=None,
         )
 
@@ -716,6 +739,16 @@ def create_app():
         if getattr(error, "code", None) == 404:
             return ("Not found", 404)
         return ("Server error", 500)
+
+    # Register a small API blueprint (under /api/v1) if available. This
+    # exposes programmatic access to plugins, metrics and health checks.
+    try:
+        from researcharr import api as _api
+
+        app.register_blueprint(_api.bp, url_prefix="/api/v1")
+    except Exception:
+        # Non-fatal if API blueprint cannot be loaded (tests may not need it)
+        pass
 
     @app.route("/validate_sonarr/<int:idx>", methods=["POST"])
     def validate_sonarr(idx):

@@ -32,4 +32,16 @@
     {% if msg %}<div class="user-msg">{{ msg }}</div>{% endif %}
   </div>
 </form>
+<form method="post" action="/settings/general" class="card">
+  <h3>API Access</h3>
+  <div class="form-row">
+    <label class="form-label">API Key</label>
+    <div class="chip" id="api_key">{{ api_key or 'Not configured' }}</div>
+    <small>Use the header <code>X-API-Key</code> to authenticate API requests.</small>
+  </div>
+  <div class="form-row">
+    <input type="hidden" name="regen_api" value="1" />
+    <input type="submit" class="btn warn" value="Regenerate API Key">
+  </div>
+</form>
 {% endblock %}

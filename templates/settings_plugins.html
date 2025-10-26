@@ -2,12 +2,23 @@
 {% block title %}Plugins{% endblock %}
 {% block content %}
 <h1>Plugins</h1>
+{% if selected_category %}
+  <h3>Category: {{ category_titles.get(selected_category, selected_category) }}</h3>
+{% endif %}
+
 {% if plugins %}
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">
-  {% for p in plugins %}
-    {% include '_plugin_card.html' with plugin=p %}
+  {% for category, plist in plugins.items() %}
+    {% if not selected_category or selected_category == category %}
+      <section style="margin-bottom:18px">
+        <h2>{{ category_titles.get(category, category|capitalize) }}</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">
+          {% for p in plist %}
+            {% include '_plugin_card.html' with plugin=p %}
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
   {% endfor %}
-  </div>
 {% else %}
   <p>No plugins discovered.</p>
 {% endif %}

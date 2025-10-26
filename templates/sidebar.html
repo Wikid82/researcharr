@@ -1,11 +1,33 @@
 
 <aside class="site-sidebar" role="navigation" aria-label="Main navigation">
   <ul class="sidebar-nav">
-    <li><a href="/settings/general" class="{% if request.path.startswith('/settings/general') %}active{% endif %}">General</a></li>
-    <li><a href="/settings/radarr" class="{% if request.path.startswith('/settings/radarr') %}active{% endif %}">Radarr</a></li>
-    <li><a href="/settings/sonarr" class="{% if request.path.startswith('/settings/sonarr') %}active{% endif %}">Sonarr</a></li>
-    <li><a href="/scheduling" class="{% if request.path.startswith('/scheduling') %}active{% endif %}">Scheduling</a></li>
-    <li><a href="/user" class="{% if request.path.startswith('/user') %}active{% endif %}">User Settings</a></li>
-    <li><a href="/settings/plugins" class="{% if request.path.startswith('/settings/plugins') %}active{% endif %}">Plugins</a></li>
+    <li><h1><a href="/settings/connections" class="{% if request.path.startswith('/settings/connections') %}active{% endif %}">Connections</a></h1></li>
+        <li>
+          <h2><a href="/settings/media" class="{% if request.path.startswith('/settings/media') %}active{% endif %}">Media</a></h2>
+          <ul class="submenu">
+            <li><a href="/settings/plugins?category=media">Plugins</a></li>
+          </ul>
+        </li>
+        <li>
+          <h2><a href="/settings/scrapers" class="{% if request.path.startswith('/settings/scrapers') %}active{% endif %}">Scrapers</a></h2>
+          <ul class="submenu">
+            <li><a href="/settings/plugins?category=scrapers">Plugins</a></li>
+          </ul>
+        </li>
+        <li>
+          <h2><a href="/settings/clients" class="{% if request.path.startswith('/settings/clients') %}active{% endif %}">Clients</a></h2>
+          <ul class="submenu">
+            <li><a href="/settings/plugins?category=clients">Plugins</a></li>
+          </ul>
+        </li>
+        <li>
+          <h2><a href="/settings/notifications" class="{% if request.path.startswith('/settings/notifications') %}active{% endif %}">Notifications</a></h2>
+          <ul class="submenu">
+            <li><a href="/settings/plugins?category=notifications">Plugins</a></li>
+          </ul>
+        </li>
+    <li><h1><a href="/settings/general" class="{% if request.path.startswith('/settings/general') %}active{% endif %}">General</a></h1></li>
+        <li><h2><a href="/scheduling" class="{% if request.path.startswith('/scheduling') %}active{% endif %}">Scheduling</a></h2></li>
+        <li><h2><a href="/user" class="{% if request.path.startswith('/user') %}active{% endif %}">User Settings</a></h2></li>
   </ul>
 </aside>

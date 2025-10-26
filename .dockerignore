@@ -34,6 +34,10 @@ docs/
 config/
 logs/
 researcharr.db
+build/
+build/artifacts/
+build/smoke-logs*
+*.tar.gz
 
 # OS
 .DS_Store

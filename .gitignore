@@ -15,5 +15,10 @@ researcharr/__pycache__/
 htmlcov/
 dist/
 build/
+# CI and local build artifacts
+build/
+build/artifacts/
+build/smoke-logs*
+*.tar.gz
 *.sqlite3
 keeping

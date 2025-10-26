@@ -53,3 +53,27 @@ a:hover {
   color: var(--color-accent);
   margin-top: 12px;
 }
+
+/* Collapsible H1 headers: visually indicate and hide/show the following
+   content block when the header is clicked. We keep the DOM unchanged
+   so server-side tests that inspect HTML text continue to work. */
+.collapsible-header {
+  cursor: pointer;
+  position: relative;
+  padding-right: 24px; /* space for the disclosure arrow */
+}
+.collapsible-header::after {
+  content: '▸';
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.9em;
+  color: var(--color-muted, #888);
+}
+.collapsible-header.open::after {
+  content: '▾';
+}
+.collapsible-content.collapsed {
+  display: none;
+}

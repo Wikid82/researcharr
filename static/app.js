@@ -141,4 +141,28 @@ document.addEventListener('DOMContentLoaded', ()=>{
       else location.reload()
     }).catch(()=>{alert('Request failed')})
   })
+
+  // Make all H1 headers collapsible: add a class and toggle the next
+  // element's visibility on click. We intentionally do not alter server-
+  // side templates; this is a progressive enhancement applied on the
+  // client so tests that inspect HTML still see the same content.
+  try {
+    document.querySelectorAll('h1').forEach(h => {
+      h.classList.add('collapsible-header')
+      // Toggle the immediately following element (if any)
+      const next = h.nextElementSibling
+      if (next) {
+        next.classList.add('collapsible-content')
+        // Start expanded by default; tests expect visible content. If
+        // you'd prefer collapsed default, remove the following line.
+        // next.classList.remove('collapsed')
+      }
+      h.addEventListener('click', () => {
+        if (next) next.classList.toggle('collapsed')
+        h.classList.toggle('open')
+      })
+    })
+  } catch (err) {
+    // Fail silently; progressive enhancement only.
+  }
 });

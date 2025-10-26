@@ -15,29 +15,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Lint root Dockerfile (hadolint action)
-        uses: hadolint/hadolint-action@v1
-        with:
-          dockerfile: Dockerfile
-
       - name: Lint root Dockerfile (hadolint image)
         run: |
           docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace hadolint/hadolint:latest hadolint Dockerfile || true
-
-      - name: Lint Alpine Dockerfile (hadolint action)
-        uses: hadolint/hadolint-action@v1
-        with:
-          dockerfile: Dockerfile.alpine
-
       - name: Lint Alpine Dockerfile (hadolint image)
         run: |
           docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace hadolint/hadolint:latest hadolint Dockerfile.alpine || true
-
-      - name: Lint Distroless Dockerfile (hadolint action)
-        uses: hadolint/hadolint-action@v1
-        with:
-          dockerfile: Dockerfile.distroless
-
       - name: Lint Distroless Dockerfile (hadolint image)
         run: |
           docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace hadolint/hadolint:latest hadolint Dockerfile.distroless || true

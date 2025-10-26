@@ -30,7 +30,11 @@ class Plugin(BasePlugin):
             s = requests.Session()
             # try login if credentials provided (best-effort)
             if username and password:
-                s.post(f"{host}/api/v2/auth/login", data={"username": username, "password": password}, timeout=5)
+                s.post(
+                    f"{host}/api/v2/auth/login",
+                    data={"username": username, "password": password},
+                    timeout=5,
+                )
             r = s.get(f"{host}/api/v2/torrents/info", timeout=5)
             if r.status_code == 200:
                 return {"success": True, "torrents": r.json()}
@@ -41,8 +45,18 @@ class Plugin(BasePlugin):
         return {
             "success": True,
             "torrents": [
-                {"hash": "abc123", "name": "Example Torrent 1", "progress": 0.5, "state": "downloading"},
-                {"hash": "def456", "name": "Example Torrent 2", "progress": 0.0, "state": "queued"},
+                {
+                    "hash": "abc123",
+                    "name": "Example Torrent 1",
+                    "progress": 0.5,
+                    "state": "downloading",
+                },
+                {
+                    "hash": "def456",
+                    "name": "Example Torrent 2",
+                    "progress": 0.0,
+                    "state": "queued",
+                },
             ],
         }
 

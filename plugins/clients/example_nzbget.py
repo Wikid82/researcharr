@@ -59,8 +59,18 @@ class Plugin(BasePlugin):
         return {
             "success": True,
             "queue": [
-                {"id": "1", "title": "Example NZB 1", "size": "700MB", "status": "downloading"},
-                {"id": "2", "title": "Example NZB 2", "size": "1.4GB", "status": "queued"},
+                {
+                    "id": "1",
+                    "title": "Example NZB 1",
+                    "size": "700MB",
+                    "status": "downloading",
+                },
+                {
+                    "id": "2",
+                    "title": "Example NZB 2",
+                    "size": "1.4GB",
+                    "status": "queued",
+                },
             ],
         }
 

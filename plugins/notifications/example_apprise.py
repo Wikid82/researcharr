@@ -25,7 +25,10 @@ class Plugin(BasePlugin):
     def validate(self) -> Dict[str, Any]:
         urls = self._get_urls()
         if not urls:
-            return {"success": False, "msg": "No apprise URL(s) configured (set 'url' or 'urls')."}
+            return {
+                "success": False,
+                "msg": "No apprise URL(s) configured (set 'url' or 'urls').",
+            }
 
         try:
             import apprise
@@ -40,7 +43,10 @@ class Plugin(BasePlugin):
                     # skip problematic url
                     continue
             if added == 0:
-                return {"success": False, "msg": "No valid apprise URLs could be added."}
+                return {
+                    "success": False,
+                    "msg": "No valid apprise URLs could be added.",
+                }
             return {"success": True, "added": added}
         except ImportError:
             return {"success": False, "msg": "apprise package not installed"}
@@ -99,7 +105,10 @@ class Plugin(BasePlugin):
                     continue
             return {"status": "ok" if added > 0 else "degraded", "added": added}
         except Exception:
-            return {"status": "degraded", "msg": "apprise not available or error during check"}
+            return {
+                "status": "degraded",
+                "msg": "apprise not available or error during check",
+            }
 
     def blueprint(self):
         bp = Blueprint("apprise_plugin", __name__, url_prefix="/plugin/apprise")
@@ -111,12 +120,19 @@ class Plugin(BasePlugin):
         @bp.route("/send", methods=["POST"])
         def send():
             payload = request.get_json(force=True, silent=True) or {}
-            title = payload.get("title") or self.config.get("title") or "ResearchArr Notification"
+            title = (
+                payload.get("title")
+                or self.config.get("title")
+                or "ResearchArr Notification"
+            )
             body = payload.get("body") or self.config.get("body") or ""
             # allow overriding urls for an explicit send
             urls = payload.get("urls") or self._get_urls()
             if not urls:
-                return jsonify({"success": False, "msg": "no apprise urls configured"}), 400
+                return (
+                    jsonify({"success": False, "msg": "no apprise urls configured"}),
+                    400,
+                )
 
             try:
                 import apprise
@@ -133,4 +149,3 @@ class Plugin(BasePlugin):
                 return jsonify({"success": False, "msg": str(exc)}), 500
 
         return bp
-

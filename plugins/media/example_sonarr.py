@@ -82,7 +82,12 @@ class Plugin(BasePlugin):
                 return jsonify({"success": False, "msg": "missing seriesId"}), 400
 
             if not self.config.get("allow_remote_actions", False):
-                return jsonify({"success": True, "msg": "simulated search (remote actions disabled)"})
+                return jsonify(
+                    {
+                        "success": True,
+                        "msg": "simulated search (remote actions disabled)",
+                    }
+                )
 
             url = self.config.get("url")
             api_key = self.config.get("api_key")
@@ -91,13 +96,32 @@ class Plugin(BasePlugin):
 
                 # Try episode-level search first
                 if episode is not None:
-                    r = requests.post(f"{url}/api/v3/episode/{episode}/search?apikey={api_key}", timeout=10)
-                    return jsonify({"success": r.status_code == 200, "status_code": r.status_code, "text": r.text})
+                    r = requests.post(
+                        f"{url}/api/v3/episode/{episode}/search?apikey={api_key}",
+                        timeout=10,
+                    )
+                    return jsonify(
+                        {
+                            "success": r.status_code == 200,
+                            "status_code": r.status_code,
+                            "text": r.text,
+                        }
+                    )
 
                 # Otherwise, try series-level command
                 payload_cmd = {"name": "SeriesSearch", "seriesId": series_id}
-                r = requests.post(f"{url}/api/v3/command?apikey={api_key}", json=payload_cmd, timeout=10)
-                return jsonify({"success": r.status_code in (200, 201), "status_code": r.status_code, "text": r.text})
+                r = requests.post(
+                    f"{url}/api/v3/command?apikey={api_key}",
+                    json=payload_cmd,
+                    timeout=10,
+                )
+                return jsonify(
+                    {
+                        "success": r.status_code in (200, 201),
+                        "status_code": r.status_code,
+                        "text": r.text,
+                    }
+                )
             except Exception as exc:
                 return jsonify({"success": False, "msg": str(exc)}), 500
 

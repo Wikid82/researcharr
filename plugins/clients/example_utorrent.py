@@ -33,7 +33,10 @@ class Plugin(BasePlugin):
         except Exception:
             pass
 
-        return {"success": True, "queue": [{"name": "Example Torrent", "status": "downloading"}]}
+        return {
+            "success": True,
+            "queue": [{"name": "Example Torrent", "status": "downloading"}],
+        }
 
     def health(self) -> Dict[str, Any]:
         return {"status": "ok"}

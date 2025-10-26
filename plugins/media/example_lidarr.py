@@ -52,12 +52,25 @@ class Plugin(BasePlugin):
             if not artist_id:
                 return jsonify({"success": False, "msg": "missing id"}), 400
             if not self.config.get("allow_remote_actions", False):
-                return jsonify({"success": True, "msg": "simulated search (remote actions disabled)"})
+                return jsonify(
+                    {
+                        "success": True,
+                        "msg": "simulated search (remote actions disabled)",
+                    }
+                )
             try:
                 import requests
 
-                r = requests.post(f"{self.config.get('url')}/api/v1/artist/{artist_id}/refresh?apikey={self.config.get('api_key')}", timeout=10)
-                return jsonify({"success": r.status_code in (200, 201), "status_code": r.status_code})
+                r = requests.post(
+                    f"{self.config.get('url')}/api/v1/artist/{artist_id}/refresh?apikey={self.config.get('api_key')}",
+                    timeout=10,
+                )
+                return jsonify(
+                    {
+                        "success": r.status_code in (200, 201),
+                        "status_code": r.status_code,
+                    }
+                )
             except Exception as exc:
                 return jsonify({"success": False, "msg": str(exc)}), 500
 

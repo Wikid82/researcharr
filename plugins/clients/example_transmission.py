@@ -23,11 +23,15 @@ class Plugin(BasePlugin):
         # Attempt to query Transmission RPC if configured
         host = self.config.get("host")
         try:
-            import requests
             import json
 
+            import requests
+
             # Transmission RPC expects POST with JSON body
-            payload = {"method": "torrent-get", "arguments": {"fields": ["id", "name", "percentDone", "status"]}}
+            payload = {
+                "method": "torrent-get",
+                "arguments": {"fields": ["id", "name", "percentDone", "status"]},
+            }
             r = requests.post(host, json=payload, timeout=5)
             if r.status_code == 200:
                 return {"success": True, "data": r.json().get("arguments", {})}
@@ -46,7 +50,9 @@ class Plugin(BasePlugin):
         return {"status": "ok"}
 
     def blueprint(self):
-        bp = Blueprint("transmission_plugin", __name__, url_prefix="/plugin/transmission")
+        bp = Blueprint(
+            "transmission_plugin", __name__, url_prefix="/plugin/transmission"
+        )
 
         @bp.route("/queue")
         def queue():

@@ -3,9 +3,9 @@ import logging
 import pytest
 
 from researcharr.researcharr import (
-    setup_logger,
     check_radarr_connection,
     check_sonarr_connection,
+    setup_logger,
 )
 
 
@@ -48,12 +48,14 @@ def test_check_sonarr_variants(tmp_path, monkeypatch):
     logger = _make_logger(tmp_path)
     # Missing params
     assert check_sonarr_connection("", "", logger) is False
+
     # Non-200 status
     class R:
         status_code = 500
 
     monkeypatch.setattr("researcharr.researcharr.requests.get", lambda url: R())
     assert check_sonarr_connection("http://x", "k", logger) is False
+
     # Exception
     def bad(url):
         raise ValueError("err")

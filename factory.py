@@ -437,7 +437,11 @@ def create_app():
                 instances = app.config_data.get(name, [])
                 cls = registry.get(name)
                 # Prefer a class-level category attribute, default to 'plugins'
-                category = getattr(cls, "category", "plugins") if cls is not None else "plugins"
+                category = (
+                    getattr(cls, "category", "plugins")
+                    if cls is not None
+                    else "plugins"
+                )
                 description = getattr(cls, "description", "") if cls is not None else ""
                 docs_url = getattr(cls, "docs_url", None) if cls is not None else None
                 plugins_by_category.setdefault(category, []).append(

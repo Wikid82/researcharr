@@ -1,8 +1,8 @@
 from researcharr.researcharr import (
-    create_metrics_app,
-    setup_logger,
     check_radarr_connection,
     check_sonarr_connection,
+    create_metrics_app,
+    setup_logger,
 )
 
 

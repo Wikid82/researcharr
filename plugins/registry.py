@@ -64,7 +64,9 @@ class PluginRegistry:
                     continue
 
                 # Determine category: explicit module-level or class attr
-                explicit_cat = getattr(mod, "CATEGORY", None) or getattr(plugin_cls, "category", None)
+                explicit_cat = getattr(mod, "CATEGORY", None) or getattr(
+                    plugin_cls, "category", None
+                )
                 if explicit_cat:
                     plugin_cls.category = explicit_cat
                 elif parent:

@@ -2,7 +2,10 @@ from researcharr.researcharr import has_valid_url_and_key
 
 
 def test_has_valid_url_and_key_positive():
-    instances = [{"enabled": False}, {"enabled": True, "url": "http://x", "api_key": "k"}]
+    instances = [
+        {"enabled": False},
+        {"enabled": True, "url": "http://x", "api_key": "k"},
+    ]
     assert has_valid_url_and_key(instances) is True
 
 

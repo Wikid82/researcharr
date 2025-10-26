@@ -1,5 +1,13 @@
-<header style="width: 100%; background: #222; color: #fff; padding: 16px; position: fixed; top: 0; left: 0; z-index: 101; display: flex; align-items: center;">
-  <img src="/static/logo.png" alt="researcharr logo" style="height: 32px; margin-right: 12px;">
-  <span class="title-text" style="font-size: 1.5em; font-weight: bold;">researcharr</span>
-  <span style="margin-left: auto;"><a href="/logout" style="color: #fff; text-decoration: none;">Logout</a></span>
+<header class="site-header">
+  <button id="sidebar-toggle" class="btn" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
+  <div class="brand">
+    <a href="/"><img src="/static/logo.png" alt="researcharr logo"><span class="title">researcharr</span></a>
+  </div>
+  <div class="header-actions">
+    <button id="theme-toggle" class="btn" title="Toggle theme">🌓</button>
+    <div class="user-menu">
+      <a href="/user" class="btn ghost">Account</a>
+      <a href="/logout" class="btn">Logout</a>
+    </div>
+  </div>
 </header>

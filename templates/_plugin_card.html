@@ -1,0 +1,20 @@
+<div class="card plugin-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <div>
+      <strong>{{ plugin.name }}</strong>
+      <div class="muted">{{ plugin.description }}</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <a href="{{ plugin.docs_url }}" class="btn ghost">Docs</a>
+      {% if plugin.enabled %}
+        <form method="post" action="/settings/plugins/{{ plugin.id }}/disable" style="display:inline">
+          <button class="btn">Disable</button>
+        </form>
+      {% else %}
+        <form method="post" action="/settings/plugins/{{ plugin.id }}/enable" style="display:inline">
+          <button class="btn primary">Enable</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>

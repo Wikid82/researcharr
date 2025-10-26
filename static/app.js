@@ -40,4 +40,74 @@ document.addEventListener('DOMContentLoaded', ()=>{
         .catch(err => { if (targetSpan) targetSpan.textContent = 'Request failed' })
     }
   })
+  // plugin instance modal (add/edit)
+  const modal = document.getElementById('plugin-instance-modal')
+  const modalTitle = document.getElementById('plugin-instance-modal-title')
+  const modalSave = document.getElementById('plugin-instance-modal-save')
+  if(modal){
+    document.addEventListener('click', function(e){
+      const edit = e.target.closest('[data-plugin-edit]')
+      const add = e.target.closest('[data-plugin-add]')
+      if(edit||add){
+        e.preventDefault()
+        const plugin = (edit? edit.dataset.pluginEdit : add.dataset.pluginAdd)
+        const idx = edit? edit.dataset.idx : null
+        modal.dataset.plugin = plugin
+        modal.dataset.idx = idx===null? 'new': idx
+        modalTitle.textContent = idx===null? `Add instance for ${plugin}` : `Edit instance ${idx} for ${plugin}`
+        // clear fields
+        modal.querySelector('[name="instance_name"]').value = ''
+        modal.querySelector('[name="instance_url"]').value = ''
+        modal.querySelector('[name="instance_api_key"]').value = ''
+        modal.querySelector('[name="instance_enabled"]').checked = false
+        // if editing, attempt to load instance data from DOM dataset (simple approach)
+        if(idx!==null){
+          // try to fetch instances from server as fallback
+          fetch(`/api/plugins` , { credentials: 'same-origin' })
+            .then(r=>r.json())
+            .then(j=>{
+              const p = j.plugins.find(pp=>pp.name===plugin)
+              if(p && p.instances && p.instances[idx]){
+                const inst = p.instances[idx]
+                modal.querySelector('[name="instance_name"]').value = inst.name||''
+                modal.querySelector('[name="instance_url"]').value = inst.url||''
+                modal.querySelector('[name="instance_api_key"]').value = inst.api_key||''
+                modal.querySelector('[name="instance_enabled"]').checked = !!inst.enabled
+              }
+            }).catch(()=>{})
+        }
+        modal.classList.add('open')
+      }
+    })
+
+    // cancel
+    modal.querySelector('[data-modal-cancel]').addEventListener('click', ()=>{
+      modal.classList.remove('open')
+    })
+
+    // save
+    modalSave.addEventListener('click', ()=>{
+      const plugin = modal.dataset.plugin
+      const idx = modal.dataset.idx
+      const instance = {
+        name: modal.querySelector('[name="instance_name"]').value,
+        url: modal.querySelector('[name="instance_url"]').value,
+        api_key: modal.querySelector('[name="instance_api_key"]').value,
+        enabled: !!modal.querySelector('[name="instance_enabled"]').checked
+      }
+      const action = idx==='new' ? 'add':'update'
+      fetch(`/api/plugins/${encodeURIComponent(plugin)}/instances`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'same-origin',
+        body: JSON.stringify({action:action, idx: idx==='new'? null: parseInt(idx,10), instance: instance})
+      }).then(r=>r.json()).then(j=>{
+        if(j.error){
+          alert('Save failed: '+(j.msg||j.error))
+        } else {
+          location.reload()
+        }
+      }).catch(()=>{alert('Request failed')})
+    })
+  }
 });

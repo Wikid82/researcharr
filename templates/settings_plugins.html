@@ -11,6 +11,33 @@
 {% else %}
   <p>No plugins discovered.</p>
 {% endif %}
+
+<!-- Plugin instance modal (hidden by default) -->
+<div id="plugin-instance-modal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);z-index:9999;" class="modal">
+  <div class="card" style="width:420px;">
+    <h3 id="plugin-instance-modal-title">Plugin Instance</h3>
+    <div class="form-row">
+      <label class="form-label">Name</label>
+      <input name="instance_name" class="form-control">
+    </div>
+    <div class="form-row">
+      <label class="form-label">URL</label>
+      <input name="instance_url" class="form-control">
+    </div>
+    <div class="form-row">
+      <label class="form-label">API Key</label>
+      <input name="instance_api_key" class="form-control">
+    </div>
+    <div class="form-row">
+      <label><input type="checkbox" name="instance_enabled"> Enabled</label>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+      <button data-modal-cancel class="btn">Cancel</button>
+      <button id="plugin-instance-modal-save" class="btn primary">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // keep existing instance-level actions available via API if needed; plugin cards are primarily presentational
 </script>

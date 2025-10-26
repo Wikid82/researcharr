@@ -36,11 +36,14 @@ def test_shim_fallback_when_top_level_missing(tmp_path):
 
         pkg = importlib.import_module("researcharr")
 
-        # When the top-level file is missing the shim's fallback attempts a
-        # package-style import for researcharr.researcharr; if that fails the
-        # code sets the attribute to None. Assert the package does not expose
-        # a live implementation module.
-        assert not getattr(pkg, "researcharr", None)
+        # The shim should fall back to loading the package-level
+        # implementation (researcharr/researcharr.py) when the top-level
+        # file is missing. Confirm the implementation exists and its file is
+        # different from the moved top-level path.
+        impl = getattr(pkg, "researcharr", None)
+        assert impl is not None
+        impl_file = os.path.abspath(getattr(impl, "__file__", ""))
+        assert impl_file != orig
 
     finally:
         # Restore the file and reload the package to leave global state

@@ -16,65 +16,65 @@ jobs:
     name: Build distroless image, run tests, Trivy
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
-      - name: Set up QEMU and buildx
-        uses: docker/setup-buildx-action@v2
+    - name: Set up QEMU and buildx
+      uses: docker/setup-buildx-action@v2
 
-      - name: Build builder stage image
-        run: |
-          docker build --target builder -f Dockerfile.distroless -t local/researcharr:builder .
+    - name: Build builder stage image
+      run: |
+        docker build --target builder -f Dockerfile.distroless -t local/researcharr:builder .
 
-      - name: Run mypy + pytest inside builder image
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        run: |
-          docker run --rm --entrypoint "" -v "${{ github.workspace }}":/src -w /src local/researcharr:builder sh -lc "python -m pip install --upgrade pip && pip install mypy pytest && mypy . && pytest tests/ --maxfail=1 -q"
+    - name: Run mypy + pytest inside builder image
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        docker run --rm --entrypoint "" -v "${{ github.workspace }}":/src -w /src local/researcharr:builder sh -lc "python -m pip install --upgrade pip && pip install mypy pytest && mypy . && pytest tests/ --maxfail=1 -q"
 
-      - name: Build final distroless image (loaded)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.distroless
-          push: false
-          load: true
-          tags: local/researcharr:distroless
+    - name: Build final distroless image (loaded)
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: Dockerfile.distroless
+        push: false
+        load: true
+        tags: local/researcharr:distroless
 
-      - name: Run Trivy scan on distroless image
-        run: |
-          docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace aquasec/trivy:latest image --format json -o build/artifacts/trivy-report-distroless.json local/researcharr:distroless || true
+    - name: Run Trivy scan on distroless image
+      run: |
+        docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace aquasec/trivy:latest image --format json -o build/artifacts/trivy-report-distroless.json local/researcharr:distroless || true
 
-      - name: Upload Trivy JSON artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-report-distroless
-          path: build/artifacts/trivy-report-distroless.json
+    - name: Upload Trivy JSON artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: trivy-report-distroless
+        path: build/artifacts/trivy-report-distroless.json
 
-      - name: Compute VERSION
-        id: version
-        run: |
-          if [[ "${GITHUB_REF}" =~ refs/tags/(.*) ]]; then
-            echo "VERSION=${BASH_REMATCH[1]}" >> $GITHUB_ENV
-          else
-            echo "VERSION=0.0.0-alpha.${GITHUB_RUN_ID}" >> $GITHUB_ENV
-          fi
+    - name: Compute VERSION
+      id: version
+      run: |
+        if [[ "${GITHUB_REF}" =~ refs/tags/(.*) ]]; then
+          echo "VERSION=${BASH_REMATCH[1]}" >> $GITHUB_ENV
+        else
+          echo "VERSION=0.0.0-alpha.${GITHUB_RUN_ID}" >> $GITHUB_ENV
+        fi
 
-      - name: Log in to GHCR
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/')
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Log in to GHCR
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/')
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish distroless image to GHCR (main/development/tags only)
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/')
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.distroless
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository }}:${{ env.VERSION }}-distroless
-            ghcr.io/${{ github.repository }}:distroless
+    - name: Publish distroless image to GHCR (main/development/tags only)
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/')
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: Dockerfile.distroless
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository }}:${{ env.VERSION }}-distroless
+          ghcr.io/${{ github.repository }}:distroless

@@ -23,14 +23,13 @@ COPY . /src
 
 ### Final minimal runtime image (distroless keeps glibc compatibility)
 FROM gcr.io/distroless/python3:latest
+ENV PYTHONPATH="/install"
 
 # Copy installed packages and app from builder. Packages were installed into
-# /install in the builder stage using pip --target, so add /install to
-# PYTHONPATH in the final image so the interpreter can import them.
+# /install in the builder stage using pip --target, so the interpreter can
+# import them at runtime because PYTHONPATH is pre-defined above.
 COPY --from=builder /install /install
 COPY --from=builder /src /app
-
-ENV PYTHONPATH="/install"
 WORKDIR /app
 
 EXPOSE 2929

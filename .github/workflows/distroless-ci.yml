@@ -31,9 +31,22 @@ jobs:
         # Include /install (where builder stage put runtime deps via --target)
         PYTHONPATH: /install:${{ github.workspace }}
       run: |
-        # Ensure the builder image has mypy/pytest and typing stubs, and run
-        # mypy/pytest with PYTHONPATH pointing at /install and the checked-out code
-        docker run --rm --entrypoint "" -v "${{ github.workspace }}":/src -w /src local/researcharr:builder sh -lc "python -m pip install --upgrade pip && pip install mypy pytest types-PyYAML && PYTHONPATH=/install:/src mypy . && PYTHONPATH=/install:/src pytest tests/ --maxfail=1 -q"
+        # Ensure the builder image has mypy/pytest/pytest-cov and typing stubs, and run
+        # mypy/pytest with PYTHONPATH pointing at /install and the checked-out code.
+        # Also produce a coverage XML so it can be uploaded for Codecov/inspection.
+        docker run --rm --entrypoint "" -v "${{ github.workspace }}":/src -w /src local/researcharr:builder sh -lc "python -m pip install --upgrade pip && pip install mypy pytest pytest-cov types-PyYAML && PYTHONPATH=/install:/src mypy . && PYTHONPATH=/install:/src pytest tests/ --maxfail=1 -q --cov=researcharr --cov-report=term-missing --cov-report=xml:build/artifacts/coverage-distroless.xml"
+
+    - name: Upload coverage XML artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-distroless
+        path: build/artifacts/coverage-distroless.xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: build/artifacts/coverage-distroless.xml
+        fail_ci_if_error: false
 
     - name: Build final distroless image (loaded)
       uses: docker/build-push-action@v5

@@ -35,7 +35,20 @@ jobs:
       env:
         PYTHONPATH: ${{ github.workspace }}
       run: |
-        docker run --rm --entrypoint "" -v "${{ github.workspace }}":/app -w /app -e PYTHONPATH=/app local/researcharr:alpine sh -lc "python -m pip install --upgrade pip && pip install mypy && mypy . && pytest tests/ --maxfail=1 -q"
+        # Install test deps including pytest-cov and produce a coverage XML
+        docker run --rm --entrypoint "" -v "${{ github.workspace }}":/app -w /app -e PYTHONPATH=/app local/researcharr:alpine sh -lc "python -m pip install --upgrade pip && pip install mypy pytest pytest-cov && mypy . && pytest tests/ --maxfail=1 -q --cov=researcharr --cov-report=term-missing --cov-report=xml:build/artifacts/coverage-alpine.xml"
+
+    - name: Upload coverage XML artifact (alpine)
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-alpine
+        path: build/artifacts/coverage-alpine.xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: build/artifacts/coverage-alpine.xml
+        fail_ci_if_error: false
 
     - name: Run Trivy scan
       run: |

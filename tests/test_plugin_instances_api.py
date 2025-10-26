@@ -46,7 +46,7 @@ def test_add_update_delete_plugin_instance(tmp_path, monkeypatch):
     # Update instance (index 0)
     payload = {
         "action": "update",
-        "index": 0,
+        "idx": 0,
         "instance": {"name": "T2", "url": "http://x", "api_key": "k", "enabled": True},
     }
     resp = client.post(
@@ -59,7 +59,7 @@ def test_add_update_delete_plugin_instance(tmp_path, monkeypatch):
     assert any(i.get("name") == "T2" for i in data)
 
     # Delete instance
-    payload = {"action": "delete", "index": 0}
+    payload = {"action": "delete", "idx": 0}
     resp = client.post(
         "/api/plugins/sonarr/instances",
         data=json.dumps(payload),

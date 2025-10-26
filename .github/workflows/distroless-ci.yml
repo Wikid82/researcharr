@@ -28,9 +28,12 @@ jobs:
 
     - name: Run mypy + pytest inside builder image
       env:
-        PYTHONPATH: ${{ github.workspace }}
+        # Include /install (where builder stage put runtime deps via --target)
+        PYTHONPATH: /install:${{ github.workspace }}
       run: |
-        docker run --rm --entrypoint "" -v "${{ github.workspace }}":/src -w /src local/researcharr:builder sh -lc "python -m pip install --upgrade pip && pip install mypy pytest && mypy . && pytest tests/ --maxfail=1 -q"
+        # Ensure the builder image has mypy/pytest and typing stubs, and run
+        # mypy/pytest with PYTHONPATH pointing at /install and the checked-out code
+        docker run --rm --entrypoint "" -v "${{ github.workspace }}":/src -w /src local/researcharr:builder sh -lc "python -m pip install --upgrade pip && pip install mypy pytest types-PyYAML && PYTHONPATH=/install:/src mypy . && PYTHONPATH=/install:/src pytest tests/ --maxfail=1 -q"
 
     - name: Build final distroless image (loaded)
       uses: docker/build-push-action@v5

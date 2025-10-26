@@ -1,0 +1,37 @@
+# Multi-stage build: builder (Debian-slim) -> distroless runtime
+FROM python:3.13-slim AS builder
+
+WORKDIR /src
+
+# Install build dependencies for wheels
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libffi-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install into a venv to make copying easier
+COPY requirements.txt /src/requirements.txt
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN python -m pip install --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir -r /src/requirements.txt
+
+# Copy application source
+COPY . /src
+
+### Final minimal runtime image (distroless keeps glibc compatibility)
+FROM gcr.io/distroless/python3:latest
+
+# Copy venv and app from builder
+COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /src /app
+
+ENV PATH="/opt/venv/bin:$PATH"
+WORKDIR /app
+
+EXPOSE 2929
+
+# Run the app directly with python (no shell available in distroless)
+ENTRYPOINT ["python3", "/app/run.py"]

@@ -107,16 +107,21 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Prepare lowercased repo name
+      run: |
+        REPO=${{ github.repository }}
+        echo "REPO_NAME_LOWER=$(echo \"$REPO\" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
     - name: Tag and push alpine image to GHCR (main/development/tags only)
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/')
       run: |
-  docker tag local/researcharr:alpine ghcr.io/${{ toLower(github.repository) }}:${{ env.VERSION }}-alpine
-  docker tag local/researcharr:alpine ghcr.io/${{ toLower(github.repository) }}:alpine
-  docker push ghcr.io/${{ toLower(github.repository) }}:${{ env.VERSION }}-alpine
-  docker push ghcr.io/${{ toLower(github.repository) }}:alpine
+        docker tag local/researcharr:alpine ghcr.io/${{ env.REPO_NAME_LOWER }}:${{ env.VERSION }}-alpine
+        docker tag local/researcharr:alpine ghcr.io/${{ env.REPO_NAME_LOWER }}:alpine
+        docker push ghcr.io/${{ env.REPO_NAME_LOWER }}:${{ env.VERSION }}-alpine
+        docker push ghcr.io/${{ env.REPO_NAME_LOWER }}:alpine
 
     - name: Publish dev tag (development branch only)
       if: github.ref == 'refs/heads/development'
       run: |
-  docker tag local/researcharr:alpine ghcr.io/${{ toLower(github.repository) }}:dev-${{ github.run_id }}
-  docker push ghcr.io/${{ toLower(github.repository) }}:dev-${{ github.run_id }}
+        docker tag local/researcharr:alpine ghcr.io/${{ env.REPO_NAME_LOWER }}:dev-${{ github.run_id }}
+        docker push ghcr.io/${{ env.REPO_NAME_LOWER }}:dev-${{ github.run_id }}

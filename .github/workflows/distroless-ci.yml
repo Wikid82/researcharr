@@ -115,16 +115,21 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Prepare lowercased repo name
+      run: |
+        REPO=${{ github.repository }}
+        echo "REPO_NAME_LOWER=$(echo \"$REPO\" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
     - name: Tag and push distroless image to GHCR (main/development/tags only)
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/')
       run: |
-        docker tag local/researcharr:distroless ghcr.io/${{ toLower(github.repository) }}:${{ env.VERSION }}-distroless
-        docker tag local/researcharr:distroless ghcr.io/${{ toLower(github.repository) }}:distroless
-        docker push ghcr.io/${{ toLower(github.repository) }}:${{ env.VERSION }}-distroless
-        docker push ghcr.io/${{ toLower(github.repository) }}:distroless
+  docker tag local/researcharr:distroless ghcr.io/${{ env.REPO_NAME_LOWER }}:${{ env.VERSION }}-distroless
+  docker tag local/researcharr:distroless ghcr.io/${{ env.REPO_NAME_LOWER }}:distroless
+  docker push ghcr.io/${{ env.REPO_NAME_LOWER }}:${{ env.VERSION }}-distroless
+  docker push ghcr.io/${{ env.REPO_NAME_LOWER }}:distroless
 
     - name: Publish dev tag (development branch only)
       if: github.ref == 'refs/heads/development'
       run: |
-        docker tag local/researcharr:distroless ghcr.io/${{ toLower(github.repository) }}:dev-${{ github.run_id }}
-        docker push ghcr.io/${{ toLower(github.repository) }}:dev-${{ github.run_id }}
+  docker tag local/researcharr:distroless ghcr.io/${{ env.REPO_NAME_LOWER }}:dev-${{ github.run_id }}
+  docker push ghcr.io/${{ env.REPO_NAME_LOWER }}:dev-${{ github.run_id }}

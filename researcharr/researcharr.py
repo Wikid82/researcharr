@@ -37,7 +37,7 @@ candidates = [
     ),
 ]
 
-TOP_LEVEL = None
+TOP_LEVEL: Optional[str] = None
 for c in candidates:
     if os.path.isfile(c) and os.path.abspath(c) != os.path.abspath(__file__):
         TOP_LEVEL = c
@@ -58,54 +58,68 @@ if not TOP_LEVEL:
             break
 
 if TOP_LEVEL:
-    # Use the package module name so importlib.reload and sys.modules
-    # behave as callers expect (i.e. the module is known as
-    # 'researcharr.researcharr').
-    spec = importlib.util.spec_from_file_location(
-        "researcharr.researcharr",
-        TOP_LEVEL,
-    )
+    # Deterministically load the top-level implementation by path so the
+    # resulting module object always contains the implementation functions
+    # (avoid package-style import fallbacks which can be sensitive to
+    # pytest's import order).
+    spec = importlib.util.spec_from_file_location("researcharr.researcharr", TOP_LEVEL)
     if spec and spec.loader:
         _mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(_mod)  # type: ignore[arg-type]
 
-if _mod:
-    # Ensure commonly-patched top-level names exist on the loaded module so
-    # tests that patch e.g. `researcharr.researcharr.requests` resolve
-    # correctly even when the shim is used to load the implementation by
-    # path.
-    try:
-        import requests as _requests  # type: ignore
-    except Exception:
-        _requests = None
-    try:
-        import yaml as _yaml  # type: ignore
-    except Exception:
-        _yaml = None
+    if _mod:
+        # Ensure commonly-patched top-level names exist on the loaded module so
+        # tests that patch e.g. `researcharr.researcharr.requests` resolve
+        # correctly even when the shim is used to load the implementation by
+        # path.
+        from typing import Optional as _Optional
 
-    if not hasattr(_mod, "requests") and _requests is not None:
-        setattr(_mod, "requests", _requests)
-    if not hasattr(_mod, "yaml") and _yaml is not None:
-        setattr(_mod, "yaml", _yaml)
-
-    # Replace this shim module in sys.modules with the loaded top-level
-    # module so callers receive the real module object (functions will use
-    # the correct globals and monkeypatching will work as expected).
-    sys.modules[__name__] = _mod
-    sys.modules["researcharr.researcharr"] = _mod
-
-    # Also set the attribute on the parent package module (if present) so
-    # `from researcharr import researcharr` resolves directly to the
-    # implementation module in all import scenarios.
-    parent = sys.modules.get("researcharr")
-    if parent is not None:
+        _requests: _Optional[ModuleType] = None
+        _req: _Optional[ModuleType] = None
         try:
-            setattr(parent, "researcharr", _mod)
-        except Exception:
-            pass
+            import requests as _req_import  # type: ignore
 
-    # Also expose the loaded module on the name 'module' for debugging
-    module = _mod
+            _req = _req_import
+        except Exception:
+            _req = None
+        if _req is not None:
+            _requests = _req
+
+        _yaml: _Optional[ModuleType] = None
+        _y: _Optional[ModuleType] = None
+        try:
+            import yaml as _y_import  # type: ignore
+
+            _y = _y_import
+        except Exception:
+            _y = None
+        if _y is not None:
+            _yaml = _y
+
+        if _requests is not None and not hasattr(_mod, "requests"):
+            setattr(_mod, "requests", _requests)
+        if _yaml is not None and not hasattr(_mod, "yaml"):
+            setattr(_mod, "yaml", _yaml)
+
+        # Replace this shim module in sys.modules with the loaded top-level
+        # module so callers receive the real module object (functions will use
+        # the correct globals and monkeypatching will work as expected).
+        assert _mod is not None
+        sys.modules[__name__] = _mod
+        sys.modules["researcharr.researcharr"] = _mod
+
+        # Also set the attribute on the parent package module (if present) so
+        # `from researcharr import researcharr` resolves directly to the
+        # implementation module in all import scenarios.
+        parent = sys.modules.get("researcharr")
+        if parent is not None:
+            try:
+                setattr(parent, "researcharr", _mod)
+            except Exception:
+                pass
+
+        # Also expose the loaded module on the name 'module' for debugging
+        module = _mod
 else:
     module = None
 
@@ -117,7 +131,9 @@ if module is not None:
     for name in ("init_db", "create_metrics_app", "has_valid_url_and_key"):
         if not hasattr(module, name):
             try:
-                spec2 = importlib.util.spec_from_file_location("researcharr_impl", TOP_LEVEL)
+                spec2 = importlib.util.spec_from_file_location(
+                    "researcharr_impl", TOP_LEVEL
+                )
                 if spec2 and spec2.loader:
                     impl = importlib.util.module_from_spec(spec2)
                     spec2.loader.exec_module(impl)  # type: ignore[arg-type]

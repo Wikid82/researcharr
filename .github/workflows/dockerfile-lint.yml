@@ -16,16 +16,17 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Lint root Dockerfile
-      uses: hadolint/hadolint-action@v2
+      # v1 is a stable, published tag for the hadolint action; v2 may not exist
+      uses: hadolint/hadolint-action@v1
       with:
         dockerfile: Dockerfile
 
     - name: Lint Alpine Dockerfile
-      uses: hadolint/hadolint-action@v2
+      uses: hadolint/hadolint-action@v1
       with:
         dockerfile: Dockerfile.alpine
 
     - name: Lint Distroless Dockerfile
-      uses: hadolint/hadolint-action@v2
+      uses: hadolint/hadolint-action@v1
       with:
         dockerfile: Dockerfile.distroless

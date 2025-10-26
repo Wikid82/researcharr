@@ -95,6 +95,19 @@ document.addEventListener('DOMContentLoaded', ()=>{
         api_key: modal.querySelector('[name="instance_api_key"]').value,
         enabled: !!modal.querySelector('[name="instance_enabled"]').checked
       }
+      // client-side validation
+      const errorBox = document.getElementById('plugin-modal-error')
+      errorBox.textContent = ''
+      if(instance.enabled){
+        if(!instance.url || !instance.url.startsWith('http')){
+          errorBox.textContent = 'When enabled, URL must start with http/https'
+          return
+        }
+        if(!instance.api_key){
+          errorBox.textContent = 'When enabled, API key is required'
+          return
+        }
+      }
       const action = idx==='new' ? 'add':'update'
       fetch(`/api/plugins/${encodeURIComponent(plugin)}/instances`,{
         method:'POST',
@@ -103,11 +116,29 @@ document.addEventListener('DOMContentLoaded', ()=>{
         body: JSON.stringify({action:action, idx: idx==='new'? null: parseInt(idx,10), instance: instance})
       }).then(r=>r.json()).then(j=>{
         if(j.error){
-          alert('Save failed: '+(j.msg||j.error))
+          errorBox.textContent = j.msg || j.error || 'Save failed'
+        } else if (j.warning){
+          errorBox.textContent = j.warning
         } else {
           location.reload()
         }
-      }).catch(()=>{alert('Request failed')})
+      }).catch(()=>{ errorBox.textContent = 'Request failed' })
     })
   }
+  // delete handler (confirm + API)
+  document.addEventListener('click', function(e){
+    const del = e.target.closest('[data-plugin-delete]')
+    if(!del) return
+    e.preventDefault()
+    const plugin = del.dataset.pluginDelete
+    const idx = parseInt(del.dataset.idx,10)
+    if(!confirm(`Delete instance ${idx} for plugin ${plugin}? This cannot be undone.`)) return
+    fetch(`/api/plugins/${encodeURIComponent(plugin)}/instances`,{
+      method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin',
+      body: JSON.stringify({action:'delete', idx: idx})
+    }).then(r=>r.json()).then(j=>{
+      if(j.error) alert('Delete failed: '+(j.msg||j.error))
+      else location.reload()
+    }).catch(()=>{alert('Request failed')})
+  })
 });

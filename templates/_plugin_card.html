@@ -30,6 +30,7 @@
             <button class="btn plugin-validate" data-plugin="{{ plugin.name }}" data-idx="{{ loop.index0 }}">Validate</button>
             <button class="btn plugin-sync" data-plugin="{{ plugin.name }}" data-idx="{{ loop.index0 }}">Sync</button>
             <button class="btn" data-plugin-edit="{{ plugin.name }}" data-idx="{{ loop.index0 }}">Edit</button>
+            <button class="btn" data-plugin-delete="{{ plugin.name }}" data-idx="{{ loop.index0 }}">Delete</button>
             <span class="plugin-result" id="result-{{ plugin.name }}-{{ loop.index0 }}"></span>
           </div>
         </div>

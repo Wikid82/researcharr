@@ -1,4 +1,5 @@
 import json
+
 import yaml
 
 from researcharr.factory import create_app

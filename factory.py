@@ -3,8 +3,8 @@
 import importlib.util
 import os
 import pathlib
-import yaml
 
+import yaml
 from flask import (
     Flask,
     flash,
@@ -167,10 +167,14 @@ def create_app():
                             # Set into in-memory config_data so UI and APIs use it
                             app.config_data[name] = data
                     except Exception:
-                        app.logger.exception("Failed to load plugin config %s", cfg_file)
+                        app.logger.exception(
+                            "Failed to load plugin config %s", cfg_file
+                        )
         except Exception:
             # best-effort; don't prevent startup if the config path is unwritable
-            app.logger.debug("Could not ensure plugins config dir %s", plugins_config_dir)
+            app.logger.debug(
+                "Could not ensure plugins config dir %s", plugins_config_dir
+            )
         # Example: if there are configured sonarr instances in config_data,
         # create plugin instances and register their blueprints.
         try:
@@ -517,7 +521,7 @@ def create_app():
             app.logger.exception("Plugin sync failed: %s", e)
             return jsonify({"error": "sync_failed", "msg": str(e)}), 500
 
-    @app.route('/api/plugins/<plugin_name>/instances', methods=['POST'])
+    @app.route("/api/plugins/<plugin_name>/instances", methods=["POST"])
     def api_plugin_instances(plugin_name: str):
         """Add/update/delete plugin instances via JSON POST.
 
@@ -525,70 +529,82 @@ def create_app():
         """
         if not is_logged_in():
             return jsonify({"error": "unauthorized"}), 401
-        registry = getattr(app, 'plugin_registry', None)
+        registry = getattr(app, "plugin_registry", None)
         if registry is None or registry.get(plugin_name) is None:
             return jsonify({"error": "unknown_plugin"}), 404
         try:
             data = request.get_json(force=True)
         except Exception:
             return jsonify({"error": "invalid_json"}), 400
-        action = data.get('action')
+        action = data.get("action")
         instances = app.config_data.get(plugin_name, []) or []
 
         def _validate_instance(inst):
             # Basic validation: if enabled, require url and api_key
             if not isinstance(inst, dict):
-                return False, 'instance must be an object'
-            if inst.get('enabled'):
-                url = inst.get('url', '') or ''
-                key = inst.get('api_key', '') or ''
-                if not isinstance(url, str) or not url.startswith('http'):
-                    return False, 'URL must start with http/https'
+                return False, "instance must be an object"
+            if inst.get("enabled"):
+                url = inst.get("url", "") or ""
+                key = inst.get("api_key", "") or ""
+                if not isinstance(url, str) or not url.startswith("http"):
+                    return False, "URL must start with http/https"
                 if not key:
-                    return False, 'API key is required for enabled instances'
+                    return False, "API key is required for enabled instances"
             return True, None
 
         # perform action
-        if action == 'add':
-            inst = data.get('instance') or {}
+        if action == "add":
+            inst = data.get("instance") or {}
             ok, err = _validate_instance(inst)
             if not ok:
-                return jsonify({'error': 'invalid_instance', 'msg': err}), 400
+                return jsonify({"error": "invalid_instance", "msg": err}), 400
             instances.append(inst)
             app.config_data[plugin_name] = instances
-        elif action == 'update':
-            idx = data.get('idx')
-            if idx is None or not isinstance(idx, int) or idx < 0 or idx >= len(instances):
-                return jsonify({'error': 'invalid_instance'}), 400
-            inst = data.get('instance') or {}
+        elif action == "update":
+            idx = data.get("idx")
+            if (
+                idx is None
+                or not isinstance(idx, int)
+                or idx < 0
+                or idx >= len(instances)
+            ):
+                return jsonify({"error": "invalid_instance"}), 400
+            inst = data.get("instance") or {}
             ok, err = _validate_instance(inst)
             if not ok:
-                return jsonify({'error': 'invalid_instance', 'msg': err}), 400
+                return jsonify({"error": "invalid_instance", "msg": err}), 400
             instances[idx] = inst
             app.config_data[plugin_name] = instances
-        elif action == 'delete':
-            idx = data.get('idx')
-            if idx is None or not isinstance(idx, int) or idx < 0 or idx >= len(instances):
-                return jsonify({'error': 'invalid_instance'}), 400
+        elif action == "delete":
+            idx = data.get("idx")
+            if (
+                idx is None
+                or not isinstance(idx, int)
+                or idx < 0
+                or idx >= len(instances)
+            ):
+                return jsonify({"error": "invalid_instance"}), 400
             instances.pop(idx)
             app.config_data[plugin_name] = instances
         else:
-            return jsonify({'error': 'unknown_action'}), 400
+            return jsonify({"error": "unknown_action"}), 400
 
         # Persist instances to disk under CONFIG_DIR/plugins/<plugin_name>.yml
         try:
-            config_root = os.getenv('CONFIG_DIR', '/config')
-            plugins_config_dir = os.path.join(config_root, 'plugins')
+            config_root = os.getenv("CONFIG_DIR", "/config")
+            plugins_config_dir = os.path.join(config_root, "plugins")
             os.makedirs(plugins_config_dir, exist_ok=True)
             cfg_file = os.path.join(plugins_config_dir, f"{plugin_name}.yml")
-            with open(cfg_file, 'w') as fh:
+            with open(cfg_file, "w") as fh:
                 yaml.safe_dump(app.config_data.get(plugin_name, []), fh)
         except Exception:
-            app.logger.exception('Failed to persist plugin instances for %s', plugin_name)
+            app.logger.exception(
+                "Failed to persist plugin instances for %s", plugin_name
+            )
             # don't fail the request; inform the client
-            return jsonify({'result': 'ok', 'warning': 'persist_failed'}), 200
+            return jsonify({"result": "ok", "warning": "persist_failed"}), 200
 
-        return jsonify({'result': 'ok'})
+        return jsonify({"result": "ok"})
 
     @app.route("/user", methods=["GET", "POST"])
     def user_settings():

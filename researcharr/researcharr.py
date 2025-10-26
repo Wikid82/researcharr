@@ -39,7 +39,7 @@ for c in candidates:
 if not TOP_LEVEL:
     base = os.path.dirname(__file__)
     for depth in range(1, 6):
-        candidate = os.path.abspath(os.path.join(base, *( [".."] * depth), "researcharr.py"))
+        candidate = os.path.abspath(os.path.join(base, *([".."] * depth), "researcharr.py"))
         if os.path.isfile(candidate) and os.path.abspath(candidate) != os.path.abspath(__file__):
             TOP_LEVEL = candidate
             break

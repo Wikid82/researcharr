@@ -52,23 +52,43 @@ jobs:
         mkdir -p build/smoke-config
         cp config.example.yml build/smoke-config/config.yml || true
 
-    - name: Run Alpine smoke-test (health endpoint)
+    - name: Run Alpine smoke-test (health endpoint + basic acceptance)
+      id: smoke_test
+      continue-on-error: true
       run: |
         set -euo pipefail
-        docker run --rm -d --name smoke_test_instance -v "${{ github.workspace }}/build/smoke-config":/config -e CONFIG_PATH=/config/config.yml -p 2929:2929 local/researcharr:alpine || true
-        for i in $(seq 1 30); do
-          if curl -sS -f http://127.0.0.1:2929/health >/dev/null 2>&1; then
-            echo "smoke-test: health ok"
-            break
+        CONTAINER_NAME=smoke_test_instance
+        mkdir -p build/smoke-logs
+        docker run --rm -d --name ${CONTAINER_NAME} -v "${{ github.workspace }}/build/smoke-config":/config -e CONFIG_PATH=/config/config.yml -p 2929:2929 local/researcharr:alpine || true
+        HEALTH_OK=0
+        for i in $(seq 1 60); do
+          OUTPUT=$(curl -sS -f http://127.0.0.1:2929/health 2>/dev/null || true)
+          if [ -n "$OUTPUT" ]; then
+            if echo "$OUTPUT" | jq -e '.status and .config and .db' >/dev/null 2>&1; then
+              echo "smoke-test: health ok and JSON shape validated"
+              HEALTH_OK=1
+              break
+            else
+              echo "smoke-test: health returned but JSON missing expected keys; output=$OUTPUT"
+            fi
           fi
           sleep 1
         done
-        if ! curl -sS -f http://127.0.0.1:2929/health >/dev/null 2>&1; then
-          docker logs smoke_test_instance || true
-          docker stop smoke_test_instance || true
+        if [ "$HEALTH_OK" -ne 1 ]; then
+          echo "smoke-test: failed to validate health endpoint"
+          docker logs ${CONTAINER_NAME} > build/smoke-logs/${CONTAINER_NAME}.log 2>&1 || true
+          tar -czf build/smoke-logs.tar.gz -C build smoke-logs || true
+          docker stop ${CONTAINER_NAME} || true
           exit 1
         fi
-        docker stop smoke_test_instance || true
+        docker stop ${CONTAINER_NAME} || true
+
+    - name: Upload smoke-test logs (alpine)
+      if: steps.smoke_test.outcome == 'failure'
+      uses: actions/upload-artifact@v4
+      with:
+        name: smoke-logs-alpine
+        path: build/smoke-logs.tar.gz
 
     - name: Compute VERSION
       id: version

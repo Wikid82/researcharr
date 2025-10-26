@@ -143,6 +143,44 @@ Development config vs user config
 - **User / operator config:** mount a persistent host directory at `/config` and let the container populate `config.yml` from `config.example.yml` on first-run. This is the simplest and safest setup for operators.
 - **Development config:** when contributing, mount your repo into the container and use the `builder` or `alpine` images. Use your host editor to change files and run the in-container test commands. Avoid using the distroless runtime for active development because it lacks a shell and dev tooling.
 
+## Developer compose & debug notes
+
+The repository includes a few compose files and a small helper script to make local development and debugging easier:
+
+- `docker-compose.yml` — production-like compose file for running the container locally with a mounted `./config` directory.
+- `docker-compose.dev.yml` — developer convenience compose that mounts the source tree into the container so you can iterate quickly and run tests in-container.
+- `docker-compose.hardened.yml` — an optional override demonstrating secure runtime options (for example: `no-new-privileges`, `cap_drop`, running as a non-root user, `tmpfs` for `/tmp`). Use it as an example by combining it with the base compose file:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.hardened.yml up --build
+```
+
+Preparing a local config
+
+```bash
+cp config.example.yml config/config.yml
+```
+
+Run the development compose (mount source, run in foreground):
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+Debugging and collecting logs
+
+We include `debug-collect.sh` which gathers useful debugging artifacts (container logs, `/app/VERSION`, and the mounted `config` contents) into a tarball. Run it on a host that can reach your containers to collect artifacts quickly.
+
+Example:
+
+```bash
+./debug-collect.sh > debug-collect-output.tar.gz
+```
+
+CI smoke-test artifacts
+
+If a CI smoke-test fails the workflows will now attach a `smoke-logs-*.tar.gz` artifact containing container logs and a small dump of the health output. This helps debugging flaky startup issues quickly.
+
 
 
 ## Requirements

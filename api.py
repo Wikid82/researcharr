@@ -273,7 +273,8 @@ def docs():
         "<html lang=\"en\">\n"
         "    <head>\n"
         "        <meta charset=\"utf-8\" />\n"
-        "        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n"
+        "        <meta name=\"viewport\"\n"
+        "              content=\"width=device-width, initial-scale=1\" />\n"
         "        <title>ResearchArr API Docs</title>\n"
         '        <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4/'
         'swagger-ui.css" />\n'

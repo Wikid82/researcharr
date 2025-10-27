@@ -15,7 +15,7 @@ from flask import (
     session,
     url_for,
 )
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 try:
     # Prefer importing webui from the package if available
@@ -125,15 +125,18 @@ def create_app():
             # to be 'admin'). Only set an in-memory password when the loader
             # returned a plaintext password (first-run).
             if "password" in ucfg:
+                # In-memory plaintext for first-run so login works immediately
                 app.config_data["user"]["password"] = ucfg.get("password")
                 try:
                     app.logger.info(
-                        "Generated web UI initial password for %s: %s",
+                        "Generated web UI initial password for %s (plaintext available in-memory)",
                         app.config_data["user"]["username"],
-                        ucfg.get("password"),
                     )
                 except Exception:
                     pass
+            # Persisted user config may contain only hashes; preserve them
+            if "password_hash" in ucfg:
+                app.config_data["user"]["password_hash"] = ucfg.get("password_hash")
             # If an API key was persisted in the user config, migrate it to a
             # hashed form and expose the hash to the application so API
             # endpoints can validate requests. Prefer `api_key_hash` when
@@ -288,13 +291,30 @@ def create_app():
             instances.append(inst)
         return instances
 
+    @app.route("/")
+    def index():
+        # Redirect root to the login page for convenience so visiting /
+        # opens the web UI instead of returning 404. Tests that expect
+        # root to be missing should continue to use explicit paths.
+        return redirect(url_for("login"))
+
     @app.route("/login", methods=["GET", "POST"])
     def login():
         if request.method == "POST":
             username = request.form.get("username")
             password = request.form.get("password")
             user = app.config_data["user"]
-            if username == user["username"] and password == user["password"]:
+            # Accept either the in-memory plaintext password (first-run) or
+            # verify against a stored password hash when present.
+            pw_ok = False
+            try:
+                if password and "password" in user and password == user["password"]:
+                    pw_ok = True
+                elif password and "password_hash" in user and user["password_hash"]:
+                    pw_ok = check_password_hash(user["password_hash"], password)
+            except Exception:
+                pw_ok = False
+            if username == user["username"] and pw_ok:
                 session["logged_in"] = True
                 return redirect(url_for("general_settings"))
             return render_template(

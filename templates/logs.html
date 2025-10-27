@@ -3,6 +3,160 @@
 {% block content %}
   <div class="container main-content">
     <h1>Logs</h1>
-    <p>Application logs and diagnostics will be available here.</p>
+
+    <form id="loglevel-form" method="post" action="/logs" class="card">
+      <h3>Live Logging Level</h3>
+      <div class="form-row">
+        <label class="form-label" for="LogLevel">Logging Level</label>
+        <select name="LogLevel" id="LogLevel" class="form-control">
+          <option value="DEBUG">DEBUG (most detailed)</option>
+          <option value="INFO">INFO</option>
+          <option value="WARNING">WARNING</option>
+          <option value="ERROR">ERROR</option>
+          <option value="CRITICAL">CRITICAL (least)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <input type="submit" class="btn primary" value="Apply Log Level">
+        <span id="loglevel-msg" class="user-msg" style="display:none;margin-left:10px"></span>
+      </div>
+    </form>
+
+    <div class="card">
+      <h3>Application Log</h3>
+      <div class="form-row">
+        <button id="refresh-log" class="btn">Refresh</button>
+        <button id="download-log" class="btn" data-href="/api/logs?download=1">Download</button>
+        <label style="margin-left:10px">Lines: <input type="number" id="tail-lines" value="200" min="10" style="width:80px"></label>
+        <label style="margin-left:10px"><input type="checkbox" id="live-toggle"> Live stream</label>
+        <span id="stream-state" style="margin-left:10px;font-weight:600;color:#888">Disconnected</span>
+      </div>
+      <pre id="log-output" style="white-space:pre-wrap;max-height:60vh;overflow:auto;border:1px solid #ddd;padding:10px;background:#111;color:#eee;font-family:monospace;">Loading...</pre>
+    </div>
   </div>
+
+  <script>
+    async function fetchLogs(download=false){
+      const lines = document.getElementById('tail-lines').value || 200;
+      const url = '/api/logs?lines=' + encodeURIComponent(lines) + (download? '&download=1' : '');
+      if(download){
+        // direct navigation to download
+        window.location = url;
+        return;
+      }
+      try{
+        const r = await fetch(url, {credentials: 'same-origin'});
+        if(!r.ok){
+          document.getElementById('log-output').textContent = 'Failed to load logs: ' + r.status;
+          return;
+        }
+        const data = await r.json();
+        const out = data.content || '';
+        document.getElementById('log-output').textContent = out;
+        // set selected loglevel
+        if(data.loglevel){
+          const sel = document.getElementById('LogLevel');
+          if(sel) sel.value = data.loglevel;
+        }
+      }catch(e){
+        document.getElementById('log-output').textContent = 'Error loading logs: ' + e;
+      }
+    }
+
+    document.getElementById('refresh-log').addEventListener('click', function(ev){
+      ev.preventDefault();
+      fetchLogs();
+    });
+    document.getElementById('download-log').addEventListener('click', function(ev){
+      ev.preventDefault();
+      fetchLogs(true);
+    });
+
+    // submit loglevel via fetch to avoid full page reload
+    document.getElementById('loglevel-form').addEventListener('submit', async function(ev){
+      ev.preventDefault();
+      const lvl = document.getElementById('LogLevel').value;
+      try{
+        const r = await fetch('/logs', {
+          method: 'POST',
+          headers: {'Content-Type':'application/x-www-form-urlencoded'},
+          body: 'LogLevel=' + encodeURIComponent(lvl),
+          credentials: 'same-origin'
+        });
+        if(r.ok){
+          const msg = document.getElementById('loglevel-msg');
+          msg.style.display = 'inline-block';
+          msg.textContent = 'Log level updated';
+          setTimeout(()=> msg.style.display='none', 3000);
+          fetchLogs();
+        }else{
+          alert('Failed to set log level');
+        }
+      }catch(e){
+        alert('Error: ' + e);
+      }
+    });
+
+    // initial load
+    fetchLogs();
+
+    // Live stream management
+    let ev = null;
+    const streamStateEl = document.getElementById('stream-state');
+    function setStreamState(s){
+      streamStateEl.textContent = s;
+      if(s.toLowerCase().includes('connect')) streamStateEl.style.color = 'lightgreen';
+      else if(s.toLowerCase().includes('error')) streamStateEl.style.color = 'orange';
+      else streamStateEl.style.color = '#888';
+    }
+
+    function startStream(){
+      stopStream();
+      const esLines = document.getElementById('tail-lines').value || 200;
+      try{
+        // clear current output to avoid duplication; SSE will send initial tail
+        document.getElementById('log-output').textContent = '';
+        ev = new EventSource('/api/logs/stream?lines=' + encodeURIComponent(esLines));
+        ev.onopen = function(){ setStreamState('Connected'); };
+        ev.onmessage = function(evt){
+          const outEl = document.getElementById('log-output');
+          // Append the incoming data and a newline
+          if(outEl.textContent) outEl.textContent = outEl.textContent + '\n' + evt.data;
+          else outEl.textContent = evt.data;
+          // keep scrolled to bottom
+          outEl.scrollTop = outEl.scrollHeight;
+        };
+        ev.onerror = function(e){
+          console.warn('Log stream error', e);
+          setStreamState('Error / Reconnecting');
+        };
+      }catch(e){
+        console.warn('SSE not available:', e);
+        setStreamState('Unavailable');
+      }
+    }
+
+    function stopStream(){
+      if(ev){
+        try{ ev.close(); }catch(_){}
+        ev = null;
+      }
+      setStreamState('Disconnected');
+    }
+
+    document.getElementById('live-toggle').addEventListener('change', function(ev){
+      if(this.checked){
+        startStream();
+      }else{
+        stopStream();
+      }
+    });
+
+    // reconnect the stream when tail-lines changes while enabled
+    document.getElementById('tail-lines').addEventListener('change', function(){
+      if(document.getElementById('live-toggle').checked){
+        startStream();
+      }
+    });
+  </script>
 {% endblock %}

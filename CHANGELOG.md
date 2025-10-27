@@ -97,6 +97,32 @@ Notes: These plugins are experimental and intended for development and UI testin
 - Added per-plugin in-memory metrics counters (validate/sync attempts and errors) and included an error-rate summary in `/api/status` so repeated plugin failures are surfaced as warnings.
 - Added `docs/Status-and-Warnings.md` describing each warning and step-by-step remediation instructions. The Status UI links to the relevant docs sections for each warning.
 - Notes: plugin metrics are stored in-memory (reset on restart). Network-heavy checks (update availability, external checks) are opt-in to avoid flaky UI behavior.
+ - Notes: plugin metrics are stored in-memory (reset on restart). Network-heavy checks (update availability, external checks) are opt-in to avoid flaky UI behavior.
+
+### Backups & Tasks
+
+- Added a Backups UI and API for operator-driven import/export and restore of application state.
+  - Backups are ZIP archives stored under the configured `CONFIG_DIR` (default `/config/backups`) and include configuration files, the SQLite DB, plugins directory, and application logs.
+  - Supported operations: create, import, download, restore, and delete backups via the web UI and `/api/backups` endpoints.
+  - Backups retention and rotation are configurable via `CONFIG_DIR/backups.yml` (keys include `retain_count`, `retain_days`, `pre_restore`, `pre_restore_keep_days`, `auto_backup_enabled`, `auto_backup_cron`, and `prune_cron`).
+  - Pre-restore snapshots are taken (opt-in) before a destructive restore and are prefixed `pre-` to help operators recover if a restore fails.
+
+- Added server-side scheduled pruning (rotation) and optional scheduled automatic backups. These are wired to the scheduler and use cron expressions stored in `backups.yml`.
+
+- Persisted Tasks history and settings so scheduled/long-running task runs can be inspected later via `CONFIG_DIR/task_history.jsonl` and `CONFIG_DIR/tasks.yml`.
+
+### Logs and Live Streaming
+
+- Added a dedicated Logs page (`/logs`) with these features:
+  - Tail and view the application log (configurable number of lines) and download the full log file.
+  - Live log-level control applied at runtime (no restart required). UI-chosen LogLevel is persisted to `CONFIG_DIR/general.yml` so it survives restarts.
+  - Optional Server-Sent Events (SSE) streaming endpoint at `/api/logs/stream` to receive initial tail and appended log lines in real-time.
+
+### Updates & Release Checks
+
+- Implemented server-side caching and exponential backoff for release checks (cache persisted at `CONFIG_DIR/updates_cache.yml`, TTL configurable via `UPDATE_CACHE_TTL`). This reduces GitHub API load and handles transient failures gracefully.
+- Added API endpoints to: list current release info (`/api/updates`), ignore/unignore releases, and a guarded in-app upgrade download that stores downloaded assets in `CONFIG_DIR/updates/downloads` when allowed (disabled when running inside immutable images).
+
 
 ---
 

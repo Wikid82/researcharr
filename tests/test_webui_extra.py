@@ -82,7 +82,7 @@ def test_scheduling_save_and_reload(client):
 def test_user_settings_change_username(client):
     import pytest
 
-    pytest.skip("Username change test is skipped due to config reset on app import.")
+#    pytest.skip("Username change test is skipped due to config reset on app import.")
 
 
 def test_logout_flow(client):

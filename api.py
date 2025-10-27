@@ -270,17 +270,17 @@ def docs():
     openapi_url = "/api/v1/openapi.json"
     html = (
         "<!doctype html>\n"
-        "<html lang=\"en\">\n"
+        '<html lang="en">\n'
         "    <head>\n"
-        "        <meta charset=\"utf-8\" />\n"
-        "        <meta name=\"viewport\"\n"
-        "              content=\"width=device-width, initial-scale=1\" />\n"
+        '        <meta charset="utf-8" />\n'
+        '        <meta name="viewport"\n'
+        '              content="width=device-width, initial-scale=1" />\n'
         "        <title>ResearchArr API Docs</title>\n"
         '        <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4/'
         'swagger-ui.css" />\n'
         "    </head>\n"
         "    <body>\n"
-        "        <div id=\"swagger-ui\"></div>\n"
+        '        <div id="swagger-ui"></div>\n'
         '        <script src="https://unpkg.com/swagger-ui-dist@4/'
         'swagger-ui-bundle.js"></script>\n'
         "        <script>\n"

@@ -1,11 +1,16 @@
 import os
 import time
+
 import yaml
 
 
 def login_client(app):
     client = app.test_client()
-    client.post("/login", data={"username": "admin", "password": "password"}, follow_redirects=True)
+    client.post(
+        "/login",
+        data={"username": "admin", "password": "password"},
+        follow_redirects=True,
+    )
     return client
 
 
@@ -13,7 +18,9 @@ def test_updates_skips_fetch_when_cache_fresh(tmp_path, monkeypatch):
     monkeypatch.setenv("CONFIG_DIR", str(tmp_path))
     cache_file = tmp_path / "updates_cache.yml"
     now = int(time.time())
-    cache_file.write_text(yaml.safe_dump({"fetched_at": now, "latest": {"tag_name": "v1"}}))
+    cache_file.write_text(
+        yaml.safe_dump({"fetched_at": now, "latest": {"tag_name": "v1"}})
+    )
 
     # make requests.get raise if called (should not be called because cache is fresh)
     def fail_get(*a, **k):

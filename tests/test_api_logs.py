@@ -6,7 +6,11 @@ import pytest
 
 def login_client(app):
     client = app.test_client()
-    client.post("/login", data={"username": "admin", "password": "password"}, follow_redirects=True)
+    client.post(
+        "/login",
+        data={"username": "admin", "password": "password"},
+        follow_redirects=True,
+    )
     return client
 
 

@@ -1,10 +1,15 @@
 import json
+
 import yaml
 
 
 def login_client(app):
     client = app.test_client()
-    client.post("/login", data={"username": "admin", "password": "password"}, follow_redirects=True)
+    client.post(
+        "/login",
+        data={"username": "admin", "password": "password"},
+        follow_redirects=True,
+    )
     return client
 
 
@@ -17,7 +22,13 @@ def test_api_tasks_filters_and_pagination(tmp_path, monkeypatch):
     # create several records: some success, some failed, some with stderr
     records = [
         {"id": 1, "stdout": "ok1", "stderr": "", "success": True, "start_ts": 100},
-        {"id": 2, "stdout": "err2", "stderr": "boom", "success": False, "start_ts": 200},
+        {
+            "id": 2,
+            "stdout": "err2",
+            "stderr": "boom",
+            "success": False,
+            "start_ts": 200,
+        },
         {"id": 3, "stdout": "ok3", "stderr": "", "success": True, "start_ts": 300},
         {"id": 4, "stdout": "searchme", "stderr": "", "success": True, "start_ts": 400},
     ]

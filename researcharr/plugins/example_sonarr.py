@@ -6,11 +6,11 @@ in this repository. This module attempts to import the canonical
 location first and falls back to loading the file by path if needed.
 """
 
-from typing import Any
 import importlib
 import importlib.util
 import os
 from types import ModuleType
+from typing import Any
 
 
 def _load_module() -> ModuleType:

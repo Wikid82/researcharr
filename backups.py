@@ -4,14 +4,17 @@ Provides create_backup_file() and prune_backups() used by both the
 web UI (factory.py) and the scheduler runner (run.py) to avoid
 duplicating zip/prune logic.
 """
-from datetime import datetime
+
 import os
-import zipfile
 import time
+import zipfile
+from datetime import datetime
 from typing import Optional
 
 
-def create_backup_file(config_root: str, backups_dir: str, prefix: str = "") -> Optional[str]:
+def create_backup_file(
+    config_root: str, backups_dir: str, prefix: str = ""
+) -> Optional[str]:
     """Create a zip backup of important config files and return the filename.
 
     Returns the filename (not full path) on success, or None on failure.
@@ -19,7 +22,11 @@ def create_backup_file(config_root: str, backups_dir: str, prefix: str = "") -> 
     try:
         os.makedirs(backups_dir, exist_ok=True)
         timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-        name = f"{prefix}researcharr-backup-{timestamp}.zip" if prefix else f"researcharr-backup-{timestamp}.zip"
+        name = (
+            f"{prefix}researcharr-backup-{timestamp}.zip"
+            if prefix
+            else f"researcharr-backup-{timestamp}.zip"
+        )
         path = os.path.join(backups_dir, name)
         with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             cfg = os.path.join(config_root, "config.yml")
@@ -36,7 +43,9 @@ def create_backup_file(config_root: str, backups_dir: str, prefix: str = "") -> 
                 for root, dirs, files in os.walk(plugins_dir):
                     for f in files:
                         full = os.path.join(root, f)
-                        arc = os.path.join("plugins", os.path.relpath(full, plugins_dir))
+                        arc = os.path.join(
+                            "plugins", os.path.relpath(full, plugins_dir)
+                        )
                         zf.write(full, arcname=arc)
             app_log = os.path.join(os.path.dirname(__file__), os.pardir, "app.log")
             if os.path.exists(app_log):
@@ -92,7 +101,9 @@ def prune_backups(backups_dir: str, cfg: Optional[dict] = None) -> None:
             for fname, mtime in list(files):
                 if mtime < cutoff:
                     try:
-                        if fname.startswith("pre-") and (now - mtime) < (pre_keep * 86400):
+                        if fname.startswith("pre-") and (now - mtime) < (
+                            pre_keep * 86400
+                        ):
                             # keep recent pre-restore backups
                             continue
                         os.remove(os.path.join(backups_dir, fname))

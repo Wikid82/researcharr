@@ -1,14 +1,18 @@
 import os
-import time
-import yaml
 import threading
+import time
 
 import requests
+import yaml
 
 
 def login_client(app):
     client = app.test_client()
-    client.post("/login", data={"username": "admin", "password": "password"}, follow_redirects=True)
+    client.post(
+        "/login",
+        data={"username": "admin", "password": "password"},
+        follow_redirects=True,
+    )
     return client
 
 
@@ -23,7 +27,12 @@ def test_api_updates_fetch_success(tmp_path, monkeypatch):
         "body": "notes",
         "published_at": "2020-01-01T00:00:00Z",
         "html_url": "https://example.com/release",
-        "assets": [{"name": "asset.tar.gz", "browser_download_url": "https://example.com/asset.tar.gz"}],
+        "assets": [
+            {
+                "name": "asset.tar.gz",
+                "browser_download_url": "https://example.com/asset.tar.gz",
+            }
+        ],
     }
 
     class MockJSONResp:
@@ -93,7 +102,9 @@ def test_updates_ignore_and_unignore(tmp_path, monkeypatch):
     client = login_client(app)
 
     # ignore a specific release
-    r = client.post("/api/updates/ignore", json={"mode": "release", "release_tag": "v9"})
+    r = client.post(
+        "/api/updates/ignore", json={"mode": "release", "release_tag": "v9"}
+    )
     assert r.status_code == 200
     j = r.get_json()
     assert j.get("result") == "ok"
@@ -133,13 +144,17 @@ def test_api_updates_upgrade_starts_download(tmp_path, monkeypatch):
         # download call uses stream=True
         if kwargs.get("stream"):
             return MockStreamResp(b"dummydata")
+
         # other calls (release fetch) can return minimal JSON
         class J:
             def raise_for_status(self):
                 return None
 
             def json(self):
-                return {"tag_name": "vX", "assets": [{"name": "a", "browser_download_url": url}]}
+                return {
+                    "tag_name": "vX",
+                    "assets": [{"name": "a", "browser_download_url": url}],
+                }
 
         return J()
 

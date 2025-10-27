@@ -10,22 +10,23 @@ import zipfile
 from datetime import datetime
 
 import yaml
-from researcharr.backups import create_backup_file, prune_backups
 from flask import (
     Flask,
+    Response,
     flash,
     jsonify,
     redirect,
     render_template,
     request,
-    session,
-    url_for,
     send_file,
-    Response,
+    session,
     stream_with_context,
+    url_for,
 )
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
+
+from researcharr.backups import create_backup_file, prune_backups
 
 try:
     # Prefer importing webui from the package if available
@@ -142,7 +143,15 @@ def create_app():
         "scheduling": {"cron_schedule": "0 0 * * *", "timezone": "UTC"},
         "user": {"username": "admin", "password": "researcharr"},
         # Backups settings: retain_count (max files), retain_days (age in days), pre_restore (create snapshot before restore)
-        "backups": {"retain_count": 10, "retain_days": 30, "pre_restore": True, "pre_restore_keep_days": 1, "auto_backup_enabled": False, "auto_backup_cron": "0 2 * * *", "prune_cron": "0 3 * * *"},
+        "backups": {
+            "retain_count": 10,
+            "retain_days": 30,
+            "pre_restore": True,
+            "pre_restore_keep_days": 1,
+            "auto_backup_enabled": False,
+            "auto_backup_cron": "0 2 * * *",
+            "prune_cron": "0 3 * * *",
+        },
     }
 
     # Load persisted tasks settings if present so UI preferences survive restarts
@@ -156,7 +165,9 @@ def create_app():
                 app.config_data.setdefault("tasks", {}).update(tcfg)
             except Exception:
                 try:
-                    app.logger.exception("Failed to load tasks settings %s", tasks_cfg_file)
+                    app.logger.exception(
+                        "Failed to load tasks settings %s", tasks_cfg_file
+                    )
                 except Exception:
                     pass
     except Exception:
@@ -176,7 +187,9 @@ def create_app():
                     )
             except Exception:
                 try:
-                    app.logger.exception("Failed to load general settings %s", general_cfg_file)
+                    app.logger.exception(
+                        "Failed to load general settings %s", general_cfg_file
+                    )
                 except Exception:
                     pass
     except Exception:
@@ -563,7 +576,12 @@ def create_app():
             return jsonify({"error": "unauthorized"}), 401
         config_root = os.getenv("CONFIG_DIR", "/config")
         # allow overriding log path via env
-        app_log = os.getenv("WEBUI_LOG", os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "app.log")))
+        app_log = os.getenv(
+            "WEBUI_LOG",
+            os.path.abspath(
+                os.path.join(os.path.dirname(__file__), os.pardir, "app.log")
+            ),
+        )
         # optional query params
         try:
             lines = int(request.args.get("lines", 200))
@@ -591,7 +609,13 @@ def create_app():
         except Exception:
             app.logger.exception("Failed to read app log")
             return jsonify({"error": "read_failed"}), 500
-        return jsonify({"content": content, "meta": meta, "loglevel": app.config_data.get("general", {}).get("LogLevel")})
+        return jsonify(
+            {
+                "content": content,
+                "meta": meta,
+                "loglevel": app.config_data.get("general", {}).get("LogLevel"),
+            }
+        )
 
     @app.route("/api/tasks", methods=["GET"])
     def api_tasks():
@@ -607,7 +631,11 @@ def create_app():
 
         config_root = os.getenv("CONFIG_DIR", "/config")
         hist_file = os.path.join(config_root, "task_history.jsonl")
-        limit = int(request.args.get("limit", app.config_data.get("tasks", {}).get("show_count", 20)))
+        limit = int(
+            request.args.get(
+                "limit", app.config_data.get("tasks", {}).get("show_count", 20)
+            )
+        )
         offset = int(request.args.get("offset", 0))
         status_filter = request.args.get("status")  # e.g., 'failed'
         search_text = request.args.get("search")
@@ -622,34 +650,54 @@ def create_app():
                         if not line:
                             continue
                         try:
-                            rec = yaml.safe_load(line) if line.lstrip().startswith("-") else None
+                            rec = (
+                                yaml.safe_load(line)
+                                if line.lstrip().startswith("-")
+                                else None
+                            )
                         except Exception:
                             rec = None
                         if rec is None:
                             try:
-                                rec = __import__('json').loads(line)
+                                rec = __import__("json").loads(line)
                             except Exception:
                                 # Skip malformed lines
                                 continue
                         runs.append(rec)
                 # newest last in file; present newest first
                 runs = list(reversed(runs))
+
                 # server-side filtering
                 def match_filters(r):
                     if status_filter:
-                        if status_filter == 'failed':
-                            if not (r.get('success') is False or (r.get('returncode') is not None and r.get('returncode') != 0) or r.get('stderr')):
+                        if status_filter == "failed":
+                            if not (
+                                r.get("success") is False
+                                or (
+                                    r.get("returncode") is not None
+                                    and r.get("returncode") != 0
+                                )
+                                or r.get("stderr")
+                            ):
                                 return False
                         # other status types may be added
                     if search_text:
-                        target = (r.get('stdout','') or '') + '\n' + (r.get('stderr','') or '')
-                        if search_text.lower() not in target.lower() and search_text.lower() not in str(r.get('start_ts','')).lower():
+                        target = (
+                            (r.get("stdout", "") or "")
+                            + "\n"
+                            + (r.get("stderr", "") or "")
+                        )
+                        if (
+                            search_text.lower() not in target.lower()
+                            and search_text.lower()
+                            not in str(r.get("start_ts", "")).lower()
+                        ):
                             return False
                     return True
 
                 filtered = [r for r in runs if match_filters(r)]
                 total = len(filtered)
-                runs = filtered[offset: offset + limit]
+                runs = filtered[offset : offset + limit]
             else:
                 runs = []
                 total = 0
@@ -657,7 +705,7 @@ def create_app():
             return jsonify({"error": "failed_to_read_history"}), 500
 
         return jsonify({"runs": runs, "total": total})
-    
+
     @app.route("/api/logs/stream", methods=["GET"])
     def api_logs_stream():
         """Server-sent events endpoint that tails the application log and streams new lines.
@@ -669,7 +717,12 @@ def create_app():
             return ("", 401)
 
         config_root = os.getenv("CONFIG_DIR", "/config")
-        app_log = os.getenv("WEBUI_LOG", os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "app.log")))
+        app_log = os.getenv(
+            "WEBUI_LOG",
+            os.path.abspath(
+                os.path.join(os.path.dirname(__file__), os.pardir, "app.log")
+            ),
+        )
         try:
             initial_lines = int(request.args.get("lines", 200))
         except Exception:
@@ -679,7 +732,7 @@ def create_app():
             # Memory-efficient backward reader to get the last n lines.
             # Reads blocks from the end until we've got enough newlines.
             try:
-                with open(path, 'rb') as f:
+                with open(path, "rb") as f:
                     f.seek(0, os.SEEK_END)
                     filesize = f.tell()
                     if filesize == 0:
@@ -698,14 +751,14 @@ def create_app():
                     data = b"".join(blocks)
                     parts = data.splitlines()
                     tail = parts[-n:]
-                    return [p.decode('utf-8', errors='replace') for p in tail]
+                    return [p.decode("utf-8", errors="replace") for p in tail]
             except Exception:
                 return []
 
         def generate():
             try:
                 if not os.path.exists(app_log):
-                    yield 'data: ' + "" + '\n\n'
+                    yield "data: " + "" + "\n\n"
                     return
                 # send initial tail efficiently
                 tail = tail_lines(app_log, initial_lines)
@@ -717,7 +770,7 @@ def create_app():
                     yield "\n"
 
                 # now stream appended lines by seeking to end and reading
-                with open(app_log, 'r', errors='ignore') as fh:
+                with open(app_log, "r", errors="ignore") as fh:
                     fh.seek(0, os.SEEK_END)
                     while True:
                         where = fh.tell()
@@ -736,9 +789,10 @@ def create_app():
                     app.logger.exception("Log stream error")
                 except Exception:
                     pass
-                yield 'data: [stream error]\n\n'
+                yield "data: [stream error]\n\n"
 
         return Response(stream_with_context(generate()), mimetype="text/event-stream")
+
     def scheduling():
         if not is_logged_in():
             return redirect(url_for("login"))
@@ -858,7 +912,15 @@ def create_app():
         # Ensure plugin metrics bucket exists
         try:
             pmetrics = app.metrics.setdefault("plugins", {}).setdefault(
-                plugin_name, {"validate_attempts": 0, "validate_errors": 0, "sync_attempts": 0, "sync_errors": 0, "last_error": None, "last_error_msg": None}
+                plugin_name,
+                {
+                    "validate_attempts": 0,
+                    "validate_errors": 0,
+                    "sync_attempts": 0,
+                    "sync_errors": 0,
+                    "last_error": None,
+                    "last_error_msg": None,
+                },
             )
         except Exception:
             pmetrics = None
@@ -877,7 +939,9 @@ def create_app():
             if not result:
                 try:
                     if pmetrics is not None:
-                        pmetrics["validate_errors"] = pmetrics.get("validate_errors", 0) + 1
+                        pmetrics["validate_errors"] = (
+                            pmetrics.get("validate_errors", 0) + 1
+                        )
                         pmetrics["last_error"] = int(time.time())
                         pmetrics["last_error_msg"] = "validation returned falsy"
                 except Exception:
@@ -912,7 +976,15 @@ def create_app():
         # Ensure plugin metrics bucket exists
         try:
             pmetrics = app.metrics.setdefault("plugins", {}).setdefault(
-                plugin_name, {"validate_attempts": 0, "validate_errors": 0, "sync_attempts": 0, "sync_errors": 0, "last_error": None, "last_error_msg": None}
+                plugin_name,
+                {
+                    "validate_attempts": 0,
+                    "validate_errors": 0,
+                    "sync_attempts": 0,
+                    "sync_errors": 0,
+                    "last_error": None,
+                    "last_error_msg": None,
+                },
             )
         except Exception:
             pmetrics = None
@@ -946,7 +1018,6 @@ def create_app():
                 pass
             app.logger.exception("Plugin sync failed: %s", e)
             return jsonify({"error": "sync_failed", "msg": str(e)}), 500
-
 
     @app.route("/api/storage", methods=["GET"])
     def api_storage():
@@ -1001,7 +1072,10 @@ def create_app():
             config_root = os.getenv("CONFIG_DIR", "/config")
             plugins_config_dir = os.path.join(config_root, "plugins")
             paths = []
-            for name, path in (("config", config_root), ("plugins", plugins_config_dir)):
+            for name, path in (
+                ("config", config_root),
+                ("plugins", plugins_config_dir),
+            ):
                 try:
                     exists = os.path.exists(path)
                     is_dir = os.path.isdir(path)
@@ -1029,7 +1103,9 @@ def create_app():
             # Prefer env override
             db_file = os.getenv(
                 "RESEARCHARR_DB",
-                os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "researcharr.db")),
+                os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), os.pardir, "researcharr.db")
+                ),
             )
             db_info["path"] = db_file
             try:
@@ -1068,7 +1144,9 @@ def create_app():
         try:
             user = app.config_data.get("user", {})
             if user.get("password") and not user.get("password_hash"):
-                cfg_issues.append("Web UI admin account still has first-run plaintext password in memory; rotate credentials")
+                cfg_issues.append(
+                    "Web UI admin account still has first-run plaintext password in memory; rotate credentials"
+                )
             if not user.get("username"):
                 cfg_issues.append("Missing web UI username")
         except Exception:
@@ -1079,10 +1157,19 @@ def create_app():
         logs = {}
         try:
             # app.log in repository root or env override
-            app_log = os.getenv("WEBUI_LOG", os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "app.log")))
+            app_log = os.getenv(
+                "WEBUI_LOG",
+                os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), os.pardir, "app.log")
+                ),
+            )
             if os.path.exists(app_log):
                 st = os.stat(app_log)
-                logs["app_log"] = {"path": app_log, "size": st.st_size, "mtime": int(st.st_mtime)}
+                logs["app_log"] = {
+                    "path": app_log,
+                    "size": st.st_size,
+                    "mtime": int(st.st_mtime),
+                }
             # db size included above
         except Exception:
             pass
@@ -1090,8 +1177,13 @@ def create_app():
 
         # Example files check
         try:
-            example_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "config.example.yml"))
-            result["examples"] = {"config_example_exists": os.path.exists(example_path), "path": example_path}
+            example_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), os.pardir, "config.example.yml")
+            )
+            result["examples"] = {
+                "config_example_exists": os.path.exists(example_path),
+                "path": example_path,
+            }
         except Exception:
             result["examples"] = {"config_example_exists": False}
 
@@ -1106,7 +1198,9 @@ def create_app():
                     if ":" in l:
                         k, v = l.split(":", 1)
                         mem[k.strip()] = v.strip()
-                resources["meminfo"] = {k: mem.get(k) for k in ("MemTotal", "MemAvailable")} if mem else {}
+                resources["meminfo"] = (
+                    {k: mem.get(k) for k in ("MemTotal", "MemAvailable")} if mem else {}
+                )
             if os.path.exists("/proc/loadavg"):
                 with open("/proc/loadavg") as fh:
                     resources["loadavg"] = fh.read().strip()
@@ -1391,7 +1485,6 @@ def create_app():
             return redirect(url_for("login"))
         return render_template("tasks.html")
 
-
     @app.route("/api/tasks", methods=["GET"])
     def api_tasks():
         """Return recent scheduled job runs parsed from the cron log.
@@ -1406,7 +1499,11 @@ def create_app():
 
         log_path = os.getenv("CRON_LOG_PATH", "/config/cron.log")
         # Pagination parameters
-        max_entries = int(request.args.get("limit", app.config_data.get("tasks", {}).get("show_count", 20)))
+        max_entries = int(
+            request.args.get(
+                "limit", app.config_data.get("tasks", {}).get("show_count", 20)
+            )
+        )
         offset = int(request.args.get("offset", 0))
         runs = []
         try:
@@ -1414,7 +1511,7 @@ def create_app():
                 with open(log_path, "r") as fh:
                     raw = fh.read()
                 # Split into blocks starting with the date-prefixed line
-                parts = raw.split('\n')
+                parts = raw.split("\n")
                 current = None
                 for line in parts:
                     if not line.strip():
@@ -1430,14 +1527,19 @@ def create_app():
                             ts = line.split()[0] + " " + line.split()[1]
                         except Exception:
                             ts = None
-                        current = {"start": ts, "lines": [line], "returncode": None, "success": None}
+                        current = {
+                            "start": ts,
+                            "lines": [line],
+                            "returncode": None,
+                            "success": None,
+                        }
                     elif current is not None:
                         current["lines"].append(line)
                         if "Job finished with returncode" in line:
                             try:
                                 rc = int(line.rsplit()[-1])
                                 current["returncode"] = rc
-                                current["success"] = (rc == 0)
+                                current["success"] = rc == 0
                             except Exception:
                                 pass
                         elif line.startswith("Job stderr:") or "Job stderr:" in line:
@@ -1449,12 +1551,11 @@ def create_app():
                 runs = list(reversed(runs))
                 total = len(runs)
                 # apply offset/limit for pagination
-                runs = runs[offset: offset + max_entries]
+                runs = runs[offset : offset + max_entries]
         except Exception:
             return jsonify({"error": "failed_to_read_log"}), 500
 
         return jsonify({"runs": runs, "total": total})
-
 
     @app.route("/api/tasks/trigger", methods=["POST"])
     def api_tasks_trigger():
@@ -1493,7 +1594,6 @@ def create_app():
             app.logger.exception("Failed to trigger scheduled job")
             return jsonify({"error": "trigger_failed"}), 500
 
-
     @app.route("/api/tasks/settings", methods=["GET", "POST"])
     def api_tasks_settings():
         if not is_logged_in():
@@ -1525,7 +1625,9 @@ def create_app():
         except Exception:
             # Don't fail the request if persistence fails; return ok but
             # include a warning for callers that persistence didn't work.
-            return jsonify({"result": "ok", "tasks": tasks_cfg, "warning": "persist_failed"})
+            return jsonify(
+                {"result": "ok", "tasks": tasks_cfg, "warning": "persist_failed"}
+            )
 
         return jsonify({"result": "ok", "tasks": tasks_cfg})
 
@@ -1534,7 +1636,6 @@ def create_app():
         if not is_logged_in():
             return redirect(url_for("login"))
         return render_template("backups.html")
-
 
     @app.route("/api/backups", methods=["GET"])
     def api_backups_list():
@@ -1549,7 +1650,9 @@ def create_app():
                 fpath = os.path.join(backups_dir, fname)
                 try:
                     st = os.stat(fpath)
-                    files.append({"name": fname, "size": st.st_size, "mtime": int(st.st_mtime)})
+                    files.append(
+                        {"name": fname, "size": st.st_size, "mtime": int(st.st_mtime)}
+                    )
                 except Exception:
                     continue
             return jsonify({"backups": files})
@@ -1557,15 +1660,15 @@ def create_app():
             app.logger.exception("Failed to list backups: %s", e)
             return jsonify({"error": "failed_to_list"}), 500
 
-
-    def _create_backup_file(config_root: str, backups_dir: str, prefix: str = "") -> str:
+    def _create_backup_file(
+        config_root: str, backups_dir: str, prefix: str = ""
+    ) -> str:
         """Wrapper around shared create_backup_file helper.
 
         Keeps the old internal name for backwards compatibility within this
         module.
         """
         return create_backup_file(config_root, backups_dir, prefix)
-
 
     def _prune_backups(backups_dir: str):
         """Wrapper around shared prune_backups helper which accepts a cfg.
@@ -1579,7 +1682,6 @@ def create_app():
         except Exception:
             cfg = None
         prune_backups(backups_dir, cfg)
-
 
     @app.route("/api/backups/create", methods=["POST"])
     def api_backups_create():
@@ -1598,7 +1700,6 @@ def create_app():
         except Exception as e:
             app.logger.exception("Failed to create backup: %s", e)
             return jsonify({"error": "create_failed"}), 500
-
 
     @app.route("/api/backups/import", methods=["POST"])
     def api_backups_import():
@@ -1626,7 +1727,6 @@ def create_app():
             app.logger.exception("Failed to import backup: %s", e)
             return jsonify({"error": "import_failed"}), 500
 
-
     @app.route("/api/backups/download/<path:name>", methods=["GET"])
     def api_backups_download(name: str):
         if not is_logged_in():
@@ -1643,7 +1743,6 @@ def create_app():
         except Exception as e:
             app.logger.exception("Failed to download backup: %s", e)
             return jsonify({"error": "download_failed"}), 500
-
 
     @app.route("/api/backups/delete/<path:name>", methods=["DELETE"])
     def api_backups_delete(name: str):
@@ -1662,7 +1761,6 @@ def create_app():
         except Exception as e:
             app.logger.exception("Failed to delete backup: %s", e)
             return jsonify({"error": "delete_failed"}), 500
-
 
     @app.route("/api/backups/restore/<path:name>", methods=["POST"])
     def api_backups_restore(name: str):
@@ -1687,7 +1785,9 @@ def create_app():
             try:
                 pre_cfg = app.config_data.get("backups", {})
                 if bool(pre_cfg.get("pre_restore", True)):
-                    pre_name = _create_backup_file(config_root, backups_dir, prefix="pre-")
+                    pre_name = _create_backup_file(
+                        config_root, backups_dir, prefix="pre-"
+                    )
                     try:
                         _prune_backups(backups_dir)
                     except Exception:
@@ -1717,7 +1817,6 @@ def create_app():
         except Exception as e:
             app.logger.exception("Failed to restore backup: %s", e)
             return jsonify({"error": "restore_failed"}), 500
-
 
     @app.route("/api/backups/settings", methods=["GET", "POST"])
     def api_backups_settings():
@@ -1752,7 +1851,9 @@ def create_app():
                 yaml.safe_dump(backups_cfg, fh)
         except Exception:
             app.logger.exception("Failed to persist backups settings")
-            return jsonify({"result": "ok", "warning": "persist_failed", "backups": backups_cfg})
+            return jsonify(
+                {"result": "ok", "warning": "persist_failed", "backups": backups_cfg}
+            )
 
         return jsonify({"result": "ok", "backups": backups_cfg})
 
@@ -1869,7 +1970,10 @@ def create_app():
             return cache
 
         # attempt fetch with exponential backoff on failure
-        headers = {"Accept": "application/vnd.github.v3+json", "User-Agent": "researcharr-updater/1"}
+        headers = {
+            "Accept": "application/vnd.github.v3+json",
+            "User-Agent": "researcharr-updater/1",
+        }
         gh_token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
         if gh_token:
             headers["Authorization"] = f"token {gh_token}"
@@ -1883,7 +1987,8 @@ def create_app():
                 "published_at": j.get("published_at"),
                 "url": j.get("html_url") or j.get("url"),
                 "assets": [
-                    {"name": a.get("name"), "url": a.get("browser_download_url")} for a in (j.get("assets") or [])
+                    {"name": a.get("name"), "url": a.get("browser_download_url")}
+                    for a in (j.get("assets") or [])
                 ],
             }
             cache["latest"] = latest
@@ -1912,7 +2017,7 @@ def create_app():
                 pass
             return cache
 
-    @app.route('/api/updates', methods=['GET'])
+    @app.route("/api/updates", methods=["GET"])
     def api_updates():
         """Return current and latest release metadata.
 
@@ -1949,8 +2054,14 @@ def create_app():
                         ignore_reason = "ignored_until"
                 except Exception:
                     pass
-            if not is_ignored and "ignored_release" in ucfg and ucfg.get("ignored_release"):
-                if latest.get("tag_name") and ucfg.get("ignored_release") == latest.get("tag_name"):
+            if (
+                not is_ignored
+                and "ignored_release" in ucfg
+                and ucfg.get("ignored_release")
+            ):
+                if latest.get("tag_name") and ucfg.get("ignored_release") == latest.get(
+                    "tag_name"
+                ):
                     is_ignored = True
                     ignore_reason = "ignored_release"
         except Exception:
@@ -1977,7 +2088,7 @@ def create_app():
             }
         )
 
-    @app.route('/api/updates/ignore', methods=['POST'])
+    @app.route("/api/updates/ignore", methods=["POST"])
     def api_updates_ignore():
         """Ignore update notifications.
 
@@ -2014,8 +2125,7 @@ def create_app():
             return jsonify({"result": "ok", "warning": "persist_failed"}), 200
         return jsonify({"result": "ok", "updates": ucfg})
 
-
-    @app.route('/api/updates/upgrade', methods=['POST'])
+    @app.route("/api/updates/upgrade", methods=["POST"])
     def api_updates_upgrade():
         """Start a controlled in-app upgrade by downloading the selected asset.
 
@@ -2032,13 +2142,18 @@ def create_app():
         except Exception:
             return jsonify({"error": "invalid_json"}), 400
         asset_url = data.get("asset_url")
-        if not asset_url or not isinstance(asset_url, str) or not asset_url.startswith(("http://", "https://")):
+        if (
+            not asset_url
+            or not isinstance(asset_url, str)
+            or not asset_url.startswith(("http://", "https://"))
+        ):
             return jsonify({"error": "invalid_asset_url"}), 400
 
         # perform the download in a background thread
         def _download_asset(url: str):
-            import requests
             from urllib.parse import urlparse
+
+            import requests
 
             cfg_root = os.getenv("CONFIG_DIR", "/config")
             dl_dir = os.path.join(cfg_root, "updates", "downloads")
@@ -2057,7 +2172,11 @@ def create_app():
                                 fh.write(chunk)
                 # record last_download in cache for operator visibility
                 cache = _load_updates_cache()
-                cache["last_download"] = {"url": url, "path": dest, "ts": int(time.time())}
+                cache["last_download"] = {
+                    "url": url,
+                    "path": dest,
+                    "ts": int(time.time()),
+                }
                 _save_updates_cache(cache)
             except Exception:
                 try:
@@ -2071,7 +2190,7 @@ def create_app():
         t.start()
         return jsonify({"result": "started", "asset_url": asset_url})
 
-    @app.route('/api/updates/unignore', methods=['POST'])
+    @app.route("/api/updates/unignore", methods=["POST"])
     def api_updates_unignore():
         if not is_logged_in():
             return jsonify({"error": "unauthorized"}), 401

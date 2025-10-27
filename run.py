@@ -16,14 +16,15 @@ import threading
 from types import ModuleType
 
 import yaml
+
 try:
     # Prefer importing the shared helpers from the package
     from researcharr.backups import create_backup_file, prune_backups
 except Exception:
     create_backup_file = None
     prune_backups = None
-import time
 import json
+import time
 import zipfile
 
 # `resource` is a platform-specific stdlib module (POSIX). Annotate a
@@ -202,12 +203,14 @@ def run_job():
                 hist_file = os.path.join(config_dir, "task_history.jsonl")
                 rec = {
                     "start_ts": int(start_ts),
-                    "start_iso": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(start_ts)),
-                    "returncode": int(getattr(res, 'returncode', -1)),
+                    "start_iso": time.strftime(
+                        "%Y-%m-%dT%H:%M:%SZ", time.gmtime(start_ts)
+                    ),
+                    "returncode": int(getattr(res, "returncode", -1)),
                     "stdout": res.stdout or "",
                     "stderr": res.stderr or "",
                     "duration_seconds": round(time.time() - start_ts, 2),
-                    "success": getattr(res, 'returncode', 1) == 0,
+                    "success": getattr(res, "returncode", 1) == 0,
                 }
                 try:
                     os.makedirs(config_dir, exist_ok=True)
@@ -279,6 +282,7 @@ def main(once: bool = False):
             id="researcharr_job",
             replace_existing=True,
         )
+
         # backup helpers and scheduled prune/auto-backup
         def _read_backups_cfg():
             config_dir = os.getenv("CONFIG_DIR", "/config")
@@ -328,7 +332,12 @@ def main(once: bool = False):
             if prune_cron:
                 try:
                     ptrigger = CronTrigger.from_crontab(prune_cron, timezone="UTC")
-                    scheduler.add_job(_prune_backups_run, ptrigger, id="prune_backups", replace_existing=True)
+                    scheduler.add_job(
+                        _prune_backups_run,
+                        ptrigger,
+                        id="prune_backups",
+                        replace_existing=True,
+                    )
                 except Exception:
                     logger.exception("Invalid prune cron: %s", prune_cron)
             # Auto backup
@@ -336,6 +345,7 @@ def main(once: bool = False):
                 ab_cron = bcfg.get("auto_backup_cron") or "0 2 * * *"
                 try:
                     abtrigger = CronTrigger.from_crontab(ab_cron, timezone="UTC")
+
                     def _auto_backup_wrapper():
                         name = _create_backup_file_run()
                         if name:
@@ -345,7 +355,13 @@ def main(once: bool = False):
                                 _prune_backups_run()
                             except Exception:
                                 logger.exception("Prune after auto-backup failed")
-                    scheduler.add_job(_auto_backup_wrapper, abtrigger, id="auto_backup", replace_existing=True)
+
+                    scheduler.add_job(
+                        _auto_backup_wrapper,
+                        abtrigger,
+                        id="auto_backup",
+                        replace_existing=True,
+                    )
                 except Exception:
                     logger.exception("Invalid auto backup cron: %s", ab_cron)
         except Exception:

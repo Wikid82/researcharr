@@ -3,7 +3,9 @@ import os
 
 def test_env_bool_truthy_and_falsy(monkeypatch):
     import importlib
+
     import researcharr.webui as webui
+
     importlib.reload(webui)
 
     monkeypatch.setenv("WEBUI_DEV_PRINT_CREDS", "true")

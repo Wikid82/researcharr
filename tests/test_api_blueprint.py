@@ -3,7 +3,11 @@ from werkzeug.security import generate_password_hash
 
 def login_client(app):
     client = app.test_client()
-    client.post("/login", data={"username": "admin", "password": "password"}, follow_redirects=True)
+    client.post(
+        "/login",
+        data={"username": "admin", "password": "password"},
+        follow_redirects=True,
+    )
     return client
 
 
@@ -26,7 +30,9 @@ def test_openapi_and_docs_require_api_key(monkeypatch):
 
     # set a valid api key hash in app config and call with header
     secret = "sekrit"
-    app.config_data.setdefault("general", {})["api_key_hash"] = generate_password_hash(secret)
+    app.config_data.setdefault("general", {})["api_key_hash"] = generate_password_hash(
+        secret
+    )
     r3 = client.get("/api/v1/docs", headers={"X-API-Key": secret})
     assert r3.status_code == 200
     assert "ResearchArr API Docs" in r3.data.decode("utf-8")
@@ -40,7 +46,9 @@ def test_plugins_and_validate_and_notifications(monkeypatch):
 
     # prepare api key
     secret = "token"
-    app.config_data.setdefault("general", {})["api_key_hash"] = generate_password_hash(secret)
+    app.config_data.setdefault("general", {})["api_key_hash"] = generate_password_hash(
+        secret
+    )
 
     # without header -> unauthorized
     r = client.get("/api/v1/plugins")
@@ -57,7 +65,9 @@ def test_plugins_and_validate_and_notifications(monkeypatch):
     assert r3.status_code == 404
 
     # test notifications send when no apprise plugin registered -> 404
-    r4 = client.post("/api/v1/notifications/send", headers={"X-API-Key": secret}, json={"body": "x"})
+    r4 = client.post(
+        "/api/v1/notifications/send", headers={"X-API-Key": secret}, json={"body": "x"}
+    )
     assert r4.status_code == 404
 
     # Now mock a simple plugin registry with apprise
@@ -83,10 +93,16 @@ def test_plugins_and_validate_and_notifications(monkeypatch):
     app.config_data.setdefault("apprise", []).append({"name": "a"})
 
     # sending without body should return 400
-    r5 = client.post("/api/v1/notifications/send", headers={"X-API-Key": secret}, json={})
+    r5 = client.post(
+        "/api/v1/notifications/send", headers={"X-API-Key": secret}, json={}
+    )
     assert r5.status_code == 400
 
     # with body should succeed
-    r6 = client.post("/api/v1/notifications/send", headers={"X-API-Key": secret}, json={"body": "hello"})
+    r6 = client.post(
+        "/api/v1/notifications/send",
+        headers={"X-API-Key": secret},
+        json={"body": "hello"},
+    )
     assert r6.status_code == 200
     assert r6.get_json().get("result") is True

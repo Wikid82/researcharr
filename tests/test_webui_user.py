@@ -1,12 +1,14 @@
-import os
-import yaml
 import importlib
+import os
+
+import yaml
 
 
 def test_first_run_creates_user_config(tmp_path, monkeypatch):
     # point USER_CONFIG_PATH to tmp location via researcharr.researcharr symbol
     monkeypatch.setattr(
-        "researcharr.researcharr.USER_CONFIG_PATH", str(tmp_path / "webui_user.yml"),
+        "researcharr.researcharr.USER_CONFIG_PATH",
+        str(tmp_path / "webui_user.yml"),
         raising=False,
     )
     # reload webui to pick up patched USER_CONFIG_PATH
@@ -35,10 +37,12 @@ def test_first_run_creates_user_config(tmp_path, monkeypatch):
 
 def test_save_user_config_writes_hash(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "researcharr.researcharr.USER_CONFIG_PATH", str(tmp_path / "webui_user.yml"),
+        "researcharr.researcharr.USER_CONFIG_PATH",
+        str(tmp_path / "webui_user.yml"),
         raising=False,
     )
     import researcharr.webui as webui
+
     importlib.reload(webui)
 
     p = tmp_path / "webui_user.yml"

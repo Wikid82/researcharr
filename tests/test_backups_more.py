@@ -1,7 +1,6 @@
 import os
-import zipfile
 import time
-
+import zipfile
 from pathlib import Path
 
 import pytest

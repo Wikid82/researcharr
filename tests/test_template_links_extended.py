@@ -23,7 +23,9 @@ def test_templates_fetch_and_links_covered():
     routes = set()
     for m in re.finditer(r"@app\.route\(\s*['\"]([^'\"]+)['\"]", factory_text):
         routes.add(m.group(1))
-    for m in re.finditer(r"register_blueprint\([^,]+,\s*url_prefix=\s*['\"]([^'\"]+)['\"]", factory_text):
+    for m in re.finditer(
+        r"register_blueprint\([^,]+,\s*url_prefix=\s*['\"]([^'\"]+)['\"]", factory_text
+    ):
         routes.add(m.group(1).rstrip("/"))
 
     def covered(link):
@@ -41,4 +43,6 @@ def test_templates_fetch_and_links_covered():
         return False
 
     missing = [l for l in fetch_links if not covered(l)]
-    assert not missing, f"Found fetch() links with no matching route/blueprint: {missing}"
+    assert (
+        not missing
+    ), f"Found fetch() links with no matching route/blueprint: {missing}"

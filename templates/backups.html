@@ -3,6 +3,198 @@
 {% block content %}
   <div class="container main-content">
     <h1>Backups</h1>
-    <p>Backup and restore operations are available from this page.</p>
+    <p>Create, download, import, and restore application backups. Use import with care — restoring will overwrite configuration files.</p>
+
+    <div id="alerts"></div>
+
+    <style>
+      .btn[disabled] { opacity: 0.6; pointer-events: none; }
+      .backup-row { padding: 8px 0; border-bottom: 1px solid #eee; display:flex; justify-content:space-between; align-items:center; }
+      .backup-row .actions { display:flex; gap:8px; align-items:center }
+      .alert { padding:8px; margin-bottom:8px; border-radius:4px }
+      .alert-info { background:#e7f3fe; color:#0366d6 }
+      .alert-success { background:#e6ffed; color:#0b6623 }
+      .alert-danger { background:#ffeef0; color:#86181d }
+      /* modal and spinner */
+      .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; z-index:9999; }
+      .modal { background: white; padding: 16px; border-radius: 8px; max-width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.2);} 
+      .spinner { width: 28px; height: 28px; border: 4px solid #eee; border-top-color: #0366d6; border-radius:50%; animation: spin 1s linear infinite; display:inline-block; vertical-align:middle; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .disabled-list { opacity: 0.6; pointer-events: none; }
+    </style>
+
+    <div class="controls">
+      <button id="createBackup" class="btn">Create Backup</button>
+      <label for="importFile" class="btn btn-secondary">Import Backup
+        <input id="importFile" type="file" accept=".zip" style="display:none">
+      </label>
+    </div>
+
+    <h2>Settings</h2>
+    <div id="backupSettings">
+      <label style="display:block;margin-bottom:6px">Retain count (max backups to keep): <input id="retainCount" type="number" min="0" style="width:80px;margin-left:8px"/></label>
+      <label style="display:block;margin-bottom:6px">Retain days (remove older than days): <input id="retainDays" type="number" min="0" style="width:80px;margin-left:8px"/></label>
+      <label style="display:block;margin-bottom:6px"><input id="preRestore" type="checkbox" /> Create pre-restore backup</label>
+      <button id="saveSettings" class="btn">Save Settings</button>
+    </div>
+
+    <h2>Available Backups</h2>
+    <div id="backupsList">
+      <p>Loading...</p>
+    </div>
   </div>
+
+  <script>
+    async function showAlert(msg, kind='info'){
+      const el = document.getElementById('alerts');
+      el.innerHTML = `<div class="alert alert-${kind}">${msg}</div>`;
+      setTimeout(()=>{el.innerHTML=''}, 8000);
+    }
+
+    function showSpinner(){
+      if(document.getElementById('globalOverlay')) return;
+      const ov = document.createElement('div'); ov.className='overlay'; ov.id='globalOverlay';
+      ov.innerHTML = `<div class="modal"><div class="spinner"></div> Working...</div>`;
+      document.body.appendChild(ov);
+    }
+    function hideSpinner(){ const ov = document.getElementById('globalOverlay'); if(ov) ov.remove(); }
+
+    function confirmModal(message){
+      return new Promise((resolve)=>{
+        const ov = document.createElement('div'); ov.className='overlay';
+        const modal = document.createElement('div'); modal.className='modal';
+        modal.innerHTML = `<div style="margin-bottom:12px">${message}</div><div style="text-align:right"><button id="cmNo" class="btn btn-secondary">Cancel</button> <button id="cmYes" class="btn">Confirm</button></div>`;
+        ov.appendChild(modal);
+        document.body.appendChild(ov);
+        document.getElementById('cmYes').addEventListener('click', ()=>{ ov.remove(); resolve(true); });
+        document.getElementById('cmNo').addEventListener('click', ()=>{ ov.remove(); resolve(false); });
+      });
+    }
+
+    async function loadBackups(){
+      const r = await fetch('/api/backups');
+      if(!r.ok){
+        document.getElementById('backupsList').innerText = 'Failed to load backups';
+        return;
+      }
+      const j = await r.json();
+      const list = j.backups || [];
+      if(list.length===0){
+        document.getElementById('backupsList').innerHTML = '<p>No backups found.</p>';
+        return;
+      }
+      const rows = list.map(b=>{
+        const date = new Date(b.mtime*1000).toLocaleString();
+        return (`<div class="backup-row"><strong>${b.name}</strong> &nbsp; <small>${date} • ${b.size} bytes</small>
+          <div class="actions">
+            <a class="btn btn-link" href="/api/backups/download/${encodeURIComponent(b.name)}">Download</a>
+            <button class="btn" data-name="${b.name}" data-action="restore">Restore</button>
+            <button class="btn btn-danger" data-name="${b.name}" data-action="delete">Delete</button>
+          </div>
+        </div>`);
+      }).join('\n');
+      document.getElementById('backupsList').innerHTML = rows;
+
+      document.querySelectorAll('[data-action]').forEach(btn=>{
+        btn.addEventListener('click', async (ev)=>{
+          const name = btn.getAttribute('data-name');
+          const action = btn.getAttribute('data-action');
+              if(action === 'delete'){
+                if(!await confirmModal('Delete backup '+name+'?')) return;
+                // disable the button while deleting
+                btn.disabled = true;
+                const orig = btn.innerText;
+                btn.innerText = 'Deleting...';
+                showSpinner();
+                try{
+                  const rr = await fetch('/api/backups/delete/'+encodeURIComponent(name), {method:'DELETE'});
+                  if(rr.ok){ showAlert('Deleted '+name, 'success'); loadBackups(); }
+                  else { showAlert('Delete failed','danger'); }
+                }catch(e){ showAlert('Delete failed','danger'); }
+                finally{ btn.disabled = false; btn.innerText = orig; hideSpinner(); }
+              } else if(action === 'restore'){
+                if(!await confirmModal('Restore backup '+name+'? This will overwrite current configuration files.')) return;
+                btn.disabled = true;
+                const orig = btn.innerText;
+                btn.innerText = 'Preparing...';
+                showSpinner();
+                try{
+                  const rr = await fetch('/api/backups/restore/'+encodeURIComponent(name), {method:'POST'});
+                  if(rr.ok){
+                    const j = await rr.json();
+                    if(j.pre_restore_backup){
+                      showAlert('Created pre-restore backup: '+j.pre_restore_backup, 'info');
+                    }
+                    showAlert('Restore completed. Restart the app if necessary.', 'success');
+                  } else {
+                    showAlert('Restore failed','danger');
+                  }
+                }catch(e){ showAlert('Restore failed','danger'); }
+                finally{ btn.disabled = false; btn.innerText = orig; hideSpinner(); loadBackups(); }
+              }
+        });
+      });
+    }
+
+    document.getElementById('createBackup').addEventListener('click', async ()=>{
+      const b = document.getElementById('createBackup');
+      b.disabled = true; const orig = b.innerText; b.innerText = 'Creating...';
+      try{
+        showSpinner();
+        const r = await fetch('/api/backups/create', {method:'POST'});
+        if(r.ok){ const j=await r.json(); showAlert('Created '+j.name,'success'); loadBackups(); }
+        else{ showAlert('Create failed','danger'); }
+      }catch(e){ showAlert('Create failed','danger'); }
+      finally{ b.disabled = false; b.innerText = orig; hideSpinner(); }
+    });
+
+    document.getElementById('importFile').addEventListener('change', async (ev)=>{
+      const input = ev.target;
+      const f = input.files[0];
+      if(!f) return;
+      if(!await confirmModal('Importing a backup will overwrite configuration files. Proceed?')) return;
+      input.disabled = true; const label = document.querySelector('label[for="importFile"]'); const origLabel = label.innerText; label.innerText = 'Importing...';
+      const fd = new FormData();
+      fd.append('file', f);
+      try{
+        showSpinner();
+        const r = await fetch('/api/backups/import', {method:'POST', body: fd});
+        if(r.ok){ showAlert('Import accepted. Restart the app if needed.', 'success'); loadBackups(); }
+        else{ showAlert('Import failed','danger'); }
+      }catch(e){ showAlert('Import failed','danger'); }
+      finally{ input.disabled = false; label.innerText = origLabel; hideSpinner(); }
+    });
+
+    // delegate download links to allow auth cookies to be sent
+    document.addEventListener('click', (e)=>{
+      if(e.target.tagName === 'A' && e.target.href && e.target.href.includes('/api/backups/download/')){
+        // allow default behavior
+      }
+    });
+
+    loadBackups();
+
+    // Load settings and wire save
+    async function loadSettings(){
+      try{
+        const r = await fetch('/api/backups/settings');
+        if(!r.ok) return;
+        const s = await r.json();
+        document.getElementById('retainCount').value = s.retain_count || s.retain_count === 0 ? s.retain_count : (s.retainCount || 0);
+        document.getElementById('retainDays').value = s.retain_days || s.retain_days === 0 ? s.retain_days : (s.retainDays || 0);
+        document.getElementById('preRestore').checked = !!s.pre_restore;
+      }catch(e){}
+    }
+    document.getElementById('saveSettings').addEventListener('click', async ()=>{
+      const btn = document.getElementById('saveSettings'); btn.disabled = true; const orig = btn.innerText; btn.innerText = 'Saving...';
+      try{
+        const payload = { retain_count: parseInt(document.getElementById('retainCount').value||0), retain_days: parseInt(document.getElementById('retainDays').value||0), pre_restore: document.getElementById('preRestore').checked };
+        const r = await fetch('/api/backups/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+        if(r.ok){ showAlert('Settings saved','success'); }
+        else{ showAlert('Save failed','danger'); }
+      }catch(e){ showAlert('Save failed','danger'); }
+      finally{ btn.disabled = false; btn.innerText = orig; }
+    });
+    loadSettings();
+  </script>
 {% endblock %}

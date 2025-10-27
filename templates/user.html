@@ -8,4 +8,15 @@
     <h1>User Settings</h1>
     <p>Username: {{ user.username if user else '' }}</p>
   </body>
-</html>
+```html
+{% extends 'base.html' %}
+{% block title %}User Settings - researcharr{% endblock %}
+{% block content %}
+  <h1>User Settings</h1>
+  <p>Username: {{ user.username if user else '' }}</p>
+  {% if user_msg %}
+    <p>{{ user_msg }}</p>
+  {% endif %}
+{% endblock %}
+
+```

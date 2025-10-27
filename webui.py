@@ -62,6 +62,10 @@ def load_user_config():
         # only the hash to disk).
         data["password"] = generated
         data["api_key"] = api_token
+        # Return the generated plaintext values to the caller so the
+        # application can set in-memory credentials for immediate login.
+        return data
+    # Existing user config on disk: return the persisted values (hashes)
     with open(USER_CONFIG_PATH, "r") as f:
         return yaml.safe_load(f)
 

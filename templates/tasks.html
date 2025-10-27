@@ -3,6 +3,161 @@
 {% block content %}
   <div class="container main-content">
     <h1>Tasks</h1>
-    <p>Scheduled and background tasks are listed here.</p>
+    <p>Scheduled and background tasks are listed here. You can view previous job runs, trigger a job immediately, and configure how many entries to display.</p>
+
+    <section id="tasks-controls" style="margin-top:12px;display:flex;gap:12px;align-items:center;">
+      <div>
+        <label>Show
+          <input id="show-count" type="number" min="1" max="500" style="width:80px;margin-left:6px;"/>
+        </label>
+        <button id="save-show-count" class="btn">Save</button>
+      </div>
+      <div>
+        <button id="trigger-job" class="btn primary">Trigger job now</button>
+        <span id="trigger-status" style="margin-left:8px;color:#666"></span>
+      </div>
+    </section>
+
+    <script>
+    (function(){
+      const container = document.getElementById('tasks-table-container');
+      const showCountEl = document.getElementById('show-count');
+      const saveBtn = document.getElementById('save-show-count');
+      const triggerBtn = document.getElementById('trigger-job');
+      const triggerStatus = document.getElementById('trigger-status');
+
+      async function loadSettings(){
+        try{
+          const r = await fetch('/api/tasks/settings');
+          if (r.ok){
+            const j = await r.json();
+            showCountEl.value = j.show_count || 20;
+          }
+        }catch(e){/* ignore */}
+      }
+
+      function renderRuns(runs){
+        container.innerHTML = '';
+        if (!runs || !runs.length){
+          container.appendChild(document.createElement('div')).textContent = 'No runs found.';
+          return;
+        }
+        const tpl = document.getElementById('task-row-tpl');
+        runs.forEach(r => {
+          const node = tpl.content.cloneNode(true);
+          const card = node.querySelector('.task-row');
+          const start = node.querySelector('.task-start');
+          const result = node.querySelector('.task-result');
+          const log = node.querySelector('.task-log');
+          const expand = node.querySelector('.expand-log');
+          start.textContent = r.start || '(unknown start)';
+          let statusText = 'Unknown';
+          if (r.returncode !== null){
+            statusText = r.returncode === 0 ? 'Success' : 'Failed (rc=' + r.returncode + ')';
+          } else if (r.has_stderr){
+            statusText = 'Possible failure (stderr present)';
+          }
+          result.textContent = statusText;
+          log.textContent = r.lines ? r.lines.join('\n') : '';
+          expand.addEventListener('click', function(){
+            if (log.style.display === 'none'){
+              log.style.display = 'block';
+              expand.textContent = 'Hide log';
+            } else {
+              log.style.display = 'none';
+              expand.textContent = 'Show log';
+            }
+          });
+          container.appendChild(node);
+        });
+      }
+
+      async function loadRuns(){
+        container.innerHTML = '<p class="muted">Loading recent runs…</p>';
+        const limit = parseInt(showCountEl.value || '20', 10);
+        try{
+          const r = await fetch('/api/tasks?limit=' + encodeURIComponent(limit));
+          if (!r.ok){
+            container.innerHTML = '';
+            container.appendChild(document.createElement('div')).textContent = 'Failed to load runs.';
+            return;
+          }
+          const j = await r.json();
+          renderRuns(j.runs || []);
+        }catch(e){
+          container.innerHTML = '';
+          container.appendChild(document.createElement('div')).textContent = 'Failed to load runs.';
+        }
+      }
+
+      saveBtn.addEventListener('click', async function(){
+        const val = parseInt(showCountEl.value || '20', 10);
+        try{
+          const r = await fetch('/api/tasks/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({show_count: val})});
+          if (r.ok){
+            triggerStatus.textContent = 'Saved';
+            setTimeout(()=> triggerStatus.textContent = '', 1500);
+            loadRuns();
+          } else {
+            triggerStatus.textContent = 'Save failed';
+            setTimeout(()=> triggerStatus.textContent = '', 2000);
+          }
+        }catch(e){
+          triggerStatus.textContent = 'Save failed';
+          setTimeout(()=> triggerStatus.textContent = '', 2000);
+        }
+      });
+
+      triggerBtn.addEventListener('click', async function(){
+        triggerBtn.disabled = true;
+        triggerStatus.textContent = 'Triggering…';
+        try{
+          const r = await fetch('/api/tasks/trigger', {method:'POST'});
+          if (r.ok){
+            const j = await r.json();
+            if (j.result === 'triggered'){
+              triggerStatus.textContent = 'Triggered';
+              setTimeout(()=> triggerStatus.textContent = '', 2000);
+              // refresh runs after a short delay to allow job to start
+              setTimeout(loadRuns, 2000);
+            } else {
+              triggerStatus.textContent = 'Trigger failed';
+            }
+          } else {
+            triggerStatus.textContent = 'Trigger failed';
+          }
+        }catch(e){
+          triggerStatus.textContent = 'Trigger failed';
+        }finally{
+          triggerBtn.disabled = false;
+        }
+      });
+
+      // Initial load
+      loadSettings().then(loadRuns);
+    })();
+    </script>
+
+    <section id="tasks-list" style="margin-top:18px;">
+      <h2>Recent job runs</h2>
+      <div id="tasks-table-container">
+        <p class="muted">Loading recent runs…</p>
+      </div>
+    </section>
+
+    <template id="task-row-tpl">
+      <div class="card task-row" style="padding:8px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <strong class="task-start"></strong>
+            <div class="task-result muted"></div>
+          </div>
+          <div>
+            <button class="btn ghost expand-log">Show log</button>
+          </div>
+        </div>
+        <pre class="task-log" style="display:none;background:#111;color:#fff;padding:8px;border-radius:6px;margin-top:8px;white-space:pre-wrap;max-height:240px;overflow:auto"></pre>
+      </div>
+    </template>
   </div>
 {% endblock %}

@@ -88,6 +88,16 @@ Notes: These plugins are experimental and intended for development and UI testin
 - New docs page: `Health-and-Metrics.md` (moved from the wiki).
 - All relevant usage and configuration docs updated.
 
+## 2025-10-27
+
+### System / Status and Monitoring
+
+- Added a System → Status page that surfaces operator-facing warnings for common operational problems including storage mounts, database connectivity, configuration/API key issues, first-run admin credentials, permissions, plugin error rates, log growth, external rate-limits, high resource usage, container restarts, and missing example files.
+- Implemented a lightweight `/api/status` aggregator endpoint that returns storage, DB, config, logs, resources, metrics and per-plugin summaries used by the UI.
+- Added per-plugin in-memory metrics counters (validate/sync attempts and errors) and included an error-rate summary in `/api/status` so repeated plugin failures are surfaced as warnings.
+- Added `docs/Status-and-Warnings.md` describing each warning and step-by-step remediation instructions. The Status UI links to the relevant docs sections for each warning.
+- Notes: plugin metrics are stored in-memory (reset on restart). Network-heavy checks (update availability, external checks) are opt-in to avoid flaky UI behavior.
+
 ---
 
 For previous changes, see the project commit history.

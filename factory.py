@@ -3,6 +3,7 @@
 import importlib.util
 import os
 import pathlib
+import time
 
 import yaml
 from flask import (
@@ -134,7 +135,9 @@ def create_app():
     }
 
     # In-memory metrics for test isolation
-    app.metrics = {"requests_total": 0, "errors_total": 0}
+    # Structure:
+    # { requests_total: int, errors_total: int, plugins: { <plugin>: {validate_attempts, validate_errors, sync_attempts, sync_errors, last_error, last_error_msg} } }
+    app.metrics = {"requests_total": 0, "errors_total": 0, "plugins": {}}
 
     # Ensure web UI user config exists on startup. If a first-run password is
     # generated, the loader returns the plaintext as `password` so we can set
@@ -653,11 +656,43 @@ def create_app():
         if idx < 0 or idx >= len(instances):
             return jsonify({"error": "invalid_instance"}), 400
         inst_cfg = instances[idx]
+        # Ensure plugin metrics bucket exists
+        try:
+            pmetrics = app.metrics.setdefault("plugins", {}).setdefault(
+                plugin_name, {"validate_attempts": 0, "validate_errors": 0, "sync_attempts": 0, "sync_errors": 0, "last_error": None, "last_error_msg": None}
+            )
+        except Exception:
+            pmetrics = None
+
+        # Track an attempt
+        try:
+            if pmetrics is not None:
+                pmetrics["validate_attempts"] = pmetrics.get("validate_attempts", 0) + 1
+        except Exception:
+            pass
+
         try:
             pl = registry.create_instance(plugin_name, inst_cfg)
             result = pl.validate()
+            # Treat falsy result as a validation failure to be surfaced in metrics
+            if not result:
+                try:
+                    if pmetrics is not None:
+                        pmetrics["validate_errors"] = pmetrics.get("validate_errors", 0) + 1
+                        pmetrics["last_error"] = int(time.time())
+                        pmetrics["last_error_msg"] = "validation returned falsy"
+                except Exception:
+                    pass
             return jsonify({"result": result})
         except Exception as e:
+            # Record error in plugin metrics
+            try:
+                if pmetrics is not None:
+                    pmetrics["validate_errors"] = pmetrics.get("validate_errors", 0) + 1
+                    pmetrics["last_error"] = int(time.time())
+                    pmetrics["last_error_msg"] = str(e)
+            except Exception:
+                pass
             app.logger.exception("Plugin validate failed: %s", e)
             return jsonify({"error": "validate_failed", "msg": str(e)}), 500
 
@@ -675,11 +710,41 @@ def create_app():
         if idx < 0 or idx >= len(instances):
             return jsonify({"error": "invalid_instance"}), 400
         inst_cfg = instances[idx]
+        # Ensure plugin metrics bucket exists
+        try:
+            pmetrics = app.metrics.setdefault("plugins", {}).setdefault(
+                plugin_name, {"validate_attempts": 0, "validate_errors": 0, "sync_attempts": 0, "sync_errors": 0, "last_error": None, "last_error_msg": None}
+            )
+        except Exception:
+            pmetrics = None
+
+        # Track sync attempt
+        try:
+            if pmetrics is not None:
+                pmetrics["sync_attempts"] = pmetrics.get("sync_attempts", 0) + 1
+        except Exception:
+            pass
+
         try:
             pl = registry.create_instance(plugin_name, inst_cfg)
             result = pl.sync()
+            if not result:
+                try:
+                    if pmetrics is not None:
+                        pmetrics["sync_errors"] = pmetrics.get("sync_errors", 0) + 1
+                        pmetrics["last_error"] = int(time.time())
+                        pmetrics["last_error_msg"] = "sync returned falsy"
+                except Exception:
+                    pass
             return jsonify({"result": result})
         except Exception as e:
+            try:
+                if pmetrics is not None:
+                    pmetrics["sync_errors"] = pmetrics.get("sync_errors", 0) + 1
+                    pmetrics["last_error"] = int(time.time())
+                    pmetrics["last_error_msg"] = str(e)
+            except Exception:
+                pass
             app.logger.exception("Plugin sync failed: %s", e)
             return jsonify({"error": "sync_failed", "msg": str(e)}), 500
 
@@ -714,6 +779,180 @@ def create_app():
                 }
             )
         return jsonify({"paths": checks})
+
+    @app.route("/api/status", methods=["GET"])
+    def api_status():
+        """Return an aggregated status summary used by the UI.
+
+        Provides a lightweight, best-effort set of checks including:
+        - storage mount checks (config/plugins)
+        - simple DB connectivity/readability check
+        - config/user/api key sanity checks
+        - log and DB file size checks
+        - example file existence check
+        - simple resource usage (from /proc when available)
+        """
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+
+        result = {}
+
+        # Storage checks (reuse same logic as /api/storage)
+        try:
+            config_root = os.getenv("CONFIG_DIR", "/config")
+            plugins_config_dir = os.path.join(config_root, "plugins")
+            paths = []
+            for name, path in (("config", config_root), ("plugins", plugins_config_dir)):
+                try:
+                    exists = os.path.exists(path)
+                    is_dir = os.path.isdir(path)
+                    readable = os.access(path, os.R_OK)
+                    writable = os.access(path, os.W_OK)
+                except Exception:
+                    exists = is_dir = readable = writable = False
+                paths.append(
+                    {
+                        "name": name,
+                        "path": path,
+                        "exists": exists,
+                        "is_dir": is_dir,
+                        "readable": readable,
+                        "writable": writable,
+                    }
+                )
+            result["storage"] = {"paths": paths}
+        except Exception:
+            result["storage"] = {"paths": []}
+
+        # DB connectivity & file checks (best-effort)
+        db_info = {"ok": True}
+        try:
+            # Prefer env override
+            db_file = os.getenv(
+                "RESEARCHARR_DB",
+                os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "researcharr.db")),
+            )
+            db_info["path"] = db_file
+            try:
+                import sqlite3
+
+                conn = sqlite3.connect(db_file)
+                cur = conn.cursor()
+                cur.execute("SELECT 1")
+                cur.fetchone()
+                cur.close()
+                conn.close()
+                # size and mtime if present
+                try:
+                    st = os.stat(db_file)
+                    db_info["size"] = st.st_size
+                    db_info["mtime"] = int(st.st_mtime)
+                except Exception:
+                    pass
+            except Exception as e:
+                db_info["ok"] = False
+                db_info["error"] = str(e)
+        except Exception as e:
+            db_info = {"ok": False, "error": str(e)}
+        result["db"] = db_info
+
+        # Config and user/api checks
+        cfg_issues = []
+        try:
+            gen = app.config_data.get("general", {})
+            if not gen.get("api_key_hash"):
+                cfg_issues.append("Missing API key (no api_key_hash configured)")
+        except Exception:
+            cfg_issues.append("Failed to inspect general config")
+
+        # Admin/user config check — if a plaintext password exists in-memory
+        try:
+            user = app.config_data.get("user", {})
+            if user.get("password") and not user.get("password_hash"):
+                cfg_issues.append("Web UI admin account still has first-run plaintext password in memory; rotate credentials")
+            if not user.get("username"):
+                cfg_issues.append("Missing web UI username")
+        except Exception:
+            cfg_issues.append("Failed to inspect user config")
+        result["config"] = {"issues": cfg_issues}
+
+        # Log and DB growth checks (best-effort)
+        logs = {}
+        try:
+            # app.log in repository root or env override
+            app_log = os.getenv("WEBUI_LOG", os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "app.log")))
+            if os.path.exists(app_log):
+                st = os.stat(app_log)
+                logs["app_log"] = {"path": app_log, "size": st.st_size, "mtime": int(st.st_mtime)}
+            # db size included above
+        except Exception:
+            pass
+        result["logs"] = logs
+
+        # Example files check
+        try:
+            example_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "config.example.yml"))
+            result["examples"] = {"config_example_exists": os.path.exists(example_path), "path": example_path}
+        except Exception:
+            result["examples"] = {"config_example_exists": False}
+
+        # Basic resource usage from /proc (Linux-only, best-effort)
+        resources = {}
+        try:
+            if os.path.exists("/proc/meminfo"):
+                with open("/proc/meminfo") as fh:
+                    lines = fh.read().splitlines()
+                mem = {}
+                for l in lines:
+                    if ":" in l:
+                        k, v = l.split(":", 1)
+                        mem[k.strip()] = v.strip()
+                resources["meminfo"] = {k: mem.get(k) for k in ("MemTotal", "MemAvailable")} if mem else {}
+            if os.path.exists("/proc/loadavg"):
+                with open("/proc/loadavg") as fh:
+                    resources["loadavg"] = fh.read().strip()
+            # uptime
+            if os.path.exists("/proc/uptime"):
+                with open("/proc/uptime") as fh:
+                    resources["uptime_seconds"] = float(fh.read().split()[0])
+        except Exception:
+            pass
+        result["resources"] = resources
+
+        # Metrics summary (best-effort)
+        try:
+            result["metrics"] = app.metrics or {}
+        except Exception:
+            result["metrics"] = {}
+
+        # Include a plugin summary with error rates for convenience
+        try:
+            plugins_summary = {}
+            for pname, pm in (app.metrics.get("plugins") or {}).items():
+                try:
+                    va = int(pm.get("validate_attempts", 0))
+                    ve = int(pm.get("validate_errors", 0))
+                    sa = int(pm.get("sync_attempts", 0))
+                    se = int(pm.get("sync_errors", 0))
+                    validate_rate = (ve / va * 100.0) if va > 0 else None
+                    sync_rate = (se / sa * 100.0) if sa > 0 else None
+                    plugins_summary[pname] = {
+                        "validate_attempts": va,
+                        "validate_errors": ve,
+                        "validate_error_rate": validate_rate,
+                        "sync_attempts": sa,
+                        "sync_errors": se,
+                        "sync_error_rate": sync_rate,
+                        "last_error": pm.get("last_error"),
+                        "last_error_msg": pm.get("last_error_msg"),
+                    }
+                except Exception:
+                    plugins_summary[pname] = {"error": "failed to summarize"}
+            result["plugins"] = plugins_summary
+        except Exception:
+            result["plugins"] = {}
+
+        return jsonify(result)
 
     @app.route("/api/plugins/<plugin_name>/instances", methods=["POST"])
     def api_plugin_instances(plugin_name: str):
@@ -955,6 +1194,127 @@ def create_app():
         if not is_logged_in():
             return redirect(url_for("login"))
         return render_template("tasks.html")
+
+
+    @app.route("/api/tasks", methods=["GET"])
+    def api_tasks():
+        """Return recent scheduled job runs parsed from the cron log.
+
+        The implementation is best-effort and parses `/config/cron.log` by
+        splitting on 'Starting scheduled job' entries. Each run contains a
+        start timestamp, lines for stdout/stderr, and a returncode when
+        available.
+        """
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+
+        log_path = os.getenv("CRON_LOG_PATH", "/config/cron.log")
+        max_entries = int(request.args.get("limit", app.config_data.get("tasks", {}).get("show_count", 20)))
+        runs = []
+        try:
+            if os.path.exists(log_path):
+                with open(log_path, "r") as fh:
+                    raw = fh.read()
+                # Split into blocks starting with the date-prefixed line
+                parts = raw.split('\n')
+                current = None
+                for line in parts:
+                    if not line.strip():
+                        continue
+                    # Expect lines like: 2025-10-25 12:00:00,000 INFO Message
+                    # Identify new run by 'Starting scheduled job'
+                    if "Starting scheduled job" in line:
+                        # start a new run
+                        if current is not None:
+                            runs.append(current)
+                        # extract timestamp at start of line (space-separated first two tokens)
+                        try:
+                            ts = line.split()[0] + " " + line.split()[1]
+                        except Exception:
+                            ts = None
+                        current = {"start": ts, "lines": [line], "returncode": None, "success": None}
+                    elif current is not None:
+                        current["lines"].append(line)
+                        if "Job finished with returncode" in line:
+                            try:
+                                rc = int(line.rsplit()[-1])
+                                current["returncode"] = rc
+                                current["success"] = (rc == 0)
+                            except Exception:
+                                pass
+                        elif line.startswith("Job stderr:") or "Job stderr:" in line:
+                            # treat any stderr as possible failure indicator
+                            current.setdefault("has_stderr", True)
+                if current is not None:
+                    runs.append(current)
+                # most recent runs last in file; return newest first
+                runs = list(reversed(runs))[:max_entries]
+        except Exception:
+            return jsonify({"error": "failed_to_read_log"}), 500
+
+        return jsonify({"runs": runs})
+
+
+    @app.route("/api/tasks/trigger", methods=["POST"])
+    def api_tasks_trigger():
+        """Trigger the scheduled job manually (runs in background thread).
+
+        This invokes the same `run_job` function used by the scheduler. The
+        function is executed in a background thread to avoid blocking the
+        request. The scheduler's concurrency guard (if any) applies, so
+        triggering while a job runs will typically be skipped by the
+        underlying lock.
+        """
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+
+        try:
+            # Import run.py and invoke run_job in a background thread if
+            # available. If import fails, return an error.
+            spec_path = os.path.join(os.path.dirname(__file__), "run.py")
+            if not os.path.exists(spec_path):
+                return jsonify({"error": "run_module_missing"}), 500
+            import importlib.util
+
+            spec = importlib.util.spec_from_file_location("run_module", spec_path)
+            run_mod = importlib.util.module_from_spec(spec)
+            loader = spec.loader
+            assert loader is not None
+            loader.exec_module(run_mod)
+
+            # Run in background thread
+            import threading
+
+            t = threading.Thread(target=getattr(run_mod, "run_job"), daemon=True)
+            t.start()
+            return jsonify({"result": "triggered"})
+        except Exception:
+            app.logger.exception("Failed to trigger scheduled job")
+            return jsonify({"error": "trigger_failed"}), 500
+
+
+    @app.route("/api/tasks/settings", methods=["GET", "POST"])
+    def api_tasks_settings():
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        if request.method == "GET":
+            tasks_cfg = app.config_data.get("tasks", {})
+            return jsonify(tasks_cfg)
+        # POST: update settings
+        try:
+            data = request.get_json(force=True)
+        except Exception:
+            return jsonify({"error": "invalid_json"}), 400
+        tasks_cfg = app.config_data.setdefault("tasks", {})
+        # Only allow integer show_count for now
+        show_count = data.get("show_count")
+        try:
+            if show_count is not None:
+                tasks_cfg["show_count"] = int(show_count)
+        except Exception:
+            return jsonify({"error": "invalid_show_count"}), 400
+        app.config_data["tasks"] = tasks_cfg
+        return jsonify({"result": "ok", "tasks": tasks_cfg})
 
     @app.route("/backups")
     def backups():

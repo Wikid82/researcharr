@@ -55,6 +55,22 @@ body{margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "
 .warning-card{opacity:0;transform:translateY(-6px);transition:opacity .28s ease, transform .28s ease}
 .warning-card.show{opacity:1;transform:translateY(0)}
 .warning-card.hide{opacity:0;transform:translateY(-6px)}
+
+/* recovered animation (green pulse) */
+.warning-card.recovered{border-left-color:#5ee08a;background:rgba(46, 204, 113, 0.06)}
+.warning-card.recovered .warning-title{color:#d7ffd9}
+.warning-card.recovered{animation:recovered-pulse 1s ease forwards}
+@keyframes recovered-pulse{
+  0%{box-shadow:0 0 0 rgba(94,224,138,0)}
+  40%{box-shadow:0 8px 24px rgba(94,224,138,0.18)}
+  100%{box-shadow:0 0 0 rgba(94,224,138,0)}
+}
+
+/* status controls */
+.status-controls{display:flex;align-items:center;gap:12px;margin-top:8px;margin-bottom:8px}
+.last-checked{font-size:0.9rem;color:var(--muted)}
+.auto-refresh-toggle{display:flex;align-items:center;gap:6px}
+.auto-refresh-toggle input[type=checkbox]{width:16px;height:16px}
 /* Responsive */
 @media (max-width:900px){
   .site-sidebar{transform:translateX(-100%);position:fixed;left:0;top:var(--header-h);transition:transform .18s ease}

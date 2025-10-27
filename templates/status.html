@@ -7,6 +7,17 @@
 
     <section id="plugin-warnings">
       <h2>Plugin connectivity warnings</h2>
+
+      <div class="status-controls">
+        <div class="auto-refresh-toggle">
+          <label>
+            <input type="checkbox" id="auto-refresh-checkbox">
+            Auto-refresh (30s)
+          </label>
+        </div>
+        <div class="last-checked" id="last-checked">Last checked: never</div>
+      </div>
+
       <div id="warnings-list">
         <p class="muted">Checking plugin connections…</p>
       </div>
@@ -17,14 +28,29 @@
       // Helper to create an element with classes
       function el(tag, cls){ const e = document.createElement(tag); if(cls) e.className = cls; return e }
 
-      const warningsList = document.getElementById('warnings-list');
+  const warningsList = document.getElementById('warnings-list');
+  const lastCheckedEl = document.getElementById('last-checked');
+  const autoRefreshCheckbox = document.getElementById('auto-refresh-checkbox');
+  const AUTO_REFRESH_KEY = 'status:autoRefresh';
+  const AUTO_REFRESH_INTERVAL_MS = 30000; // 30s
+  let autoRefreshId = null;
 
       // Fetch plugins and validate enabled instances
       async function loadAndCheck(){
-        warningsList.innerHTML = '';
+        // Build map of existing warning elements keyed by plugin:idx
+        const existingMap = new Map();
+        warningsList.querySelectorAll('.warning-card').forEach(elm => {
+          const k = elm.dataset.key;
+          if (k) existingMap.set(k, elm);
+        });
+
+        const seenFailures = new Set();
+
         const resp = await fetch('/api/plugins');
         if (!resp.ok){
+          warningsList.innerHTML = '';
           warningsList.appendChild(el('div','muted')).textContent = 'Failed to load plugin list.';
+          updateLastChecked();
           return;
         }
         const data = await resp.json();
@@ -45,12 +71,25 @@
 
         // Run validations in series to avoid spamming backends
         for (const chk of checks){
-          await validateAndRender(chk.name, chk.idx, chk.instance);
+          const key = `${chk.name}:${chk.idx}`;
+          const failed = await validateAndRender(chk.name, chk.idx, chk.instance, existingMap);
+          if (failed){
+            seenFailures.add(key);
+          }
         }
-      }
 
-      async function validateAndRender(name, idx, instance){
+        // Any existing warning not seen now has recovered — animate then remove
+        existingMap.forEach((elm, key) => {
+          if (!seenFailures.has(key)){
+            playRecoveredAnimation(elm);
+          }
+        });
+
+        updateLastChecked();
+      }
+      async function validateAndRender(name, idx, instance, existingMap){
         const url = `/api/plugins/${encodeURIComponent(name)}/validate/${idx}`;
+        const key = `${name}:${idx}`;
         let ok = false;
         try{
           const r = await fetch(url, {method:'POST'});
@@ -64,64 +103,92 @@
         }
 
         if (!ok){
-          const warn = el('div','warning-card');
-          const title = el('div','warning-title');
-          title.textContent = `${instance.name || name} (${name}) — connection issue`;
-          warn.appendChild(title);
+          // If there is already an element for this key, leave/update it
+          let warn = existingMap.get(key);
+          if (!warn){
+            warn = el('div','warning-card');
+            warn.dataset.key = key;
+            const title = el('div','warning-title');
+            title.textContent = `${instance.name || name} (${name}) — connection issue`;
+            warn.appendChild(title);
 
-          const actions = el('div','warning-actions');
-          const retry = el('button','btn');
-          retry.textContent = 'Retry';
-          // helper to remove with animation
-          function removeWarn(elm){
-            elm.classList.remove('show');
-            elm.classList.add('hide');
-            elm.addEventListener('transitionend', function(){ elm.remove() }, {once:true});
-          }
+            const actions = el('div','warning-actions');
+            const retry = el('button','btn');
+            retry.textContent = 'Retry';
 
-          retry.addEventListener('click', async function(){
-            retry.disabled = true;
-            retry.textContent = 'Checking…';
-            // call validate again
-            try{
-              const r = await fetch(url, {method:'POST'});
-              const j = await r.json();
-              const okNow = !!j.result;
-              if (okNow){
-                // animate out then remove
-                removeWarn(warn);
-              } else {
+            retry.addEventListener('click', async function(){
+              retry.disabled = true;
+              retry.textContent = 'Checking…';
+              // call validate again
+              try{
+                const r = await fetch(url, {method:'POST'});
+                const j = await r.json();
+                const okNow = !!j.result;
+                if (okNow){
+                  playRecoveredAnimation(warn);
+                } else {
+                  retry.disabled = false;
+                  retry.textContent = 'Retry';
+                }
+              }catch(e){
                 retry.disabled = false;
                 retry.textContent = 'Retry';
               }
-            }catch(e){
-              retry.disabled = false;
-              retry.textContent = 'Retry';
-            }
-          });
+            });
 
-          const fix = el('a','btn ghost');
-          // Link to the plugin card in the settings page (anchor uses plugin name id)
-          fix.href = `/settings/plugins#plugin-${encodeURIComponent(name)}`;
-          fix.textContent = 'Open plugin settings';
-          actions.appendChild(retry);
-          actions.appendChild(fix);
-          warn.appendChild(actions);
+            const fix = el('a','btn ghost');
+            // Link to the plugin card in the settings page (anchor uses plugin name id)
+            fix.href = `/settings/plugins#plugin-${encodeURIComponent(name)}`;
+            fix.textContent = 'Open plugin settings';
+            actions.appendChild(retry);
+            actions.appendChild(fix);
+            warn.appendChild(actions);
 
-          const info = el('div','muted');
-          info.textContent = instance.url ? `Configured endpoint: ${instance.url}` : 'No endpoint configured';
-          warn.appendChild(info);
+            const info = el('div','muted');
+            info.textContent = instance.url ? `Configured endpoint: ${instance.url}` : 'No endpoint configured';
+            warn.appendChild(info);
 
-          warningsList.appendChild(warn);
-          // trigger enter animation
-          requestAnimationFrame(function(){ warn.classList.add('show'); });
+            warningsList.appendChild(warn);
+            // remember in map so later checks know it existed
+            existingMap.set(key, warn);
+            // trigger enter animation
+            requestAnimationFrame(function(){ warn.classList.add('show'); });
+          }
+          return true;
         }
+        return false;
+      }
+
+      function playRecoveredAnimation(warn){
+        // play green pulse then hide+remove
+        warn.classList.add('recovered');
+        // after pulse duration, hide with transition and remove
+        setTimeout(function(){
+          warn.classList.remove('show');
+          warn.classList.add('hide');
+          // remove after transition end
+          warn.addEventListener('transitionend', function(){ warn.remove() }, {once:true});
+        }, 900);
+      }
+
+      function updateLastChecked(){
+        try{
+          lastCheckedEl.textContent = 'Last checked: ' + new Date().toLocaleString();
+        }catch(e){/* ignore */}
+      }
+
+      function enableAutoRefresh(enabled){
+        if (autoRefreshId){ clearInterval(autoRefreshId); autoRefreshId = null }
+        if (enabled){
+          autoRefreshId = setInterval(function(){ loadAndCheck() }, AUTO_REFRESH_INTERVAL_MS);
+        }
+        try{ localStorage.setItem(AUTO_REFRESH_KEY, enabled ? '1' : '0') }catch(e){}
       }
 
       // initial load
       loadAndCheck();
 
-      // Optional: add a global refresh button
+      // Wire up the refresh button
       const refreshBtn = document.createElement('button');
       refreshBtn.className = 'btn';
       refreshBtn.textContent = 'Refresh all';
@@ -131,6 +198,18 @@
         loadAndCheck().finally(()=> refreshBtn.disabled = false);
       });
       warningsList.parentNode.insertBefore(refreshBtn, warningsList.nextSibling);
+
+      // restore auto-refresh preference
+      try{
+        const saved = localStorage.getItem(AUTO_REFRESH_KEY);
+        const enabled = saved === '1';
+        autoRefreshCheckbox.checked = enabled;
+        enableAutoRefresh(enabled);
+      }catch(e){ /* ignore storage errors */ }
+
+      autoRefreshCheckbox.addEventListener('change', function(){
+        enableAutoRefresh(!!autoRefreshCheckbox.checked);
+      });
 
     })();
     </script>

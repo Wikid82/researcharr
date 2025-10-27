@@ -36,13 +36,26 @@ def load_user_config():
         }
         with open(USER_CONFIG_PATH, "w") as f:
             yaml.safe_dump(data, f)
-        # Log the generated plaintext once for operators to copy from logs.
+        # Log and print the generated plaintext once for operators to copy from logs.
+        # Printing ensures the plaintext appears in container stdout/stderr even when
+        # logging configuration may default to higher levels or write elsewhere.
         logger = logging.getLogger("researcharr")
-        logger.info(
-            "Generated web UI initial password for %s: %s",
-            data["username"],
-            generated,
-        )
+        try:
+            logger.info(
+                "Generated web UI initial password for %s",
+                data["username"],
+            )
+            logger.info("Password (printed once): %s", generated)
+            logger.info("API token (printed once): %s", api_token)
+        except Exception:
+            # Best-effort logging; continue to print directly.
+            pass
+        # Also print the plaintext to stdout so it's visible in container logs.
+        try:
+            print(f"Generated web UI initial credentials -> username: {data['username']} password: {generated} api_token: {api_token}")
+        except Exception:
+            # If printing fails for any reason, ignore — we still persisted the hash.
+            pass
         # Return the generated plaintext to the caller so the running app can
         # set its in-memory password for immediate login. Also include the
         # plaintext API token so the operator can copy it once (we persist

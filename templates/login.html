@@ -1,19 +1,35 @@
-{% extends 'base.html' %}
-{% block title %}Login{% endblock %}
-{% block content %}
-{% block sidebar %}{% endblock %}
-{% block main_style %}style="display:flex; align-items:center; justify-content:center; margin:0; height:calc(100vh - 64px);"{% endblock %}
-
-<div class="card login-card">
-  <h2 style="margin-top:0; margin-bottom:16px; text-align:center;">Sign in to researcharr</h2>
-  <form method="post" style="display:flex; flex-direction:column; gap:12px;">
-    <label class="form-label" for="username">Username</label>
-    <input id="username" name="username" class="form-control" placeholder="Username" autofocus>
-    <label class="form-label" for="password">Password</label>
-    <input id="password" name="password" type="password" class="form-control" placeholder="Password">
-    <input type="submit" value="Sign in" class="btn primary">
-    {% if error %}<div role="alert" style="color:#b00020;">{{ error }}</div>{% endif %}
-  </form>
-  <p style="text-align:center; margin-top:12px;"><a href="/reset-password">Forgot password?</a></p>
-</div>
-{% endblock %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>researcharr — Login</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+      html,body{height:100%;margin:0}
+      .login-outer{display:flex;align-items:center;justify-content:center;height:100%}
+      .login-card{max-width:420px;width:100%;padding:28px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.08)}
+      .login-card h2{text-align:center;margin-top:0}
+      .form-control{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:4px}
+      .form-label{font-size:0.9rem;margin-bottom:6px}
+      .btn{display:inline-block;padding:10px 14px;border-radius:4px;border:none;cursor:pointer}
+      .btn.primary{background:#2d8cf0;color:#fff}
+    </style>
+  </head>
+  <body>
+    <div class="login-outer">
+      <div class="card login-card">
+        <h2>Sign in to researcharr</h2>
+        <form method="post" style="display:flex; flex-direction:column; gap:12px;">
+          <label class="form-label" for="username">Username</label>
+          <input id="username" name="username" class="form-control" placeholder="Username" autofocus>
+          <label class="form-label" for="password">Password</label>
+          <input id="password" name="password" type="password" class="form-control" placeholder="Password">
+          <input type="submit" value="Sign in" class="btn primary">
+          {% if error %}<div role="alert" style="color:#b00020;">{{ error }}</div>{% endif %}
+        </form>
+        <p style="text-align:center; margin-top:12px;"><a href="/reset-password">Forgot password?</a></p>
+      </div>
+    </div>
+  </body>
+</html>

@@ -46,6 +46,35 @@
 
         const seenFailures = new Set();
 
+        // First, check storage mount points
+        try{
+          const storageResp = await fetch('/api/storage');
+          if (storageResp && storageResp.ok){
+            const stor = await storageResp.json();
+            (stor.paths || []).forEach(p => {
+              const skey = `storage:${p.name}`;
+              // If missing or not readable/writable, render a warning (will be added to existingMap below)
+              if (!p.exists || !p.readable || !p.writable){
+                const warn = el('div','warning-card');
+                warn.dataset.key = skey;
+                const title = el('div','warning-title');
+                title.textContent = `Storage issue: ${p.path}`;
+                warn.appendChild(title);
+                const actions = el('div','warning-actions');
+                const info = el('div','muted');
+                info.textContent = `exists: ${p.exists}, readable: ${p.readable}, writable: ${p.writable}`;
+                warn.appendChild(actions);
+                warn.appendChild(info);
+                warningsList.appendChild(warn);
+                requestAnimationFrame(function(){ warn.classList.add('show'); });
+                existingMap.set(skey, warn);
+              }
+            });
+          }
+        }catch(e){
+          // ignore storage check errors
+        }
+
         const resp = await fetch('/api/plugins');
         if (!resp.ok){
           warningsList.innerHTML = '';

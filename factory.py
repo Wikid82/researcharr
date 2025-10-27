@@ -683,6 +683,38 @@ def create_app():
             app.logger.exception("Plugin sync failed: %s", e)
             return jsonify({"error": "sync_failed", "msg": str(e)}), 500
 
+
+    @app.route("/api/storage", methods=["GET"])
+    def api_storage():
+        """Return simple checks for configured storage mount points (config/plugins).
+
+        Returns JSON like: {"paths": [{"name": "config", "path": "/config", "exists": true, "is_dir": true, "readable": true, "writable": false}, ...]}
+        """
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        plugins_config_dir = os.path.join(config_root, "plugins")
+        checks = []
+        for name, path in (("config", config_root), ("plugins", plugins_config_dir)):
+            try:
+                exists = os.path.exists(path)
+                is_dir = os.path.isdir(path)
+                readable = os.access(path, os.R_OK)
+                writable = os.access(path, os.W_OK)
+            except Exception:
+                exists = is_dir = readable = writable = False
+            checks.append(
+                {
+                    "name": name,
+                    "path": path,
+                    "exists": exists,
+                    "is_dir": is_dir,
+                    "readable": readable,
+                    "writable": writable,
+                }
+            )
+        return jsonify({"paths": checks})
+
     @app.route("/api/plugins/<plugin_name>/instances", methods=["POST"])
     def api_plugin_instances(plugin_name: str):
         """Add/update/delete plugin instances via JSON POST.

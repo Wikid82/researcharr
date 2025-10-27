@@ -61,8 +61,11 @@ class Plugin(BasePlugin):
             try:
                 import requests
 
+                base = self.config.get("url")
+                key = self.config.get("api_key")
+
                 r = requests.post(
-                    f"{self.config.get('url')}/api/v1/series/{item_id}/search?apikey={self.config.get('api_key')}",
+                    f"{base}/api/v1/series/{item_id}/search?apikey={key}",
                     timeout=10,
                 )
                 return jsonify(

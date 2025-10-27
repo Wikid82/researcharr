@@ -24,9 +24,8 @@ class Plugin(BasePlugin):
         try:
             import requests
 
-            r = requests.get(
-                f"{self.config.get('url')}/api?cmd=getAll&json=1", timeout=5
-            )
+            base = self.config.get("url")
+            r = requests.get(f"{base}/api?cmd=getAll&json=1", timeout=5)
             if r.status_code == 200:
                 return {"success": True, "comics": r.json()}
         except Exception:
@@ -59,8 +58,9 @@ class Plugin(BasePlugin):
             try:
                 import requests
 
+                base = self.config.get("url")
                 r = requests.get(
-                    f"{self.config.get('url')}/api?cmd=search&comicid={comic_id}&json=1",
+                    f"{base}/api?cmd=search&comicid={comic_id}&json=1",
                     timeout=10,
                 )
                 return jsonify(

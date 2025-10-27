@@ -1,7 +1,3 @@
-import logging
-
-import pytest
-
 from researcharr.researcharr import (
     check_radarr_connection,
     check_sonarr_connection,

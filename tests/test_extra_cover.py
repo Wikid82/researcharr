@@ -1,5 +1,4 @@
 import logging
-import os
 
 
 def test_setup_logger_writes_file(tmp_path):

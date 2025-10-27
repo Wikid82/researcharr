@@ -54,10 +54,11 @@ class Plugin(BasePlugin):
             return {"success": False, "msg": f"validation error: {exc}"}
 
     def sync(self) -> Dict[str, Any]:
-        """Send a test notification if 'test' is true in config or called via the blueprint.
+        """Send a test notification if 'test' is true in config or called via
+        the blueprint.
 
-        This method is conservative: it only sends if explicitly requested to avoid
-        surprising users during routine syncs.
+        This method is conservative: it only sends if explicitly requested to
+        avoid surprising users during routine syncs.
         """
         urls = self._get_urls()
         if not urls:

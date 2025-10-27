@@ -1,5 +1,3 @@
-import json
-
 from researcharr.factory import create_app
 
 

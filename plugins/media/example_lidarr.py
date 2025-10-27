@@ -28,7 +28,10 @@ class Plugin(BasePlugin):
         try:
             import requests
 
-            r = requests.get(f"{url}/api/v1/artist?apikey={api_key}", timeout=5)
+            base_url = url
+            key = api_key
+
+            r = requests.get(f"{base_url}/api/v1/artist?apikey={key}", timeout=5)
             if r.status_code == 200:
                 return {"success": True, "artists": r.json()}
         except Exception:
@@ -61,8 +64,11 @@ class Plugin(BasePlugin):
             try:
                 import requests
 
+                base = self.config.get("url")
+                key = self.config.get("api_key")
+
                 r = requests.post(
-                    f"{self.config.get('url')}/api/v1/artist/{artist_id}/refresh?apikey={self.config.get('api_key')}",
+                    f"{base}/api/v1/artist/{artist_id}/refresh?apikey={key}",
                     timeout=10,
                 )
                 return jsonify(

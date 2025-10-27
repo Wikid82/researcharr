@@ -5,6 +5,13 @@ import logging
 import os
 import sqlite3
 
+# Allow the top-level module `researcharr.py` to behave like a package for
+# legacy imports such as `import researcharr.plugins.example_sonarr`.
+# When a module defines a __path__ attribute it is treated as a package by
+# the import system; include both the module directory and the nested
+# `researcharr/` package directory so submodule imports resolve.
+__path__ = [os.path.dirname(__file__), os.path.join(os.path.dirname(__file__), "researcharr")]
+
 # Allow test fixtures to monkeypatch top-level names before the module is
 # (re)loaded. If a name already exists in globals() (for example because a
 # test called monkeypatch.setattr("researcharr.researcharr.requests", ...) )

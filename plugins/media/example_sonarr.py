@@ -75,7 +75,7 @@ class Plugin(BasePlugin):
             payload = request.get_json(force=True, silent=True) or {}
             # payload can contain seriesId, season, episode for flexible searches
             series_id = payload.get("seriesId") or payload.get("id")
-            season = payload.get("season")
+            # season is not used directly in this example; keep payload parsing flexible
             episode = payload.get("episode")
 
             if not series_id:

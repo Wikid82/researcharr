@@ -1,4 +1,3 @@
-import secrets
 from functools import wraps
 
 from flask import Blueprint, current_app, jsonify, request
@@ -15,15 +14,19 @@ def require_api_key(func):
             "X-API-Key"
         ):
             key = request.headers.get("X-API-Key")
-            stored_hash = current_app.config_data.get("general", {}).get("api_key_hash")
+            stored_hash = (
+                getattr(current_app, "config_data", {})
+                .get("general", {})
+                .get("api_key_hash")
+            )
             # If an API key hash is configured, verify the presented token
             if stored_hash and key and check_password_hash(stored_hash, key):
                 return func(*args, **kwargs)
         # Fallback to web session-based auth (same as web UI)
-        if (
-            request.cookies.get(current_app.session_cookie_name)
-            and request.authorization is None
-        ):
+        cookie_name = getattr(
+            current_app, "session_cookie_name", current_app.config.get("SESSION_COOKIE_NAME")
+        )
+        if (request.cookies.get(cookie_name) and request.authorization is None):
             # Let the view decide if session is valid; for now allow and let
             # route-level checks mirror UI behaviour.
             return func(*args, **kwargs)
@@ -68,7 +71,7 @@ def plugins():
     data = {"plugins": []}
     if registry is not None:
         for name in registry.list_plugins():
-            instances = current_app.config_data.get(name, [])
+            instances = getattr(current_app, "config_data", {}).get(name, [])
             cls = registry.get(name)
             category = (
                 getattr(cls, "category", "plugins") if cls is not None else "plugins"
@@ -91,7 +94,7 @@ def plugin_validate(plugin_name: str, idx: int):
     registry = getattr(current_app, "plugin_registry", None)
     if registry is None or registry.get(plugin_name) is None:
         return jsonify({"error": "unknown_plugin"}), 404
-    instances = current_app.config_data.get(plugin_name, [])
+    instances = getattr(current_app, "config_data", {}).get(plugin_name, [])
     if idx < 0 or idx >= len(instances):
         return jsonify({"error": "invalid_instance"}), 400
     inst_cfg = instances[idx]
@@ -110,7 +113,7 @@ def plugin_sync(plugin_name: str, idx: int):
     registry = getattr(current_app, "plugin_registry", None)
     if registry is None or registry.get(plugin_name) is None:
         return jsonify({"error": "unknown_plugin"}), 404
-    instances = current_app.config_data.get(plugin_name, [])
+    instances = getattr(current_app, "config_data", {}).get(plugin_name, [])
     if idx < 0 or idx >= len(instances):
         return jsonify({"error": "invalid_instance"}), 400
     inst_cfg = instances[idx]
@@ -132,7 +135,7 @@ def notifications_send():
     registry = getattr(current_app, "plugin_registry", None)
     if registry is None or registry.get("apprise") is None:
         return jsonify({"error": "no_apprise_plugin"}), 404
-    instances = current_app.config_data.get("apprise", [])
+    instances = getattr(current_app, "config_data", {}).get("apprise", [])
     if not instances:
         return jsonify({"error": "no_apprise_instances"}), 404
     try:
@@ -158,7 +161,10 @@ def openapi():
         "info": {
             "title": "ResearchArr API",
             "version": "1.0.0",
-            "description": "Minimal API for ResearchArr (plugins, metrics, health, notifications).",
+            "description": (
+                "Minimal API for ResearchArr: plugins, metrics, health, "
+                "and notifications."
+            ),
         },
         "servers": [{"url": f"http://{host}/api/v1"}],
         "paths": {

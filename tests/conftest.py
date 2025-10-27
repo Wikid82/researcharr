@@ -1,3 +1,24 @@
+"""Pytest session helpers.
+
+Provide compatibility shim modules under the `researcharr.plugins.*` names
+so older-style imports used by the test-suite resolve to the canonical
+`plugins.*` implementations located at the repo root.
+"""
+import sys
+import importlib
+
+_mappings = [
+    ("plugins.media.example_sonarr", "researcharr.plugins.example_sonarr"),
+]
+
+for src, dst in _mappings:
+    try:
+        mod = importlib.import_module(src)
+        sys.modules[dst] = mod
+    except Exception:
+        # If import fails, don't block test collection; tests that need the
+        # module will raise a clear error.
+        pass
 import importlib
 import os
 import sys

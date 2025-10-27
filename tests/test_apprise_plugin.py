@@ -1,8 +1,6 @@
 import sys
 from types import SimpleNamespace
 
-import pytest
-
 
 def make_fake_apprise(monkeypatch):
     class FakeApprise:

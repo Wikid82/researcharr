@@ -23,8 +23,6 @@ class Plugin(BasePlugin):
         # Attempt to query Transmission RPC if configured
         host = self.config.get("host")
         try:
-            import json
-
             import requests
 
             # Transmission RPC expects POST with JSON body

@@ -21,7 +21,8 @@ class Plugin(BasePlugin):
         return {"success": True}
 
     def sync(self) -> Dict[str, Any]:
-        # Read-only: attempt to fetch indexers/status from Jackett
+        # Read-only: attempt to fetch indexers/status
+        # from Jackett (different API paths per version)
         url = self.config.get("url")
         api_key = self.config.get("api_key")
         if not url or not api_key:
@@ -30,11 +31,12 @@ class Plugin(BasePlugin):
         try:
             import requests
 
-            # Jackett exposes /api/v2.0/indexers or /api/v2/indexers depending on version
+            # Try the two common Jackett indexer endpoints
             endpoints = ["/api/v2.0/indexers", "/api/v2/indexers"]
             for ep in endpoints:
                 try:
-                    r = requests.get(f"{url}{ep}?apikey={api_key}", timeout=5)
+                    ep_url = f"{url}{ep}"
+                    r = requests.get(f"{ep_url}?apikey={api_key}", timeout=5)
                     if r.status_code == 200:
                         return {"success": True, "indexers": r.json()}
                 except Exception:
@@ -59,7 +61,10 @@ class Plugin(BasePlugin):
         try:
             import requests
 
-            r = requests.get(f"{url}/api/v2.0/indexers?apikey={api_key}", timeout=5)
+            base = url
+            key = api_key
+
+            r = requests.get(f"{base}/api/v2.0/indexers?apikey={key}", timeout=5)
             if r.status_code == 200:
                 return {"status": "ok"}
         except Exception:

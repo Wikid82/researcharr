@@ -368,13 +368,17 @@ def create_app():
                 import secrets
 
                 new_key = secrets.token_urlsafe(32)
-                app.config_data.setdefault("general", {})["api_key"] = new_key
+                # Store only the hash in runtime config for security
+                from werkzeug.security import generate_password_hash
+
+                new_hash = generate_password_hash(new_key)
+                app.config_data.setdefault("general", {})["api_key_hash"] = new_hash
                 # Persist to the user config so the key survives restarts
                 try:
                     ucfg = webui.load_user_config() or {}
                     username = ucfg.get("username", app.config_data["user"]["username"])
                     pwd_hash = ucfg.get("password_hash")
-                    webui.save_user_config(username, pwd_hash, api_key=new_key)
+                    webui.save_user_config(username, pwd_hash, api_key_hash=new_hash)
                 except Exception:
                     app.logger.exception("Failed to persist regenerated API key")
                 flash("API key regenerated")

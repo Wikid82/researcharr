@@ -1,3 +1,13 @@
+"""Shim package for example plugins.
+
+This package provides compatibility shims so tests and legacy imports that
+reference `researcharr.plugins.<name>` continue to work while the canonical
+plugins live under the top-level `plugins/` directory.
+"""
+
+# Intentionally empty — individual plugin shims are provided as modules in
+# this package (e.g. example_sonarr.py) that import from the top-level
+# `plugins` package.
 import os
 
 # Extend this package's __path__ to include the repository's top-level

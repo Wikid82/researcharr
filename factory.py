@@ -316,11 +316,9 @@ def create_app():
                 pw_ok = False
             # Debug logging to help diagnose mismatches during development
             try:
-                app.logger.info(
-                    "login attempt: user=%s pw_ok=%s keys=%s",
-                    username,
-                    pw_ok,
-                    list(user.keys()),
+                # Print to stdout for debugging in the container logs
+                print(
+                    f"DEBUG_LOGIN user={username} pw_ok={pw_ok} keys={list(user.keys())}"
                 )
             except Exception:
                 pass

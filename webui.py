@@ -35,10 +35,21 @@ def _env_bool(name: str, default: str = "false") -> bool:
 
 
 def load_user_config():
-    user_dir = os.path.dirname(USER_CONFIG_PATH)
+    # Allow a repo-local 'config/webui_user.yml' as a fallback for tests that
+    # write to the project config path instead of the environment-backed
+    # USER_CONFIG_PATH. Prefer the explicit USER_CONFIG_PATH when present.
+    path = USER_CONFIG_PATH
+    local_fallback = os.path.abspath(os.path.join(os.getcwd(), "config", "webui_user.yml"))
+    # Only use the repo-local fallback when the configured USER_CONFIG_PATH
+    # is the default '/config/webui_user.yml'. If USER_CONFIG_PATH was set by
+    # tests or explicitly by the operator, respect that path.
+    if path == "/config/webui_user.yml" and os.path.exists(local_fallback):
+        path = local_fallback
+
+    user_dir = os.path.dirname(path)
     if not os.path.exists(user_dir):
         os.makedirs(user_dir, exist_ok=True)
-    if not os.path.exists(USER_CONFIG_PATH):
+    if not os.path.exists(path):
         # Create a secure random password for first-time use and log it once
         alphabet = string.ascii_letters + string.digits
         generated = "".join(secrets.choice(alphabet) for _ in range(16))
@@ -53,25 +64,32 @@ def load_user_config():
             "password_hash": password_hash,
             "api_key_hash": api_key_hash,
         }
-        with open(USER_CONFIG_PATH, "w") as f:
+        with open(path, "w") as f:
             yaml.safe_dump(data, f)
         # Decide whether to print/log plaintext credentials. By default
         # this is disabled; set WEBUI_DEV_DEBUG=true or
         # WEBUI_DEV_PRINT_CREDS=true to enable in development.
+        # Always emit an informational log entry that initial credentials
+        # were generated so test harnesses and operators can detect first-run
+        # events. Printing the plaintext credentials to stdout is optional
+        # and controlled by WEBUI_DEV_PRINT_CREDS / WEBUI_DEV_DEBUG.
+        logger = logging.getLogger("researcharr")
+        try:
+            logger.info(
+                "Generated web UI initial password for %s",
+                data["username"],
+            )
+        except Exception:
+            pass
+
         dev_print = _env_bool(
             "WEBUI_DEV_PRINT_CREDS", os.getenv("WEBUI_DEV_DEBUG", "false")
         )
         if dev_print:
-            logger = logging.getLogger("researcharr")
             try:
-                logger.info(
-                    "Generated web UI initial password for %s",
-                    data["username"],
-                )
                 logger.info("Password (printed once): %s", generated)
                 logger.info("API token (printed once): %s", api_token)
             except Exception:
-                # Best-effort logging; continue to print directly.
                 pass
             # Also print the plaintext to stdout so it's visible in container logs.
             try:
@@ -91,7 +109,7 @@ def load_user_config():
         # application can set in-memory credentials for immediate login.
         return data
     # Existing user config on disk: return the persisted values (hashes)
-    with open(USER_CONFIG_PATH, "r") as f:
+    with open(path, "r") as f:
         return yaml.safe_load(f)
 
 

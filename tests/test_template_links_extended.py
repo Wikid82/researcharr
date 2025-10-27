@@ -16,7 +16,8 @@ def test_templates_fetch_and_links_covered():
 
     # find fetch('/path') or fetch("/path") occurrences
     fetch_re = re.compile(r"fetch\(\s*['\"](/[^'\")]+)")
-    fetch_links = set(m.group(1) for m in fetch_re.finditer(text))
+    # strip query params (e.g. /api/tasks?limit=) so we only compare paths
+    fetch_links = set(m.group(1).split("?", 1)[0] for m in fetch_re.finditer(text))
 
     # reuse existing template link test's route discovery logic
     factory_text = factory_path.read_text(encoding="utf-8")

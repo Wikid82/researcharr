@@ -23,9 +23,12 @@ def test_sse_stream_yields_appended_lines(tmp_path, monkeypatch):
     # make time.sleep short so the streaming loop checks often
     import time as _time
 
+    # Save original sleep function so our patched short_sleep can call it
+    _orig_sleep = _time.sleep
+
     def short_sleep(s):
-        # small real sleep to yield to other thread
-        time.sleep(0.01)
+        # small real sleep to yield to other thread using the original sleep
+        _orig_sleep(0.01)
 
     monkeypatch.setattr(_time, "sleep", short_sleep)
 

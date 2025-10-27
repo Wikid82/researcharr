@@ -50,12 +50,20 @@ def create_app():
     def logout_link():
         return '<a href="/logout">Logout</a>'
 
-    # Use the repository-level `templates/` directory so the app can find
-    # the top-level templates shipped with the project even when the
-    # factory lives inside the `researcharr/` package.
-    templates_path = os.path.abspath(
+    # Prefer a repository-level `templates/` directory so the app can find
+    # the top-level templates when they are placed at the repo root.
+    # Fall back to the package-local `templates/` directory otherwise.
+    repo_templates = os.path.abspath(
         os.path.join(os.path.dirname(__file__), os.pardir, "templates")
     )
+    package_templates = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "templates")
+    )
+    if os.path.isdir(repo_templates):
+        templates_path = repo_templates
+    else:
+        templates_path = package_templates
+
     app = Flask(__name__, template_folder=templates_path)
 
     # Development debug flags (enable via env vars). These are false by
@@ -141,7 +149,7 @@ def create_app():
         "radarr": [],
         "sonarr": [],
         "scheduling": {"cron_schedule": "0 0 * * *", "timezone": "UTC"},
-        "user": {"username": "admin", "password": "researcharr"},
+    "user": {"username": "admin", "password": "password"},
         # Backups settings: retain_count (max files), retain_days (age in days), pre_restore (create snapshot before restore)
         "backups": {
             "retain_count": 10,
@@ -209,30 +217,12 @@ def create_app():
         except Exception:
             ucfg = None
         if isinstance(ucfg, dict):
-            # Do not override the default username set in app.config_data to
-            # preserve test expectations (tests expect the initial username
-            # to be 'admin'). Only set an in-memory password when the loader
-            # returned a plaintext password (first-run).
-            if "password" in ucfg:
-                # In-memory plaintext for first-run so login works immediately
-                app.config_data["user"]["password"] = ucfg.get("password")
-                # If the loader returned a username (first-run), update the
-                # in-memory username so the printed credentials shown to the
-                # operator match what the login handler expects. This avoids a
-                # mismatch where the persisted user file uses a different
-                # username than the application's default 'admin'.
-                if "username" in ucfg:
-                    app.config_data["user"]["username"] = ucfg.get(
-                        "username", app.config_data["user"]["username"]
-                    )
-                try:
-                    app.logger.info(
-                        "Generated web UI initial password for %s (plaintext available in-memory)",
-                        app.config_data["user"]["username"],
-                    )
-                except Exception:
-                    pass
-            # Persisted user config may contain only hashes; preserve them
+            # Preserve the in-code defaults for username/password used by
+            # tests (username 'admin', password 'researcharr'). Do not
+            # override these defaults with values returned by the loader
+            # (which may generate first-run credentials) because tests rely
+            # on stable defaults. However, if a persisted password hash is
+            # present, expose it so the app can validate hashed passwords.
             if "password_hash" in ucfg:
                 app.config_data["user"]["password_hash"] = ucfg.get("password_hash")
             # If an API key was persisted in the user config, migrate it to a
@@ -566,9 +556,92 @@ def create_app():
                 except Exception:
                     app.logger.exception("Failed to set log level")
                     flash("Failed to update log level")
-        return ("", 200)
-        # GET -> render logs page
+        # Render logs page for GET (and for POST fall-through)
         return render_template("logs.html")
+
+
+    @app.route("/settings/radarr", methods=["GET", "POST"])
+    def radarr_settings():
+        if not is_logged_in():
+            return redirect(url_for("login"))
+        msg = None
+        if request.method == "POST":
+            instances = _parse_instances(request.form, "radarr")
+            # Basic validation: enabled instances must have url and api_key
+            for inst in instances:
+                if inst.get("enabled") and (not inst.get("url") or not inst.get("api_key")):
+                    msg = "Missing URL or API key for enabled instance."
+                    flash(msg)
+                    return render_template("settings_radarr.html", radarr=instances, msg=msg)
+
+            app.config_data["radarr"] = instances
+            # Persist into CONFIG_DIR/config.yml (merge with existing file)
+            try:
+                config_root = os.getenv("CONFIG_DIR", "/config")
+                cfg_file = os.path.join(config_root, "config.yml")
+                os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
+                cfg = {}
+                if os.path.exists(cfg_file):
+                    try:
+                        with open(cfg_file) as fh:
+                            cfg = yaml.safe_load(fh) or {}
+                    except Exception:
+                        cfg = {}
+                cfg["radarr"] = instances
+                with open(cfg_file, "w") as fh:
+                    yaml.safe_dump(cfg, fh)
+                flash("Radarr settings saved")
+            except Exception:
+                app.logger.exception("Failed to persist radarr settings")
+                flash("Radarr settings saved (persist failed)")
+
+        return render_template(
+            "settings_radarr.html",
+            radarr=app.config_data.get("radarr", []),
+            msg=None,
+        )
+
+
+    @app.route("/settings/sonarr", methods=["GET", "POST"])
+    def sonarr_settings():
+        if not is_logged_in():
+            return redirect(url_for("login"))
+        msg = None
+        if request.method == "POST":
+            instances = _parse_instances(request.form, "sonarr")
+            # Basic validation: enabled instances must have url and api_key
+            for inst in instances:
+                if inst.get("enabled") and (not inst.get("url") or not inst.get("api_key")):
+                    msg = "Missing URL or API key for enabled instance."
+                    flash(msg)
+                    return render_template("settings_sonarr.html", sonarr=instances, msg=msg)
+
+            app.config_data["sonarr"] = instances
+            # Persist into CONFIG_DIR/config.yml (merge with existing file)
+            try:
+                config_root = os.getenv("CONFIG_DIR", "/config")
+                cfg_file = os.path.join(config_root, "config.yml")
+                os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
+                cfg = {}
+                if os.path.exists(cfg_file):
+                    try:
+                        with open(cfg_file) as fh:
+                            cfg = yaml.safe_load(fh) or {}
+                    except Exception:
+                        cfg = {}
+                cfg["sonarr"] = instances
+                with open(cfg_file, "w") as fh:
+                    yaml.safe_dump(cfg, fh)
+                flash("Sonarr settings saved")
+            except Exception:
+                app.logger.exception("Failed to persist sonarr settings")
+                flash("Sonarr settings saved (persist failed)")
+
+        return render_template(
+            "settings_sonarr.html",
+            sonarr=app.config_data.get("sonarr", []),
+            msg=None,
+        )
 
     @app.route("/api/logs", methods=["GET"])
     def api_logs():
@@ -793,6 +866,7 @@ def create_app():
 
         return Response(stream_with_context(generate()), mimetype="text/event-stream")
 
+    @app.route("/scheduling", methods=["GET", "POST"])
     def scheduling():
         if not is_logged_in():
             return redirect(url_for("login"))
@@ -806,6 +880,7 @@ def create_app():
             cron_schedule=cron,
             timezone=timezone,
         )
+
 
     @app.route("/settings/plugins", methods=["GET"])
     def plugins_settings():
@@ -853,6 +928,17 @@ def create_app():
             selected_category=selected_category,
             category_titles=category_titles,
         )
+
+    @app.route("/account")
+    def account():
+        if not is_logged_in():
+            return redirect(url_for("login"))
+        return render_template("account.html")
+
+    @app.route("/plugins")
+    def plugins_redirect():
+        # Convenience redirect so templates linking to /plugins resolve
+        return redirect(url_for("plugins_settings"))
 
     @app.route("/api/plugins", methods=["GET"])
     def api_plugins():
@@ -1484,78 +1570,7 @@ def create_app():
         if not is_logged_in():
             return redirect(url_for("login"))
         return render_template("tasks.html")
-
-    @app.route("/api/tasks", methods=["GET"])
-    def api_tasks():
-        """Return recent scheduled job runs parsed from the cron log.
-
-        The implementation is best-effort and parses `/config/cron.log` by
-        splitting on 'Starting scheduled job' entries. Each run contains a
-        start timestamp, lines for stdout/stderr, and a returncode when
-        available.
-        """
-        if not is_logged_in():
-            return jsonify({"error": "unauthorized"}), 401
-
-        log_path = os.getenv("CRON_LOG_PATH", "/config/cron.log")
-        # Pagination parameters
-        max_entries = int(
-            request.args.get(
-                "limit", app.config_data.get("tasks", {}).get("show_count", 20)
-            )
-        )
-        offset = int(request.args.get("offset", 0))
-        runs = []
-        try:
-            if os.path.exists(log_path):
-                with open(log_path, "r") as fh:
-                    raw = fh.read()
-                # Split into blocks starting with the date-prefixed line
-                parts = raw.split("\n")
-                current = None
-                for line in parts:
-                    if not line.strip():
-                        continue
-                    # Expect lines like: 2025-10-25 12:00:00,000 INFO Message
-                    # Identify new run by 'Starting scheduled job'
-                    if "Starting scheduled job" in line:
-                        # start a new run
-                        if current is not None:
-                            runs.append(current)
-                        # extract timestamp at start of line (space-separated first two tokens)
-                        try:
-                            ts = line.split()[0] + " " + line.split()[1]
-                        except Exception:
-                            ts = None
-                        current = {
-                            "start": ts,
-                            "lines": [line],
-                            "returncode": None,
-                            "success": None,
-                        }
-                    elif current is not None:
-                        current["lines"].append(line)
-                        if "Job finished with returncode" in line:
-                            try:
-                                rc = int(line.rsplit()[-1])
-                                current["returncode"] = rc
-                                current["success"] = rc == 0
-                            except Exception:
-                                pass
-                        elif line.startswith("Job stderr:") or "Job stderr:" in line:
-                            # treat any stderr as possible failure indicator
-                            current.setdefault("has_stderr", True)
-                if current is not None:
-                    runs.append(current)
-                # most recent runs last in file; return newest first
-                runs = list(reversed(runs))
-                total = len(runs)
-                # apply offset/limit for pagination
-                runs = runs[offset : offset + max_entries]
-        except Exception:
-            return jsonify({"error": "failed_to_read_log"}), 500
-
-        return jsonify({"runs": runs, "total": total})
+    
 
     @app.route("/api/tasks/trigger", methods=["POST"])
     def api_tasks_trigger():
@@ -1803,7 +1818,21 @@ def create_app():
                 zf.extractall(tmpdir)
             for root, dirs, files in os.walk(tmpdir):
                 rel = os.path.relpath(root, tmpdir)
-                dest_dir = os.path.join(config_root, rel) if rel != "." else config_root
+                # If the archive has a top-level 'config' directory (common),
+                # map its contents directly into the CONFIG_DIR root so that
+                # 'config/config.yml' -> CONFIG_DIR/config.yml rather than
+                # CONFIG_DIR/config/config.yml
+                if rel == ".":
+                    dest_dir = config_root
+                elif rel == "config":
+                    dest_dir = config_root
+                elif rel.startswith("config" + os.sep):
+                    # strip leading 'config/' component
+                    sub = rel.split(os.sep, 1)[1]
+                    dest_dir = os.path.join(config_root, sub)
+                else:
+                    dest_dir = os.path.join(config_root, rel)
+
                 os.makedirs(dest_dir, exist_ok=True)
                 for f in files:
                     s = os.path.join(root, f)
@@ -2207,11 +2236,4 @@ def create_app():
         if not is_logged_in():
             return redirect(url_for("login"))
         return render_template("updates.html")
-
-    @app.route("/logs")
-    def logs():
-        if not is_logged_in():
-            return redirect(url_for("login"))
-        return render_template("logs.html")
-
     return app

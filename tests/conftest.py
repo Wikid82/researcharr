@@ -97,3 +97,17 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
     importlib.import_module("researcharr.researcharr")
     yield
     # Cleanup handled by tmp_path_factory
+
+
+@pytest.fixture
+def app():
+    """Provide a Flask app instance for tests that request an `app` fixture.
+
+    Use the project's application factory so tests get the same app instance
+    as those that call `create_app()` directly.
+    """
+    from researcharr.factory import create_app
+
+    app = create_app()
+    app.config["TESTING"] = True
+    return app

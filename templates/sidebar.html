@@ -1,25 +1,22 @@
-
 <aside class="site-sidebar" role="navigation" aria-label="Main navigation">
   <ul class="sidebar-nav">
-    <li></li><h1><a href="/home" class="{% if request.path.startswith('/home') %}active{% endif %}">Home</a></h1></li>
-    <menu><h1><a href="/connections" class="{% if request.path.startswith('/connections') %}active{% endif %}">Connections</a></h1></menu>
-        <li>
-          <h2><a href="/settings/plugins?category=media class="{% if request.path.startswith('/media') %}active{% endif %}">Media</a></h2>
-          
-        </li>
-        <li>
-          <h2><a href="/plugins?category=scrapers" class="{% if request.path.startswith('/scrapers') %}active{% endif %}">Scrapers</a></h2>
-          </li>
-        <li>
-          <h2><a href="/plugins?category=clients" class="{% if request.path.startswith('/clients') %}active{% endif %}">Clients</a></h2>
-         </li>
-        <li>
-          <h2><a href="/plugins?category=notifications" class="{% if request.path.startswith('/notifications') %}active{% endif %}">Notifications</a></h2>
-
-        </li>
-    <h1><menu><a href="/settings" class="{% if request.path.startswith('/settings/general') %}active{% endif %}">Settings</a></h1></ul></menu>
-    <li><h2><a href="/general" class="{% if request.path.startswith('/general') %}active{% endif %}">General</a></h2></li>
+    <li><h1><a href="/" class="{% if request.path == '/' %}active{% endif %}">Home</a></h1></li>
+    <li><h1><a href="/settings/plugins" class="{% if request.path.startswith('/settings/plugins') %}active{% endif %}">Connections</a></h1></li>
+    <li>
+      <h2><a href="/settings/plugins?category=media" class="{% if request.args.get('category') == 'media' %}active{% endif %}">Media</a></h2>
+    </li>
+    <li>
+      <h2><a href="/settings/plugins?category=scrapers" class="{% if request.args.get('category') == 'scrapers' %}active{% endif %}">Scrapers</a></h2>
+    </li>
+    <li>
+      <h2><a href="/settings/plugins?category=clients" class="{% if request.args.get('category') == 'clients' %}active{% endif %}">Clients</a></h2>
+    </li>
+    <li>
+      <h2><a href="/settings/plugins?category=notifications" class="{% if request.args.get('category') == 'notifications' %}active{% endif %}">Notifications</a></h2>
+    </li>
+    <li><h1><a href="/settings/general" class="{% if request.path.startswith('/settings/general') %}active{% endif %}">Settings</a></h1></li>
+    <li><h2><a href="/settings/general" class="{% if request.path.startswith('/settings/general') %}active{% endif %}">General</a></h2></li>
     <li><h2><a href="/scheduling" class="{% if request.path.startswith('/scheduling') %}active{% endif %}">Scheduling</a></h2></li>
-        <li><h2><a href="/user" class="{% if request.path.startswith('/user') %}active{% endif %}">User Settings</a></h2></li>
+    <li><h2><a href="/user" class="{% if request.path.startswith('/user') %}active{% endif %}">User Settings</a></h2></li>
   </ul>
 </aside>

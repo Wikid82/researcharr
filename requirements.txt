@@ -16,6 +16,7 @@ isort
 flake8
 types-requests
 types-PyYAML
+types-Markdown
 python-json-logger
 APScheduler
 pytest

@@ -72,6 +72,13 @@
           const actions = el('div','warning-actions');
           const retry = el('button','btn');
           retry.textContent = 'Retry';
+          // helper to remove with animation
+          function removeWarn(elm){
+            elm.classList.remove('show');
+            elm.classList.add('hide');
+            elm.addEventListener('transitionend', function(){ elm.remove() }, {once:true});
+          }
+
           retry.addEventListener('click', async function(){
             retry.disabled = true;
             retry.textContent = 'Checking…';
@@ -81,8 +88,8 @@
               const j = await r.json();
               const okNow = !!j.result;
               if (okNow){
-                // remove this warning
-                warn.remove();
+                // animate out then remove
+                removeWarn(warn);
               } else {
                 retry.disabled = false;
                 retry.textContent = 'Retry';
@@ -106,6 +113,8 @@
           warn.appendChild(info);
 
           warningsList.appendChild(warn);
+          // trigger enter animation
+          requestAnimationFrame(function(){ warn.classList.add('show'); });
         }
       }
 

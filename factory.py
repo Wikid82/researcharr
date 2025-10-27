@@ -562,86 +562,23 @@ def create_app():
 
     @app.route("/settings/radarr", methods=["GET", "POST"])
     def radarr_settings():
+        # Radarr settings are now managed by the plugin system. Keep a
+        # backwards-compatible redirect to the Plugins page (media
+        # category) so older links continue to work.
         if not is_logged_in():
             return redirect(url_for("login"))
-        msg = None
-        if request.method == "POST":
-            instances = _parse_instances(request.form, "radarr")
-            # Basic validation: enabled instances must have url and api_key
-            for inst in instances:
-                if inst.get("enabled") and (not inst.get("url") or not inst.get("api_key")):
-                    msg = "Missing URL or API key for enabled instance."
-                    flash(msg)
-                    return render_template("settings_radarr.html", radarr=instances, msg=msg)
-
-            app.config_data["radarr"] = instances
-            # Persist into CONFIG_DIR/config.yml (merge with existing file)
-            try:
-                config_root = os.getenv("CONFIG_DIR", "/config")
-                cfg_file = os.path.join(config_root, "config.yml")
-                os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
-                cfg = {}
-                if os.path.exists(cfg_file):
-                    try:
-                        with open(cfg_file) as fh:
-                            cfg = yaml.safe_load(fh) or {}
-                    except Exception:
-                        cfg = {}
-                cfg["radarr"] = instances
-                with open(cfg_file, "w") as fh:
-                    yaml.safe_dump(cfg, fh)
-                flash("Radarr settings saved")
-            except Exception:
-                app.logger.exception("Failed to persist radarr settings")
-                flash("Radarr settings saved (persist failed)")
-
-        return render_template(
-            "settings_radarr.html",
-            radarr=app.config_data.get("radarr", []),
-            msg=None,
-        )
+        flash("Radarr settings have moved to the Plugins page.")
+        return redirect(url_for("plugins_settings", category="media"))
 
 
     @app.route("/settings/sonarr", methods=["GET", "POST"])
     def sonarr_settings():
+        # Sonarr settings are now managed by the plugin system. Redirect
+        # to the Plugins page so old links keep working.
         if not is_logged_in():
             return redirect(url_for("login"))
-        msg = None
-        if request.method == "POST":
-            instances = _parse_instances(request.form, "sonarr")
-            # Basic validation: enabled instances must have url and api_key
-            for inst in instances:
-                if inst.get("enabled") and (not inst.get("url") or not inst.get("api_key")):
-                    msg = "Missing URL or API key for enabled instance."
-                    flash(msg)
-                    return render_template("settings_sonarr.html", sonarr=instances, msg=msg)
-
-            app.config_data["sonarr"] = instances
-            # Persist into CONFIG_DIR/config.yml (merge with existing file)
-            try:
-                config_root = os.getenv("CONFIG_DIR", "/config")
-                cfg_file = os.path.join(config_root, "config.yml")
-                os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
-                cfg = {}
-                if os.path.exists(cfg_file):
-                    try:
-                        with open(cfg_file) as fh:
-                            cfg = yaml.safe_load(fh) or {}
-                    except Exception:
-                        cfg = {}
-                cfg["sonarr"] = instances
-                with open(cfg_file, "w") as fh:
-                    yaml.safe_dump(cfg, fh)
-                flash("Sonarr settings saved")
-            except Exception:
-                app.logger.exception("Failed to persist sonarr settings")
-                flash("Sonarr settings saved (persist failed)")
-
-        return render_template(
-            "settings_sonarr.html",
-            sonarr=app.config_data.get("sonarr", []),
-            msg=None,
-        )
+        flash("Sonarr settings have moved to the Plugins page.")
+        return redirect(url_for("plugins_settings", category="media"))
 
     @app.route("/api/logs", methods=["GET"])
     def api_logs():
@@ -1513,15 +1450,14 @@ def create_app():
             )
             return resp, 400
         s = sonarrs[idx]
-        if not s.get("sonarr0_url") or not s.get("sonarr0_api_key"):
+        # Accept both legacy form-field keys (sonarr0_url/sonarr0_api_key)
+        # and the normalized instance keys (url/api_key)
+        url_present = bool(s.get("url") or s.get("sonarr0_url"))
+        key_present = bool(s.get("api_key") or s.get("sonarr0_api_key"))
+        if not url_present or not key_present:
             # Also show error on settings page for test
             error_msg = "Missing URL or API key for enabled instance."
-            resp = jsonify(
-                {
-                    "success": False,
-                    "msg": error_msg,
-                }
-            )
+            resp = jsonify({"success": False, "msg": error_msg})
             return resp, 400
 
         return jsonify({"success": True})

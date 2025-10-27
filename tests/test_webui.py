@@ -77,23 +77,21 @@ def test_general_settings_page(client):
 
 def test_radarr_settings_page(client):
     login(client)
-    rv = client.get("/settings/radarr")
+    # Radarr settings are now surfaced via the plugins API/page
+    rv = client.get("/api/plugins")
     assert rv.status_code == 200
-    assert b"Radarr" in rv.data
-    assert b"researcharr" in rv.data
-    assert b"sidebar" in rv.data
-    assert b"footer" in rv.data or b"footer.html" in rv.data
+    assert rv.is_json
+    names = [p.get("name") for p in rv.json.get("plugins", [])]
+    assert "radarr" in names
 
 
 def test_sonarr_settings_page(client):
     login(client)
-    rv = client.get("/settings/sonarr")
-
+    rv = client.get("/api/plugins")
     assert rv.status_code == 200
-    assert b"Sonarr" in rv.data
-    assert b"researcharr" in rv.data
-    assert b"sidebar" in rv.data
-    assert b"footer" in rv.data or b"footer.html" in rv.data
+    assert rv.is_json
+    names = [p.get("name") for p in rv.json.get("plugins", [])]
+    assert "sonarr" in names
 
 
 def test_scheduling_page(client):
@@ -124,14 +122,21 @@ def test_general_settings_page_content(client):
 
 def test_radarr_settings_page_content(client):
     login(client)
-    rv = client.get("/settings/radarr")
-    assert b"API Key" in rv.data
+    rv = client.get("/api/plugins")
+    assert rv.status_code == 200
+    assert rv.is_json
+    # API provides plugin metadata; ensure radarr is present
+    names = [p.get("name") for p in rv.json.get("plugins", [])]
+    assert "radarr" in names
 
 
 def test_sonarr_settings_page_content(client):
     login(client)
-    rv = client.get("/settings/sonarr")
-    assert b"API Key" in rv.data
+    rv = client.get("/api/plugins")
+    assert rv.status_code == 200
+    assert rv.is_json
+    names = [p.get("name") for p in rv.json.get("plugins", [])]
+    assert "sonarr" in names
 
 
 def test_scheduling_page_content(client):
@@ -189,46 +194,18 @@ def test_radarr_settings_save_invalid(client):
     login(client)
     with client.session_transaction() as sess:
         sess["logged_in"] = True
-    rv = client.post(
-        "/settings/radarr",
-        data={
-            "radarr0_enabled": "on",
-            "radarr0_name": "",
-            "radarr0_url": "",
-            "radarr0_api_key": "",
-            "radarr0_process": "on",
-            "radarr0_state_mgmt": "on",
-            "radarr0_movies_to_upgrade": 5,
-            "radarr0_max_download_queue": 15,
-            "radarr0_reprocess_interval_days": 7,
-        },
-        follow_redirects=True,
-    )
-    assert rv.status_code == 200
-    assert b"Radarr" in rv.data
+    # attempt to add an invalid radarr instance via API
+    inst = {"enabled": True, "name": "", "url": "", "api_key": ""}
+    rv = client.post("/api/plugins/radarr/instances", json={"action": "add", "instance": inst})
+    assert rv.status_code == 400
+    assert rv.is_json and ("error" in rv.json)
 
 
 def test_sonarr_settings_save_invalid(client):
     login(client)
     with client.session_transaction() as sess:
         sess["logged_in"] = True
-    rv = client.post(
-        "/settings/sonarr",
-        data={
-            "sonarr0_enabled": "on",
-            "sonarr0_name": "",
-            "sonarr0_url": "",
-            "sonarr0_api_key": "",
-            "sonarr0_process": "on",
-            "sonarr0_mode": "series",
-            "sonarr0_api_pulls": 20,
-            "sonarr0_state_mgmt": "on",
-            "sonarr0_episodes_to_upgrade": 5,
-            "sonarr0_max_download_queue": 15,
-            "sonarr0_reprocess_interval_days": 7,
-        },
-        follow_redirects=True,
-    )
-
-    assert rv.status_code == 200
-    assert b"Sonarr" in rv.data
+    inst = {"enabled": True, "name": "", "url": "", "api_key": ""}
+    rv = client.post("/api/plugins/sonarr/instances", json={"action": "add", "instance": inst})
+    assert rv.status_code == 400
+    assert rv.is_json and ("error" in rv.json)

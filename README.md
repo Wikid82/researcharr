@@ -54,6 +54,13 @@ researcharr/
 Documentation
 
 - Local docs: see the `docs/` folder in this repository for contributor and user documentation.
+- Local docs: see the `docs/` folder in this repository for contributor and user documentation.
+
+API docs / Swagger UI
+---------------------
+
+An interactive Swagger UI is available at `/api/v1/docs` and reads the OpenAPI JSON at `/api/v1/openapi.json`.
+For security this documentation endpoint requires a valid API key provided via the `X-API-Key` header (it does not allow anonymous or session-only access). Please avoid exposing the docs endpoint to the public internet unless access to the API key is tightly controlled.
 - FAQ: see `docs/FAQ.md` for common questions and troubleshooting tips.
 - Published docs (GitHub Pages): https://wikid82.github.io/researcharr/  (deployed from `docs/` on `main` via GitHub Actions)
 

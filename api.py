@@ -1,6 +1,12 @@
 from functools import wraps
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import (
+    Blueprint,
+    current_app,
+    jsonify,
+    render_template_string,
+    request,
+)
 from werkzeug.security import check_password_hash
 
 bp = Blueprint("api_v1", __name__)
@@ -24,11 +30,34 @@ def require_api_key(func):
                 return func(*args, **kwargs)
         # Fallback to web session-based auth (same as web UI)
         cookie_name = getattr(
-            current_app, "session_cookie_name", current_app.config.get("SESSION_COOKIE_NAME")
+            current_app,
+            "session_cookie_name",
+            current_app.config.get("SESSION_COOKIE_NAME"),
         )
-        if (request.cookies.get(cookie_name) and request.authorization is None):
+        if request.cookies.get(cookie_name) and request.authorization is None:
             # Let the view decide if session is valid; for now allow and let
             # route-level checks mirror UI behaviour.
+            return func(*args, **kwargs)
+        return jsonify({"error": "unauthorized"}), 401
+
+    return wrapper
+
+
+def require_api_key_only(func):
+    """Decorator that requires a valid X-API-Key header and disallows session fallback.
+
+    Use this for endpoints that must only be accessible via a valid API token.
+    """
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        key = request.headers.get("X-API-Key")
+        stored_hash = (
+            getattr(current_app, "config_data", {})
+            .get("general", {})
+            .get("api_key_hash")
+        )
+        if stored_hash and key and check_password_hash(stored_hash, key):
             return func(*args, **kwargs)
         return jsonify({"error": "unauthorized"}), 401
 
@@ -227,3 +256,42 @@ def openapi():
         },
     }
     return jsonify(spec)
+
+
+@bp.route("/docs")
+@require_api_key_only
+def docs():
+    """Serve a minimal Swagger UI pointing at the OpenAPI JSON endpoint.
+
+    This returns a small HTML page that loads Swagger UI from a CDN and
+    configures it to fetch /api/v1/openapi.json. For security consider
+    restricting access to authenticated users in production.
+    """
+    openapi_url = "/api/v1/openapi.json"
+    html = """
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>ResearchArr API Docs</title>
+        <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4/swagger-ui.css" />
+    </head>
+    <body>
+        <div id="swagger-ui"></div>
+        <script src="https://unpkg.com/swagger-ui-dist@4/swagger-ui-bundle.js"></script>
+        <script>
+            window.onload = function() {
+                const ui = SwaggerUIBundle({
+                    url: "{{ openapi_url }}",
+                    dom_id: '#swagger-ui',
+                    presets: [SwaggerUIBundle.presets.apis],
+                    layout: 'BaseLayout',
+                })
+                window.ui = ui
+            }
+        </script>
+    </body>
+</html>
+"""
+    return render_template_string(html, openapi_url=openapi_url)

@@ -20,6 +20,10 @@
 - Hardened the compatibility import shim used by the `researcharr` package so the real implementation module is deterministically loaded and registered in `sys.modules`. This fixes intermittent test failures caused by import/monkeypatch ordering.
 - Updated docs/README guidance with recommended debug image tags: `local/researcharr:builder` (CI-like builder), `local/researcharr:alpine` (interactive debugging), and `ghcr.io/wikid82/researcharr:distroless` (production).
 
+### Security
+
+- Secured the interactive API documentation (Swagger UI) at `/api/v1/docs` so it requires a valid API key in the `X-API-Key` header. The docs no longer allow anonymous or session-only access to avoid accidental exposure of interactive API call functionality.
+
 ### Plugins (alpha)
 
 - Added a large set of example integrations (alpha/test harnesses) under `plugins/` grouped by category:

@@ -4,8 +4,9 @@ Provide compatibility shim modules under the `researcharr.plugins.*` names
 so older-style imports used by the test-suite resolve to the canonical
 `plugins.*` implementations located at the repo root.
 """
-import sys
+
 import importlib
+import sys
 
 _mappings = [
     ("plugins.media.example_sonarr", "researcharr.plugins.example_sonarr"),

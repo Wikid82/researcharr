@@ -314,6 +314,17 @@ def create_app():
                     pw_ok = check_password_hash(user["password_hash"], password)
             except Exception:
                 pw_ok = False
+            # Debug logging to help diagnose mismatches during development
+            try:
+                app.logger.debug(
+                    "login attempt: user=%s pw_ok=%s keys=%s",
+                    username,
+                    pw_ok,
+                    list(user.keys()),
+                )
+            except Exception:
+                pass
+
             if username == user["username"] and pw_ok:
                 session["logged_in"] = True
                 return redirect(url_for("general_settings"))

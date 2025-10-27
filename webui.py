@@ -1,5 +1,3 @@
-# ... code for webui.py ...
-
 # -*- coding: utf-8 -*-
 # --- Flask app and route definitions only; all HTML/Jinja/JS is in templates
 # Keep route helpers and config management small and testable
@@ -13,6 +11,12 @@ import yaml
 from werkzeug.security import generate_password_hash
 
 USER_CONFIG_PATH = "/config/webui_user.yml"
+
+
+def _env_bool(name: str, default: str = "false") -> bool:
+    """Return True if env var is set to a truthy value (true/1/yes)."""
+    v = os.getenv(name, default)
+    return str(v).lower() in ("1", "true", "yes")
 
 
 def load_user_config():
@@ -36,26 +40,28 @@ def load_user_config():
         }
         with open(USER_CONFIG_PATH, "w") as f:
             yaml.safe_dump(data, f)
-        # Log and print the generated plaintext once for operators to copy from logs.
-        # Printing ensures the plaintext appears in container stdout/stderr even when
-        # logging configuration may default to higher levels or write elsewhere.
-        logger = logging.getLogger("researcharr")
-        try:
-            logger.info(
-                "Generated web UI initial password for %s",
-                data["username"],
-            )
-            logger.info("Password (printed once): %s", generated)
-            logger.info("API token (printed once): %s", api_token)
-        except Exception:
-            # Best-effort logging; continue to print directly.
-            pass
-        # Also print the plaintext to stdout so it's visible in container logs.
-        try:
-            print(f"Generated web UI initial credentials -> username: {data['username']} password: {generated} api_token: {api_token}")
-        except Exception:
-            # If printing fails for any reason, ignore — we still persisted the hash.
-            pass
+        # Decide whether to print/log plaintext credentials. By default
+        # this is disabled; set WEBUI_DEV_DEBUG=true or
+        # WEBUI_DEV_PRINT_CREDS=true to enable in development.
+        dev_print = _env_bool("WEBUI_DEV_PRINT_CREDS", os.getenv("WEBUI_DEV_DEBUG", "false"))
+        if dev_print:
+            logger = logging.getLogger("researcharr")
+            try:
+                logger.info(
+                    "Generated web UI initial password for %s",
+                    data["username"],
+                )
+                logger.info("Password (printed once): %s", generated)
+                logger.info("API token (printed once): %s", api_token)
+            except Exception:
+                # Best-effort logging; continue to print directly.
+                pass
+            # Also print the plaintext to stdout so it's visible in container logs.
+            try:
+                print(f"Generated web UI initial credentials -> username: {data['username']} password: {generated} api_token: {api_token}")
+            except Exception:
+                # If printing fails for any reason, ignore — we still persisted the hash.
+                pass
         # Return the generated plaintext to the caller so the running app can
         # set its in-memory password for immediate login. Also include the
         # plaintext API token so the operator can copy it once (we persist

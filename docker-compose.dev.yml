@@ -11,6 +11,11 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=America/New_York
+      - SESSION_COOKIE_SECURE=false
+      # Development debug flags (false by default). Set to 'true' to enable.
+      - WEBUI_DEV_DEBUG=false
+      - WEBUI_DEV_PRINT_CREDS=false
+      - WEBUI_DEV_ENABLE_DEBUG_ENDPOINT=false
       - LOGLEVEL=DEBUG
       - WEBUI_PORT=2929
       - PYTHONUNBUFFERED=1

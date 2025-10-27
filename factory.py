@@ -40,6 +40,25 @@ def create_app():
         return '<a href="/logout">Logout</a>'
 
     app = Flask(__name__)
+
+    # Development debug flags (enable via env vars). These are false by
+    # default to avoid leaking sensitive info in production. Allowed true
+    # values: 1, true, yes (case-insensitive).
+    def _env_bool(name, default="false"):
+        return str(os.getenv(name, default)).lower() in ("1", "true", "yes")
+
+    app.config["WEBUI_DEV_DEBUG"] = _env_bool("WEBUI_DEV_DEBUG", "false")
+    # Control whether plaintext generated credentials are printed/logged
+    # on first-run. If unspecified, it follows WEBUI_DEV_DEBUG.
+    app.config["WEBUI_DEV_PRINT_CREDS"] = _env_bool(
+        "WEBUI_DEV_PRINT_CREDS", os.getenv("WEBUI_DEV_DEBUG", "false")
+    )
+    # Control the availability of an introspection debug endpoint used for
+    # programmatic testing of auth logic. Disabled by default.
+    app.config["WEBUI_DEV_ENABLE_DEBUG_ENDPOINT"] = _env_bool(
+        "WEBUI_DEV_ENABLE_DEBUG_ENDPOINT", os.getenv("WEBUI_DEV_DEBUG", "false")
+    )
+
     # SECRET_KEY must be provided in production. In development/test the
     # default 'dev' key is used but a warning is emitted. Use an
     # environment variable to supply a strong secret in production.
@@ -127,6 +146,15 @@ def create_app():
             if "password" in ucfg:
                 # In-memory plaintext for first-run so login works immediately
                 app.config_data["user"]["password"] = ucfg.get("password")
+                # If the loader returned a username (first-run), update the
+                # in-memory username so the printed credentials shown to the
+                # operator match what the login handler expects. This avoids a
+                # mismatch where the persisted user file uses a different
+                # username than the application's default 'admin'.
+                if "username" in ucfg:
+                    app.config_data["user"]["username"] = ucfg.get(
+                        "username", app.config_data["user"]["username"]
+                    )
                 try:
                     app.logger.info(
                         "Generated web UI initial password for %s (plaintext available in-memory)",
@@ -316,10 +344,23 @@ def create_app():
                 pw_ok = False
             # Debug logging to help diagnose mismatches during development
             try:
-                # Print to stdout for debugging in the container logs
-                print(
-                    f"DEBUG_LOGIN user={username} pw_ok={pw_ok} keys={list(user.keys())}"
-                )
+                # Emit debug information only when explicitly enabled via
+                # the WEBUI_DEV_DEBUG env var to avoid leaking sensitive
+                # information in production logs.
+                if app.config.get("WEBUI_DEV_DEBUG"):
+                    # Print to stdout for debugging in the container logs
+                    print(
+                        f"DEBUG_LOGIN user={username} pw_ok={pw_ok} keys={list(user.keys())}"
+                    )
+                    try:
+                        app.logger.debug(
+                            "DEBUG_LOGIN user=%s pw_ok=%s keys=%s",
+                            username,
+                            pw_ok,
+                            list(user.keys()),
+                        )
+                    except Exception:
+                        pass
             except Exception:
                 pass
 
@@ -831,5 +872,30 @@ def create_app():
             return resp, 400
 
         return jsonify({"success": True})
+
+    # Development-only debug endpoint for programmatic auth testing. This
+    # is only registered when WEBUI_DEV_ENABLE_DEBUG_ENDPOINT is enabled.
+    if app.config.get("WEBUI_DEV_ENABLE_DEBUG_ENDPOINT"):
+        @app.route("/__debug_auth", methods=["POST"])
+        def __debug_auth():
+            # Accept JSON {"password": "..."} and return whether it
+            # matches the in-memory plaintext (first-run) or the stored
+            # password hash. Returns minimal info suitable for local dev.
+            payload = None
+            try:
+                payload = request.get_json(force=True, silent=True) or {}
+            except Exception:
+                payload = {}
+            pw = payload.get("password")
+            user = app.config_data.get("user", {})
+            pw_ok = False
+            try:
+                if pw and "password" in user and pw == user.get("password"):
+                    pw_ok = True
+                elif pw and "password_hash" in user and user.get("password_hash"):
+                    pw_ok = check_password_hash(user.get("password_hash"), pw)
+            except Exception:
+                pw_ok = False
+            return jsonify({"user_keys": list(user.keys()), "pw_ok": pw_ok, "username": user.get("username")})
 
     return app

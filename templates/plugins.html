@@ -13,7 +13,9 @@
         <h2>{{ category_titles.get(category, category|capitalize) }}</h2>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">
           {% for p in plist %}
-            {% include '_plugin_card.html' with plugin=p %}
+            {% set plugin = p %}
+            {% include '_plugin_card.html' %}
+            {% set plugin = None %}
           {% endfor %}
         </div>
       </section>

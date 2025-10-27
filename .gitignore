@@ -30,3 +30,14 @@ keeping
 /config/updates/downloads/
 /config/backups/
 /config/task_history.jsonl
+
+# Generated webui user credentials (do not commit)
+config/webui_user.yml
+config/webui_user.yml.bak*
+
+# Runtime DBs and logs under config/ (environment-specific)
+config/*.db
+config/*.sqlite
+config/cron.log
+config/logs/
+config/*.log

@@ -316,7 +316,7 @@ def create_app():
                 pw_ok = False
             # Debug logging to help diagnose mismatches during development
             try:
-                app.logger.debug(
+                app.logger.info(
                     "login attempt: user=%s pw_ok=%s keys=%s",
                     username,
                     pw_ok,

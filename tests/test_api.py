@@ -5,8 +5,11 @@ from researcharr.factory import create_app
 
 def test_api_requires_key_and_returns_plugins():
     app = create_app()
-    # ensure there's an api key configured
-    app.config_data.setdefault("general", {})["api_key"] = "testkey"
+    # ensure there's an api key hash configured (tests supply plaintext token)
+    from werkzeug.security import generate_password_hash
+
+    token = "testkey"
+    app.config_data.setdefault("general", {})["api_key_hash"] = generate_password_hash(token)
 
     client = app.test_client()
 
@@ -19,7 +22,7 @@ def test_api_requires_key_and_returns_plugins():
     assert r.status_code == 401
 
     # with correct key -> ok and returns JSON
-    r = client.get("/api/v1/plugins", headers={"X-API-Key": "testkey"})
+    r = client.get("/api/v1/plugins", headers={"X-API-Key": token})
     assert r.status_code == 200
     data = r.get_json()
     assert "plugins" in data
@@ -33,11 +36,12 @@ def test_regenerate_api_key_via_settings():
     with client.session_transaction() as sess:
         sess["logged_in"] = True
 
-    # ensure no api key initially
+    # ensure no api key/hash initially
     app.config_data.setdefault("general", {}).pop("api_key", None)
+    app.config_data.setdefault("general", {}).pop("api_key_hash", None)
 
     # post regen request
     r = client.post("/settings/general", data={"regen_api": "1"}, follow_redirects=True)
     assert r.status_code in (200, 302)
-    # After regen, an api_key should be present
-    assert app.config_data["general"].get("api_key") is not None
+    # After regen, an api_key_hash should be present
+    assert app.config_data["general"].get("api_key_hash") is not None

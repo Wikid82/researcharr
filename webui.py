@@ -25,12 +25,14 @@ def load_user_config():
         generated = "".join(secrets.choice(alphabet) for _ in range(16))
         password_hash = generate_password_hash(generated)
         # Also generate an API key for first-run so operators can use the
-        # API immediately. The key is stored alongside the user config.
-        api_key = secrets.token_urlsafe(32)
+        # API immediately. Persist only a hash of the key to disk; the
+        # plaintext token is returned so the operator can copy it once.
+        api_token = secrets.token_urlsafe(32)
+        api_key_hash = generate_password_hash(api_token)
         data = {
             "username": "researcharr",
             "password_hash": password_hash,
-            "api_key": api_key,
+            "api_key_hash": api_key_hash,
         }
         with open(USER_CONFIG_PATH, "w") as f:
             yaml.safe_dump(data, f)
@@ -42,21 +44,25 @@ def load_user_config():
             generated,
         )
         # Return the generated plaintext to the caller so the running app can
-        # set its in-memory password for immediate login.
+        # set its in-memory password for immediate login. Also include the
+        # plaintext API token so the operator can copy it once (we persist
+        # only the hash to disk).
         data["password"] = generated
+        data["api_key"] = api_token
     with open(USER_CONFIG_PATH, "r") as f:
         return yaml.safe_load(f)
 
 
-def save_user_config(username, password_hash, api_key=None):
+def save_user_config(username, password_hash, api_key=None, api_key_hash=None):
 
     user_dir = os.path.dirname(USER_CONFIG_PATH)
     if not os.path.exists(user_dir):
         os.makedirs(user_dir, exist_ok=True)
     data = {"username": username, "password_hash": password_hash}
-    # Persist the API key if provided (keep existing behaviour when not
-    # supplied for backwards compatibility with older callers/tests).
+    # Accept either a raw api_key (which we will hash) or an api_key_hash.
     if api_key is not None:
-        data["api_key"] = api_key
+        data["api_key_hash"] = generate_password_hash(api_key)
+    elif api_key_hash is not None:
+        data["api_key_hash"] = api_key_hash
     with open(USER_CONFIG_PATH, "w") as f:
         yaml.safe_dump(data, f)

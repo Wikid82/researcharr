@@ -1,5 +1,6 @@
 import secrets
 from functools import wraps
+from werkzeug.security import check_password_hash
 
 from flask import Blueprint, current_app, jsonify, request
 
@@ -10,12 +11,11 @@ def require_api_key(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         # Allow either a valid session (web UI) or an API key header
-        if getattr(current_app, "config_data", None) and request.headers.get(
-            "X-API-Key"
-        ):
+        if getattr(current_app, "config_data", None) and request.headers.get("X-API-Key"):
             key = request.headers.get("X-API-Key")
-            expected = current_app.config_data.get("general", {}).get("api_key")
-            if expected and key == expected:
+            stored_hash = current_app.config_data.get("general", {}).get("api_key_hash")
+            # If an API key hash is configured, verify the presented token
+            if stored_hash and key and check_password_hash(stored_hash, key):
                 return func(*args, **kwargs)
         # Fallback to web session-based auth (same as web UI)
         if (
@@ -145,3 +145,54 @@ def notifications_send():
     except Exception as e:
         current_app.logger.exception("Apprise send failed: %s", e)
         return jsonify({"error": "send_failed", "msg": str(e)}), 500
+
+
+@bp.route("/openapi.json")
+def openapi():
+    """Return a minimal OpenAPI v3 JSON description for the API."""
+    host = request.host or "localhost"
+    spec = {
+        "openapi": "3.0.0",
+        "info": {
+            "title": "ResearchArr API",
+            "version": "1.0.0",
+            "description": "Minimal API for ResearchArr (plugins, metrics, health, notifications).",
+        },
+        "servers": [{"url": f"http://{host}/api/v1"}],
+        "paths": {
+            "/health": {"get": {"summary": "Health check", "responses": {"200": {"description": "OK"}}}},
+            "/metrics": {"get": {"summary": "Metrics", "responses": {"200": {"description": "OK"}}}},
+            "/plugins": {
+                "get": {
+                    "summary": "List plugins",
+                    "security": [{"ApiKeyAuth": []}],
+                    "responses": {"200": {"description": "List"}},
+                }
+            },
+            "/plugins/{plugin}/validate/{idx}": {
+                "post": {
+                    "summary": "Validate plugin instance",
+                    "security": [{"ApiKeyAuth": []}],
+                    "parameters": [
+                        {"name": "plugin", "in": "path", "required": True, "schema": {"type": "string"}},
+                        {"name": "idx", "in": "path", "required": True, "schema": {"type": "integer"}},
+                    ],
+                    "responses": {"200": {"description": "OK"}},
+                }
+            },
+            "/notifications/send": {
+                "post": {
+                    "summary": "Send notification (apprise)",
+                    "security": [{"ApiKeyAuth": []}],
+                    "requestBody": {"required": True, "content": {"application/json": {"schema": {"type": "object"}}}},
+                    "responses": {"200": {"description": "OK"}},
+                }
+            },
+        },
+        "components": {
+            "securitySchemes": {
+                "ApiKeyAuth": {"type": "apiKey", "in": "header", "name": "X-API-Key"}
+            }
+        },
+    }
+    return jsonify(spec)

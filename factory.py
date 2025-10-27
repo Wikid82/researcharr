@@ -134,12 +134,31 @@ def create_app():
                     )
                 except Exception:
                     pass
-            # If an API key was persisted in the user config, expose it to the
-            # application so API endpoints can validate requests.
-            if "api_key" in ucfg:
-                app.config_data.setdefault("general", {})["api_key"] = ucfg.get(
-                    "api_key"
-                )
+            # If an API key was persisted in the user config, migrate it to a
+            # hashed form and expose the hash to the application so API
+            # endpoints can validate requests. Prefer `api_key_hash` when
+            # present; if only a legacy `api_key` is present, hash and
+            # persist a migration.
+            try:
+                if "api_key_hash" in ucfg:
+                    app.config_data.setdefault("general", {})["api_key_hash"] = ucfg.get(
+                        "api_key_hash"
+                    )
+                elif "api_key" in ucfg:
+                    # legacy plaintext key found; hash and persist migration
+                    try:
+                        hashed = generate_password_hash(ucfg.get("api_key"))
+                        webui.save_user_config(
+                            ucfg.get("username", app.config_data["user"]["username"]),
+                            ucfg.get("password_hash"),
+                            api_key_hash=hashed,
+                        )
+                        app.config_data.setdefault("general", {})["api_key_hash"] = hashed
+                    except Exception:
+                        app.logger.exception("Failed to migrate plaintext api_key to api_key_hash")
+            except Exception:
+                # best-effort; don't fail startup on migration errors
+                pass
     except Exception:
         # best-effort; if loading the user config fails we continue with the
         # default in-memory credentials to avoid preventing the UI from

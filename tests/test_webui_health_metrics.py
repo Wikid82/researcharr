@@ -51,15 +51,15 @@ def test_loglevel_change_live(client):
     login(client)
     # Change loglevel to ERROR
     rv = client.post(
-        "/settings/general",
-        data={"PUID": "1", "PGID": "1", "Timezone": "UTC", "LogLevel": "ERROR"},
+        "/logs",
+        data={"LogLevel": "ERROR"},
         follow_redirects=True,
     )
     assert rv.status_code == 200
     # Change loglevel to DEBUG
     rv = client.post(
-        "/settings/general",
-        data={"PUID": "1", "PGID": "1", "Timezone": "UTC", "LogLevel": "DEBUG"},
+        "/logs",
+        data={"LogLevel": "DEBUG"},
         follow_redirects=True,
     )
     assert rv.status_code == 200

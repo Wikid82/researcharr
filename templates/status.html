@@ -61,6 +61,10 @@
                 title.textContent = `Storage issue: ${p.path}`;
                 warn.appendChild(title);
                 const actions = el('div','warning-actions');
+                const fixBtn = el('button','btn ghost');
+                fixBtn.textContent = 'How to fix';
+                fixBtn.addEventListener('click', function(){ openStorageHelp(p.path, p); });
+                actions.appendChild(fixBtn);
                 const info = el('div','muted');
                 info.textContent = `exists: ${p.exists}, readable: ${p.readable}, writable: ${p.writable}`;
                 warn.appendChild(actions);
@@ -239,6 +243,62 @@
       autoRefreshCheckbox.addEventListener('change', function(){
         enableAutoRefresh(!!autoRefreshCheckbox.checked);
       });
+
+      // Storage help modal markup + helpers
+      function openStorageHelp(path, info){
+        let modal = document.getElementById('storage-help-modal');
+        if (!modal){
+          modal = document.createElement('div');
+          modal.id = 'storage-help-modal';
+          modal.style.display = 'none';
+          modal.style.position = 'fixed';
+          modal.style.inset = '0';
+          modal.style.alignItems = 'center';
+          modal.style.justifyContent = 'center';
+          modal.style.background = 'rgba(0,0,0,0.5)';
+          modal.style.zIndex = '9999';
+          modal.innerHTML = `
+            <div class="card" style="width:640px;max-width:calc(100% - 40px);">
+              <h3 id="storage-help-title">Storage help</h3>
+              <div id="storage-help-body" style="max-height:60vh;overflow:auto;margin-top:8px"></div>
+              <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+                <button id="storage-help-close" class="btn">Close</button>
+              </div>
+            </div>`;
+          document.body.appendChild(modal);
+          modal.addEventListener('click', function(e){ if (e.target === modal) closeStorageHelp(); });
+        }
+        const title = modal.querySelector('#storage-help-title');
+        const body = modal.querySelector('#storage-help-body');
+        title.textContent = 'Fix storage: ' + path;
+        // Populate help content with suggestions and commands
+        body.innerHTML = `
+          <p>Detected an issue with the mounted path <code>${path}</code>. Typical fixes:</p>
+          <ol>
+            <li>Ensure the host directory is bind-mounted into the container at <code>${path}</code>. Example (docker):
+              <pre style="background:#111;padding:8px;color:#fff;border-radius:6px;margin-top:6px">docker run --rm -v /path/on/host:/config -p 2929:2929 ghcr.io/wikid82/researcharr:latest</pre>
+            </li>
+            <li>Fix permissions so the container user can read/write the directory. Example (on host):
+              <pre style="background:#111;padding:8px;color:#fff;border-radius:6px;margin-top:6px"># give rw to user (adjust UID/GID as needed)
+sudo chown -R 1000:1000 /path/on/host
+sudo chmod -R u+rwx /path/on/host</pre>
+            </li>
+            <li>If you run via docker-compose, ensure the compose defines the volume and maps to <code>/config</code> (or set the <code>CONFIG_DIR</code> env). Example:
+              <pre style="background:#111;padding:8px;color:#fff;border-radius:6px;margin-top:6px">volumes:
+  - ./config:/config</pre>
+            </li>
+          </ol>
+          <p>More information in the project docs: <a href="https://github.com/Wikid82/researcharr/blob/main/docs/Getting-Started.md" target="_blank" rel="noopener">Getting-Started</a></p>
+        `;
+        modal.style.display = 'flex';
+        const closeBtn = modal.querySelector('#storage-help-close');
+        closeBtn.onclick = closeStorageHelp;
+      }
+
+      function closeStorageHelp(){
+        const modal = document.getElementById('storage-help-modal');
+        if (modal) modal.style.display = 'none';
+      }
 
     })();
     </script>

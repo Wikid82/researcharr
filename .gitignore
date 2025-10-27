@@ -22,3 +22,11 @@ build/smoke-logs*
 *.tar.gz
 *.sqlite3
 keeping
+
+# Persisted runtime files we create under CONFIG_DIR
+/config/general.yml
+/config/updates_cache.yml
+/config/updates/
+/config/updates/downloads/
+/config/backups/
+/config/task_history.jsonl

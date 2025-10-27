@@ -22,7 +22,7 @@ def test_shim_fallback_when_top_level_missing(tmp_path):
         # can't exercise the move; skip safely.
         import pytest
 
-        pytest.skip("no cwd-level researcharr.py to move; skipping shim fallback test")
+#        pytest.skip("no cwd-level researcharr.py to move; skipping shim fallback test")
 
     bak = orig + ".bak"
     try:

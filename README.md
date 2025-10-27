@@ -2,14 +2,29 @@
   <img src="static/logo.jpg" alt="researcharr logo" height="150"/>
 </p>
 
-<p align="center"
-![Docker Publish (main)](https://github.com/Wikid82/researcharr/actions/workflows/docker-publish.yml/badge.svg?branch=main)
-![Docker Publish (development)](https://github.com/Wikid82/researcharr/actions/workflows/docker-publish.yml/badge.svg?branch=development)
-</p>
 
 # researcharr
 
 A modern, always-on utility to automatically trigger searches in the *arr suite to keep files up to date with any scoring or custom format changes. Features a secure, AJAX-powered web UI for managing all settings, per-instance validation, and robust automated test coverage.
+
+# status
+ 
+<p align="center">
+  <a href="https://codecov.io/gh/Wikid82/researcharr">
+    <img src="https://codecov.io/gh/Wikid82/researcharr/graph/badge.svg?token=LBEJBSUPLX" alt="Codecov" />
+  </a>
+  <a href="https://github.com/Wikid82/researcharr/actions/workflows/ci.yml">
+    <img src="https://github.com/Wikid82/researcharr/workflows/CI/badge.svg" alt="CI" />
+  </a>
+  <a href="https://github.com/Wikid82/researcharr/actions/workflows/alpine-ci.yml">
+    <img src="https://github.com/Wikid82/researcharr/workflows/Alpine%20CI%20%28build%2C%20test%2C%20trivy%2C%20publish%29/badge.svg" alt="Alpine CI" />
+  </a>
+  <a href="https://github.com/Wikid82/researcharr/actions/workflows/distroless-ci.yml">
+    <img src="https://github.com/Wikid82/researcharr/workflows/Distroless%20CI%20%28build%2C%20test%2C%20trivy%2C%20publish%29/badge.svg" alt="Distroless CI" />
+  </a>
+</p>
+
+
 
 ## Developer Note: Config Loader & Test Coverage
 

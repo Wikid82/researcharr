@@ -141,8 +141,8 @@ def create_app():
             # persist a migration.
             try:
                 if "api_key_hash" in ucfg:
-                    app.config_data.setdefault("general", {})["api_key_hash"] = ucfg.get(
-                        "api_key_hash"
+                    app.config_data.setdefault("general", {})["api_key_hash"] = (
+                        ucfg.get("api_key_hash")
                     )
                 elif "api_key" in ucfg:
                     # legacy plaintext key found; hash and persist migration
@@ -153,9 +153,13 @@ def create_app():
                             ucfg.get("password_hash"),
                             api_key_hash=hashed,
                         )
-                        app.config_data.setdefault("general", {})["api_key_hash"] = hashed
+                        app.config_data.setdefault("general", {})[
+                            "api_key_hash"
+                        ] = hashed
                     except Exception:
-                        app.logger.exception("Failed to migrate plaintext api_key to api_key_hash")
+                        app.logger.exception(
+                            "Failed to migrate plaintext api_key to api_key_hash"
+                        )
             except Exception:
                 # best-effort; don't fail startup on migration errors
                 pass

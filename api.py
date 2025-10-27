@@ -1,8 +1,8 @@
 import secrets
 from functools import wraps
-from werkzeug.security import check_password_hash
 
 from flask import Blueprint, current_app, jsonify, request
+from werkzeug.security import check_password_hash
 
 bp = Blueprint("api_v1", __name__)
 
@@ -11,7 +11,9 @@ def require_api_key(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         # Allow either a valid session (web UI) or an API key header
-        if getattr(current_app, "config_data", None) and request.headers.get("X-API-Key"):
+        if getattr(current_app, "config_data", None) and request.headers.get(
+            "X-API-Key"
+        ):
             key = request.headers.get("X-API-Key")
             stored_hash = current_app.config_data.get("general", {}).get("api_key_hash")
             # If an API key hash is configured, verify the presented token
@@ -160,8 +162,18 @@ def openapi():
         },
         "servers": [{"url": f"http://{host}/api/v1"}],
         "paths": {
-            "/health": {"get": {"summary": "Health check", "responses": {"200": {"description": "OK"}}}},
-            "/metrics": {"get": {"summary": "Metrics", "responses": {"200": {"description": "OK"}}}},
+            "/health": {
+                "get": {
+                    "summary": "Health check",
+                    "responses": {"200": {"description": "OK"}},
+                }
+            },
+            "/metrics": {
+                "get": {
+                    "summary": "Metrics",
+                    "responses": {"200": {"description": "OK"}},
+                }
+            },
             "/plugins": {
                 "get": {
                     "summary": "List plugins",
@@ -174,8 +186,18 @@ def openapi():
                     "summary": "Validate plugin instance",
                     "security": [{"ApiKeyAuth": []}],
                     "parameters": [
-                        {"name": "plugin", "in": "path", "required": True, "schema": {"type": "string"}},
-                        {"name": "idx", "in": "path", "required": True, "schema": {"type": "integer"}},
+                        {
+                            "name": "plugin",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string"},
+                        },
+                        {
+                            "name": "idx",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "integer"},
+                        },
                     ],
                     "responses": {"200": {"description": "OK"}},
                 }
@@ -184,7 +206,10 @@ def openapi():
                 "post": {
                     "summary": "Send notification (apprise)",
                     "security": [{"ApiKeyAuth": []}],
-                    "requestBody": {"required": True, "content": {"application/json": {"schema": {"type": "object"}}}},
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {"type": "object"}}},
+                    },
                     "responses": {"200": {"description": "OK"}},
                 }
             },

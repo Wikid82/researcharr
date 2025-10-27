@@ -1,22 +1,56 @@
 <aside class="site-sidebar" role="navigation" aria-label="Main navigation">
   <ul class="sidebar-nav">
     <li><h1><a href="/" class="{% if request.path == '/' %}active{% endif %}">Home</a></h1></li>
-    <li><h1><a href="/settings/plugins" class="{% if request.path.startswith('/settings/plugins') %}active{% endif %}">Connections</a></h1></li>
-    <li>
-      <h2><a href="/settings/plugins?category=media" class="{% if request.args.get('category') == 'media' %}active{% endif %}">Media</a></h2>
-    </li>
-    <li>
-      <h2><a href="/settings/plugins?category=scrapers" class="{% if request.args.get('category') == 'scrapers' %}active{% endif %}">Scrapers</a></h2>
-    </li>
-    <li>
-      <h2><a href="/settings/plugins?category=clients" class="{% if request.args.get('category') == 'clients' %}active{% endif %}">Clients</a></h2>
-    </li>
-    <li>
-      <h2><a href="/settings/plugins?category=notifications" class="{% if request.args.get('category') == 'notifications' %}active{% endif %}">Notifications</a></h2>
-    </li>
-    <li><h1><a href="/settings/general" class="{% if request.path.startswith('/settings/general') %}active{% endif %}">Settings</a></h1></li>
-    <li><h2><a href="/settings/general" class="{% if request.path.startswith('/settings/general') %}active{% endif %}">General</a></h2></li>
-    <li><h2><a href="/scheduling" class="{% if request.path.startswith('/scheduling') %}active{% endif %}">Scheduling</a></h2></li>
-    <li><h2><a href="/user" class="{% if request.path.startswith('/user') %}active{% endif %}">User Settings</a></h2></li>
+
+<!-- Connections block (native details) -->
+<li class="sidebar-section">
+  <details class="sidebar-details">
+    <summary class="sidebar-summary">
+      <span class="sidebar-summary-title">Connections</span>
+      <span class="sidebar-summary-caret" aria-hidden="true">▸</span>
+    </summary>
+
+    <ul class="sidebar-sublist">
+      <li><a href="/plugins?category=media" class="{% if request.args.get('category') == 'media' %}active{% endif %}">Media</a></li>
+      <li><a href="/plugins?category=scrapers" class="{% if request.args.get('category') == 'scrapers' %}active{% endif %}">Scrapers</a></li>
+      <li><a href="/plugins?category=clients" class="{% if request.args.get('category') == 'clients' %}active{% endif %}">Clients</a></li>
+      <li><a href="/plugins?category=notifications" class="{% if request.args.get('category') == 'notifications' %}active{% endif %}">Notifications</a></li>
+    </ul>
+  </details>
+</li>
+
+
+  <li class="sidebar-section">
+    <details class="sidebar-details">
+      <summary class="sidebar-summary">
+        <span class="sidebar-summary-title">Settings</span>
+        <span class="sidebar-summary-caret" aria-hidden="true">▸</span>
+      </summary>
+
+      <ul class="sidebar-sublist">
+        <li><a href="/settings/general" class="{% if request.path.startswith('/settings/general') %}active{% endif %}">General</a></li>
+        <li><a href="/scheduling" class="{% if request.path.startswith('/scheduling') %}active{% endif %}">Scheduling</a></li>
+        <li><a href="/account" class="{% if request.path.startswith('/user') %}active{% endif %}">Account</a></li>
+      </ul>
+    </details>
+  </li>
+
+  <li class="sidebar-section">
+    <details class="sidebar-details">
+      <summary class="sidebar-summary">
+        <span class="sidebar-summary-title">System</span>
+        <span class="sidebar-summary-caret" aria-hidden="true">▸</span>
+      </summary>
+
+      <ul class="sidebar-sublist">
+        <li><a href="/status" class="{% if request.path.startswith('/status') %}active{% endif %}">Status</a></li>
+        <li><a href="/tasks" class="{% if request.path.startswith('/tasks') %}active{% endif %}">Tasks</a></li>
+        <li><a href="/backups" class="{% if request.path.startswith('/backups') %}active{% endif %}">Backups</a></li>
+        <li><a href="/updates" class="{% if request.path.startswith('/updates') %}active{% endif %}">Updates</a></li>
+        <li><a href="/logs" class="{% if request.path.startswith('/logs') %}active{% endif %}">Logs</a></li>
+      </ul>
+    </details>
+  </li>
+
   </ul>
 </aside>

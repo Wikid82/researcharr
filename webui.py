@@ -10,7 +10,22 @@ import string
 import yaml
 from werkzeug.security import generate_password_hash
 
-USER_CONFIG_PATH = "/config/webui_user.yml"
+# Default path for the persisted webui user config. Tests and some legacy
+# modules may monkeypatch the value on a different module (for example
+# `researcharr.researcharr.USER_CONFIG_PATH`). Prefer a value provided by
+# that module when present so tests can patch the expected symbol and the
+# web UI will follow along.
+try:
+    # If the package-level module exists and defines USER_CONFIG_PATH, use it
+    # as the authoritative source. Import in a try/except to avoid importing
+    # the entire package at module import time in environments that don't
+    # need it.
+    import importlib
+
+    _ra = importlib.import_module("researcharr.researcharr")
+    USER_CONFIG_PATH = getattr(_ra, "USER_CONFIG_PATH", "/config/webui_user.yml")
+except Exception:
+    USER_CONFIG_PATH = "/config/webui_user.yml"
 
 
 def _env_bool(name: str, default: str = "false") -> bool:
@@ -43,7 +58,9 @@ def load_user_config():
         # Decide whether to print/log plaintext credentials. By default
         # this is disabled; set WEBUI_DEV_DEBUG=true or
         # WEBUI_DEV_PRINT_CREDS=true to enable in development.
-        dev_print = _env_bool("WEBUI_DEV_PRINT_CREDS", os.getenv("WEBUI_DEV_DEBUG", "false"))
+        dev_print = _env_bool(
+            "WEBUI_DEV_PRINT_CREDS", os.getenv("WEBUI_DEV_DEBUG", "false")
+        )
         if dev_print:
             logger = logging.getLogger("researcharr")
             try:
@@ -58,7 +75,9 @@ def load_user_config():
                 pass
             # Also print the plaintext to stdout so it's visible in container logs.
             try:
-                print(f"Generated web UI initial credentials -> username: {data['username']} password: {generated} api_token: {api_token}")
+                print(
+                    f"Generated web UI initial credentials -> username: {data['username']} password: {generated} api_token: {api_token}"
+                )
             except Exception:
                 # If printing fails for any reason, ignore — we still persisted the hash.
                 pass

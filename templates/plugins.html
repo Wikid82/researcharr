@@ -52,5 +52,20 @@
 
 <script>
 // keep existing instance-level actions available via API if needed; plugin cards are primarily presentational
+// If user navigated with a fragment like #plugin-sonarr, scroll that plugin card into view and highlight it briefly
+document.addEventListener('DOMContentLoaded', function(){
+  try{
+    var h = window.location.hash;
+    if (h && h.startsWith('#plugin-')){
+      var el = document.querySelector(h);
+      if (el){
+        el.scrollIntoView({behavior:'smooth', block:'center'});
+        el.style.transition = 'box-shadow 0.3s ease';
+        el.style.boxShadow = '0 6px 18px rgba(255,180,180,0.18)';
+        setTimeout(function(){ el.style.boxShadow = ''; }, 2500);
+      }
+    }
+  }catch(e){/* ignore */}
+});
 </script>
 {% endblock %}

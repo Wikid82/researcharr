@@ -39,7 +39,13 @@ def create_app():
     def logout_link():
         return '<a href="/logout">Logout</a>'
 
-    app = Flask(__name__)
+    # Use the repository-level `templates/` directory so the app can find
+    # the top-level templates shipped with the project even when the
+    # factory lives inside the `researcharr/` package.
+    templates_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), os.pardir, "templates")
+    )
+    app = Flask(__name__, template_folder=templates_path)
 
     # Development debug flags (enable via env vars). These are false by
     # default to avoid leaking sensitive info in production. Allowed true
@@ -876,6 +882,7 @@ def create_app():
     # Development-only debug endpoint for programmatic auth testing. This
     # is only registered when WEBUI_DEV_ENABLE_DEBUG_ENDPOINT is enabled.
     if app.config.get("WEBUI_DEV_ENABLE_DEBUG_ENDPOINT"):
+
         @app.route("/__debug_auth", methods=["POST"])
         def __debug_auth():
             # Accept JSON {"password": "..."} and return whether it
@@ -896,6 +903,43 @@ def create_app():
                     pw_ok = check_password_hash(user.get("password_hash"), pw)
             except Exception:
                 pw_ok = False
-            return jsonify({"user_keys": list(user.keys()), "pw_ok": pw_ok, "username": user.get("username")})
+            return jsonify(
+                {
+                    "user_keys": list(user.keys()),
+                    "pw_ok": pw_ok,
+                    "username": user.get("username"),
+                }
+            )
+
+    # --- System pages introduced via the sidebar ---
+    @app.route("/status")
+    def status():
+        if not is_logged_in():
+            return redirect(url_for("login"))
+        return render_template("status.html")
+
+    @app.route("/tasks")
+    def tasks():
+        if not is_logged_in():
+            return redirect(url_for("login"))
+        return render_template("tasks.html")
+
+    @app.route("/backups")
+    def backups():
+        if not is_logged_in():
+            return redirect(url_for("login"))
+        return render_template("backups.html")
+
+    @app.route("/updates")
+    def updates():
+        if not is_logged_in():
+            return redirect(url_for("login"))
+        return render_template("updates.html")
+
+    @app.route("/logs")
+    def logs():
+        if not is_logged_in():
+            return redirect(url_for("login"))
+        return render_template("logs.html")
 
     return app

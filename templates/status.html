@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="container main-content">
+    <h1>System Status</h1>
+    <p>Basic system status information will be displayed here.</p>
+
+    <section id="plugin-warnings">
+      <h2>Plugin connectivity warnings</h2>
+      <div id="warnings-list">
+        <p class="muted">Checking plugin connections…</p>
+      </div>
+    </section>
+
+    <script>
+    (function(){
+      // Helper to create an element with classes
+      function el(tag, cls){ const e = document.createElement(tag); if(cls) e.className = cls; return e }
+
+      const warningsList = document.getElementById('warnings-list');
+
+      // Fetch plugins and validate enabled instances
+      async function loadAndCheck(){
+        warningsList.innerHTML = '';
+        const resp = await fetch('/api/plugins');
+        if (!resp.ok){
+          warningsList.appendChild(el('div','muted')).textContent = 'Failed to load plugin list.';
+          return;
+        }
+        const data = await resp.json();
+        const plugins = data.plugins || [];
+        const checks = [];
+        plugins.forEach(p => {
+          (p.instances || []).forEach((inst, idx) => {
+            const enabled = inst.enabled === undefined ? true : !!inst.enabled;
+            if (!enabled) return; // skip disabled instances
+            checks.push({name: p.name, idx, instance: inst});
+          });
+        });
+
+        if (!checks.length){
+          warningsList.appendChild(el('div','muted')).textContent = 'No enabled plugin instances to check.';
+          return;
+        }
+
+        // Run validations in series to avoid spamming backends
+        for (const chk of checks){
+          await validateAndRender(chk.name, chk.idx, chk.instance);
+        }
+      }
+
+      async function validateAndRender(name, idx, instance){
+        const url = `/api/plugins/${encodeURIComponent(name)}/validate/${idx}`;
+        let ok = false;
+        try{
+          const r = await fetch(url, {method:'POST'});
+          if (r.ok){
+            const j = await r.json();
+            // Expect {result: true} or {result: {...}} ; treat falsy result as failure
+            ok = !!j.result;
+          }
+        }catch(e){
+          ok = false;
+        }
+
+        if (!ok){
+          const warn = el('div','warning-card');
+          const title = el('div','warning-title');
+          title.textContent = `${instance.name || name} (${name}) — connection issue`;
+          warn.appendChild(title);
+
+          const actions = el('div','warning-actions');
+          const retry = el('button','btn');
+          retry.textContent = 'Retry';
+          retry.addEventListener('click', async function(){
+            retry.disabled = true;
+            retry.textContent = 'Checking…';
+            // call validate again
+            try{
+              const r = await fetch(url, {method:'POST'});
+              const j = await r.json();
+              const okNow = !!j.result;
+              if (okNow){
+                // remove this warning
+                warn.remove();
+              } else {
+                retry.disabled = false;
+                retry.textContent = 'Retry';
+              }
+            }catch(e){
+              retry.disabled = false;
+              retry.textContent = 'Retry';
+            }
+          });
+
+          const fix = el('a','btn ghost');
+          // Link to the plugin card in the settings page (anchor uses plugin name id)
+          fix.href = `/settings/plugins#plugin-${encodeURIComponent(name)}`;
+          fix.textContent = 'Open plugin settings';
+          actions.appendChild(retry);
+          actions.appendChild(fix);
+          warn.appendChild(actions);
+
+          const info = el('div','muted');
+          info.textContent = instance.url ? `Configured endpoint: ${instance.url}` : 'No endpoint configured';
+          warn.appendChild(info);
+
+          warningsList.appendChild(warn);
+        }
+      }
+
+      // initial load
+      loadAndCheck();
+
+      // Optional: add a global refresh button
+      const refreshBtn = document.createElement('button');
+      refreshBtn.className = 'btn';
+      refreshBtn.textContent = 'Refresh all';
+      refreshBtn.style.marginTop = '12px';
+      refreshBtn.addEventListener('click', function(){
+        refreshBtn.disabled = true;
+        loadAndCheck().finally(()=> refreshBtn.disabled = false);
+      });
+      warningsList.parentNode.insertBefore(refreshBtn, warningsList.nextSibling);
+
+    })();
+    </script>
+  </div>
+{% endblock %}

@@ -857,7 +857,7 @@ def create_app():
         }
 
         return render_template(
-            "settings_plugins.html",
+            "plugins.html",
             plugins=plugins_by_category,
             selected_category=selected_category,
             category_titles=category_titles,
@@ -1306,6 +1306,45 @@ def create_app():
         # perform action
         if action == "add":
             inst = data.get("instance") or {}
+            # normalize legacy form-shaped instances (e.g. sonarr0_url -> url)
+            def _normalize_instance(d):
+                if not isinstance(d, dict):
+                    return d
+                # if already normalized, return as-is
+                if "url" in d or "api_key" in d:
+                    return d
+                # known suffixes to map (match longest first)
+                suffixes = [
+                    "reprocess_interval_days",
+                    "max_download_queue",
+                    "movies_to_upgrade",
+                    "episodes_to_upgrade",
+                    "api_pulls",
+                    "api_key",
+                    "state_mgmt",
+                    "process",
+                    "enabled",
+                    "mode",
+                    "url",
+                    "name",
+                ]
+                normalized = {}
+                for k, v in d.items():
+                    mapped = None
+                    for s in suffixes:
+                        if k.endswith("_" + s):
+                            mapped = s
+                            break
+                    if mapped is None:
+                        # fallback to last component
+                        mapped = k.rsplit("_", 1)[-1]
+                    # convert common on/off strings to booleans
+                    if isinstance(v, str) and v.lower() == "on":
+                        v = True
+                    normalized[mapped] = v
+                return normalized
+
+            inst = _normalize_instance(inst)
             ok, err = _validate_instance(inst)
             if not ok:
                 return jsonify({"error": "invalid_instance", "msg": err}), 400

@@ -16,6 +16,9 @@
         <button id="trigger-job" class="btn primary">Trigger job now</button>
         <span id="trigger-status" style="margin-left:8px;color:#666"></span>
       </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+        <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="filter-failed"> Show failures only</label>
+      </div>
     </section>
 
     <script>
@@ -25,6 +28,13 @@
       const saveBtn = document.getElementById('save-show-count');
       const triggerBtn = document.getElementById('trigger-job');
       const triggerStatus = document.getElementById('trigger-status');
+      const pagerPrev = document.getElementById('pager-prev');
+      const pagerNext = document.getElementById('pager-next');
+      const pagerInfo = document.getElementById('pager-info');
+      const filterFailed = document.getElementById('filter-failed');
+
+      let offset = 0;
+      let total = 0;
 
       async function loadSettings(){
         try{
@@ -36,54 +46,129 @@
         }catch(e){/* ignore */}
       }
 
+      function makeRow(r){
+        const tpl = document.getElementById('task-row-tpl');
+        const node = tpl.content.cloneNode(true);
+        const start = node.querySelector('.task-start');
+        const result = node.querySelector('.task-result');
+        const log = node.querySelector('.task-log');
+        const expand = node.querySelector('.expand-log');
+        start.textContent = r.start || '(unknown start)';
+        let statusText = 'Unknown';
+        const failed = (r.returncode !== null && r.returncode !== 0) || (!!r.has_stderr && r.has_stderr === true);
+        if (r.returncode !== null){
+          statusText = r.returncode === 0 ? 'Success' : 'Failed (rc=' + r.returncode + ')';
+        } else if (r.has_stderr){
+          statusText = 'Possible failure (stderr present)';
+        }
+        result.textContent = statusText;
+        if (failed){ result.classList.add('text-danger'); }
+        log.textContent = r.lines ? r.lines.join('\n') : '';
+
+        expand.addEventListener('click', function(){
+          if (log.style.display === 'none'){
+            log.style.display = 'block';
+            expand.textContent = 'Hide log';
+          } else {
+            log.style.display = 'none';
+            expand.textContent = 'Show log';
+          }
+        });
+
+        // add actions (download log, retry)
+        const actionsWrap = document.createElement('div');
+        actionsWrap.style.display = 'flex';
+        actionsWrap.style.gap = '6px';
+        const download = document.createElement('button');
+        download.className = 'btn ghost';
+        download.textContent = 'Download log';
+        download.addEventListener('click', function(){
+          try{
+            const blob = new Blob([log.textContent], {type: 'text/plain'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = (r.start || 'run') + '.log';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+          }catch(e){/* ignore */}
+        });
+
+        const retry = document.createElement('button');
+        retry.className = 'btn';
+        retry.textContent = 'Retry';
+        retry.addEventListener('click', async function(){
+          retry.disabled = true;
+          retry.textContent = 'Triggering…';
+          try{
+            const res = await fetch('/api/tasks/trigger', {method:'POST'});
+            if (res.ok){
+              const j = await res.json();
+              if (j.result === 'triggered'){
+                retry.textContent = 'Triggered';
+                setTimeout(()=> retry.textContent = 'Retry', 1500);
+                setTimeout(()=> loadRuns(), 2000);
+              } else {
+                retry.textContent = 'Failed';
+              }
+            } else {
+              retry.textContent = 'Failed';
+            }
+          }catch(e){
+            retry.textContent = 'Failed';
+          }finally{
+            retry.disabled = false;
+          }
+        });
+
+        actionsWrap.appendChild(download);
+        actionsWrap.appendChild(retry);
+
+        // append actions into the card's right-side actions area
+        const right = node.querySelector('div > div:last-child');
+        if (right){ right.appendChild(actionsWrap); }
+
+        return node;
+      }
+
       function renderRuns(runs){
         container.innerHTML = '';
         if (!runs || !runs.length){
           container.appendChild(document.createElement('div')).textContent = 'No runs found.';
+          pagerInfo.textContent = '';
           return;
         }
-        const tpl = document.getElementById('task-row-tpl');
         runs.forEach(r => {
-          const node = tpl.content.cloneNode(true);
-          const card = node.querySelector('.task-row');
-          const start = node.querySelector('.task-start');
-          const result = node.querySelector('.task-result');
-          const log = node.querySelector('.task-log');
-          const expand = node.querySelector('.expand-log');
-          start.textContent = r.start || '(unknown start)';
-          let statusText = 'Unknown';
-          if (r.returncode !== null){
-            statusText = r.returncode === 0 ? 'Success' : 'Failed (rc=' + r.returncode + ')';
-          } else if (r.has_stderr){
-            statusText = 'Possible failure (stderr present)';
-          }
-          result.textContent = statusText;
-          log.textContent = r.lines ? r.lines.join('\n') : '';
-          expand.addEventListener('click', function(){
-            if (log.style.display === 'none'){
-              log.style.display = 'block';
-              expand.textContent = 'Hide log';
-            } else {
-              log.style.display = 'none';
-              expand.textContent = 'Show log';
-            }
-          });
-          container.appendChild(node);
+          const row = makeRow(r);
+          container.appendChild(row);
         });
+        const showingFrom = offset + 1;
+        const showingTo = Math.min(offset + parseInt(showCountEl.value || '20', 10), total);
+        pagerInfo.textContent = `Showing ${showingFrom}-${showingTo} of ${total}`;
       }
 
       async function loadRuns(){
         container.innerHTML = '<p class="muted">Loading recent runs…</p>';
         const limit = parseInt(showCountEl.value || '20', 10);
         try{
-          const r = await fetch('/api/tasks?limit=' + encodeURIComponent(limit));
+          const r = await fetch('/api/tasks?limit=' + encodeURIComponent(limit) + '&offset=' + encodeURIComponent(offset));
           if (!r.ok){
             container.innerHTML = '';
             container.appendChild(document.createElement('div')).textContent = 'Failed to load runs.';
             return;
           }
           const j = await r.json();
-          renderRuns(j.runs || []);
+          total = j.total || 0;
+          let runs = j.runs || [];
+          if (filterFailed && filterFailed.checked){
+            runs = runs.filter(rr => (rr.returncode !== null && rr.returncode !== 0) || (!!rr.has_stderr && rr.has_stderr === true));
+          }
+          renderRuns(runs);
+          // pager buttons state
+          pagerPrev.disabled = offset <= 0;
+          pagerNext.disabled = offset + limit >= total;
         }catch(e){
           container.innerHTML = '';
           container.appendChild(document.createElement('div')).textContent = 'Failed to load runs.';
@@ -97,6 +182,7 @@
           if (r.ok){
             triggerStatus.textContent = 'Saved';
             setTimeout(()=> triggerStatus.textContent = '', 1500);
+            offset = 0;
             loadRuns();
           } else {
             triggerStatus.textContent = 'Save failed';
@@ -133,6 +219,19 @@
         }
       });
 
+      pagerPrev.addEventListener('click', function(){
+        const limit = parseInt(showCountEl.value || '20', 10);
+        offset = Math.max(0, offset - limit);
+        loadRuns();
+      });
+      pagerNext.addEventListener('click', function(){
+        const limit = parseInt(showCountEl.value || '20', 10);
+        offset = offset + limit;
+        loadRuns();
+      });
+
+      filterFailed.addEventListener('change', function(){ offset = 0; loadRuns(); });
+
       // Initial load
       loadSettings().then(loadRuns);
     })();
@@ -140,8 +239,15 @@
 
     <section id="tasks-list" style="margin-top:18px;">
       <h2>Recent job runs</h2>
-      <div id="tasks-table-container">
-        <p class="muted">Loading recent runs…</p>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div id="tasks-table-container">
+          <p class="muted">Loading recent runs…</p>
+        </div>
+        <div id="tasks-pager" style="display:flex;gap:8px;align-items:center;">
+          <button id="pager-prev" class="btn ghost">Prev</button>
+          <span id="pager-info" class="muted">&nbsp;</span>
+          <button id="pager-next" class="btn ghost">Next</button>
+        </div>
       </div>
     </section>
 

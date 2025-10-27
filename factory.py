@@ -1209,7 +1209,9 @@ def create_app():
             return jsonify({"error": "unauthorized"}), 401
 
         log_path = os.getenv("CRON_LOG_PATH", "/config/cron.log")
+        # Pagination parameters
         max_entries = int(request.args.get("limit", app.config_data.get("tasks", {}).get("show_count", 20)))
+        offset = int(request.args.get("offset", 0))
         runs = []
         try:
             if os.path.exists(log_path):
@@ -1248,11 +1250,14 @@ def create_app():
                 if current is not None:
                     runs.append(current)
                 # most recent runs last in file; return newest first
-                runs = list(reversed(runs))[:max_entries]
+                runs = list(reversed(runs))
+                total = len(runs)
+                # apply offset/limit for pagination
+                runs = runs[offset: offset + max_entries]
         except Exception:
             return jsonify({"error": "failed_to_read_log"}), 500
 
-        return jsonify({"runs": runs})
+        return jsonify({"runs": runs, "total": total})
 
 
     @app.route("/api/tasks/trigger", methods=["POST"])

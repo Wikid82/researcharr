@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  researcharr:
+    image: ghcr.io/wikid82/researcharr:alpine
+    container_name: researcharr-dev
+    ports:
+      - "2929:2929"
+      - "5678:5678" # optional debug port for debugpy
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - LOGLEVEL=DEBUG
+      - WEBUI_PORT=2929
+      - PYTHONUNBUFFERED=1
+    # Mount the repository into /app so the bundled config.example.yml remains available
+    # and you can edit code on the host while the container runs.
+    volumes:
+      - ./:/app:delegated
+      - ./config:/config:rw
+      - ./logs:/config/logs:rw
+    tty: true
+    stdin_open: true
+    command: >
+      /bin/sh -lc "python -m pip install --no-cache-dir -r requirements.txt || true && python -u /app/run.py"

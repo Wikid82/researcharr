@@ -19,6 +19,9 @@ Table of contents
 - Missing example files
 - /api/status aggregator
 
+- Backups and retention
+- Tasks persistence
+
 ## Storage mounts
 
 Anchor: `#storage-mounts`
@@ -163,6 +166,8 @@ How to fix
 2. Investigate the root cause of new log entries (use Settings → Logs and the `/logs` page).
 3. Consider log rotation via the host or a sidecar.
 
+More: See `docs/Logs.md` for details on the Logs UI, live log-level control, and the SSE streaming endpoint (`/api/logs/stream`).
+
 ## Update available (opt-in)
 
 Anchor: `#update-available`
@@ -232,6 +237,59 @@ Usage
 Notes
 - The checks are intentionally lightweight and best-effort. Network-heavy checks are opt-in to avoid flaky UI behaviour.
 - Plugin metrics are stored in-memory and reset on service restart unless you enable persistence via a custom implementation.
+
+
+## Backups and retention
+
+Anchor: `#backups-and-retention`
+
+What it means
+: The application exposes a Backups page and `/api/backups` endpoints for creating, importing, downloading, restoring and deleting backup ZIP archives representing application state.
+
+How we detect issues
+: The Status UI and backups page surface failures to create or import archives, and the backend logs any I/O or integrity errors. Scheduled pruning failures are surfaced in the application logs and the Status UI may show related warnings when backups cannot be rotated or created.
+
+Common causes
+- Missing or unwritable `CONFIG_DIR` (default `/config`) or `CONFIG_DIR/backups` directory.
+- Insufficient disk space when creating large backups.
+- Corrupt or malformed imported ZIP files.
+
+How to fix
+1. Check that the backups folder is present and writable by the container process (see Storage mounts section). Example:
+
+```bash
+ls -la /config/backups
+sudo chown -R 1000:1000 /path/to/config
+```
+
+2. If imports fail with integrity errors, inspect the archive contents locally and re-create a valid ZIP from a known-good copy.
+
+3. Configure retention and scheduling in `CONFIG_DIR/backups.yml`. Key settings:
+  - `retain_count`: keep most recent N backups
+  - `retain_days`: keep backups younger than N days
+  - `pre_restore`: when enabled, create an automatic snapshot before a restore
+  - `pre_restore_keep_days`: retention window for pre-restore snapshots
+  - `auto_backup_enabled`: enable scheduled automatic backups
+  - `auto_backup_cron` / `prune_cron`: cron expressions for auto-backup and scheduled pruning
+
+Notes
+- Pre-restore snapshots are prefixed with `pre-` and, by default, are retained for a short window (see `pre_restore_keep_days`) so you can recover from failed restores.
+
+
+## Tasks persistence
+
+Anchor: `#tasks-persistence`
+
+What it means
+: The scheduler records task run history and settings so you can inspect past runs and failures from the Tasks page in the UI. History is persisted to `CONFIG_DIR/task_history.jsonl` and settings to `CONFIG_DIR/tasks.yml`.
+
+How we detect issues
+: The Status UI surfaces if task history cannot be written (I/O errors) or if scheduled jobs fail repeatedly. Check application logs for task-related exceptions.
+
+How to fix
+1. Ensure `CONFIG_DIR` is writable and has sufficient disk space.
+2. If the history file is corrupt, you can rotate or remove it; historic runs will be lost but the scheduler will continue creating new history entries.
+3. For repeated scheduled job failures, inspect the task details in the Tasks page and consult logs for stack traces.
 
 ---
 

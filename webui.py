@@ -39,7 +39,9 @@ def load_user_config():
     # write to the project config path instead of the environment-backed
     # USER_CONFIG_PATH. Prefer the explicit USER_CONFIG_PATH when present.
     path = USER_CONFIG_PATH
-    local_fallback = os.path.abspath(os.path.join(os.getcwd(), "config", "webui_user.yml"))
+    local_fallback = os.path.abspath(
+        os.path.join(os.getcwd(), "config", "webui_user.yml")
+    )
     # Only use the repo-local fallback when the configured USER_CONFIG_PATH
     # is the default '/config/webui_user.yml'. If USER_CONFIG_PATH was set by
     # tests or explicitly by the operator, respect that path.

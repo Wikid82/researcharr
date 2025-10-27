@@ -149,7 +149,7 @@ def create_app():
         "radarr": [],
         "sonarr": [],
         "scheduling": {"cron_schedule": "0 0 * * *", "timezone": "UTC"},
-    "user": {"username": "admin", "password": "password"},
+        "user": {"username": "admin", "password": "password"},
         # Backups settings: retain_count (max files), retain_days (age in days), pre_restore (create snapshot before restore)
         "backups": {
             "retain_count": 10,
@@ -559,7 +559,6 @@ def create_app():
         # Render logs page for GET (and for POST fall-through)
         return render_template("logs.html")
 
-
     @app.route("/settings/radarr", methods=["GET", "POST"])
     def radarr_settings():
         # Radarr settings are now managed by the plugin system. Keep a
@@ -569,7 +568,6 @@ def create_app():
             return redirect(url_for("login"))
         flash("Radarr settings have moved to the Plugins page.")
         return redirect(url_for("plugins_settings", category="media"))
-
 
     @app.route("/settings/sonarr", methods=["GET", "POST"])
     def sonarr_settings():
@@ -817,7 +815,6 @@ def create_app():
             cron_schedule=cron,
             timezone=timezone,
         )
-
 
     @app.route("/settings/plugins", methods=["GET"])
     def plugins_settings():
@@ -1506,7 +1503,6 @@ def create_app():
         if not is_logged_in():
             return redirect(url_for("login"))
         return render_template("tasks.html")
-    
 
     @app.route("/api/tasks/trigger", methods=["POST"])
     def api_tasks_trigger():
@@ -2172,4 +2168,5 @@ def create_app():
         if not is_logged_in():
             return redirect(url_for("login"))
         return render_template("updates.html")
+
     return app

@@ -196,7 +196,9 @@ def test_radarr_settings_save_invalid(client):
         sess["logged_in"] = True
     # attempt to add an invalid radarr instance via API
     inst = {"enabled": True, "name": "", "url": "", "api_key": ""}
-    rv = client.post("/api/plugins/radarr/instances", json={"action": "add", "instance": inst})
+    rv = client.post(
+        "/api/plugins/radarr/instances", json={"action": "add", "instance": inst}
+    )
     assert rv.status_code == 400
     assert rv.is_json and ("error" in rv.json)
 
@@ -206,6 +208,8 @@ def test_sonarr_settings_save_invalid(client):
     with client.session_transaction() as sess:
         sess["logged_in"] = True
     inst = {"enabled": True, "name": "", "url": "", "api_key": ""}
-    rv = client.post("/api/plugins/sonarr/instances", json={"action": "add", "instance": inst})
+    rv = client.post(
+        "/api/plugins/sonarr/instances", json={"action": "add", "instance": inst}
+    )
     assert rv.status_code == 400
     assert rv.is_json and ("error" in rv.json)

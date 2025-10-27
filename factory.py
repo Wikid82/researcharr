@@ -1,11 +1,16 @@
 # ... code for factory.py ...
 
 import importlib.util
+import io
 import os
 import pathlib
+import shutil
 import time
+import zipfile
+from datetime import datetime
 
 import yaml
+from researcharr.backups import create_backup_file, prune_backups
 from flask import (
     Flask,
     flash,
@@ -15,8 +20,12 @@ from flask import (
     request,
     session,
     url_for,
+    send_file,
+    Response,
+    stream_with_context,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 try:
     # Prefer importing webui from the package if available
@@ -132,7 +141,46 @@ def create_app():
         "sonarr": [],
         "scheduling": {"cron_schedule": "0 0 * * *", "timezone": "UTC"},
         "user": {"username": "admin", "password": "researcharr"},
+        # Backups settings: retain_count (max files), retain_days (age in days), pre_restore (create snapshot before restore)
+        "backups": {"retain_count": 10, "retain_days": 30, "pre_restore": True, "pre_restore_keep_days": 1, "auto_backup_enabled": False, "auto_backup_cron": "0 2 * * *", "prune_cron": "0 3 * * *"},
     }
+
+    # Load persisted tasks settings if present so UI preferences survive restarts
+    try:
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        tasks_cfg_file = os.path.join(config_root, "tasks.yml")
+        if os.path.exists(tasks_cfg_file):
+            try:
+                with open(tasks_cfg_file) as fh:
+                    tcfg = yaml.safe_load(fh) or {}
+                app.config_data.setdefault("tasks", {}).update(tcfg)
+            except Exception:
+                try:
+                    app.logger.exception("Failed to load tasks settings %s", tasks_cfg_file)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    # Load persisted general settings (e.g., UI-chosen LogLevel) if present
+    try:
+        general_cfg_file = os.path.join(config_root, "general.yml")
+        if os.path.exists(general_cfg_file):
+            try:
+                with open(general_cfg_file) as fh:
+                    gcfg = yaml.safe_load(fh) or {}
+                # Only merge known keys to avoid clobbering runtime env-managed keys
+                if isinstance(gcfg, dict):
+                    app.config_data.setdefault("general", {}).update(
+                        {k: v for k, v in gcfg.items() if k in ("LogLevel",)}
+                    )
+            except Exception:
+                try:
+                    app.logger.exception("Failed to load general settings %s", general_cfg_file)
+                except Exception:
+                    pass
+    except Exception:
+        pass
 
     # In-memory metrics for test isolation
     # Structure:
@@ -464,13 +512,10 @@ def create_app():
             else:
                 # Only allow editing of non-runtime values via the UI. Do not
                 # accept PUID/PGID/Timezone from the form — they are set via
-                # environment variables. Accept only LogLevel here.
-                loglevel = request.form.get("LogLevel")
-                if loglevel:
-                    app.config_data["general"]["LogLevel"] = loglevel
+                # environment variables.
                 flash("General settings saved")
         return render_template(
-            "settings_general.html",
+            "general.html",
             puid=app.config_data["general"].get("PUID"),
             pgid=app.config_data["general"].get("PGID"),
             timezone=app.config_data["general"].get("Timezone"),
@@ -479,67 +524,221 @@ def create_app():
             msg=None,
         )
 
-    @app.route("/settings/radarr", methods=["GET", "POST"])
-    def radarr_settings():
+    @app.route("/logs", methods=["GET", "POST"])
+    def logs_page():
         if not is_logged_in():
             return redirect(url_for("login"))
+        # POST used to change live log level
         if request.method == "POST":
-            # Parse and save radarr instances
-            radarr_list = _parse_instances(request.form, "radarr")
-            app.config_data["radarr"] = radarr_list
-            flash("Radarr settings saved")
-        radarrs = app.config_data.get("radarr", [])
+            loglevel = request.form.get("LogLevel")
+            if loglevel:
+                try:
+                    # update runtime config and live logger level
+                    app.config_data.setdefault("general", {})["LogLevel"] = loglevel
+                    import logging
 
-        # Convert stored dicts to objects for template attribute-style access
-        # and provide a .get() method used by templates
+                    root = logging.getLogger()
+                    root.setLevel(getattr(logging, loglevel, logging.INFO))
+                    app.logger.setLevel(getattr(logging, loglevel, logging.INFO))
+                    # persist chosen loglevel so it survives restarts
+                    try:
+                        config_root = os.getenv("CONFIG_DIR", "/config")
+                        general_cfg_file = os.path.join(config_root, "general.yml")
+                        os.makedirs(os.path.dirname(general_cfg_file), exist_ok=True)
+                        with open(general_cfg_file, "w") as fh:
+                            yaml.safe_dump({"LogLevel": loglevel}, fh)
+                    except Exception:
+                        app.logger.exception("Failed to persist LogLevel to disk")
+                    flash("Log level updated")
+                except Exception:
+                    app.logger.exception("Failed to set log level")
+                    flash("Failed to update log level")
+        return ("", 200)
+        # GET -> render logs page
+        return render_template("logs.html")
 
-        class _Obj:
-            def __init__(self, d):
-                self._d = dict(d)
-
-            def __getattr__(self, name):
-                # allow attribute access like obj.name
-                return self._d.get(name)
-
-            def get(self, key, default=None):
-                return self._d.get(key, default)
-
-        def _wrap_list(lst):
-            return [_Obj(r) if isinstance(r, dict) else r for r in lst]
-
-        return render_template(
-            "settings_radarr.html",
-            radarr=_wrap_list(radarrs),
-        )
-
-    @app.route("/settings/sonarr", methods=["GET", "POST"])
-    def sonarr_settings():
+    @app.route("/api/logs", methods=["GET"])
+    def api_logs():
         if not is_logged_in():
-            return redirect(url_for("login"))
-        if request.method == "POST":
-            # Parse and save sonarr instances
-            sonarr_list = _parse_instances(request.form, "sonarr")
-            app.config_data["sonarr"] = sonarr_list
-            flash("Sonarr settings saved")
-        sonarrs = app.config_data.get("sonarr", [])
-        error = None
-        if request.method == "POST":
-            # Basic validation: if enabled but missing url/api_key, set error
-            if request.form.get("sonarr0_enabled") and (
-                not request.form.get("sonarr0_url")
-                or not request.form.get("sonarr0_api_key")
-            ):
-                error = "Missing URL or API key for enabled instance."
-                flash(error)
-            sonarrs = app.config_data.get("sonarr", [])
+            return jsonify({"error": "unauthorized"}), 401
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        # allow overriding log path via env
+        app_log = os.getenv("WEBUI_LOG", os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "app.log")))
+        # optional query params
+        try:
+            lines = int(request.args.get("lines", 200))
+        except Exception:
+            lines = 200
+        download = request.args.get("download")
+        # If download requested, return file as attachment
+        if download:
+            if os.path.exists(app_log):
+                return send_file(app_log, as_attachment=True)
+            else:
+                return jsonify({"error": "log_not_found"}), 404
+        content = ""
+        meta = {}
+        try:
+            if os.path.exists(app_log):
+                with open(app_log, "r", errors="ignore") as fh:
+                    all_lines = fh.read().splitlines()
+                tail = all_lines[-lines:]
+                content = "\n".join(tail)
+                st = os.stat(app_log)
+                meta = {"path": app_log, "size": st.st_size, "mtime": int(st.st_mtime)}
+            else:
+                content = ""
+        except Exception:
+            app.logger.exception("Failed to read app log")
+            return jsonify({"error": "read_failed"}), 500
+        return jsonify({"content": content, "meta": meta, "loglevel": app.config_data.get("general", {}).get("LogLevel")})
 
-        return render_template(
-            "settings_sonarr.html",
-            sonarr=sonarrs,
-            error=error,
-        )
+    @app.route("/api/tasks", methods=["GET"])
+    def api_tasks():
+        """Return recent scheduled job runs from structured JSONL history.
 
-    @app.route("/scheduling", methods=["GET", "POST"])
+        The runtime writes structured JSON lines to `CONFIG_DIR/task_history.jsonl`
+        after each scheduled run. This endpoint supports pagination (`limit`,
+        `offset`), server-side filtering by `status` (e.g., `failed`) and a
+        text `search` over stdout/stderr.
+        """
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        hist_file = os.path.join(config_root, "task_history.jsonl")
+        limit = int(request.args.get("limit", app.config_data.get("tasks", {}).get("show_count", 20)))
+        offset = int(request.args.get("offset", 0))
+        status_filter = request.args.get("status")  # e.g., 'failed'
+        search_text = request.args.get("search")
+
+        runs = []
+        total = 0
+        try:
+            if os.path.exists(hist_file):
+                with open(hist_file, "r") as fh:
+                    for line in fh:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            rec = yaml.safe_load(line) if line.lstrip().startswith("-") else None
+                        except Exception:
+                            rec = None
+                        if rec is None:
+                            try:
+                                rec = __import__('json').loads(line)
+                            except Exception:
+                                # Skip malformed lines
+                                continue
+                        runs.append(rec)
+                # newest last in file; present newest first
+                runs = list(reversed(runs))
+                # server-side filtering
+                def match_filters(r):
+                    if status_filter:
+                        if status_filter == 'failed':
+                            if not (r.get('success') is False or (r.get('returncode') is not None and r.get('returncode') != 0) or r.get('stderr')):
+                                return False
+                        # other status types may be added
+                    if search_text:
+                        target = (r.get('stdout','') or '') + '\n' + (r.get('stderr','') or '')
+                        if search_text.lower() not in target.lower() and search_text.lower() not in str(r.get('start_ts','')).lower():
+                            return False
+                    return True
+
+                filtered = [r for r in runs if match_filters(r)]
+                total = len(filtered)
+                runs = filtered[offset: offset + limit]
+            else:
+                runs = []
+                total = 0
+        except Exception:
+            return jsonify({"error": "failed_to_read_history"}), 500
+
+        return jsonify({"runs": runs, "total": total})
+    
+    @app.route("/api/logs/stream", methods=["GET"])
+    def api_logs_stream():
+        """Server-sent events endpoint that tails the application log and streams new lines.
+
+        Query params:
+          lines - number of initial tail lines to send (default 200)
+        """
+        if not is_logged_in():
+            return ("", 401)
+
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        app_log = os.getenv("WEBUI_LOG", os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "app.log")))
+        try:
+            initial_lines = int(request.args.get("lines", 200))
+        except Exception:
+            initial_lines = 200
+
+        def tail_lines(path, n):
+            # Memory-efficient backward reader to get the last n lines.
+            # Reads blocks from the end until we've got enough newlines.
+            try:
+                with open(path, 'rb') as f:
+                    f.seek(0, os.SEEK_END)
+                    filesize = f.tell()
+                    if filesize == 0:
+                        return []
+                    block_size = 4096
+                    blocks = []
+                    lines_found = 0
+                    to_read = filesize
+                    while to_read > 0 and lines_found <= n:
+                        read_size = min(block_size, to_read)
+                        f.seek(to_read - read_size)
+                        chunk = f.read(read_size)
+                        blocks.insert(0, chunk)
+                        lines_found = b"\n".join(blocks).count(b"\n")
+                        to_read -= read_size
+                    data = b"".join(blocks)
+                    parts = data.splitlines()
+                    tail = parts[-n:]
+                    return [p.decode('utf-8', errors='replace') for p in tail]
+            except Exception:
+                return []
+
+        def generate():
+            try:
+                if not os.path.exists(app_log):
+                    yield 'data: ' + "" + '\n\n'
+                    return
+                # send initial tail efficiently
+                tail = tail_lines(app_log, initial_lines)
+                if tail:
+                    for t in tail:
+                        # protect from newlines inside the line
+                        for ln in t.splitlines():
+                            yield f"data: {ln}\n"
+                    yield "\n"
+
+                # now stream appended lines by seeking to end and reading
+                with open(app_log, 'r', errors='ignore') as fh:
+                    fh.seek(0, os.SEEK_END)
+                    while True:
+                        where = fh.tell()
+                        line = fh.readline()
+                        if line:
+                            for l in line.splitlines():
+                                yield f"data: {l}\n"
+                            yield "\n"
+                        else:
+                            time.sleep(1.0)
+                            fh.seek(where)
+            except GeneratorExit:
+                return
+            except Exception:
+                try:
+                    app.logger.exception("Log stream error")
+                except Exception:
+                    pass
+                yield 'data: [stream error]\n\n'
+
+        return Response(stream_with_context(generate()), mimetype="text/event-stream")
     def scheduling():
         if not is_logged_in():
             return redirect(url_for("login"))
@@ -1070,11 +1269,8 @@ def create_app():
         # Simulate saving general settings
         # Only allow saving of non-runtime fields. Do not overwrite
         # PUID/PGID/Timezone which are controlled via environment variables.
-        loglevel = request.form.get("LogLevel")
-        if loglevel:
-            app.config_data["general"]["LogLevel"] = loglevel
         return render_template(
-            "settings_general.html",
+            "general.html",
             puid=app.config_data["general"].get("PUID"),
             pgid=app.config_data["general"].get("PGID"),
             timezone=app.config_data["general"].get("Timezone"),
@@ -1319,6 +1515,18 @@ def create_app():
         except Exception:
             return jsonify({"error": "invalid_show_count"}), 400
         app.config_data["tasks"] = tasks_cfg
+        # Persist tasks settings to CONFIG_DIR/tasks.yml so UI preferences
+        # survive restarts. Writing is best-effort.
+        try:
+            config_root = os.getenv("CONFIG_DIR", "/config")
+            tasks_file = os.path.join(config_root, "tasks.yml")
+            with open(tasks_file, "w") as fh:
+                yaml.safe_dump(app.config_data.get("tasks", {}), fh)
+        except Exception:
+            # Don't fail the request if persistence fails; return ok but
+            # include a warning for callers that persistence didn't work.
+            return jsonify({"result": "ok", "tasks": tasks_cfg, "warning": "persist_failed"})
+
         return jsonify({"result": "ok", "tasks": tasks_cfg})
 
     @app.route("/backups")
@@ -1326,6 +1534,554 @@ def create_app():
         if not is_logged_in():
             return redirect(url_for("login"))
         return render_template("backups.html")
+
+
+    @app.route("/api/backups", methods=["GET"])
+    def api_backups_list():
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        backups_dir = os.path.join(config_root, "backups")
+        try:
+            os.makedirs(backups_dir, exist_ok=True)
+            files = []
+            for fname in sorted(os.listdir(backups_dir), reverse=True):
+                fpath = os.path.join(backups_dir, fname)
+                try:
+                    st = os.stat(fpath)
+                    files.append({"name": fname, "size": st.st_size, "mtime": int(st.st_mtime)})
+                except Exception:
+                    continue
+            return jsonify({"backups": files})
+        except Exception as e:
+            app.logger.exception("Failed to list backups: %s", e)
+            return jsonify({"error": "failed_to_list"}), 500
+
+
+    def _create_backup_file(config_root: str, backups_dir: str, prefix: str = "") -> str:
+        """Wrapper around shared create_backup_file helper.
+
+        Keeps the old internal name for backwards compatibility within this
+        module.
+        """
+        return create_backup_file(config_root, backups_dir, prefix)
+
+
+    def _prune_backups(backups_dir: str):
+        """Wrapper around shared prune_backups helper which accepts a cfg.
+
+        This wrapper reads the current app.config_data['backups'] and calls
+        the shared implementation so tests and run.py can reuse the same
+        logic.
+        """
+        try:
+            cfg = app.config_data.get("backups", {})
+        except Exception:
+            cfg = None
+        prune_backups(backups_dir, cfg)
+
+
+    @app.route("/api/backups/create", methods=["POST"])
+    def api_backups_create():
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        backups_dir = os.path.join(config_root, "backups")
+        try:
+            name = _create_backup_file(config_root, backups_dir)
+            # Prune according to settings
+            try:
+                _prune_backups(backups_dir)
+            except Exception:
+                pass
+            return jsonify({"result": "ok", "name": name})
+        except Exception as e:
+            app.logger.exception("Failed to create backup: %s", e)
+            return jsonify({"error": "create_failed"}), 500
+
+
+    @app.route("/api/backups/import", methods=["POST"])
+    def api_backups_import():
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        if "file" not in request.files:
+            return jsonify({"error": "missing_file"}), 400
+        f = request.files.get("file")
+        if f.filename == "":
+            return jsonify({"error": "empty_name"}), 400
+        filename = secure_filename(f.filename)
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        backups_dir = os.path.join(config_root, "backups")
+        try:
+            os.makedirs(backups_dir, exist_ok=True)
+            dest = os.path.join(backups_dir, filename)
+            f.save(dest)
+            # After import, prune
+            try:
+                _prune_backups(backups_dir)
+            except Exception:
+                pass
+            return jsonify({"result": "ok", "name": filename})
+        except Exception as e:
+            app.logger.exception("Failed to import backup: %s", e)
+            return jsonify({"error": "import_failed"}), 500
+
+
+    @app.route("/api/backups/download/<path:name>", methods=["GET"])
+    def api_backups_download(name: str):
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        backups_dir = os.path.join(config_root, "backups")
+        fpath = os.path.join(backups_dir, name)
+        try:
+            if not os.path.realpath(fpath).startswith(os.path.realpath(backups_dir)):
+                return jsonify({"error": "invalid_name"}), 400
+            if not os.path.exists(fpath):
+                return jsonify({"error": "not_found"}), 404
+            return send_file(fpath, as_attachment=True, download_name=name)
+        except Exception as e:
+            app.logger.exception("Failed to download backup: %s", e)
+            return jsonify({"error": "download_failed"}), 500
+
+
+    @app.route("/api/backups/delete/<path:name>", methods=["DELETE"])
+    def api_backups_delete(name: str):
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        backups_dir = os.path.join(config_root, "backups")
+        fpath = os.path.join(backups_dir, name)
+        try:
+            if not os.path.realpath(fpath).startswith(os.path.realpath(backups_dir)):
+                return jsonify({"error": "invalid_name"}), 400
+            if os.path.exists(fpath):
+                os.remove(fpath)
+                return jsonify({"result": "deleted"})
+            return jsonify({"error": "not_found"}), 404
+        except Exception as e:
+            app.logger.exception("Failed to delete backup: %s", e)
+            return jsonify({"error": "delete_failed"}), 500
+
+
+    @app.route("/api/backups/restore/<path:name>", methods=["POST"])
+    def api_backups_restore(name: str):
+        """Restore a backup by extracting into the config directory.
+
+        This is a best-effort restore. Files in the backup will overwrite
+        existing files in the config directory. The operation is potentially
+        destructive; callers should confirm before invoking.
+        """
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        backups_dir = os.path.join(config_root, "backups")
+        fpath = os.path.join(backups_dir, name)
+        try:
+            if not os.path.realpath(fpath).startswith(os.path.realpath(backups_dir)):
+                return jsonify({"error": "invalid_name"}), 400
+            if not os.path.exists(fpath):
+                return jsonify({"error": "not_found"}), 404
+            # Create a pre-restore backup so the operator can roll back if needed
+            pre_name = None
+            try:
+                pre_cfg = app.config_data.get("backups", {})
+                if bool(pre_cfg.get("pre_restore", True)):
+                    pre_name = _create_backup_file(config_root, backups_dir, prefix="pre-")
+                    try:
+                        _prune_backups(backups_dir)
+                    except Exception:
+                        pass
+            except Exception:
+                pre_name = None
+
+            tmpdir = os.path.join(config_root, ".restore_tmp")
+            if os.path.exists(tmpdir):
+                shutil.rmtree(tmpdir)
+            os.makedirs(tmpdir, exist_ok=True)
+            with zipfile.ZipFile(fpath, "r") as zf:
+                zf.extractall(tmpdir)
+            for root, dirs, files in os.walk(tmpdir):
+                rel = os.path.relpath(root, tmpdir)
+                dest_dir = os.path.join(config_root, rel) if rel != "." else config_root
+                os.makedirs(dest_dir, exist_ok=True)
+                for f in files:
+                    s = os.path.join(root, f)
+                    d = os.path.join(dest_dir, f)
+                    shutil.copy2(s, d)
+            shutil.rmtree(tmpdir)
+            resp = {"result": "restored"}
+            if pre_name:
+                resp["pre_restore_backup"] = pre_name
+            return jsonify(resp)
+        except Exception as e:
+            app.logger.exception("Failed to restore backup: %s", e)
+            return jsonify({"error": "restore_failed"}), 500
+
+
+    @app.route("/api/backups/settings", methods=["GET", "POST"])
+    def api_backups_settings():
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        settings_file = os.path.join(config_root, "backups.yml")
+        if request.method == "GET":
+            return jsonify(app.config_data.get("backups", {}))
+
+        # POST: update settings
+        try:
+            data = request.get_json(force=True)
+        except Exception:
+            return jsonify({"error": "invalid_json"}), 400
+        backups_cfg = app.config_data.setdefault("backups", {})
+        try:
+            if "retain_count" in data:
+                backups_cfg["retain_count"] = int(data.get("retain_count") or 0)
+            if "retain_days" in data:
+                backups_cfg["retain_days"] = int(data.get("retain_days") or 0)
+            if "pre_restore" in data:
+                # accept truthy/falsy values
+                backups_cfg["pre_restore"] = bool(data.get("pre_restore"))
+        except Exception:
+            return jsonify({"error": "invalid_settings"}), 400
+        app.config_data["backups"] = backups_cfg
+        # Persist to CONFIG_DIR/backups.yml
+        try:
+            os.makedirs(config_root, exist_ok=True)
+            with open(settings_file, "w") as fh:
+                yaml.safe_dump(backups_cfg, fh)
+        except Exception:
+            app.logger.exception("Failed to persist backups settings")
+            return jsonify({"result": "ok", "warning": "persist_failed", "backups": backups_cfg})
+
+        return jsonify({"result": "ok", "backups": backups_cfg})
+
+    # --- Updates API: check latest release and persist ignore settings ---
+    def _read_local_version():
+        info = {"version": "dev", "build": "0", "sha": "unknown"}
+        try:
+            ver_file = os.getenv("RESEARCHARR_VERSION_FILE", "/app/VERSION")
+            p = pathlib.Path(ver_file)
+            if p.exists():
+                for line in p.read_text().splitlines():
+                    if "=" in line:
+                        k, v = line.split("=", 1)
+                        info[k.strip()] = v.strip()
+        except Exception:
+            pass
+        return info
+
+    def _updates_config_path():
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        return os.path.join(config_root, "updates.yml")
+
+    def _load_updates_cfg():
+        cfg_file = _updates_config_path()
+        try:
+            if os.path.exists(cfg_file):
+                with open(cfg_file) as fh:
+                    return yaml.safe_load(fh) or {}
+        except Exception:
+            app.logger.exception("Failed to load updates config")
+        return {}
+
+    def _save_updates_cfg(cfg: dict):
+        cfg_file = _updates_config_path()
+        try:
+            os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
+            with open(cfg_file, "w") as fh:
+                yaml.safe_dump(cfg, fh)
+            return True
+        except Exception:
+            app.logger.exception("Failed to persist updates config")
+            return False
+
+    def _running_in_image():
+        # Heuristic: check for common container indicators
+        try:
+            if os.path.exists("/.dockerenv"):
+                return True
+            if os.getenv("KUBERNETES_SERVICE_HOST"):
+                return True
+            if os.getenv("CONTAINER") or os.getenv("IN_CONTAINER"):
+                return True
+        except Exception:
+            pass
+        return False
+
+    # Caching and backoff for update checks
+    def _updates_cache_path():
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        return os.path.join(config_root, "updates_cache.yml")
+
+    def _load_updates_cache():
+        p = _updates_cache_path()
+        try:
+            if os.path.exists(p):
+                with open(p) as fh:
+                    return yaml.safe_load(fh) or {}
+        except Exception:
+            try:
+                app.logger.exception("Failed to load updates cache")
+            except Exception:
+                pass
+        return {}
+
+    def _save_updates_cache(cache: dict):
+        p = _updates_cache_path()
+        try:
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            with open(p, "w") as fh:
+                yaml.safe_dump(cache, fh)
+            return True
+        except Exception:
+            try:
+                app.logger.exception("Failed to persist updates cache")
+            except Exception:
+                pass
+            return False
+
+    def _fetch_remote_release(check_url: str, headers: dict):
+        """Attempt to fetch remote release JSON. Returns dict or raises."""
+        import requests
+
+        resp = requests.get(check_url, headers=headers, timeout=8)
+        resp.raise_for_status()
+        return resp.json()
+
+    def _ensure_latest_cached(check_url: str):
+        """Ensure cache contains latest release info, respecting TTL and backoff.
+
+        Returns a dict with keys: latest, fetched_at, backoff metadata.
+        """
+        cache = _load_updates_cache() or {}
+        now = int(time.time())
+        ttl = int(os.getenv("UPDATE_CACHE_TTL", str(60 * 60)))
+
+        # respect backoff: if next_try is set and in future, skip fetch
+        next_try = int(cache.get("next_try", 0) or 0)
+        if next_try and now < next_try:
+            return cache
+
+        # if cache is recent enough, return it
+        fetched_at = int(cache.get("fetched_at", 0) or 0)
+        if fetched_at and (now - fetched_at) < ttl:
+            return cache
+
+        # attempt fetch with exponential backoff on failure
+        headers = {"Accept": "application/vnd.github.v3+json", "User-Agent": "researcharr-updater/1"}
+        gh_token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+        if gh_token:
+            headers["Authorization"] = f"token {gh_token}"
+
+        try:
+            j = _fetch_remote_release(check_url, headers)
+            latest = {
+                "tag_name": j.get("tag_name"),
+                "name": j.get("name"),
+                "body": j.get("body"),
+                "published_at": j.get("published_at"),
+                "url": j.get("html_url") or j.get("url"),
+                "assets": [
+                    {"name": a.get("name"), "url": a.get("browser_download_url")} for a in (j.get("assets") or [])
+                ],
+            }
+            cache["latest"] = latest
+            cache["fetched_at"] = now
+            # reset backoff
+            cache.pop("failed_attempts", None)
+            cache.pop("next_try", None)
+            _save_updates_cache(cache)
+            return cache
+        except Exception:
+            # fetch failed; apply exponential backoff and keep prior cache if any
+            fa = int(cache.get("failed_attempts", 0) or 0) + 1
+            # base backoff seconds, capped maximum
+            base = int(os.getenv("UPDATE_BACKOFF_BASE", "60"))
+            cap = int(os.getenv("UPDATE_BACKOFF_CAP", str(60 * 60 * 6)))
+            backoff = min(cap, base * (2 ** (fa - 1)))
+            next_try = now + backoff
+            cache["failed_attempts"] = fa
+            cache["next_try"] = next_try
+            # record last failure timestamp
+            cache["last_failed_at"] = now
+            _save_updates_cache(cache)
+            try:
+                app.logger.debug("Update check failed; backoff set %s seconds", backoff)
+            except Exception:
+                pass
+            return cache
+
+    @app.route('/api/updates', methods=['GET'])
+    def api_updates():
+        """Return current and latest release metadata.
+
+        Attempts to fetch latest release info from GitHub for the
+        `Wikid82/researcharr` repository by default. The URL can be
+        overridden with the `UPDATE_CHECK_URL` env var. Network failures
+        are handled gracefully and a best-effort response is returned.
+        """
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+
+        local = _read_local_version()
+        current = local.get("version") or local.get("version", "dev")
+
+        # default to the project's GitHub releases latest endpoint
+        check_url = os.getenv(
+            "UPDATE_CHECK_URL",
+            "https://api.github.com/repos/Wikid82/researcharr/releases/latest",
+        )
+
+        # Ensure cache is populated, respecting TTL and backoff
+        cache = _ensure_latest_cached(check_url) or {}
+        latest = cache.get("latest") or {}
+
+        # load ignore state
+        ucfg = _load_updates_cfg()
+        is_ignored = False
+        ignore_reason = None
+        try:
+            if "ignored_until" in ucfg:
+                try:
+                    if int(time.time()) < int(ucfg.get("ignored_until", 0)):
+                        is_ignored = True
+                        ignore_reason = "ignored_until"
+                except Exception:
+                    pass
+            if not is_ignored and "ignored_release" in ucfg and ucfg.get("ignored_release"):
+                if latest.get("tag_name") and ucfg.get("ignored_release") == latest.get("tag_name"):
+                    is_ignored = True
+                    ignore_reason = "ignored_release"
+        except Exception:
+            pass
+
+        # Indicate whether in-app upgrade actions are allowed
+        in_image = bool(_running_in_image())
+        can_upgrade = (not in_image) and bool(latest.get("assets"))
+
+        return jsonify(
+            {
+                "current_version": current,
+                "latest": latest,
+                "is_ignored": bool(is_ignored),
+                "ignore_reason": ignore_reason,
+                "in_image": in_image,
+                "can_upgrade": bool(can_upgrade),
+                # include some cache/backoff metadata for UI debugging
+                "cache": {
+                    "fetched_at": cache.get("fetched_at"),
+                    "failed_attempts": cache.get("failed_attempts"),
+                    "next_try": cache.get("next_try"),
+                },
+            }
+        )
+
+    @app.route('/api/updates/ignore', methods=['POST'])
+    def api_updates_ignore():
+        """Ignore update notifications.
+
+        JSON payload examples:
+        - {"mode": "until", "days": 7}  -> ignore for N days
+        - {"mode": "release", "release_tag": "v1.2.3"} -> ignore this release
+        """
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        try:
+            data = request.get_json(force=True) or {}
+        except Exception:
+            return jsonify({"error": "invalid_json"}), 400
+        mode = data.get("mode")
+        ucfg = _load_updates_cfg()
+        if mode == "until":
+            days = int(data.get("days") or 0)
+            if days <= 0:
+                return jsonify({"error": "invalid_days"}), 400
+            ucfg["ignored_until"] = int(time.time()) + int(days) * 24 * 3600
+            # clear release ignore when time-based ignore used
+            ucfg.pop("ignored_release", None)
+        elif mode == "release":
+            tag = data.get("release_tag")
+            if not tag:
+                return jsonify({"error": "missing_release_tag"}), 400
+            ucfg["ignored_release"] = tag
+            ucfg.pop("ignored_until", None)
+        else:
+            return jsonify({"error": "unknown_mode"}), 400
+
+        ok = _save_updates_cfg(ucfg)
+        if not ok:
+            return jsonify({"result": "ok", "warning": "persist_failed"}), 200
+        return jsonify({"result": "ok", "updates": ucfg})
+
+
+    @app.route('/api/updates/upgrade', methods=['POST'])
+    def api_updates_upgrade():
+        """Start a controlled in-app upgrade by downloading the selected asset.
+
+        Request JSON: {"asset_url": "https://..."}
+        This endpoint is disabled when running in an image-managed runtime.
+        The download runs in a background thread and writes to CONFIG_DIR/updates/downloads.
+        """
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        if _running_in_image():
+            return jsonify({"error": "in_image_runtime"}), 400
+        try:
+            data = request.get_json(force=True) or {}
+        except Exception:
+            return jsonify({"error": "invalid_json"}), 400
+        asset_url = data.get("asset_url")
+        if not asset_url or not isinstance(asset_url, str) or not asset_url.startswith(("http://", "https://")):
+            return jsonify({"error": "invalid_asset_url"}), 400
+
+        # perform the download in a background thread
+        def _download_asset(url: str):
+            import requests
+            from urllib.parse import urlparse
+
+            cfg_root = os.getenv("CONFIG_DIR", "/config")
+            dl_dir = os.path.join(cfg_root, "updates", "downloads")
+            try:
+                os.makedirs(dl_dir, exist_ok=True)
+                # derive filename from URL
+                p = urlparse(url)
+                filename = os.path.basename(p.path) or "asset"
+                filename = secure_filename(filename)
+                dest = os.path.join(dl_dir, filename)
+                with requests.get(url, stream=True, timeout=10) as r:
+                    r.raise_for_status()
+                    with open(dest, "wb") as fh:
+                        for chunk in r.iter_content(chunk_size=8192):
+                            if chunk:
+                                fh.write(chunk)
+                # record last_download in cache for operator visibility
+                cache = _load_updates_cache()
+                cache["last_download"] = {"url": url, "path": dest, "ts": int(time.time())}
+                _save_updates_cache(cache)
+            except Exception:
+                try:
+                    app.logger.exception("Failed to download asset %s", url)
+                except Exception:
+                    pass
+
+        import threading
+
+        t = threading.Thread(target=_download_asset, args=(asset_url,), daemon=True)
+        t.start()
+        return jsonify({"result": "started", "asset_url": asset_url})
+
+    @app.route('/api/updates/unignore', methods=['POST'])
+    def api_updates_unignore():
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        ucfg = _load_updates_cfg()
+        ucfg.pop("ignored_until", None)
+        ucfg.pop("ignored_release", None)
+        ok = _save_updates_cfg(ucfg)
+        if not ok:
+            return jsonify({"result": "ok", "warning": "persist_failed"}), 200
+        return jsonify({"result": "ok"})
 
     @app.route("/updates")
     def updates():

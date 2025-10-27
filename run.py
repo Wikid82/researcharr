@@ -16,6 +16,15 @@ import threading
 from types import ModuleType
 
 import yaml
+try:
+    # Prefer importing the shared helpers from the package
+    from researcharr.backups import create_backup_file, prune_backups
+except Exception:
+    create_backup_file = None
+    prune_backups = None
+import time
+import json
+import zipfile
 
 # `resource` is a platform-specific stdlib module (POSIX). Annotate a
 # temporary name as optional before attempting the import so mypy knows
@@ -112,6 +121,7 @@ def load_config():
 def run_job():
     """Run scheduled job with timeout and optional RLIMITs."""
     logger = logging.getLogger("researcharr.cron")
+    start_ts = time.time()
 
     global _run_job_lock
     try:
@@ -186,6 +196,27 @@ def run_job():
             if res.stderr:
                 logger.error("Job stderr:\n%s", res.stderr.strip())
             logger.info("Job finished with returncode %s", res.returncode)
+            # Persist a structured run record to JSONL for reliable history
+            try:
+                config_dir = os.getenv("CONFIG_DIR", "/config")
+                hist_file = os.path.join(config_dir, "task_history.jsonl")
+                rec = {
+                    "start_ts": int(start_ts),
+                    "start_iso": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(start_ts)),
+                    "returncode": int(getattr(res, 'returncode', -1)),
+                    "stdout": res.stdout or "",
+                    "stderr": res.stderr or "",
+                    "duration_seconds": round(time.time() - start_ts, 2),
+                    "success": getattr(res, 'returncode', 1) == 0,
+                }
+                try:
+                    os.makedirs(config_dir, exist_ok=True)
+                    with open(hist_file, "a") as hf:
+                        hf.write(json.dumps(rec) + "\n")
+                except Exception:
+                    logger.exception("Failed to write task history to %s", hist_file)
+            except Exception:
+                pass
         except getattr(subprocess, "TimeoutExpired", Exception):
             logger.error("Scheduled job exceeded timeout and was killed")
         except Exception:
@@ -196,6 +227,8 @@ def run_job():
                 _run_job_lock.release()
             except Exception:
                 pass
+
+            pass
 
 
 def main(once: bool = False):
@@ -246,6 +279,77 @@ def main(once: bool = False):
             id="researcharr_job",
             replace_existing=True,
         )
+        # backup helpers and scheduled prune/auto-backup
+        def _read_backups_cfg():
+            config_dir = os.getenv("CONFIG_DIR", "/config")
+            cfg_file = os.path.join(config_dir, "backups.yml")
+            defaults = {
+                "retain_count": 10,
+                "retain_days": 30,
+                "pre_restore": True,
+                "pre_restore_keep_days": 1,
+                "auto_backup_enabled": False,
+                "auto_backup_cron": "0 2 * * *",
+                "prune_cron": "0 3 * * *",
+            }
+            try:
+                if os.path.exists(cfg_file):
+                    with open(cfg_file) as fh:
+                        data = yaml.safe_load(fh) or {}
+                    defaults.update(data)
+            except Exception:
+                logger.exception("Failed to read backups config %s", cfg_file)
+            return defaults
+
+        # If the shared helpers are available, use them; otherwise fall back
+        # to no-op implementations so the scheduler can still start in tests
+        # where the package import path may differ.
+        def _create_backup_file_run(prefix: str = ""):
+            if create_backup_file is None:
+                logger.debug("create_backup_file helper not available")
+                return None
+            config_dir = os.getenv("CONFIG_DIR", "/config")
+            backups_dir = os.path.join(config_dir, "backups")
+            return create_backup_file(config_dir, backups_dir, prefix=prefix)
+
+        def _prune_backups_run():
+            if prune_backups is None:
+                logger.debug("prune_backups helper not available")
+                return
+            cfg = _read_backups_cfg()
+            config_dir = os.getenv("CONFIG_DIR", "/config")
+            backups_dir = os.path.join(config_dir, "backups")
+            prune_backups(backups_dir, cfg)
+
+        try:
+            bcfg = _read_backups_cfg()
+            # Prune job
+            prune_cron = bcfg.get("prune_cron")
+            if prune_cron:
+                try:
+                    ptrigger = CronTrigger.from_crontab(prune_cron, timezone="UTC")
+                    scheduler.add_job(_prune_backups_run, ptrigger, id="prune_backups", replace_existing=True)
+                except Exception:
+                    logger.exception("Invalid prune cron: %s", prune_cron)
+            # Auto backup
+            if bcfg.get("auto_backup_enabled"):
+                ab_cron = bcfg.get("auto_backup_cron") or "0 2 * * *"
+                try:
+                    abtrigger = CronTrigger.from_crontab(ab_cron, timezone="UTC")
+                    def _auto_backup_wrapper():
+                        name = _create_backup_file_run()
+                        if name:
+                            logger.info("Auto-backup created %s", name)
+                            # prune after creating
+                            try:
+                                _prune_backups_run()
+                            except Exception:
+                                logger.exception("Prune after auto-backup failed")
+                    scheduler.add_job(_auto_backup_wrapper, abtrigger, id="auto_backup", replace_existing=True)
+                except Exception:
+                    logger.exception("Invalid auto backup cron: %s", ab_cron)
+        except Exception:
+            logger.exception("Failed to schedule backup/prune jobs")
         scheduler.start()
 
         run_job()

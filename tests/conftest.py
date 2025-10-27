@@ -6,7 +6,11 @@ so older-style imports used by the test-suite resolve to the canonical
 """
 
 import importlib
+import os
 import sys
+from unittest import mock
+
+import pytest
 
 _mappings = [
     ("plugins.media.example_sonarr", "researcharr.plugins.example_sonarr"),
@@ -20,12 +24,6 @@ for src, dst in _mappings:
         # If import fails, don't block test collection; tests that need the
         # module will raise a clear error.
         pass
-import importlib
-import os
-import sys
-from unittest import mock
-
-import pytest
 
 
 @pytest.fixture(autouse=True)

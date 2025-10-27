@@ -268,30 +268,32 @@ def docs():
     restricting access to authenticated users in production.
     """
     openapi_url = "/api/v1/openapi.json"
-    html = """
-<!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>ResearchArr API Docs</title>
-        <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4/swagger-ui.css" />
-    </head>
-    <body>
-        <div id="swagger-ui"></div>
-        <script src="https://unpkg.com/swagger-ui-dist@4/swagger-ui-bundle.js"></script>
-        <script>
-            window.onload = function() {
-                const ui = SwaggerUIBundle({
-                    url: "{{ openapi_url }}",
-                    dom_id: '#swagger-ui',
-                    presets: [SwaggerUIBundle.presets.apis],
-                    layout: 'BaseLayout',
-                })
-                window.ui = ui
-            }
-        </script>
-    </body>
-</html>
-"""
+    html = (
+        "<!doctype html>\n"
+        "<html lang=\"en\">\n"
+        "    <head>\n"
+        "        <meta charset=\"utf-8\" />\n"
+        "        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n"
+        "        <title>ResearchArr API Docs</title>\n"
+        '        <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4/'
+        'swagger-ui.css" />\n'
+        "    </head>\n"
+        "    <body>\n"
+        "        <div id=\"swagger-ui\"></div>\n"
+        '        <script src="https://unpkg.com/swagger-ui-dist@4/'
+        'swagger-ui-bundle.js"></script>\n'
+        "        <script>\n"
+        "            window.onload = function() {\n"
+        "                const ui = SwaggerUIBundle({\n"
+        '                    url: "{{ openapi_url }}",\n'
+        "                    dom_id: '#swagger-ui',\n"
+        "                    presets: [SwaggerUIBundle.presets.apis],\n"
+        "                    layout: 'BaseLayout',\n"
+        "                })\n"
+        "                window.ui = ui\n"
+        "            }\n"
+        "        </script>\n"
+        "    </body>\n"
+        "</html>\n"
+    )
     return render_template_string(html, openapi_url=openapi_url)

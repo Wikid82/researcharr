@@ -2,8 +2,6 @@ import os
 import time
 from pathlib import Path
 
-import pytest
-
 from researcharr.backups import prune_backups
 
 
@@ -12,35 +10,35 @@ def touch(p: Path, mtime: float):
     os.utime(str(p), (mtime, mtime))
 
 
-def test_prune_by_age_and_pre_restore(tmp_path):
+def test_prune_by_age_and_pre_restore(tmp_path: Path):
     backups = tmp_path / "backups"
     backups.mkdir()
     now = time.time()
 
     # recent file (should remain)
-    recent = backups / "recent.zip"
+    recent = backups / "recent.tar.gz"
     touch(recent, now)
 
     # old file (should be removed)
-    old = backups / "old.zip"
+    old = backups / "old.tar.gz"
     touch(old, now - (3 * 86400))
 
     # pre-restore recent (should be kept even if within pre_keep window)
-    pre = backups / "pre-restore.zip"
+    pre = backups / "pre-restore.tar.gz"
     touch(pre, now - (2 * 86400))
 
     cfg = {"retain_days": 2, "pre_restore_keep_days": 3}
     prune_backups(str(backups), cfg)
 
     remaining = set(os.listdir(str(backups)))
-    assert "recent.zip" in remaining
+    assert "recent.tar.gz" in remaining
     # old should be removed
-    assert "old.zip" not in remaining
+    assert "old.tar.gz" not in remaining
     # pre-restore was within keep window -> kept
-    assert "pre-restore.zip" in remaining
+    assert "pre-restore.tar.gz" in remaining
 
 
-def test_prune_by_count(tmp_path):
+def test_prune_by_count(tmp_path: Path):
     backups = tmp_path / "backups"
     backups.mkdir()
     now = time.time()
@@ -48,7 +46,7 @@ def test_prune_by_count(tmp_path):
     # create 5 backups with descending mtimes
     files = []
     for i in range(5):
-        p = backups / f"b{i}.zip"
+        p = backups / f"b{i}.tar.gz"
         touch(p, now - i)
         files.append(p)
 

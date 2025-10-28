@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import pytest
@@ -14,7 +13,7 @@ def login_client(app):
     return client
 
 
-def test_api_logs_tail_and_download(tmp_path, monkeypatch):
+def test_api_logs_tail_and_download(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     # Prepare temp log file and CONFIG_DIR
     logf = tmp_path / "app.log"
     lines = [f"line {i}" for i in range(10)]

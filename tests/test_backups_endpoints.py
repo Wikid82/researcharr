@@ -1,7 +1,3 @@
-import os
-import zipfile
-
-
 def login_client(app):
     client = app.test_client()
     client.post(
@@ -36,8 +32,8 @@ def test_backups_create_list_download_delete(tmp_path, monkeypatch):
     # Download backup
     r3 = client.get(f"/api/backups/download/{name}")
     assert r3.status_code == 200
-    # ensure it's a zip by checking magic
-    assert r3.data[:4] == b"PK\x03\x04"
+    # ensure it's a gzipped tar by checking gzip magic bytes
+    assert r3.data[:2] == b"\x1f\x8b"
 
     # Delete backup
     r4 = client.delete(f"/api/backups/delete/{name}")

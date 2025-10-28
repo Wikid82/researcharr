@@ -1,4 +1,4 @@
-import os
+# 'os' not required in this test
 
 
 def login_client(app):

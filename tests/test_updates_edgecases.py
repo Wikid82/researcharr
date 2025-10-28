@@ -1,4 +1,3 @@
-import os
 import time
 
 import yaml
@@ -25,8 +24,6 @@ def test_updates_skips_fetch_when_cache_fresh(tmp_path, monkeypatch):
     # make requests.get raise if called (should not be called because cache is fresh)
     def fail_get(*a, **k):
         raise RuntimeError("requests.get should not be called when cache fresh")
-
-    import requests
 
     monkeypatch.setattr("requests.get", fail_get)
 

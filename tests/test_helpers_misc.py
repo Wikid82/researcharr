@@ -1,4 +1,4 @@
-import os
+# 'os' not required in this test
 
 
 def test_env_bool_truthy_and_falsy(monkeypatch):

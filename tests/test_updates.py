@@ -1,7 +1,3 @@
-import os
-import threading
-import time
-
 import requests
 import yaml
 
@@ -161,7 +157,6 @@ def test_api_updates_upgrade_starts_download(tmp_path, monkeypatch):
     monkeypatch.setattr("requests.get", fake_get)
 
     # Make threading run synchronously so we can observe the written file
-    import threading as _thr
 
     class SyncThread:
         def __init__(self, target=None, args=(), kwargs=None, daemon=None):

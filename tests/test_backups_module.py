@@ -1,13 +1,10 @@
-import os
-import zipfile
+import tarfile
 from pathlib import Path
-
-import pytest
 
 from researcharr.backups import create_backup_file
 
 
-def test_create_backup_includes_expected_files(tmp_path):
+def test_create_backup_includes_expected_files(tmp_path: Path):
     config_root = tmp_path / "cfg"
     backups_dir = tmp_path / "backups"
     config_root.mkdir()
@@ -26,9 +23,9 @@ def test_create_backup_includes_expected_files(tmp_path):
     zip_path = backups_dir / name
     assert zip_path.exists()
 
-    # Inspect zip contents
-    with zipfile.ZipFile(str(zip_path), "r") as zf:
-        names = zf.namelist()
+    # Inspect tar contents
+    with tarfile.open(str(zip_path), "r:gz") as zf:
+        names = zf.getnames()
         assert "config/config.yml" in names
         assert "config/webui_user.yml" in names
         assert "db/researcharr.db" in names

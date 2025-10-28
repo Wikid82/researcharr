@@ -1,9 +1,6 @@
 import os
+import tarfile
 import time
-import zipfile
-from pathlib import Path
-
-import pytest
 
 
 def test_create_backup_includes_expected_files(tmp_path, monkeypatch):
@@ -27,8 +24,8 @@ def test_create_backup_includes_expected_files(tmp_path, monkeypatch):
     zip_path = backups_dir / name
     assert zip_path.exists()
 
-    with zipfile.ZipFile(str(zip_path), "r") as z:
-        namelist = z.namelist()
+    with tarfile.open(str(zip_path), "r:gz") as z:
+        namelist = z.getnames()
         assert "config/config.yml" in namelist
         assert "config/webui_user.yml" in namelist
         assert "db/researcharr.db" in namelist
@@ -43,15 +40,16 @@ def test_prune_backups_respects_retention(tmp_path):
     now = time.time()
     files = []
     for i in range(5):
-        p = d / f"b{i}.zip"
+        p = d / f"b{i}.tar.gz"
         p.write_text("x")
         # set mtime staggered
         m = now - (i * 86400)
         os.utime(p, (m, m))
         files.append(p.name)
 
-    # add a pre-restore file that is old but should be kept if within pre_restore_keep_days
-    pre = d / "pre-old.zip"
+    # add a pre-restore file that is old but should be kept
+    # if it falls within pre_restore_keep_days
+    pre = d / "pre-old.tar.gz"
     pre.write_text("y")
     pre_m = now - (2 * 86400)
     os.utime(pre, (pre_m, pre_m))
@@ -63,6 +61,7 @@ def test_prune_backups_respects_retention(tmp_path):
     backups.prune_backups(str(d), cfg)
 
     remaining = sorted([p.name for p in d.iterdir() if p.is_file()])
-    # newest two should remain and pre-old should be kept because pre_keep_days=3 and it's 2 days old
+    # newest two should remain. pre-old should also be kept because
+    # pre_keep_days=3 and it is 2 days old
     assert len(remaining) <= 3
-    assert "pre-old.zip" in remaining
+    assert "pre-old.tar.gz" in remaining

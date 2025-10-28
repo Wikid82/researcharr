@@ -1,6 +1,5 @@
 import io
-import os
-import zipfile
+import tarfile
 
 import yaml
 
@@ -20,10 +19,14 @@ def test_backups_import_and_restore(tmp_path, monkeypatch):
     backups_dir = tmp_path / "backups"
     backups_dir.mkdir()
 
-    # create a backup zip that contains a config/config.yml to be restored
-    zpath = backups_dir / "test_restore.zip"
-    with zipfile.ZipFile(str(zpath), "w") as z:
-        z.writestr("config/config.yml", "researcharr: {restored: true}\n")
+    # create a tar.gz backup that contains a config/config.yml to be
+    # restored
+    zpath = backups_dir / "test_restore.tar.gz"
+    with tarfile.open(str(zpath), "w:gz") as t:
+        data = b"researcharr: {restored: true}\n"
+        info = tarfile.TarInfo("config/config.yml")
+        info.size = len(data)
+        t.addfile(info, fileobj=io.BytesIO(data))
 
     from researcharr.factory import create_app
 
@@ -60,7 +63,7 @@ def test_backups_download_and_delete_invalid_name(tmp_path, monkeypatch):
     assert j.get("error") == "invalid_name"
 
     # attempt delete of non-existent file
-    r2 = client.delete("/api/backups/delete/missing.zip")
+    r2 = client.delete("/api/backups/delete/missing.tar.gz")
     assert r2.status_code == 404
     assert r2.get_json().get("error") == "not_found"
 

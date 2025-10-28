@@ -30,6 +30,10 @@ jobs:
         run: |
           pytest tests/ --maxfail=3 --disable-warnings -v \
             --cov=researcharr --cov-report=xml:coverage.xml
+      # NOTE: `secrets.CODECOV_TOKEN` is evaluated by GitHub Actions at
+      # runtime. Some local editors/language servers cannot resolve runtime
+      # contexts and report 'Unrecognized named-value: secrets' as a false
+      # positive. The secret exists in the repository (see gh secret list).
       - name: Upload coverage to Codecov
         if: ${{ secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v4

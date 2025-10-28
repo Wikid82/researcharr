@@ -46,7 +46,6 @@ jobs:
           target: debug
           tags: |
             ghcr.io/Wikid82/researcharr:dev
-            ghcr.io/Wikid82/researcharr:development
             ghcr.io/Wikid82/researcharr:branch-${{ steps.tags.outputs.safe_ref }}
           build-args: |
             BUILD_VERSION=${{ github.sha }}

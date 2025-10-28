@@ -88,6 +88,21 @@ if impl is None:
     impl = _load_by_path(candidates)
 
 if impl:
+    # Ensure the implementation module has a usable __file__ value. Some
+    # import mechanisms or test harnesses may produce modules where
+    # __file__ is unset; prefer the module spec's origin when available
+    # otherwise leave any existing value untouched.
+    try:
+        if not getattr(impl, "__file__", None):
+            spec = getattr(impl, "__spec__", None)
+            origin = getattr(spec, "origin", None) if spec is not None else None
+            if origin:
+                try:
+                    setattr(impl, "__file__", os.path.abspath(origin))
+                except Exception:
+                    pass
+    except Exception:
+        pass
     # Preserve a small set of attributes which may have been set on an
     # existing module object (for example by test fixtures using
     # monkeypatch.setattr("researcharr.researcharr.<name>", ...)). If a

@@ -2,10 +2,10 @@ version: "3.8"
 
 services:
   researcharr:
-  # Use the developer image (includes shell & dev tooling). The alpine
-  # variant is deprecated for development; use the `dev` tag for local
-  # interactive runs.
-  image: "ghcr.io/wikid82/researcharr:dev"
+    # Use the developer image (includes shell & dev tooling). The alpine
+    # variant is deprecated for development; use the `dev` tag for local
+    # interactive runs.
+    image: "ghcr.io/wikid82/researcharr:dev"
     container_name: researcharr-dev
     ports:
       - "2929:2929"

@@ -43,7 +43,7 @@ def test_templates_fetch_and_links_covered():
                 return True
         return False
 
-    missing = [l for l in fetch_links if not covered(l)]
+    missing = [link for link in fetch_links if not covered(link)]
     assert (
         not missing
     ), f"Found fetch() links with no matching route/blueprint: {missing}"

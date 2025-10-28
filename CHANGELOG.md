@@ -107,7 +107,7 @@ Notes: These plugins are experimental and intended for development and UI testin
 ### Backups & Tasks
 
 - Added a Backups UI and API for operator-driven import/export and restore of application state.
-  - Backups are ZIP archives stored under the configured `CONFIG_DIR` (default `/config/backups`) and include configuration files, the SQLite DB, plugins directory, and application logs.
+  - Backups are compressed tar (.tar.gz) archives stored under the configured `CONFIG_DIR` (default `/config/backups`) and include configuration files, the SQLite DB, plugins directory, and application logs.
   - Supported operations: create, import, download, restore, and delete backups via the web UI and `/api/backups` endpoints.
   - Backups retention and rotation are configurable via `CONFIG_DIR/backups.yml` (keys include `retain_count`, `retain_days`, `pre_restore`, `pre_restore_keep_days`, `auto_backup_enabled`, `auto_backup_cron`, and `prune_cron`).
   - Pre-restore snapshots are taken (opt-in) before a destructive restore and are prefixed `pre-` to help operators recover if a restore fails.

@@ -96,10 +96,12 @@ def load_user_config():
             # Also print the plaintext to stdout so it's visible in container logs.
             try:
                 print(
-                    f"Generated web UI initial credentials -> username: {data['username']} password: {generated} api_token: {api_token}"
+                    "Generated web UI initial credentials -> "
+                    f"username: {data['username']} password: {generated} "
+                    f"api_token: {api_token}"
                 )
             except Exception:
-                # If printing fails for any reason, ignore — we still persisted the hash.
+                # If printing fails, ignore; the hash was persisted.
                 pass
         # Return the generated plaintext to the caller so the running app can
         # set its in-memory password for immediate login. Also include the

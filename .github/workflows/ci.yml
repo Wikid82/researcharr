@@ -212,25 +212,25 @@ jobs:
           BUILD_DATE=${{ env.BUILD_DATE }}
           PYTHON_VERSION=3.13
 
-      - name: Build and push debug image (dev tag)
-        id: build-debug
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64,linux/arm64
-          target: debug
-          tags: |
-            ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-dev
-            ghcr.io/${{ env.REPO_NAME }}:dev
-          cache-from: type=gha,scope=researcharr-build-cache
-          cache-to: type=gha,mode=max,scope=researcharr-build-cache
-          build-args: |
-            BUILD_VERSION=${{ env.VERSION }}
-            BUILD_NUMBER=${{ env.BUILD_NUMBER }}
-            GIT_SHA=${{ env.GIT_SHA }}
-            BUILD_DATE=${{ env.BUILD_DATE }}
-            PYTHON_VERSION=3.13
+    - name: Build and push debug image (dev tag)
+      id: build-debug
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        platforms: linux/amd64,linux/arm64
+        target: debug
+        tags: |
+          ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-dev
+          ghcr.io/${{ env.REPO_NAME }}:dev
+        cache-from: type=gha,scope=researcharr-build-cache
+        cache-to: type=gha,mode=max,scope=researcharr-build-cache
+        build-args: |
+          BUILD_VERSION=${{ env.VERSION }}
+          BUILD_NUMBER=${{ env.BUILD_NUMBER }}
+          GIT_SHA=${{ env.GIT_SHA }}
+          BUILD_DATE=${{ env.BUILD_DATE }}
+          PYTHON_VERSION=3.13
 
     - name: Show pushed image digest and tags
       run: |

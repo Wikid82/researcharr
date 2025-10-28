@@ -56,3 +56,9 @@ trivy-*.json
 # Local DBs at repo root
 *.db
 *.sqlite3
+
+# Local scratch / duplicate folder sometimes created during edits.
+# This ignores the local scratch area (if present) to avoid accidental
+# commits of duplicate files named like `researcharr.py`.
+# Use `backups-scratch/` for local, ignored backup/editing helpers.
+/backups-scratch/

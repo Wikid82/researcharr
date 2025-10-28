@@ -5,9 +5,10 @@ web UI (factory.py) and the scheduler runner (run.py) to avoid
 duplicating zip/prune logic.
 """
 
+import io
 import os
+import tarfile
 import time
-import zipfile
 from datetime import datetime
 from typing import Optional
 
@@ -23,9 +24,9 @@ def create_backup_file(
         os.makedirs(backups_dir, exist_ok=True)
         timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
         name = (
-            f"{prefix}researcharr-backup-{timestamp}.zip"
+            f"{prefix}researcharr-backup-{timestamp}.tar.gz"
             if prefix
-            else f"researcharr-backup-{timestamp}.zip"
+            else f"researcharr-backup-{timestamp}.tar.gz"
         )
         path = os.path.join(backups_dir, name)
         # Track whether we wrote any real files into the archive. If no
@@ -33,42 +34,47 @@ def create_backup_file(
         # a valid, non-empty zip (tests and tools expect a proper zip file
         # rather than an empty archive).
         wrote_any = False
-        with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        # create gzipped tarball
+        with tarfile.open(path, "w:gz") as tf:
             cfg = os.path.join(config_root, "config.yml")
             if os.path.exists(cfg):
-                zf.write(cfg, arcname=os.path.join("config", "config.yml"))
+                tf.add(cfg, arcname=os.path.join("config", "config.yml"))
                 wrote_any = True
             userf = os.path.join(config_root, "webui_user.yml")
             if os.path.exists(userf):
-                zf.write(userf, arcname=os.path.join("config", "webui_user.yml"))
+                tf.add(userf, arcname=os.path.join("config", "webui_user.yml"))
                 wrote_any = True
             dbf = os.path.join(config_root, "researcharr.db")
             if os.path.exists(dbf):
-                zf.write(dbf, arcname=os.path.join("db", "researcharr.db"))
+                tf.add(dbf, arcname=os.path.join("db", "researcharr.db"))
                 wrote_any = True
             plugins_dir = os.path.join(config_root, "plugins")
             if os.path.isdir(plugins_dir):
                 for root, dirs, files in os.walk(plugins_dir):
                     for f in files:
                         full = os.path.join(root, f)
-                        arc = os.path.join(
-                            "plugins", os.path.relpath(full, plugins_dir)
-                        )
-                        zf.write(full, arcname=arc)
+                        # Make the archive path relative to the plugins directory
+                        arc_rel = os.path.relpath(full, plugins_dir)
+                        arc = os.path.join("plugins", arc_rel)
+                        tf.add(full, arcname=arc)
                         wrote_any = True
             app_log = os.path.join(os.path.dirname(__file__), os.pardir, "app.log")
             if os.path.exists(app_log):
                 try:
-                    zf.write(app_log, arcname=os.path.join("logs", "app.log"))
+                    tf.add(app_log, arcname=os.path.join("logs", "app.log"))
                     wrote_any = True
                 except Exception:
                     pass
 
             if not wrote_any:
-                # Add a tiny manifest so the zip isn't empty. Keep the
+                # Add a tiny manifest so the tarball isn't empty. Keep the
                 # contents minimal and non-sensitive.
-                manifest = f"researcharr backup\ntimestamp: {timestamp}\n"
-                zf.writestr("manifest.txt", manifest)
+                manifest_txt = f"researcharr backup\ntimestamp: {timestamp}\n"
+                manifest = manifest_txt.encode("utf-8")
+                info = tarfile.TarInfo("manifest.txt")
+                info.size = len(manifest)
+                info.mtime = int(time.time())
+                tf.addfile(info, fileobj=io.BytesIO(manifest))
         return name
     except Exception:
         # Caller should log if desired; keep this module free of app logger

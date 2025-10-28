@@ -244,7 +244,7 @@ Notes
 Anchor: `#backups-and-retention`
 
 What it means
-: The application exposes a Backups page and `/api/backups` endpoints for creating, importing, downloading, restoring and deleting backup ZIP archives representing application state.
+ : The application exposes a Backups page and `/api/backups` endpoints for creating, importing, downloading, restoring and deleting compressed tar (.tar.gz) archives representing application state.
 
 How we detect issues
 : The Status UI and backups page surface failures to create or import archives, and the backend logs any I/O or integrity errors. Scheduled pruning failures are surfaced in the application logs and the Status UI may show related warnings when backups cannot be rotated or created.
@@ -252,7 +252,7 @@ How we detect issues
 Common causes
 - Missing or unwritable `CONFIG_DIR` (default `/config`) or `CONFIG_DIR/backups` directory.
 - Insufficient disk space when creating large backups.
-- Corrupt or malformed imported ZIP files.
+- Corrupt or malformed imported `.tar.gz` files.
 
 How to fix
 1. Check that the backups folder is present and writable by the container process (see Storage mounts section). Example:

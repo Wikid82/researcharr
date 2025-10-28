@@ -41,3 +41,11 @@ config/*.sqlite
 config/cron.log
 config/logs/
 config/*.log
+
+# Trivy scan outputs
+trivy-*.json
+**/trivy-*.json
+
+# Trivy local cache/artifact folder (if created by CI locally)
+.trivy/
+.trivy/**

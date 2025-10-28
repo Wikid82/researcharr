@@ -108,12 +108,12 @@ Operational guidance
 
 Image variants
 
-The project publishes multiple runtime variants; choose the one that best fits your deployment:
+The project publishes two primary runtime variants built from the same multistage `Dockerfile`:
 
-- `:distroless` — Recommended for production: minimal runtime, glibc compatibility, small attack surface. Built via `Dockerfile.distroless` (multi-stage).
-- `:alpine` — Useful for development and quick debugging; may require additional build deps for some wheels.
+- `ghcr.io/wikid82/researcharr:prod` — production image based on Debian-slim (recommended for operators).
+- `ghcr.io/wikid82/researcharr:dev` — developer/debug image (same base as `prod` but with extra debugging tools installed).
 
-Production deploy example (distroless):
+Production deploy example (prod):
 
 ```bash
 docker run -d \
@@ -121,14 +121,17 @@ docker run -d \
   -v /path/to/config:/config \
   -p 2929:2929 \
   --restart unless-stopped \
-  ghcr.io/wikid82/researcharr:distroless
+  ghcr.io/wikid82/researcharr:prod
 ```
 
-Developer example (build/test in builder stage):
+Developer example (run debug image with shell):
 
 ```bash
-docker build --target builder -f Dockerfile.distroless -t local/researcharr:builder .
-docker run --rm -v "$(pwd)":/src -w /src local/researcharr:builder sh -c "pip install -r requirements.txt && pytest"
+docker run --rm -it \
+  -v "$(pwd)":/app -w /app \
+  -v /path/to/config:/config \
+  -p 2929:2929 \
+  ghcr.io/wikid82/researcharr:dev /bin/bash
 ```
 See `docs/Environment-Variables.md` for the full list of environment
 variables and their defaults.

@@ -25,7 +25,6 @@ except Exception:
     prune_backups = None
 import json
 import time
-import zipfile
 
 # `resource` is a platform-specific stdlib module (POSIX). Annotate a
 # temporary name as optional before attempting the import so mypy knows

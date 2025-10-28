@@ -181,6 +181,10 @@ jobs:
             VERSION="0.0.0-alpha.${GITHUB_RUN_NUMBER}"
           fi
         fi
+        # If this wasn't a tagged release, mark these CI builds as alpha-debug
+        if [ -z "$RAW_TAG" ]; then
+          VERSION="0.0.0-alpha.debug.${GITHUB_RUN_NUMBER}"
+        fi
         echo "VERSION=$VERSION" >> $GITHUB_ENV
         echo "BUILD_NUMBER=${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
         echo "GIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV

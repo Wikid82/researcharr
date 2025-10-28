@@ -1,13 +1,11 @@
 # ... code for factory.py ...
 
 import importlib.util
-import io
 import os
 import pathlib
 import shutil
+import tarfile
 import time
-import zipfile
-from datetime import datetime
 
 import yaml
 from flask import (
@@ -150,7 +148,8 @@ def create_app():
         "sonarr": [],
         "scheduling": {"cron_schedule": "0 0 * * *", "timezone": "UTC"},
         "user": {"username": "admin", "password": "password"},
-        # Backups settings: retain_count (max files), retain_days (age in days), pre_restore (create snapshot before restore)
+        # Backups settings: retain_count (max files), retain_days (age in days)
+        # and pre_restore (create snapshot before restore)
         "backups": {
             "retain_count": 10,
             "retain_days": 30,
@@ -204,8 +203,10 @@ def create_app():
         pass
 
     # In-memory metrics for test isolation
-    # Structure:
-    # { requests_total: int, errors_total: int, plugins: { <plugin>: {validate_attempts, validate_errors, sync_attempts, sync_errors, last_error, last_error_msg} } }
+    # Structure (short description):
+    # { requests_total: int, errors_total: int, plugins: { <plugin>: {
+    #   validate_attempts, validate_errors, sync_attempts, sync_errors,
+    #   last_error, last_error_msg } } }
     app.metrics = {"requests_total": 0, "errors_total": 0, "plugins": {}}
 
     # Ensure web UI user config exists on startup. If a first-run password is
@@ -409,9 +410,9 @@ def create_app():
                 # information in production logs.
                 if app.config.get("WEBUI_DEV_DEBUG"):
                     # Print to stdout for debugging in the container logs
-                    print(
-                        f"DEBUG_LOGIN user={username} pw_ok={pw_ok} keys={list(user.keys())}"
-                    )
+                    # Print to stdout for debugging in the container logs
+                    keys_list = list(user.keys())
+                    print("DEBUG_LOGIN", username, pw_ok, keys_list)
                     try:
                         app.logger.debug(
                             "DEBUG_LOGIN user=%s pw_ok=%s keys=%s",
@@ -582,7 +583,6 @@ def create_app():
     def api_logs():
         if not is_logged_in():
             return jsonify({"error": "unauthorized"}), 401
-        config_root = os.getenv("CONFIG_DIR", "/config")
         # allow overriding log path via env
         app_log = os.getenv(
             "WEBUI_LOG",
@@ -716,7 +716,7 @@ def create_app():
 
     @app.route("/api/logs/stream", methods=["GET"])
     def api_logs_stream():
-        """Server-sent events endpoint that tails the application log and streams new lines.
+        """SSE endpoint that tails the application log and streams new lines.
 
         Query params:
           lines - number of initial tail lines to send (default 200)
@@ -724,7 +724,6 @@ def create_app():
         if not is_logged_in():
             return ("", 401)
 
-        config_root = os.getenv("CONFIG_DIR", "/config")
         app_log = os.getenv(
             "WEBUI_LOG",
             os.path.abspath(
@@ -784,8 +783,8 @@ def create_app():
                         where = fh.tell()
                         line = fh.readline()
                         if line:
-                            for l in line.splitlines():
-                                yield f"data: {l}\n"
+                            for ln in line.splitlines():
+                                yield f"data: {ln}\n"
                             yield "\n"
                         else:
                             time.sleep(1.0)
@@ -1043,7 +1042,20 @@ def create_app():
     def api_storage():
         """Return simple checks for configured storage mount points (config/plugins).
 
-        Returns JSON like: {"paths": [{"name": "config", "path": "/config", "exists": true, "is_dir": true, "readable": true, "writable": false}, ...]}
+        Returns JSON like:
+        {
+            "paths": [
+                {
+                    "name": "config",
+                    "path": "/config",
+                    "exists": true,
+                    "is_dir": true,
+                    "readable": true,
+                    "writable": false,
+                },
+                ...
+            ]
+        }
         """
         if not is_logged_in():
             return jsonify({"error": "unauthorized"}), 401
@@ -1165,7 +1177,8 @@ def create_app():
             user = app.config_data.get("user", {})
             if user.get("password") and not user.get("password_hash"):
                 cfg_issues.append(
-                    "Web UI admin account still has first-run plaintext password in memory; rotate credentials"
+                    "Web UI admin account still has first-run plaintext password "
+                    "in memory; rotate credentials"
                 )
             if not user.get("username"):
                 cfg_issues.append("Missing web UI username")
@@ -1214,9 +1227,9 @@ def create_app():
                 with open("/proc/meminfo") as fh:
                     lines = fh.read().splitlines()
                 mem = {}
-                for l in lines:
-                    if ":" in l:
-                        k, v = l.split(":", 1)
+                for ln in lines:
+                    if ":" in ln:
+                        k, v = ln.split(":", 1)
                         mem[k.strip()] = v.strip()
                 resources["meminfo"] = (
                     {k: mem.get(k) for k in ("MemTotal", "MemAvailable")} if mem else {}
@@ -1307,6 +1320,7 @@ def create_app():
         if action == "add":
             inst = data.get("instance") or {}
             # normalize legacy form-shaped instances (e.g. sonarr0_url -> url)
+
             def _normalize_instance(d):
                 if not isinstance(d, dict):
                     return d
@@ -1785,8 +1799,9 @@ def create_app():
             if os.path.exists(tmpdir):
                 shutil.rmtree(tmpdir)
             os.makedirs(tmpdir, exist_ok=True)
-            with zipfile.ZipFile(fpath, "r") as zf:
-                zf.extractall(tmpdir)
+            # extract tar.gz into temporary folder
+            with tarfile.open(fpath, "r:gz") as tf:
+                tf.extractall(tmpdir)
             for root, dirs, files in os.walk(tmpdir):
                 rel = os.path.relpath(root, tmpdir)
                 # If the archive has a top-level 'config' directory (common),
@@ -2131,7 +2146,8 @@ def create_app():
 
         Request JSON: {"asset_url": "https://..."}
         This endpoint is disabled when running in an image-managed runtime.
-        The download runs in a background thread and writes to CONFIG_DIR/updates/downloads.
+        The download runs in a background thread and writes to
+        CONFIG_DIR/updates/downloads.
         """
         if not is_logged_in():
             return jsonify({"error": "unauthorized"}), 401

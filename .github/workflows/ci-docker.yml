@@ -5,7 +5,10 @@ on:
 
 jobs:
   docker:
-    runs-on: debain-latest
+    # NOTE: corrected invalid runner label (typo) -> using 'ubuntu-latest'.
+    # If you need a Debian-specific runner, set up a self-hosted runner and
+    # update the workflow to use its label (e.g., 'self-hosted, debian-slim').
+    runs-on: ubuntu-latest
     if: ${{ github.event_name == 'push' }}
     permissions:
       contents: read

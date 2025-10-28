@@ -16,12 +16,7 @@ A modern, always-on utility to automatically trigger searches in the *arr suite 
   <a href="https://github.com/Wikid82/researcharr/actions/workflows/ci.yml">
     <img src="https://github.com/Wikid82/researcharr/workflows/CI/badge.svg" alt="CI" />
   </a>
-  <a href="https://github.com/Wikid82/researcharr/actions/workflows/alpine-ci.yml">
-    <img src="https://github.com/Wikid82/researcharr/workflows/Alpine%20CI%20%28build%2C%20test%2C%20trivy%2C%20publish%29/badge.svg" alt="Alpine CI" />
-  </a>
-  <a href="https://github.com/Wikid82/researcharr/actions/workflows/distroless-ci.yml">
-    <img src="https://github.com/Wikid82/researcharr/workflows/Distroless%20CI%20%28build%2C%20test%2C%20trivy%2C%20publish%29/badge.svg" alt="Distroless CI" />
-  </a>
+  <!-- We run a single CI workflow that builds/tests a Debian-slim based image and runs Trivy scans -->
 </p>
 
 
@@ -41,13 +36,13 @@ The `load_config()` function now accepts an optional `path` argument, allowing t
 
 We recently enforced the repository linting and typing pipeline locally and in CI: formatters (isort + black), flake8 (E501 now enforced), mypy, and pytest with coverage. During that work we hardened the compatibility import shim used to expose the top-level module as a package so tests and monkeypatching are deterministic across import orders. This resolved an intermittent AttributeError seen in the test suite.
 
-Recommended debug image tags for reproducing CI or running interactively:
+Recommended image tags for reproducing CI or running interactively:
 
 - `local/researcharr:builder` — builds a developer image (matches CI builder stage) and is the recommended tag for reproducing CI validation (mypy + pytest).
-- `local/researcharr:alpine` — fast interactive debugging; useful for iterative development.
-- `ghcr.io/wikid82/researcharr:distroless` — production runtime (distroless) image.
+- `ghcr.io/wikid82/researcharr:prod` — production runtime image (Debian-slim, built from the multistage `Dockerfile`).
+- `ghcr.io/wikid82/researcharr:dev` — developer/debug image (same base as `prod` with extra debugging tools installed).
 
-If you'd like, I can push the verified changes to the `development` branch and monitor CI runs (alpine & distroless workflows) and add a short changelog note — confirm and I'll proceed.
+If you'd like, I can push the verified changes to the `development` branch and monitor CI runs (CI will build the `prod` and `dev` variants and run Trivy); confirm and I'll proceed.
 
 ## Project Structure
 
@@ -110,27 +105,26 @@ Notes:
 - Images are only published after CI passes for push events (not for PRs from forks) to protect secrets and avoid accidental publishes.
 - Branch images are useful for QA/testing feature branches. Consider cleaning up unused images periodically.
 
-## Runtime image variants (production vs development)
+Runtime image variants (production vs development)
 
-We now publish and maintain two first-class runtime variants to balance security and developer ergonomics:
+We maintain a single Debian-slim based production image and a debug variant built from the same pipeline. This balances security, compatibility with manylinux wheels, and developer ergonomics.
 
-- **Distroless** (recommended for production): a minimal, glibc-compatible runtime image produced by a multi-stage build. It contains only the Python interpreter and your application files — small attack surface and better compatibility with many binary wheels.
-- **Alpine** (developer-friendly alternative): a lightweight musl-based image useful for debugging and contributor workflows. Some wheels may require extra build deps on Alpine.
+- `ghcr.io/wikid82/researcharr:prod` — production image based on Debian-slim (recommended for operators). Use this for production deployments; it is built by our CI pipeline from the multistage `Dockerfile`.
+- `ghcr.io/wikid82/researcharr:dev` — debug/developer image (same base as `prod` with extra dev tooling installed). Use this when you need a shell or debugging utilities.
 
 Tags published (examples):
 
-- `ghcr.io/wikid82/researcharr:<version>-distroless` and `ghcr.io/wikid82/researcharr:distroless`
-- `ghcr.io/wikid82/researcharr:<version>-alpine` and `ghcr.io/wikid82/researcharr:alpine`
+- `ghcr.io/wikid82/researcharr:<version>-prod` and `ghcr.io/wikid82/researcharr:prod`
+- `ghcr.io/wikid82/researcharr:<version>-dev` and `ghcr.io/wikid82/researcharr:dev`
 
 Default policy
 
-We validate both variants in CI. Once the distroless variant passes CI validation and scheduled scans for a couple of releases it will become the recommended default for production deployments.
+CI builds and validates the `prod` and `dev` variants. We run Trivy scans during CI and require remediation for any CRITICAL/HIGH findings before promoting an image to a production recommendation.
 
 Which to run locally (quick guide)
 
-- Production / operator (recommended): use the `distroless` image and mount a persistent `/config` directory on the host (example below).
-- Development / debugging: use the `alpine` image or build the `builder` stage from `Dockerfile.distroless` to get a shell and dev tools.
-
+- Production / operator (recommended): use the `prod` image and mount a persistent `/config` directory on the host (example below).
+- Development / debugging: use the `dev` image (it includes a shell and common debugging tools).
 Examples
 
 1) Run the recommended production image (distroless):
@@ -146,15 +140,15 @@ docker run -d \
   ghcr.io/wikid82/researcharr:distroless
 ```
 
-2) Developer quick-run (alpine, with interactive shell):
+2) Developer quick-run (debug image, with interactive shell):
 
 ```bash
-# Mount your source tree and use the alpine image's shell for iterative dev
+# mount and run the debug image (includes shell & dev tools)
 docker run --rm -it \
   -v "$(pwd)":/app -w /app \
   -v /path/to/config:/config \
   -p 2929:2929 \
-  local/researcharr:alpine /bin/bash
+  ghcr.io/wikid82/researcharr:dev /bin/bash
 # inside the container you can run tests, linters and the app directly:
 python -m pip install -r requirements.txt
 python -m pytest tests/

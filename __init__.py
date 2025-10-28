@@ -51,6 +51,13 @@ def _load_by_path(candidates: list[str]) -> Optional[ModuleType]:
                     mod = importlib.util.module_from_spec(spec)
                     # Execute module in its own namespace
                     spec.loader.exec_module(mod)  # type: ignore[arg-type]
+                    # Some loaders may not set __file__; ensure it's present so
+                    # consumers that inspect __file__ get a meaningful path.
+                    try:
+                        if not hasattr(mod, "__file__") or not getattr(mod, "__file__"):
+                            setattr(mod, "__file__", os.path.abspath(path))
+                    except Exception:
+                        pass
                     return mod
             except Exception:
                 # Loading by path is best-effort here; fall through to try

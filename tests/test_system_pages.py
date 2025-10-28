@@ -1,17 +1,16 @@
 import pytest
-from flask import url_for
 
 
 def login_and_get_client(app):
-    # Helper: create a test client and log in using the test fixtures in conftest.py
+    # Helper: create a test client and log in using the test fixtures
     client = app.test_client()
-    # many tests in this repo use POST to /login with username/password - mimic a basic login
-    resp = client.post(
+    # Many tests use POST to /login with username/password — do the same
+    client.post(
         "/login",
         data={"username": "admin", "password": "password"},
         follow_redirects=True,
     )
-    # We don't assert successful login here because test fixtures may inject credentials.
+    # Do not assert successful login here because fixtures may inject credentials.
     return client
 
 

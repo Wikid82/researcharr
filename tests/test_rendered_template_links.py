@@ -56,25 +56,25 @@ def test_rendered_templates_links_and_forms(template):
     routes = set(str(rule.rule) for rule in app.url_map.iter_rules())
 
     missing_links = []
-    for l in links:
-        if l.startswith("/static/"):
+    for link in links:
+        if link.startswith("/static/"):
             continue
-        if l.startswith("http://") or l.startswith("https://"):
+        if link.startswith("http://") or link.startswith("https://"):
             continue
-        if l in routes:
+        if link in routes:
             continue
         matched = False
         for r in routes:
             if "<" in r:
                 prefix = r.split("/<")[0]
-                if l.startswith(prefix):
+                if link.startswith(prefix):
                     matched = True
                     break
-            if l.startswith(r.rstrip("/") + "/"):
+            if link.startswith(r.rstrip("/") + "/"):
                 matched = True
                 break
         if not matched:
-            missing_links.append(l)
+            missing_links.append(link)
 
     assert (
         not missing_links
@@ -142,6 +142,4 @@ def test_rendered_templates_links_and_forms(template):
     # attributes because many templates intentionally post to the current
     # URL or rely on CSS/JS-driven buttons. Keep the input label check
     # strict for non-button inputs though.
-    assert (
-        not inputs_without_label
-    ), f"Template {template} has inputs without id/aria-label/associated label (sample): {inputs_without_label[:3]}"
+    assert not inputs_without_label, f"Template {template} has inputs without label"

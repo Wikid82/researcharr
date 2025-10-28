@@ -169,7 +169,7 @@ docker run --rm --entrypoint "" -v "$(pwd)":/src -w /src local/researcharr:build
 Development config vs user config
 
 - **User / operator config:** mount a persistent host directory at `/config` and let the container populate `config.yml` from `config.example.yml` on first-run. This is the simplest and safest setup for operators.
-- **Development config:** when contributing, mount your repo into the container and use the `builder` or `alpine` images. Use your host editor to change files and run the in-container test commands. Avoid using the distroless runtime for active development because it lacks a shell and dev tooling.
+- **Development config:** when contributing, mount your repo into the container and use the `builder` or `dev` images. Use your host editor to change files and run the in-container test commands. Avoid using the distroless runtime for active development because it lacks a shell and dev tooling.
 
 ## Developer compose & debug notes
 

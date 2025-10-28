@@ -30,7 +30,7 @@ docker-compose up -d --build
 
 Runtime variants
 
-The project publishes two runtime variants: `distroless` (recommended for production, minimal runtime) and `alpine` (developer-friendly). For production runs use the `distroless` image and mount a persistent `/config` directory. For development, use `alpine` or the `builder` stage so you have a shell and dev tooling available.
+The project publishes two runtime variants: `distroless` (recommended for production, minimal runtime) and a developer image (tagged `dev` or built from the `builder` stage). For production runs use the `distroless` image and mount a persistent `/config` directory. For development, use the `dev` image or the `builder` stage so you have a shell and dev tooling available.
 
 - Security and initial credentials
 

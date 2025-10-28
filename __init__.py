@@ -75,6 +75,8 @@ if impl is None:
     candidates = [
         os.path.join(os.getcwd(), "researcharr.py"),
         os.path.join(base, "researcharr.py"),
+        # Also check for a nested package implementation at "researcharr/researcharr.py"
+        os.path.join(base, "researcharr", "researcharr.py"),
         os.path.abspath(os.path.join(base, "..", "researcharr.py")),
         os.path.abspath(os.path.join(base, "..", "..", "researcharr.py")),
     ]

@@ -45,8 +45,8 @@ jobs:
           push: true
           target: debug
           tags: |
-            ghcr.io/Wikid82/researcharr:dev
-            ghcr.io/Wikid82/researcharr:branch-${{ steps.tags.outputs.safe_ref }}
+            ghcr.io/wikid82/researcharr:dev
+            ghcr.io/wikid82/researcharr:branch-${{ steps.tags.outputs.safe_ref }}
           build-args: |
             BUILD_VERSION=${{ github.sha }}
 
@@ -58,9 +58,9 @@ jobs:
           push: true
           # default final stage (runtime)
           tags: |
-            ghcr.io/Wikid82/researcharr:latest
-            ghcr.io/Wikid82/researcharr:prod
-            ghcr.io/Wikid82/researcharr:branch-${{ steps.tags.outputs.safe_ref }}
+            ghcr.io/wikid82/researcharr:latest
+            ghcr.io/wikid82/researcharr:prod
+            ghcr.io/wikid82/researcharr:branch-${{ steps.tags.outputs.safe_ref }}
           build-args: |
             BUILD_VERSION=latest
 
@@ -74,6 +74,6 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/Wikid82/researcharr:branch-${{ steps.tags.outputs.safe_ref }}
+            ghcr.io/wikid82/researcharr:branch-${{ steps.tags.outputs.safe_ref }}
           build-args: |
             BUILD_VERSION=${{ github.sha }}

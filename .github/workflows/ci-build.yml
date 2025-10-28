@@ -15,6 +15,11 @@ jobs:
       # import top-level modules (e.g. `factory`) can find them when the
       # runner changes working directories or when pytest adjusts sys.path.
       PYTHONPATH: ${{ github.workspace }}
+      # Expose Codecov token to job as an env var so step-level `if` can
+      # check `env.CODECOV_TOKEN` without referencing `secrets` directly in
+      # the expression (some editors flag `secrets.*` as an unrecognized
+      # named-value even though GitHub Actions evaluates it at runtime).
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     strategy:
       matrix:
         python-version: [3.13]
@@ -36,10 +41,12 @@ jobs:
       # NOTE: `secrets.CODECOV_TOKEN` is evaluated by GitHub Actions at
       # runtime. Some local editors/language servers cannot resolve runtime
       # contexts and report 'Unrecognized named-value: secrets' as a false
-      # positive. The secret exists in the repository (see gh secret list).
+      # positive. To reduce that editor noise we copy the secret into an
+      # environment variable at the job level above and use `env.CODECOV_TOKEN`
+      # in the step `if` expression instead of referencing `secrets.*`.
       - name: Upload coverage to Codecov
-        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        if: ${{ env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ env.CODECOV_TOKEN }}
         continue-on-error: true

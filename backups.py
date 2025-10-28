@@ -53,6 +53,12 @@ def create_backup_file(
                     zf.write(app_log, arcname=os.path.join("logs", "app.log"))
                 except Exception:
                     pass
+            # Ensure the zip is never empty — include a small metadata entry so
+            # consumers can rely on a valid local-file-header when reading.
+            try:
+                zf.writestr("metadata.txt", f"backup_created={timestamp}\n")
+            except Exception:
+                pass
         return name
     except Exception:
         # Caller should log if desired; keep this module free of app logger

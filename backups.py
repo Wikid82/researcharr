@@ -28,16 +28,24 @@ def create_backup_file(
             else f"researcharr-backup-{timestamp}.zip"
         )
         path = os.path.join(backups_dir, name)
+        # Track whether we wrote any real files into the archive. If no
+        # files were present we still add a small manifest so the archive is
+        # a valid, non-empty zip (tests and tools expect a proper zip file
+        # rather than an empty archive).
+        wrote_any = False
         with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             cfg = os.path.join(config_root, "config.yml")
             if os.path.exists(cfg):
                 zf.write(cfg, arcname=os.path.join("config", "config.yml"))
+                wrote_any = True
             userf = os.path.join(config_root, "webui_user.yml")
             if os.path.exists(userf):
                 zf.write(userf, arcname=os.path.join("config", "webui_user.yml"))
+                wrote_any = True
             dbf = os.path.join(config_root, "researcharr.db")
             if os.path.exists(dbf):
                 zf.write(dbf, arcname=os.path.join("db", "researcharr.db"))
+                wrote_any = True
             plugins_dir = os.path.join(config_root, "plugins")
             if os.path.isdir(plugins_dir):
                 for root, dirs, files in os.walk(plugins_dir):
@@ -47,12 +55,20 @@ def create_backup_file(
                             "plugins", os.path.relpath(full, plugins_dir)
                         )
                         zf.write(full, arcname=arc)
+                        wrote_any = True
             app_log = os.path.join(os.path.dirname(__file__), os.pardir, "app.log")
             if os.path.exists(app_log):
                 try:
                     zf.write(app_log, arcname=os.path.join("logs", "app.log"))
+                    wrote_any = True
                 except Exception:
                     pass
+
+            if not wrote_any:
+                # Add a tiny manifest so the zip isn't empty. Keep the
+                # contents minimal and non-sensitive.
+                manifest = f"researcharr backup\ntimestamp: {timestamp}\n"
+                zf.writestr("manifest.txt", manifest)
         return name
     except Exception:
         # Caller should log if desired; keep this module free of app logger

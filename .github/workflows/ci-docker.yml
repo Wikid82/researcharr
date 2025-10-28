@@ -1,0 +1,17 @@
+name: CI — Docker
+
+on:
+  push: {}
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build placeholder
+        run: echo "Docker build/push steps go here"

@@ -49,3 +49,10 @@ trivy-*.json
 # Trivy local cache/artifact folder (if created by CI locally)
 .trivy/
 .trivy/**
+
+# Editor and IDE settings
+.vscode/
+
+# Local DBs at repo root
+*.db
+*.sqlite3

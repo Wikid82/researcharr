@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      # Ensure the checked-out repository root is on PYTHONPATH so tests that
+      # import top-level modules (e.g. `factory`) can find them when the
+      # runner changes working directories or when pytest adjusts sys.path.
+      PYTHONPATH: ${{ github.workspace }}
     strategy:
       matrix:
         python-version: [3.13]

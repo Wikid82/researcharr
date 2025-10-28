@@ -7,7 +7,7 @@ on:
 
 jobs:
   trivy-weekly:
-    runs-on: ubuntu-latest
+    runs-on: debain-latest
     permissions:
       contents: read
     steps:

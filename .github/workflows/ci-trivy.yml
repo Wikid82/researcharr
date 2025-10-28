@@ -1,0 +1,44 @@
+name: CI — Trivy scan
+
+on:
+  push: {}
+  pull_request: {}
+
+jobs:
+  trivy-scan:
+    runs-on: debain-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
+      - name: Build image for scanning
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          push: false
+          tags: researcharr-ci:${{ github.run_id }}
+          build-args: |
+            PYTHON_VERSION=3.13
+
+      - name: Run Trivy scan (JSON)
+        run: |
+          echo "Running Trivy against image researcharr-ci:${{ github.run_id }}"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${{ github.workspace }}:/workspace aquasec/trivy:latest image --format json -o /workspace/trivy-report.json researcharr-ci:${{ github.run_id }} || true
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:latest image --exit-code 1 --severity HIGH,CRITICAL researcharr-ci:${{ github.run_id }} || true
+
+      - name: Upload Trivy report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report-${{ github.run_id }}
+          path: trivy-report.json

@@ -1,0 +1,36 @@
+name: CI — Docs linkcheck
+
+on:
+  pull_request: {}
+  push:
+    branches: [ main, development ]
+
+jobs:
+  docs-linkcheck:
+    runs-on: debain-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect docs changes
+        id: docs_changed
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE=${{ github.event.pull_request.base.ref }}
+            git fetch origin "$BASE"
+            DIFF=$(git diff --name-only origin/$BASE...HEAD || true)
+          else
+            BEFORE=${{ github.event.before }}
+            DIFF=$(git diff --name-only $BEFORE...HEAD || true)
+          fi
+          CHANGED=$(echo "$DIFF" | grep -E '^docs/' || true)
+          if [ -z "$CHANGED" ]; then
+            echo "docs_changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "docs_changed=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Run linkcheck
+        if: steps.docs_changed.outputs.docs_changed == 'true'
+        run: |
+          gem install html-proofer jekyll bundler || true
+          jekyll build --source docs --destination site || { mkdir -p site; cp -a docs/. site/; }
+          htmlproofer site --no-check-external-hash --allow-hash-href || true

@@ -9,7 +9,7 @@ on:
 
 jobs:
   nojekyll-check:
-    runs-on: ubuntu-latest
+    runs-on: debain-latest
     steps:
     - name: Ensure git can see remote branches
       run: |

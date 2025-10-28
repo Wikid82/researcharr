@@ -1,4 +1,3 @@
-import os
 import re
 from pathlib import Path
 
@@ -70,9 +69,9 @@ def test_templates_have_matching_routes():
     routes = _find_app_routes(factory_path)
 
     missing = []
-    for l in links:
-        if not _is_covered(l, routes):
-            missing.append(l)
+    for link in links:
+        if not _is_covered(link, routes):
+            missing.append(link)
 
     assert (
         not missing

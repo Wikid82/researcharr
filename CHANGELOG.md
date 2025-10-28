@@ -97,6 +97,11 @@ Notes: These plugins are experimental and intended for development and UI testin
 - Added per-plugin in-memory metrics counters (validate/sync attempts and errors) and included an error-rate summary in `/api/status` so repeated plugin failures are surfaced as warnings.
 - Added `docs/Status-and-Warnings.md` describing each warning and step-by-step remediation instructions. The Status UI links to the relevant docs sections for each warning.
 - Notes: plugin metrics are stored in-memory (reset on restart). Network-heavy checks (update availability, external checks) are opt-in to avoid flaky UI behavior.
+
+### Packaging & CI (consolidation)
+
+- Consolidated image strategy: CI and publishing now focus on a single Debian-slim based production image (`:prod`) plus a debug variant (`:dev`) built from the same multistage `Dockerfile`. This simplifies image maintenance and keeps glibc compatibility for manylinux wheels while providing a debug image with common troubleshooting tools.
+- The previous separate `alpine` and `distroless` variants are no longer the primary CI targets; CI now builds and validates `prod` and `dev` variants and runs Trivy checks during validation. Existing Dockerfiles for alternative variants were left in the repo for reference but are not actively published by default.
  - Notes: plugin metrics are stored in-memory (reset on restart). Network-heavy checks (update availability, external checks) are opt-in to avoid flaky UI behavior.
 
 ### Backups & Tasks

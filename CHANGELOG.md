@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Chore / Repo hygiene
+
+- Updated `.gitignore` and `.dockerignore` to exclude build artifacts, caches, and editor/OS files. Recommended host-side cleanup of any already-tracked generated artifacts so they are no longer tracked in Git.
+- Ran `isort` and `black` across the repository and committed formatting/import-order fixes; fixed a small set of `flake8` issues in typing stubs.
+
+### Typing & editor fixes
+
+- Rewrote `researcharr/_types.pyi` to address flake8/Known-editor diagnostics and added a small runtime shim for plugin registry resolution to improve editor/type-checker behavior.
+- Replaced a dynamic `__all__` in `researcharr/webui.py` with a static export list to reduce noisy editor warnings.
+
+### Docker / entrypoint
+
+- Replaced `entrypoint.sh` with a runtime-aware script that reads `PUID`/`PGID` (env or config), chowns mounted `/config` and `/app`, creates required directories/files, sets timezone if provided, and drops privileges before exec'ing the application.
+- Adjusted the `Dockerfile` so the image build no longer forces a non-root user at build time; the entrypoint now performs privilege dropping at runtime so bind mounts can be chowned correctly.
+
+### CI / tests / security
+
+- Added a small test helper script (`scripts/run-tests.sh`) and tuned CI to avoid building/publishing images for short-lived branches (build/publish only on persistent branches such as `development`/`main`).
+- Ran the full pipeline locally and in CI: formatting checks (black/isort), `flake8`, `mypy`, `pytest` (unit tests) and a Trivy image scan. Tests pass (163 passed locally and validated in CI) and Trivy published a JSON artifact.
+
+Notes: these changes are on branch `reception` and are ready to open a PR into `development` for review and merge.
+
 ## 2025-10-25
 
 ### Packaging & CI

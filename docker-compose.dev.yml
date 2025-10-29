@@ -6,7 +6,6 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: researcharr-dev
-    user: "1000:1000"
     # Map the app ports so you can browse the UI from the host
     ports:
       - "2929:2929"
@@ -16,8 +15,6 @@ services:
       - FLASK_ENV=development
       - LOGLEVEL=DEBUG
       - WEBUI_PORT=2929
-      - PUID=1000
-      - PGID=1000
       - TZ=America/New_York
       # Useful runtime debugging overrides
       - RUN_JOB_CONCURRENCY=1
@@ -37,8 +34,7 @@ services:
     # Use a simple command that ensures any local changes to requirements are installed
     command: >
       /bin/sh -lc "pip install --no-cache-dir -r requirements.txt || true && \
-      # OPTIONAL: to run under debugpy, uncomment the next line and comment the plain run line
-      # python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m runpy /app/run.py && \
+      # OPTIONAL: to run under debugpy, uncomment the next line and comment the plain run line\n      # python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m runpy /app/run.py && \
       python -u /app/run.py"
     logging:
       driver: json-file

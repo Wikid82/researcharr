@@ -1,5 +1,3 @@
-
-
 def login_client(app):
     client = app.test_client()
     client.post(

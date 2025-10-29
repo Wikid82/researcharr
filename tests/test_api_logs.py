@@ -1,7 +1,4 @@
-import os
-from pathlib import Path
-
-import pytest
+# removed unused imports (os, Path, pytest) to satisfy flake8
 
 
 def login_client(app):

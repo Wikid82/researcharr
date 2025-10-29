@@ -4,6 +4,7 @@ services:
   researcharr:
     image: ghcr.io/wikid82/researcharr:alpine
     container_name: researcharr-dev
+    user: "1000:1000"
     ports:
       - "2929:2929"
       - "5678:5678" # optional debug port for debugpy

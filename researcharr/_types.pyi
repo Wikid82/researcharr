@@ -1,4 +1,4 @@
-from typing import Protocol, Any
+from typing import Protocol, Any, TypedDict
 
 
 class FlaskClient(Protocol):
@@ -28,3 +28,16 @@ class FlaskApp(Protocol):
 
 class BlueprintProtocol(Protocol):
     name: str
+
+
+class UserConfig(TypedDict, total=False):
+    """TypedDict for the persisted webui user config file.
+
+    Keys present include `username`, `password_hash`, `api_key_hash` and
+    optional plaintext `password` / `api_key` when created on first-run.
+    """
+    username: str
+    password_hash: str
+    api_key_hash: str
+    password: str
+    api_key: str

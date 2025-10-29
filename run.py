@@ -14,18 +14,34 @@ import subprocess
 import sys
 import threading
 from types import ModuleType
-
-import yaml
-
-try:
-    # Prefer importing the shared helpers from the package
-    from researcharr.backups import create_backup_file, prune_backups
-except Exception:
-    create_backup_file = None
-    prune_backups = None
+# stdlib imports grouped at top to satisfy flake8 E402
 import json
 import time
+
+import yaml
 from typing import Any, cast
+
+# Declare the names with a loose Any|None so static analysis knows the
+# symbols exist even if the import below fails; populate them from the
+# real module when available.
+try:
+    # Prefer importing the shared helpers from the package. Keep the
+    # imported names local and assign to module-level variables only on
+    # success so static analysis sees valid callables when available.
+    from researcharr.backups import (
+        create_backup_file as _create_backup_file,
+        prune_backups as _prune_backups,
+    )
+except Exception:
+    _create_backup_file = None
+    _prune_backups = None
+
+# Declare the names with a loose Any|None so static analysis knows the
+# symbols exist even if the import above failed; populate them from the
+# real module when available.
+create_backup_file: Any | None = _create_backup_file
+prune_backups: Any | None = _prune_backups
+# (imports consolidated at file top)
 
 # `resource` is a platform-specific stdlib module (POSIX). Annotate a
 # temporary name as optional before attempting the import so mypy knows

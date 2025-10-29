@@ -1,0 +1,10 @@
+# Example Prowlarr scraper plugin instances.
+# The Plugins UI/API manages files under /config/plugins/<plugin>.yml and
+# expects a YAML list of instance objects. Keep this file as a list.
+#
+# - name: "Prowlarr Local"
+#   enabled: true
+#   url: "http://prowlarr:9696"
+#   api_key: "REPLACE_WITH_KEY"
+
+[]

@@ -1,5 +1,3 @@
-import os
-
 # (yaml/check_password_hash removed — setup flow persistence is DB-preferred)
 
 
@@ -11,16 +9,13 @@ def test_setup_creates_user_file(tmp_path, monkeypatch, app):
     # Determine user config path patched by conftest (webui exports the
     # effective USER_CONFIG_PATH used by the app)
     client = app.test_client()
-    # Ensure webui writes to a temp path during this test
-    import researcharr.webui as w
-
-    temp_user_cfg = str(tmp_path / "webui_user.yml")
-    monkeypatch.setattr(w, "USER_CONFIG_PATH", temp_user_cfg, raising=False)
-    user_cfg = temp_user_cfg
-    # Ensure it does not exist
+    # Ensure the setup flow uses the DB-backed storage. Initialize DB tables
     try:
-        os.remove(user_cfg)
+        import researcharr.db as rdb
+
+        rdb.init_db()
     except Exception:
+        # If DB helper isn't present, proceed and let the test skip later
         pass
     # Post setup data
     resp = client.post(

@@ -11,6 +11,13 @@ import logging
 import os
 import sqlite3
 
+from typing import Any
+
+# Annotate fallback names up-front so mypy knows these may be None when
+# the optional runtime dependencies aren't available in the environment.
+requests: Any | None = None
+yaml: Any | None = None
+
 try:
     import requests  # type: ignore
 except Exception:

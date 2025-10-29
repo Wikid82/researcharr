@@ -9,16 +9,18 @@ project is used from a source checkout or as an installed package.
 from __future__ import annotations
 
 import importlib
+from typing import Any
 
 # Predefine exported names so static analysis sees them even when the
 # runtime import can't run inside the type checker/editor environment.
-registry = None
-base = None
-clients = None
-media = None
-notifications = None
-scrapers = None
+registry: Any = None
+base: Any = None
+clients: Any = None
+media: Any = None
+notifications: Any = None
+scrapers: Any = None
 
+_impl: Any | None = None
 try:
     # Prefer the repository-level `plugins` package when present.
     _impl = importlib.import_module("plugins")
@@ -38,7 +40,8 @@ if _impl is not None:
         "scrapers",
     ):
         try:
-            globals()[_name] = getattr(_impl, _name, None)
+            val: Any = getattr(_impl, _name, None)
+            globals()[_name] = val
         except Exception:
             globals()[_name] = None
 

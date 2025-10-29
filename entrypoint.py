@@ -134,13 +134,15 @@ def create_metrics_app():
             db_status = "ok"
         except Exception:
             db_status = "error"
-        return jsonify({
-            "status": "ok",
-            "db": db_status,
-            "config": "ok",
-            "threads": 1,
-            "time": "2025-10-23T00:00:00Z",
-        })
+        return jsonify(
+            {
+                "status": "ok",
+                "db": db_status,
+                "config": "ok",
+                "threads": 1,
+                "time": "2025-10-23T00:00:00Z",
+            }
+        )
 
     @app.route("/metrics")
     def metrics_endpoint():

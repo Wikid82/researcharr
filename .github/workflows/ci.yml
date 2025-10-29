@@ -46,6 +46,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install black isort flake8 mypy pytest pytest-cov
+        # Install type stubs mypy may need in CI to avoid 'Library stubs not installed' errors
+        pip install types-requests types-PyYAML || true
         # Install the package in editable mode so tests import the installed
         # package consistently (avoids local name-shadowing issues).
         pip install -e .

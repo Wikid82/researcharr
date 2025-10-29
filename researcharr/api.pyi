@@ -1,4 +1,4 @@
-from typing import Any
+from ._types import BlueprintProtocol
 
 
-bp: Any
+bp: BlueprintProtocol

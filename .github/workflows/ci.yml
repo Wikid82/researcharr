@@ -44,6 +44,10 @@ jobs:
     - name: Run tests with pytest
       # Ensure we run pytest from the package directory so coverage files are generated where codecov expects
       working-directory: .
+      env:
+        # Ensure top-level modules (e.g. factory.py) are importable during
+        # CI test collection by adding the repo root to PYTHONPATH.
+        PYTHONPATH: ${{ github.workspace }}
       run: |
         # Run tests and produce an XML coverage report for Codecov
         pytest tests/ \

@@ -21,6 +21,9 @@ jobs:
       BRANCH: "${{ github.ref_name }}"
       # Expose CODECOV_TOKEN from secrets at job level to reduce editor warnings
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+      # Use an explicit sqlite DATABASE_URL during CI so DB-backed tests run
+      # against an isolated file in the workspace.
+      DATABASE_URL: "sqlite:///${{ github.workspace }}/researcharr-test.db"
     strategy:
       matrix:
         python-version: [ 3.13 ]

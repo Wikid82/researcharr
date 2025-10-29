@@ -1,7 +1,5 @@
 import json
 
-import yaml
-
 
 def login_client(app):
     client = app.test_client()

@@ -1,91 +1,50 @@
-# General application settings
-researcharr:
-  # User and group IDs for file permissions (optional, recommended for Unraid/Synology)
-  puid: 1000 # Set to your host user ID
-  pgid: 1000 # Set to your host group ID
-  # See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for a list of valid timezones
-  timezone: "America/New_York"
-  # Scheduler expression (cron-like) that controls how often the in-process
-  # APScheduler job will run the background processing.
-  # See https://crontab.guru/ for help generating a cron expression.
+# researcharr configuration (example)
+#
+# This repository previously included PUID/PGID and timezone fields in
+# the example YAML. Those runtime values are now managed via environment
+# variables. Set these on the container/host before startup:
+#   PUID (user id for filesystem ownership)
+#   PGID (group id for filesystem ownership)
+#   TIMEZONE (tz database name, e.g. "America/New_York")
+#
+# The web UI manages most settings at runtime and persists a small set of
+# values (e.g. LogLevel) under `general.yml`. Plugin instance configuration
+# (Radarr/Sonarr/etc.) is stored under `/config/plugins/<plugin>.yml` as a
+# YAML list of instances. The plugin files are managed by the Plugins UI/API.
+
+# General runtime configuration persisted by the UI (non-runtime keys only)
+general:
+  # Only non-runtime fields are stored here; runtime-controlled values such as
+  # PUID, PGID and TIMEZONE should be provided as environment variables.
+  LogLevel: "INFO"
+
+# Scheduling: cron expression used by the in-process scheduler (APScheduler)
+# You can edit this from the Scheduling tab in the UI or change the values
+# here before first-run.
+scheduling:
   cron_schedule: "0 * * * *"
+  timezone: "UTC"
 
-# Radarr instances (up to 5 supported)
-radarr:
-- enabled: false
-  name: "Radarr 1"
-  url: ""
-  api_key: ""
-  movies_to_upgrade: 5
-  # Maximum allowed items in Radarr's download queue before skipping upgrades (default: 15)
-  max_download_queue: 15
-  # Number of days before a movie is eligible to be reprocessed (default: 7)
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Radarr 2"
-  url: ""
-  api_key: ""
-  movies_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Radarr 3"
-  url: ""
-  api_key: ""
-  movies_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Radarr 4"
-  url: ""
-  api_key: ""
-  movies_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Radarr 5"
-  url: ""
-  api_key: ""
-  movies_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
+# Backups defaults persisted by UI
+backups:
+  retain_count: 10
+  retain_days: 30
+  pre_restore: true
+  pre_restore_keep_days: 1
+  auto_backup_enabled: false
+  auto_backup_cron: "0 2 * * *"
+  prune_cron: "0 3 * * *"
 
-# Sonarr instances (up to 5 supported)
-sonarr:
-- enabled: false
-  name: "Sonarr 1"
-  url: ""
-  api_key: ""
-  episodes_to_upgrade: 5
-  # Maximum allowed items in Sonarr's download queue before skipping upgrades (default: 15)
-  max_download_queue: 15
-  # Number of days before an episode is eligible to be reprocessed (default: 7)
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Sonarr 2"
-  url: ""
-  api_key: ""
-  episodes_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Sonarr 3"
-  url: ""
-  api_key: ""
-  episodes_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Sonarr 4"
-  url: ""
-  api_key: ""
-  episodes_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Sonarr 5"
-  url: ""
-  api_key: ""
-  episodes_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
+# Notes for operators:
+# - Plugin instance configuration is stored in the plugins directory under
+#   the configured CONFIG_DIR (default: /config). Example files live at:
+#     /config/plugins/radarr.yml
+#     /config/plugins/sonarr.yml
+#   Each plugin file contains a YAML list of instances (see example plugin
+#   files under config/plugins/).
+# - The web UI creates `config/webui_user.yml` on first-run if it does not
+#   exist. Keep `/config` mounted and writable so the app can persist state.
+
+# Sample (do not delete) - plugin instances are handled in separate files:
+# radarr: []            # now managed via /config/plugins/radarr.yml
+# sonarr: []            # now managed via /config/plugins/sonarr.yml

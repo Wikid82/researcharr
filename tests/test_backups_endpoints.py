@@ -1,5 +1,4 @@
-import os
-import zipfile
+# removed unused imports (os, zipfile)
 
 
 def login_client(app):

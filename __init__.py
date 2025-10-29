@@ -21,6 +21,11 @@ from types import ModuleType
 from typing import Optional
 
 
+# Public convenience name required by some tooling/tests. Will be assigned to
+# the implementation module object when it is discovered below.
+researcharr: Optional[ModuleType] = None
+
+
 def _is_impl_module(mod: ModuleType) -> bool:
     """Return True if the module looks like the real implementation.
 
@@ -86,6 +91,17 @@ if impl is None:
         os.path.abspath(os.path.join(base, "..", "..", "researcharr.py")),
     ]
     impl = _load_by_path(candidates)
+    # If file-based loading did not produce an implementation, try a normal
+    # import of the submodule name. In some import orders Python will be
+    # able to locate the package submodule even when the direct file-based
+    # loader path didn't run or failed earlier.
+    if impl is None:
+        try:
+            maybe = importlib.import_module("researcharr.researcharr")
+            if _is_impl_module(maybe):
+                impl = maybe
+        except Exception:
+            pass
 
 if impl:
     # Ensure the implementation module has a usable __file__ value. Some
@@ -99,6 +115,19 @@ if impl:
             if origin:
                 try:
                     setattr(impl, "__file__", os.path.abspath(origin))
+                except Exception:
+                    pass
+            # As a fallback, try to find the spec by name which in some
+            # environments will provide a reliable origin path.
+            if not getattr(impl, "__file__", None):
+                try:
+                    spec2 = importlib.util.find_spec("researcharr.researcharr")
+                    if spec2 is not None:
+                        origin2 = getattr(spec2, "origin", None)
+                    else:
+                        origin2 = None
+                    if origin2:
+                        setattr(impl, "__file__", os.path.abspath(origin2))
                 except Exception:
                     pass
     except Exception:
@@ -127,6 +156,29 @@ if impl:
     # Register the implementation under the expected module name and set
     # the package attribute so all import forms resolve to the same
     # implementation object.
+    # Prefer an explicit load of the package-level implementation file
+    # (researcharr/researcharr.py) when present. This ensures a consistent
+    # implementation module object regardless of import order or how the
+    # import machinery resolved the package name earlier.
+    try:
+        base = os.path.abspath(os.path.dirname(__file__))
+        pkg_impl_path = os.path.join(base, "researcharr", "researcharr.py")
+        if os.path.isfile(pkg_impl_path):
+            # Only reload if the current impl doesn't already come from
+            # that path.
+            if os.path.abspath(getattr(impl, "__file__", "")) != os.path.abspath(
+                pkg_impl_path
+            ):
+                name = "researcharr.researcharr"
+                spec = importlib.util.spec_from_file_location(name, pkg_impl_path)
+                if spec and spec.loader:
+                    new_mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(new_mod)  # type: ignore[arg-type]
+                    impl = new_mod
+    except Exception:
+        # Non-fatal: fall back to previously-determined impl if anything
+        # goes wrong while trying to prefer the package file.
+        pass
     sys.modules["researcharr.researcharr"] = impl
     pkg = sys.modules.get("researcharr")
     if pkg is not None:
@@ -135,7 +187,45 @@ if impl:
         except Exception:
             # Non-fatal: best-effort to set the attribute for consumers.
             pass
+    # Ensure common dependent modules are available as attributes on the
+    # implementation and registered in sys.modules. This makes dotted
+    # import paths (used by tests and monkeypatch) resolve correctly.
+    try:
+        try:
+            import requests as _requests_module
+        except Exception:
+            _requests_module = None
+        try:
+            import yaml as _yaml_module
+        except Exception:
+            _yaml_module = None
+
+        if _requests_module is not None and not getattr(impl, "requests", None):
+            try:
+                setattr(impl, "requests", _requests_module)
+                name = "researcharr.researcharr.requests"
+                sys.modules.setdefault(name, _requests_module)
+            except Exception:
+                pass
+
+        if _yaml_module is not None and not getattr(impl, "yaml", None):
+            try:
+                setattr(impl, "yaml", _yaml_module)
+                name = "researcharr.researcharr.yaml"
+                sys.modules.setdefault(name, _yaml_module)
+            except Exception:
+                pass
+    except Exception:
+        pass
 
 
 # Expose a convenience name for debugging/import inspection
 __all__ = ["researcharr"]
+
+# Export the discovered implementation module under the convenient name
+# so tools and editors that consult module globals see the symbol.
+try:
+    if 'impl' in globals() and impl is not None:
+        researcharr = impl
+except Exception:
+    pass

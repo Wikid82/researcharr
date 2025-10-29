@@ -20,13 +20,39 @@ class FlaskClient(Protocol):
 
     def put(self, path: str, json: object | None = None, **kwargs: object) -> Any:
         ...
+    
+    # Support use as a context manager in tests: `with app.test_client() as c:`
+    def __enter__(self) -> "FlaskClient":
+        ...
+
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        ...
+
+
+class PluginRegistry(Protocol):
+    def register(self, name: str, cls: type[Any]) -> None:
+        ...
+
+    def get(self, name: str) -> Any:
+        ...
+
+    def discover_local(self, plugins_dir: str) -> None:
+        ...
+
+    def create_instance(self, plugin_name: str, config: dict[str, Any]) -> Any:
+        ...
+
+    def list_plugins(self) -> list[str]:
+        ...
 
 
 class FlaskApp(Protocol):
     # Minimal runtime attributes used by the code/tests
     config_data: dict[str, Any]
+    # Flask exposes `app.config` in many tests; provide a basic mapping here
+    config: dict[str, Any]
     metrics: dict[str, Any]
-    plugin_registry: Any | None
+    plugin_registry: "PluginRegistry" | None
     secret_key: str
 
     def test_client(self) -> FlaskClient:

@@ -22,7 +22,6 @@ services:
       - JOB_TIMEOUT=0
       # Development debug flags (set to 'true' to enable)
       - WEBUI_DEV_DEBUG=true
-      - WEBUI_DEV_PRINT_CREDS=true
       - WEBUI_DEV_ENABLE_DEBUG_ENDPOINT=true
     volumes:
       # Mount the project source into the container for live edits & immediate debugging
@@ -32,6 +31,10 @@ services:
       - ./logs:/config/logs:rw
     tty: true
     stdin_open: true
+    # Use the repository-local entrypoint (mounted into /app) so local
+    # edits to `entrypoint.sh` are used during development without rebuilding
+    # the published image. This is a development convenience only.
+    entrypoint: ["/app/entrypoint.sh"]
     # Run the entrypoint as root in dev so it can perform chown/chmod on bind mounts,
     # then the entrypoint will drop privileges into the configured PUID/PGID.
     # Use a simple command that ensures any local changes to requirements are installed

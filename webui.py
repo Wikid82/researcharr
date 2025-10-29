@@ -39,19 +39,19 @@ def load_user_config():
     # write to the project config path instead of the environment-backed
     # USER_CONFIG_PATH. Prefer the explicit USER_CONFIG_PATH when present.
     path = USER_CONFIG_PATH
-    local_fallback = os.path.abspath(
-        os.path.join(os.getcwd(), "config", "webui_user.yml")
-    )
-    # Only use the repo-local fallback when the configured USER_CONFIG_PATH
-    # is the default '/config/webui_user.yml'. If USER_CONFIG_PATH was set by
-    # tests or explicitly by the operator, respect that path.
-    if path == "/config/webui_user.yml" and os.path.exists(local_fallback):
-        path = local_fallback
-
     user_dir = os.path.dirname(path)
     if not os.path.exists(user_dir):
         os.makedirs(user_dir, exist_ok=True)
     if not os.path.exists(path):
+        # By default do not auto-generate credentials on first-run; instead
+        # present an interactive setup page. For unattended installs or
+        # test environments, allow auto-generation via the
+        # AUTO_GENERATE_WEBUI_CREDS env var or when running under pytest.
+        auto_gen = _env_bool(
+            "AUTO_GENERATE_WEBUI_CREDS", os.getenv("PYTEST_CURRENT_TEST", "false")
+        )
+        if not auto_gen:
+            return None
         # Create a secure random password for first-time use and log it once
         alphabet = string.ascii_letters + string.digits
         generated = "".join(secrets.choice(alphabet) for _ in range(16))
@@ -68,13 +68,9 @@ def load_user_config():
         }
         with open(path, "w") as f:
             yaml.safe_dump(data, f)
-        # Decide whether to print/log plaintext credentials. By default
-        # this is disabled; set WEBUI_DEV_DEBUG=true or
-        # WEBUI_DEV_PRINT_CREDS=true to enable in development.
-        # Always emit an informational log entry that initial credentials
-        # were generated so test harnesses and operators can detect first-run
-        # events. Printing the plaintext credentials to stdout is optional
-        # and controlled by WEBUI_DEV_PRINT_CREDS / WEBUI_DEV_DEBUG.
+        # Emit an informational log entry that initial credentials were
+        # generated so test harnesses and operators can detect first-run
+        # events. Printing plaintext is gated by WEBUI_DEV_PRINT_CREDS.
         logger = logging.getLogger("researcharr")
         try:
             logger.info(
@@ -93,24 +89,31 @@ def load_user_config():
                 logger.info("API token (printed once): %s", api_token)
             except Exception:
                 pass
-            # Also print the plaintext to stdout so it's visible in container logs.
+            # Also print the plaintext to stdout so it's visible in container
+            # logs. When Flask's reloader is enabled the process is restarted
+            # and prints from the pre-reload parent may be lost; prefer to
+            # emit plaintext only from the long-running child process or
+            # when not running under the reloader. Check the
+            # WERKZEUG_RUN_MAIN env var (set to 'true' in the reloader child).
             try:
-                # Print shorter, separate lines so we don't exceed the line length
-                # limit and to avoid a very long single f-string.
-                print(f"Generated web UI initial user: {data['username']}")
-                print(f"Password (printed once): {generated}")
-                print(f"API token (printed once): {api_token}")
+                main_flag = os.getenv("WERKZEUG_RUN_MAIN")
+                flask_env = os.getenv("FLASK_ENV", "").lower()
+                should_print = (main_flag == "true") or (
+                    main_flag is None and flask_env != "development"
+                )
             except Exception:
-                # If printing fails, ignore — the hash was persisted.
-                pass
-        # Return the generated plaintext to the caller so the running app can
-        # set its in-memory password for immediate login. Also include the
-        # plaintext API token so the operator can copy it once (we persist
-        # only the hash to disk).
+                should_print = True
+
+            if should_print:
+                try:
+                    print(f"Generated web UI initial user: {data['username']}")
+                    print(f"Password (printed once): {generated}")
+                    print(f"API token (printed once): {api_token}")
+                except Exception:
+                    pass
+
         data["password"] = generated
         data["api_key"] = api_token
-        # Return the generated plaintext values to the caller so the
-        # application can set in-memory credentials for immediate login.
         return data
     # Existing user config on disk: return the persisted values (hashes)
     with open(path, "r") as f:

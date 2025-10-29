@@ -1,9 +1,6 @@
 import os
 import time
 import zipfile
-from pathlib import Path
-
-import pytest
 
 
 def test_create_backup_includes_expected_files(tmp_path, monkeypatch):
@@ -50,7 +47,7 @@ def test_prune_backups_respects_retention(tmp_path):
         os.utime(p, (m, m))
         files.append(p.name)
 
-    # add a pre-restore file that is old but should be kept if within pre_restore_keep_days
+    # add a pre-restore file that is old but should be kept by pre_restore_keep_days
     pre = d / "pre-old.zip"
     pre.write_text("y")
     pre_m = now - (2 * 86400)
@@ -63,6 +60,6 @@ def test_prune_backups_respects_retention(tmp_path):
     backups.prune_backups(str(d), cfg)
 
     remaining = sorted([p.name for p in d.iterdir() if p.is_file()])
-    # newest two should remain and pre-old should be kept because pre_keep_days=3 and it's 2 days old
+    # newest two should remain; pre-old should be kept because pre_keep_days=3
     assert len(remaining) <= 3
     assert "pre-old.zip" in remaining

@@ -6,7 +6,7 @@ import pathlib
 import shutil
 import time
 import zipfile
-# from datetime import datetime  (not required at module scope)
+from typing import TYPE_CHECKING, Any
 
 import yaml
 from flask import (
@@ -25,9 +25,10 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
-from typing import Any, TYPE_CHECKING
-
 from researcharr.backups import create_backup_file, prune_backups
+
+# from datetime import datetime  (not required at module scope)
+
 
 try:
     # Prefer importing webui from the package if available
@@ -291,7 +292,9 @@ def create_app():
 
     try:
         try:
-            from researcharr.plugins.registry import PluginRegistry  # type: ignore
+            from researcharr.plugins.registry import (
+                PluginRegistry,  # type: ignore
+            )
 
             registry = PluginRegistry()
         except Exception:
@@ -2228,10 +2231,10 @@ def create_app():
     def api_updates_upgrade():
         """Start a controlled in-app upgrade by downloading the selected asset.
 
-    Request JSON: {"asset_url": "https://..."}
-    This endpoint is disabled when running in an image-managed runtime.
-    The download runs in a background thread.
-    It writes to CONFIG_DIR/updates/downloads.
+        Request JSON: {"asset_url": "https://..."}
+        This endpoint is disabled when running in an image-managed runtime.
+        The download runs in a background thread.
+        It writes to CONFIG_DIR/updates/downloads.
         """
         if not is_logged_in():
             return jsonify({"error": "unauthorized"}), 401

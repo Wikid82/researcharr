@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>researcharr — Setup complete</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+      html,body{height:100%;margin:0}
+      .outer{display:flex;align-items:center;justify-content:center;height:100%}
+      .card{max-width:640px;width:100%;padding:28px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.08)}
+      .muted{color:#666;font-size:0.95rem}
+      .token{word-break:break-all;padding:12px;background:#f7f9fc;border:1px solid #e6eef9;border-radius:6px}
+      .btn.primary{background:#2d8cf0;color:#fff;padding:10px 14px;border-radius:4px;border:none}
+    </style>
+  </head>
+  <body>
+    <div class="outer">
+      <div class="card">
+        <h2>Setup complete</h2>
+        <p class="muted">The admin account <strong>{{ username }}</strong> was created.</p>
+        {% if api_token %}
+        <p class="muted">The generated API token (copy this now — it will not be shown again):</p>
+        <div class="token">{{ api_token }}</div>
+        {% endif %}
+        <p style="margin-top:16px;"><a class="btn primary" href="/login">Continue to login</a></p>
+      </div>
+    </div>
+  </body>
+</html>

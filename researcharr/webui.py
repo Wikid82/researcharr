@@ -8,6 +8,8 @@ At runtime it re-exports names from the top-level `webui` module.
 from __future__ import annotations
 
 import importlib
+import importlib.util
+import os
 
 # Thin shim: import the top-level `webui` module (if present) and
 # re-export the handful of public names we expect consumers/tests to use.
@@ -16,7 +18,21 @@ import importlib
 try:
     _impl = importlib.import_module("webui")
 except Exception:
-    _impl = None  # type: ignore[assignment]
+    # Fall back to loading the repository-level `webui.py` by path so the
+    # shim works when tests or runtime change the current working
+    # directory and `webui` isn't importable by name.
+    try:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+        candidate = os.path.join(repo_root, "webui.py")
+        spec = importlib.util.spec_from_file_location("webui", candidate)
+        if spec is None or spec.loader is None:
+            _impl = None
+        else:
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)  # type: ignore
+            _impl = mod
+    except Exception:
+        _impl = None  # type: ignore[assignment]
 
 # Explicitly rebind the known public symbols from the implementation
 # module into the package shim namespace. This keeps the shim small

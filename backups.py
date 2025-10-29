@@ -194,15 +194,17 @@ def prune_backups(backups_dir: str | Path, cfg: Optional[dict] = None) -> None:
         return
 
     try:
-        if not Path(backups_dir).is_dir():
+        backups_dir_path = Path(backups_dir)
+        if not backups_dir_path.is_dir():
             return
-        files = []
-        for fname in sorted(Path(backups_dir).iterdir()):
-            if not fname.is_file() or not fname.name.endswith(".zip"):
+        # list of tuples: (filename, mtime)
+        files: list[tuple[str, float]] = []
+        for entry in sorted(backups_dir_path.iterdir()):
+            if not entry.is_file() or not entry.name.endswith(".zip"):
                 continue
             try:
-                st = fname.stat()
-                files.append((fname.name, st.st_mtime))
+                st = entry.stat()
+                files.append((entry.name, st.st_mtime))
             except Exception:
                 continue
 
@@ -212,31 +214,31 @@ def prune_backups(backups_dir: str | Path, cfg: Optional[dict] = None) -> None:
         now = __import__("time").time()
         if retain_days > 0:
             cutoff = now - (retain_days * 86400)
-            for fname, mtime in list(files):
+            for fname_str, mtime in list(files):
                 if mtime < cutoff:
                     try:
-                        should_keep_pre = fname.startswith("pre-") and (now - mtime) < (
-                            pre_keep * 86400
-                        )
+                        should_keep_pre = fname_str.startswith("pre-") and (
+                            now - mtime
+                        ) < (pre_keep * 86400)
                         if should_keep_pre:
                             continue
                         try:
-                            (Path(backups_dir) / fname).unlink()
-                            files = [f for f in files if f[0] != fname]
+                            (backups_dir_path / fname_str).unlink()
+                            files = [f for f in files if f[0] != fname_str]
                         except Exception:
                             # fall back to os.remove if unlink fails for any reason
-                            os.remove(os.path.join(backups_dir, fname))
-                            files = [f for f in files if f[0] != fname]
+                            os.remove(os.path.join(str(backups_dir_path), fname_str))
+                            files = [f for f in files if f[0] != fname_str]
                     except Exception:
                         continue
 
         if retain_count > 0 and len(files) > retain_count:
-            for fname, _ in files[retain_count:]:
+            for fname_str, _ in files[retain_count:]:
                 try:
-                    (Path(backups_dir) / fname).unlink()
+                    (backups_dir_path / fname_str).unlink()
                 except Exception:
                     try:
-                        os.remove(os.path.join(backups_dir, fname))
+                        os.remove(os.path.join(str(backups_dir_path), fname_str))
                     except Exception:
                         continue
     except Exception:

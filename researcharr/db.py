@@ -3,12 +3,13 @@
 This module stores a single webui user (username, password_hash,
 api_key_hash) using sqlite3. It prefers DATABASE_URL when set
 """
+
 from __future__ import annotations
 
 import os
 import sqlite3
 import time
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 
 def _get_db_path() -> str:

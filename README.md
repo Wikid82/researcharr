@@ -13,402 +13,60 @@ A modern, always-on utility to automatically trigger searches in the *arr suite 
   <a href="https://codecov.io/gh/Wikid82/researcharr">
     <img src="https://codecov.io/gh/Wikid82/researcharr/graph/badge.svg?token=LBEJBSUPLX" alt="Codecov" />
   </a>
-  <a href="https://github.com/Wikid82/researcharr/actions/workflows/ci.yml">
-    <img src="https://github.com/Wikid82/researcharr/workflows/CI/badge.svg" alt="CI" />
-  </a>
-  <!-- We run a single CI workflow that builds/tests a Debian-slim based image and runs Trivy scans -->
-</p>
+  <p align="center" style="background: rgba(255, 255, 255, 1); padding: 16px; border-radius: 8px;">
+    <img src="static/logo.jpg" alt="researcharr logo" height="120"/>
+  </p>
 
+  # researcharr
 
+  A compact, operator-friendly service to validate and trigger “arr” searches (Radarr/Sonarr/etc.) via a secure web UI and scheduler. Designed for reliable automation, observability, and easy Docker deployment.
 
-## Developer Note: Config Loader & Test Coverage
+  Badges
 
-The `load_config()` function now accepts an optional `path` argument, allowing tests and advanced users to load configuration from any file. This enables robust testing of config edge cases (missing, empty, malformed, or partial configs) and makes it easier to develop and validate new features. The test suite now covers config loading, error handling for connections, database integrity, and logger output.
+  [![CI](https://github.com/Wikid82/researcharr/workflows/CI/badge.svg)](https://github.com/Wikid82/researcharr/actions/workflows/ci.yml) [![Docs](https://github.com/Wikid82/researcharr/workflows/Deploy%20docs%20to%20GitHub%20Pages/badge.svg)](https://wikid82.github.io/researcharr/)
 
-**Key Features:**
-- Modern AJAX web UI (instant navigation, no page reloads)
-- Secure login, user management, and error feedback
-- Edit all config (including schedule/timezone) from the UI
-- Enable/disable and validate up to 5 Radarr & 5 Sonarr instances
-- All endpoints and UI behaviors are covered by automated tests
+  Quick start
 
-## Developer Note: Linting, typing, and import-shim hardening
+  1) Create a config directory and run the production image (recommended):
 
-We recently enforced the repository linting and typing pipeline locally and in CI: formatters (isort + black), flake8 (E501 now enforced), mypy, and pytest with coverage. During that work we hardened the compatibility import shim used to expose the top-level module as a package so tests and monkeypatching are deterministic across import orders. This resolved an intermittent AttributeError seen in the test suite.
-
-Recommended image tags for reproducing CI or running interactively:
-
-- `local/researcharr:builder` — builds a developer image (matches CI builder stage) and is the recommended tag for reproducing CI validation (mypy + pytest).
-- `ghcr.io/wikid82/researcharr:prod` — production runtime image (Debian-slim, built from the multistage `Dockerfile`).
-- `ghcr.io/wikid82/researcharr:dev` — developer/debug image (same base as `prod` with extra debugging tools installed).
-
-If you'd like, I can push the verified changes to the `development` branch and monitor CI runs (CI will build the `prod` and `dev` variants and run Trivy); confirm and I'll proceed.
-
-## Project Structure
-
-```
-researcharr/
-├── config.example.yml
-├── .github/
-│   └── workflows/
-│       └── docker-publish.yml
-├── Dockerfile
-├── LICENSE
-├── README.md
-├── researcharr.py
-├── docker-compose.yml
-├── entrypoint.sh
-└── requirements.txt
-```
-
-Documentation
-
-- Local docs: see the `docs/` folder in this repository for contributor and user documentation.
-- Local docs: see the `docs/` folder in this repository for contributor and user documentation.
-
-API docs / Swagger UI
----------------------
-
-An interactive Swagger UI is available at `/api/v1/docs` and reads the OpenAPI JSON at `/api/v1/openapi.json`.
-For security this documentation endpoint requires a valid API key provided via the `X-API-Key` header (it does not allow anonymous or session-only access). Please avoid exposing the docs endpoint to the public internet unless access to the API key is tightly controlled.
-- FAQ: see `docs/FAQ.md` for common questions and troubleshooting tips.
-- Published docs (GitHub Pages): https://wikid82.github.io/researcharr/  (deployed from `docs/` on `main` via GitHub Actions)
-
-![GitHub Pages](https://github.com/Wikid82/researcharr/workflows/Deploy%20docs%20to%20GitHub%20Pages/badge.svg)
-
-Preview docs for other branches
-
-Preview docs for other branches
-
-- Branch previews are available under the Pages site at `/previews/<branch>/` (for example `https://wikid82.github.io/researcharr/previews/development/`). Previews are generated automatically for non-`main` branches on push.
-
-Docs validation
-
-- Pull requests to `development` and `main` run a docs link-checker that validates internal and external links in the `docs/` site; fix any reported link errors before merging.
-
-Docker images per-branch (automated)
-
-- When CI completes successfully for a push, a Docker image is automatically published to GitHub Container Registry and tagged with the branch name. Example tags:
-  - `ghcr.io/wikid82/researcharr:plugins`
-  - `ghcr.io/wikid82/researcharr:branch-plugins`
-- Special branch tags: when the branch is `development` or `main`, the workflow also publishes additional tags (`:development` and `:latest` respectively).
-
-How to pull & run a branch image:
-
-```bash
-docker pull ghcr.io/wikid82/researcharr:plugins
-docker run --rm -v /path/to/config:/config -p 2929:2929 ghcr.io/wikid82/researcharr:plugins
-```
-
-Notes:
-
-- Images are only published after CI passes for push events (not for PRs from forks) to protect secrets and avoid accidental publishes.
-- Branch images are useful for QA/testing feature branches. Consider cleaning up unused images periodically.
-
-Runtime image variants (production vs development)
-
-We maintain a single Debian-slim based production image and a debug variant built from the same pipeline. This balances security, compatibility with manylinux wheels, and developer ergonomics.
-
-- `ghcr.io/wikid82/researcharr:prod` — production image based on Debian-slim (recommended for operators). Use this for production deployments; it is built by our CI pipeline from the multistage `Dockerfile`.
-- `ghcr.io/wikid82/researcharr:dev` — debug/developer image (same base as `prod` with extra dev tooling installed). Use this when you need a shell or debugging utilities.
-
-Tags published (examples):
-
-- `ghcr.io/wikid82/researcharr:<version>-prod` and `ghcr.io/wikid82/researcharr:prod`
-- `ghcr.io/wikid82/researcharr:<version>-dev` and `ghcr.io/wikid82/researcharr:dev`
-
-Default policy
-
-CI builds and validates the `prod` and `dev` variants. We run Trivy scans during CI and require remediation for any CRITICAL/HIGH findings before promoting an image to a production recommendation.
-
-Which to run locally (quick guide)
-
-- Production / operator (recommended): use the `prod` image and mount a persistent `/config` directory on the host (example below).
-- Development / debugging: use the `dev` image (it includes a shell and common debugging tools).
-Examples
-
-1) Run the recommended production image (distroless):
-
-```bash
-mkdir -p /path/to/config /path/to/logs
-docker run -d \
-  --name researcharr \
-  -v /path/to/config:/config \
-  -v /path/to/logs:/logs \
-  -p 2929:2929 \
-  --restart unless-stopped \
-  ghcr.io/wikid82/researcharr:distroless
-```
-
-2) Developer quick-run (debug image, with interactive shell):
-
-```bash
-# mount and run the debug image (includes shell & dev tools)
-docker run --rm -it \
-  -v "$(pwd)":/app -w /app \
-  -v /path/to/config:/config \
-  -p 2929:2929 \
-  ghcr.io/wikid82/researcharr:dev /bin/bash
-# inside the container you can run tests, linters and the app directly:
-python -m pip install -r requirements.txt
-python -m pytest tests/
-python -u /app/run.py
-```
-
-3) Builder-stage testing (matches CI environment):
-
-```bash
-# Build the builder image (installs build deps + packages)
-docker build --target builder -f Dockerfile.distroless -t local/researcharr:builder .
-
-# Run tests in the builder image (no need to install dev tools locally)
-docker run --rm --entrypoint "" -v "$(pwd)":/src -w /src local/researcharr:builder \
-  sh -lc "python -m pip install --upgrade pip && pip install mypy pytest && mypy . && pytest tests/"
-```
-
-Development config vs user config
-
-- **User / operator config:** mount a persistent host directory at `/config` and let the container populate `config.yml` from `config.example.yml` on first-run. This is the simplest and safest setup for operators.
-- **Development config:** when contributing, mount your repo into the container and use the `builder` or `alpine` images. Use your host editor to change files and run the in-container test commands. Avoid using the distroless runtime for active development because it lacks a shell and dev tooling.
-
-## Developer compose & debug notes
-
-The repository includes a few compose files and a small helper script to make local development and debugging easier:
-
-- `docker-compose.yml` — production-like compose file for running the container locally with a mounted `./config` directory.
-- `docker-compose.dev.yml` — developer convenience compose that mounts the source tree into the container so you can iterate quickly and run tests in-container.
-- `docker-compose.hardened.yml` — an optional override demonstrating secure runtime options (for example: `no-new-privileges`, `cap_drop`, running as a non-root user, `tmpfs` for `/tmp`). Use it as an example by combining it with the base compose file:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.hardened.yml up --build
-```
-
-Preparing a local config
-
-```bash
-cp config.example.yml config/config.yml
-```
-
-Bootstrapping configuration files
-
-If you'd like a single helper to copy the repo examples into a host `./config`
-directory and set ownership for the container runtime user, use the
-`scripts/bootstrap-config.sh` helper. It will copy `config/config.yml` and
-any files under `config/plugins/` into the target directory and attempt to
-chown them to `PUID:PGID` (default 1000:1000) so the container user can
-write to them.
-
-Usage (from repo root):
-
-```bash
-scripts/bootstrap-config.sh ./config
-# or let it use defaults:
-scripts/bootstrap-config.sh
-```
-
-After populating `./config`, run the container with the host mount and set
-the runtime env vars (PUID, PGID, TIMEZONE) in your compose or environment.
-
-Plugin templates and contributing
-
-The repository includes commented example plugin instance templates under
-`config/plugins/`. These are YAML lists intended for pre-seeding plugin
-instances. For details on how plugin instance files are used and how to
-contribute new plugin code, see `docs/Plugins.md`.
-
-
-Run the development compose (mount source, run in foreground):
-
-```bash
-docker compose -f docker-compose.dev.yml up --build
-```
-
-Debugging and collecting logs
-
-We include `debug-collect.sh` which gathers useful debugging artifacts (container logs, `/app/VERSION`, and the mounted `config` contents) into a tarball. Run it on a host that can reach your containers to collect artifacts quickly.
-
-Example:
-
-```bash
-./debug-collect.sh > debug-collect-output.tar.gz
-```
-
-CI smoke-test artifacts
-
-If a CI smoke-test fails the workflows will now attach a `smoke-logs-*.tar.gz` artifact containing container logs and a small dump of the health output. This helps debugging flaky startup issues quickly.
-
-
-
-## Requirements
-
-- Python 3.8+
-- Docker (for containerized usage)
-- [Radarr](https://radarr.video/) and/or [Sonarr](https://sonarr.tv/) instances
-
-All required Python packages are listed in `requirements.txt` and are installed automatically when building or running the Docker container. This includes:
-
-- Flask (for the web UI)
-- Werkzeug (for secure login/password hashing)
-- PyYAML (for YAML config and user management)
-
-If running outside Docker, install dependencies with:
-
-```bash
-pip install -r requirements.txt
-```
-
-
-## Health & Metrics Endpoints (NEW)
-
-researcharr exposes a single set of `/health` and `/metrics` endpoints on port `2929` (the combined web UI + scheduler service). Use these endpoints for Docker healthchecks, monitoring, and basic debugging.
-
-- `/health`: Returns a JSON object indicating the health of the service (DB, config, background threads, and current time).
-- `/metrics`: Returns a JSON object with basic metrics such as total requests, errors, and queue lengths.
-
-**Docker Compose Healthcheck Example:**
-
-```yaml
-services:
-  researcharr:
-    # ...other config...
-    command: python researcharr.py serve
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:2929/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-```
-
-You can also check these endpoints manually:
-
-```bash
-curl http://localhost:2929/health
-curl http://localhost:2929/metrics
-```
-
-See `docs/Health-and-Metrics.md` for full details.
-
-## CI and Docker publishing (CI updates)
-
-The project runs continuous integration on every push and every pull request via `.github/workflows/ci.yml` (root and project-level workflows).
-
-CI highlights for contributors:
-
-- Linting: `flake8` (style and simple mistakes).
-- Formatting checks: `black` and `isort` are run in check-only mode in CI. `isort` is configured to use Black's import formatting via `researcharr/.isort.cfg`.
-- Type checks: `mypy` where configured.
-- Tests: `pytest` runs the full test suite.
-- Caching: The workflow uses pip caching to speed up dependency installs.
-
-Local developer quick-start:
-
-1. Install dependencies into a virtualenv:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-2. Run the repo formatting and tests (CI uses check-only for formatting; locally run the auto-fixers before committing):
-
-```bash
-isort --profile=black .
-black .
-python -m pytest tests/
-```
-
-3. Use `pre-commit` (recommended) to run checks before committing. See `.pre-commit-config.yaml` in the repository root.
-
-Docker publishing and tags:
-
-Docker images are built and published for branches via `researcharr/.github/workflows/docker-publish.yml`. Images are tagged per-branch and pushed to GitHub Container Registry (GHCR):
-
-- `ghcr.io/wikid82/researcharr:<branch>`
-- `ghcr.io/wikid82/researcharr:branch-<branch>`
-
-Special tags are pushed for these branches:
-
-- `main` → `:latest`
-- `development` → `:development`
-
-## Versioning & Releases (summary)
-
-We include build metadata with each image and expose it at runtime for
-traceability. For full details (CI tagging, labels, manifest inspection,
-and troubleshooting) see `docs/Versioning.md`.
-
-Quick check (run locally):
-
-```bash
-curl http://localhost:2929/api/version
-```
-
-The detailed policy and examples are in `docs/Versioning.md`.
-
-Notes about CI pre-release behavior:
-
-- If a commit is decorated with an exact tag (for example `v1.2.3`), the CI
-  build will use that tag (stripping a leading `v`) as the canonical version
-  added to labels and tags.
-- For non-tag builds CI will generate a small pre-release version so images
-  remain traceable. The format used by CI is `0.0.0-alpha.<run>` by default
-  (where `<run>` is the GitHub Actions run number). CI will also create a
-  build-specific tag such as `0.0.0-alpha.45-build45` so you can correlate an
-  image with a particular workflow run.
-
-All of these values are written into `/app/VERSION` in the image and are
-exposed via `GET /api/version`. Use that endpoint (or the image digest from
-CI) to confirm exactly which build you are running.
-
-## How to Use
-
-1.  **Create a configuration directory:**
   ```bash
   mkdir -p /path/to/config
-  # You do not need to manually copy config.yml unless you want to pre-configure settings.
-  # If /config/config.yml is missing, it will be auto-created from config.example.yml at container startup.
+  docker run -d \
+    --name researcharr \
+    -v /path/to/config:/config \
+    -p 2929:2929 \
+    --restart unless-stopped \
+    ghcr.io/wikid82/researcharr:prod
   ```
 
-2.  **Edit your configuration:**
-  Open `/path/to/config/config.yml` in your favorite editor and fill in the values for up to 5 Radarr and 5 Sonarr instances, schedule, and timezone. Each instance can be enabled or disabled. All options are documented in the example file. The scheduler expression (cron-like) can also be edited from the "Scheduling" tab in the web UI; the app uses an in-process scheduler (APScheduler) to run the background processing according to that expression.
+  2) Visit the web UI at: http://localhost:2929/
 
-3.  **Run the container:**
-    You can use either Docker Compose (recommended) or a `docker run` command. See the examples below. The first time the script runs, it will create a `researcharr.db` file and a `logs` directory inside your config volume.
+  3) Want to develop or run the tests? Use the builder/dev images or the `docker-compose.dev.yml` from the repo. See docs for details.
 
+  Why use researcharr?
 
-4.  **Check the logs and health:**
-  - Live logs are streamed and can be viewed using the `docker logs` command. See the Logging section for more details.
-  - Health and metrics endpoints are available for monitoring and Docker healthchecks (see above).
+  - Small, focused: validates and schedules searches against Radarr/Sonarr-like services.
+  - Docker-first: production and dev images (CI-validated) with a consistent multistage build.
+  - Observability: /health and /metrics endpoints, logs, and CI-backed tests and scans.
 
-  ## Environment variables
+  More details
 
-  See `docs/Environment-Variables.md` for the full list of runtime environment variables (PUID, PGID, TIMEZONE, LOGLEVEL, WEBUI_PORT, WEBUI_RESET_TOKEN) and examples for Docker Compose. These variables must be set before container start; the web UI no longer allows editing PUID/PGID/Timezone.
+  This repository includes full docs with configuration, environment variables, CI notes, and operator guidance. Please see the site for full instructions and advanced topics:
 
-  ## Production deployment (recommended)
+  - Getting started & quick reference: `docs/Getting-Started.md`
+  - Runtime env vars: `docs/Environment-Variables.md`
+  - Health, metrics and logging: `docs/Health-and-Metrics.md` and `docs/Logs.md`
+  - Contributing and development workflow: `docs/CI-and-Development.md` and `docs/Contributing.md`
 
-  For production use, run the web UI under a WSGI server such as Gunicorn instead of the Flask development server. Example:
+  Contributors
 
-  ```bash
-  # Run with 3 workers and thread-based workers; tune GUNICORN_WORKERS/GUNICORN_THREADS
-  gunicorn -w ${GUNICORN_WORKERS:-3} -k gthread --threads ${GUNICORN_THREADS:-4} \
-    --timeout ${GUNICORN_TIMEOUT:-30} \
-    researcharr.factory:app
-  ```
+  See `docs/Contributing.md` for guidance on development, tests, and the contributor workflow.
 
-  Set `GUNICORN_WORKERS`, `GUNICORN_THREADS`, and `GUNICORN_TIMEOUT` via environment variables in your production deployment to tune concurrency and timeouts.
+  License
 
-5.  **Use the Web UI (AJAX-powered, always-on):**
-    - Launch with:
-      ```bash
-      docker exec -it researcharr python3 /app/webui.py
-      ```
-      Then visit [http://localhost:2929](http://localhost:2929) in your browser.
-    - **Login is required.**
-      - Default username: `researcharr` on first-run
-      - Default password: a secure random password is generated automatically on first startup and its plaintext value is logged once to the application logs. The generated password is stored as a hashed value in `config/webui_user.yml`.
-      - Troubleshooting / retrieving the initial password:
+  This project is released under the terms of the MIT license. See `LICENSE` for details.
 
+  If you'd like, I can open a PR merging the `reception` branch into `development` once you confirm — I left longer operator/developer guidance in `docs/` and trimmed this `README.md` to a short quickstart and links to the full documentation.
         If you start the full web UI (not a one-shot scheduler run) the first-run password will be logged once to container logs. To retrieve it:
 
         ```bash

@@ -91,6 +91,24 @@ def create_backup_file(
                         "Failed to snapshot sqlite DB %s; skipping DB in backup",
                         db_src,
                     )
+                    # If snapshot failed (e.g. file is not a sqlite DB), fall
+                    # back to including the raw DB file so the archive still
+                    # contains a copy under db/researcharr.db for restore.
+                    try:
+                        arcname = "db/researcharr.db"
+                        try:
+                            zf.write(str(db_src), arcname=arcname)
+                        except Exception:
+                            # Last-resort: if write fails, log and continue
+                            LOGGER.exception(
+                                "Failed to include raw DB file %s in zip",
+                                db_src,
+                            )
+                    except Exception:
+                        LOGGER.exception(
+                            "Unexpected error while including raw DB %s",
+                            db_src,
+                        )
                     try:
                         if tmp_snapshot and tmp_snapshot.exists():
                             tmp_snapshot.unlink()
@@ -118,7 +136,13 @@ def create_backup_file(
                         pass
 
                 rel = p.relative_to(config_root)
-                arc = Path("config") / rel
+                # Place plugin instance files at top-level `plugins/` in the
+                # archive (so restores place them directly under /config/plugins
+                # if extracted), but keep other files under `config/`.
+                if rel.parts and rel.parts[0] == "plugins":
+                    arc = Path(*rel.parts)
+                else:
+                    arc = Path("config") / rel
                 zf.write(p, arcname=str(arc))
 
             # cleanup snapshot file

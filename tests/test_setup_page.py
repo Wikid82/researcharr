@@ -1,4 +1,5 @@
 import os
+
 import yaml
 from werkzeug.security import check_password_hash
 
@@ -16,6 +17,7 @@ def test_setup_creates_user_file(tmp_path, monkeypatch, app):
     client = app.test_client()
     # Ensure webui writes to a temp path during this test
     import researcharr.webui as w
+
     temp_user_cfg = str(tmp_path / "webui_user.yml")
     monkeypatch.setattr(w, "USER_CONFIG_PATH", temp_user_cfg, raising=False)
     user_cfg = temp_user_cfg

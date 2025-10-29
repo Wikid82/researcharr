@@ -3,10 +3,10 @@
 import importlib.util
 import os
 import pathlib
+import secrets
 import shutil
 import time
 import zipfile
-import secrets
 from typing import TYPE_CHECKING, Any
 
 import yaml

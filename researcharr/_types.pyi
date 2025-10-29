@@ -2,10 +2,18 @@ from typing import Protocol, Any, TypedDict
 
 
 class FlaskClient(Protocol):
-    def post(self, path: str, data: object, follow_redirects: bool) -> Any:
+    def post(
+        self,
+        path: str,
+        data: object | None = None,
+        follow_redirects: bool = False,
+    ) -> Any:
         ...
 
     def get(self, path: str, **kwargs: object) -> Any:
+        ...
+
+    def delete(self, path: str, **kwargs: object) -> Any:
         ...
 
 

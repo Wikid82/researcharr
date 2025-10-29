@@ -23,7 +23,12 @@ No outstanding unreleased changes. Recent development has been published in the 
 - Resolved several local permission issues by aligning image runtime UID/GID with the developer host (uid/gid 1000) and adding the entrypoint fallback for filesystems that prevent `chown`.
  - Development compose convenience: `docker-compose.dev.yml` was temporarily adjusted during verification to mount the repository `entrypoint.sh` into the container at `/app/entrypoint.sh` so local edits take effect without rebuilding the published image. This was used to validate the timezone-fallback writes to `/config/timezone` when `/etc/localtime` cannot be written.
  - Verified `/config/timezone` fallback: when `/etc/localtime` could not be updated in the running dev container, the entrypoint exported `TZ` and persisted the configured timezone to `/config/timezone` (example: `America/New_York`).
- - Developer-first-run credentials: the dev compose used for local testing sets `WEBUI_DEV_PRINT_CREDS=true` so when the app creates the first-run `config/webui_user.yml` file it will print the plaintext password and API token once to container stdout. If `config/webui_user.yml` already exists (for example from a prior run), the app will not regenerate credentials; to force generation (local dev only), back up or remove `./config/webui_user.yml` and restart the container — the newly-generated plaintext password will then be printed to logs.
+- Web UI user persistence: switched to DB-backed storage (SQLite by default). The
+  legacy YAML fallback (`config/webui_user.yml`) and automatic first-run
+  plaintext credential generation/printing have been removed. Operators should
+  manage users via the web UI or via the DB. For automation, seed credentials
+  directly into the DB or use the application's APIs. See the updated
+  documentation for migration notes.
 
 ### Branches & PRs
 

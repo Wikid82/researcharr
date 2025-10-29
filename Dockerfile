@@ -72,7 +72,10 @@ RUN mkdir -p /config && touch /config/cron.log
 RUN groupadd -r researcharr || true && useradd -r -g researcharr researcharr || true && \
 	chown -R researcharr:researcharr /app /config || true
 
-USER researcharr
+# Keep the image running the entrypoint as root so the entrypoint can
+# apply runtime PUID/PGID changes to bind-mounted directories and then
+# drop privileges into the configured user. The entrypoint script will
+# perform the UID/GID mapping at container start.
 
 # Write build info
 RUN printf '%s\n' "version=${BUILD_VERSION}" "build=${BUILD_NUMBER}" "sha=${GIT_SHA}" > /app/VERSION

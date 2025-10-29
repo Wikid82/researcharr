@@ -2,40 +2,34 @@
 
 ## Unreleased
 
-### Chore / Repo hygiene
+No outstanding unreleased changes. Recent development has been published in the 2025-10-29 release below.
 
-- Updated `.gitignore` and `.dockerignore` to exclude build artifacts, caches, and editor/OS files. Recommended host-side cleanup of any already-tracked generated artifacts so they are no longer tracked in Git.
-- Ran `isort` and `black` across the repository and committed formatting/import-order fixes; fixed a small set of `flake8` issues in typing stubs.
+## 2025-10-29
 
-### Typing & editor fixes
+### Chore / Repo hygiene & CI
 
-- Rewrote `researcharr/_types.pyi` to address flake8/Known-editor diagnostics and added a small runtime shim for plugin registry resolution to improve editor/type-checker behavior.
-- Replaced a dynamic `__all__` in `researcharr/webui.py` with a static export list to reduce noisy editor warnings.
+- Pushed a batch of hygiene and CI changes that make developer first-run more reliable and make published dev images match common developer hosts.
+- Updated CI workflows to pass build-time args `RUNTIME_UID=1000` and `RUNTIME_GID=1000` so images built and published for `development` use UID/GID 1000 for the runtime user.
+- Added `scripts/run-tests.sh` (test helper) and tuned CI to run the standard pipeline (isort/black → flake8 → mypy → pytest) and to publish Trivy JSON artifacts for image scans.
 
-### Docker / entrypoint
+### Docker / Entry point
 
-- Replaced `entrypoint.sh` with a runtime-aware script that reads `PUID`/`PGID` (env or config), chowns mounted `/config` and `/app`, creates required directories/files, sets timezone if provided, and drops privileges before exec'ing the application.
-- Adjusted the `Dockerfile` so the image build no longer forces a non-root user at build time; the entrypoint now performs privilege dropping at runtime so bind mounts can be chowned correctly.
+- Rewrote `entrypoint.sh` to be runtime-aware: it reads `PUID`/`PGID` (from environment or `/config/config.yml`), attempts to `chown` mounted `/config` and `/app` to the provided IDs and falls back to `chmod -R a+rwX` when `chown` is not permitted on the host filesystem. The script creates missing directories/files, sets the timezone when provided, and drops privileges before exec'ing the application using a small, in-script Python helper.
+- Updated `Dockerfile` to accept build args `RUNTIME_UID` and `RUNTIME_GID` (defaults 1000). The image build creates the `researcharr` runtime user/group with the provided numeric IDs so published images match host user IDs and avoid ownership mismatches on first-run.
 
-### Development & runtime housekeeping
+### Development / runtime verification
 
-- Updated `docker-compose.dev.yml` to run the dev service as a non-root user (`user: "1000:1000"`) to better match host file permissions and reduce accidental root-owned files when developing.
-- Performed host-side ownership fixes for the development config and logs directories (chowned to `1000:1000`) so mounts are writable by the container runtime when running as UID 1000.
-- Verified dev container (`researcharr-dev`) runs the main process as UID 1000 (non-root) after the compose change and recreation.
+- Adjusted `docker-compose.dev.yml` and performed local verification: pulled the CI-built `ghcr.io/wikid82/researcharr:dev` image, recreated the dev container, and confirmed logs show the entrypoint performing ownership operations as UID/GID 1000 and starting the Flask dev server on port 2929.
+- Resolved several local permission issues by aligning image runtime UID/GID with the developer host (uid/gid 1000) and adding the entrypoint fallback for filesystems that prevent `chown`.
+ - Development compose convenience: `docker-compose.dev.yml` was temporarily adjusted during verification to mount the repository `entrypoint.sh` into the container at `/app/entrypoint.sh` so local edits take effect without rebuilding the published image. This was used to validate the timezone-fallback writes to `/config/timezone` when `/etc/localtime` cannot be written.
+ - Verified `/config/timezone` fallback: when `/etc/localtime` could not be updated in the running dev container, the entrypoint exported `TZ` and persisted the configured timezone to `/config/timezone` (example: `America/New_York`).
+ - Developer-first-run credentials: the dev compose used for local testing sets `WEBUI_DEV_PRINT_CREDS=true` so when the app creates the first-run `config/webui_user.yml` file it will print the plaintext password and API token once to container stdout. If `config/webui_user.yml` already exists (for example from a prior run), the app will not regenerate credentials; to force generation (local dev only), back up or remove `./config/webui_user.yml` and restart the container — the newly-generated plaintext password will then be printed to logs.
 
-### Repo housekeeping
+### Branches & PRs
 
-- Cleaned up remote branches: removed several unprotected/temporary branches (for example `chore/reception-126ff92`, `ci/publish-images`, `ci/remove-trivy-reports`, and `gh-pages`) to reduce noise; `reception`, `development`, and `main` remain protected.
-- Merged `reception` into `development` and then merged `development` into `main` (see PRs created during this work; CI validated and merges completed).
+- Changes were prepared on branch `reception`, a PR was created into `development` (see PR #17), and the CI-published dev image was consumed locally for verification. Some changes were pushed to `development` to trigger CI; note that the push bypassed branch-protection checks in the remote output.
 
-Notes: `gh-pages` was removed during cleanup — if you relied on it for docs hosting I can recreate it from the previous commit or add a docs deploy workflow that publishes from `main` instead.
-
-### CI / tests / security
-
-- Added a small test helper script (`scripts/run-tests.sh`) and tuned CI to avoid building/publishing images for short-lived branches (build/publish only on persistent branches such as `development`/`main`).
-- Ran the full pipeline locally and in CI: formatting checks (black/isort), `flake8`, `mypy`, `pytest` (unit tests) and a Trivy image scan. Tests pass (163 passed locally and validated in CI) and Trivy published a JSON artifact.
-
-Notes: these changes are on branch `reception` and are ready to open a PR into `development` for review and merge.
+Notes: documentation for the new init/onboarding helper (recommended next step: init container or documented host bootstrap script) is still a follow-up item; the entrypoint + image UID alignment fixes cover the most common first-run permission problems for developers.
 
 ## 2025-10-25
 

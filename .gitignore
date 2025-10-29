@@ -53,8 +53,9 @@ pip-wheel-metadata/
 /config/updates/downloads/
 /config/backups/
 /config/task_history.jsonl
-config/webui_user.yml
-config/webui_user.yml.bak*
+## webui user file removed; DB-backed users in sqlite
+# config/webui_user.yml
+# config/webui_user.yml.bak*
 config/*.db
 config/*.sqlite
 config/cron.log

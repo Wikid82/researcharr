@@ -3,6 +3,8 @@
 # Keep route helpers and config management small and testable
 
 import os
+from types import ModuleType
+from typing import Optional
 
 from werkzeug.security import generate_password_hash
 
@@ -10,9 +12,12 @@ from werkzeug.security import generate_password_hash
 # Import the DB helper from the package. If import fails, set `rdb` to None
 # so callers can handle the absence (tests/CI should supply a DB via
 # `researcharr.researcharr.DB_PATH` or `DATABASE_URL`).
+rdb: Optional[ModuleType]
 try:
-    from researcharr import db as rdb
+    from researcharr import db as rdb  # type: ignore
 except Exception:
+    # If the package DB helper can't be imported (tests/CI may stub it),
+    # leave `rdb` as None and callers will handle the absence.
     rdb = None
 
 

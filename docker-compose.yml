@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 services:
   researcharr:
     image: ghcr.io/wikid82/researcharr:latest
@@ -20,3 +21,18 @@ services:
       timeout: 10s
       retries: 3
    
+=======
+  services:
+    researcharr:
+      image: ghcr.io/wikid82/researcharr:latest
+      container_name: researcharr
+      volumes:
+        - /path/to/config:/config
+      ports:
+        - "2929:2929"
+      restart: unless-stopped
+      environment:
+        - PUID=1000
+        - PGID=1000
+        - TZ=America/Ney York
+>>>>>>> Stashed changes

@@ -189,6 +189,34 @@ Preparing a local config
 cp config.example.yml config/config.yml
 ```
 
+Bootstrapping configuration files
+
+If you'd like a single helper to copy the repo examples into a host `./config`
+directory and set ownership for the container runtime user, use the
+`scripts/bootstrap-config.sh` helper. It will copy `config/config.yml` and
+any files under `config/plugins/` into the target directory and attempt to
+chown them to `PUID:PGID` (default 1000:1000) so the container user can
+write to them.
+
+Usage (from repo root):
+
+```bash
+scripts/bootstrap-config.sh ./config
+# or let it use defaults:
+scripts/bootstrap-config.sh
+```
+
+After populating `./config`, run the container with the host mount and set
+the runtime env vars (PUID, PGID, TIMEZONE) in your compose or environment.
+
+Plugin templates and contributing
+
+The repository includes commented example plugin instance templates under
+`config/plugins/`. These are YAML lists intended for pre-seeding plugin
+instances. For details on how plugin instance files are used and how to
+contribute new plugin code, see `docs/Plugins.md`.
+
+
 Run the development compose (mount source, run in foreground):
 
 ```bash

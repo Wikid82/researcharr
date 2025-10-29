@@ -1,0 +1,11 @@
+# Example Apprise notification plugin instances.
+# The Plugins UI/API manages files under /config/plugins/<plugin>.yml and
+# expects a YAML list of instance objects. Keep this file as a list.
+#
+# - name: "Apprise Local"
+#   enabled: true
+#   urls:
+#     - "mailto://user:pass@example.com"
+#     - "mailto://another@example.com"
+
+[]

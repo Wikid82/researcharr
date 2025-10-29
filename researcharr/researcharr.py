@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
-
 from typing import Any
 
 # Annotate fallback names up-front so mypy knows these may be None when

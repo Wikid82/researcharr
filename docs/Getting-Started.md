@@ -34,8 +34,7 @@ The project publishes two runtime variants: `distroless` (recommended for produc
 
 - Security and initial credentials
 
-- On first startup, if `config/webui_user.yml` does not exist, the web UI will open an interactive setup page where the operator can choose the initial admin username and password. The setup page also allows optionally entering an API token; if left blank the application will generate an API token and show it once on a success page so the operator can copy it securely. The password hash and API key hash are persisted to `config/webui_user.yml`.
-- Note: the setup page is the default behavior for interactive installs and avoids printing secrets to container logs. For unattended/automated installs you can still auto-generate credentials by setting the `AUTO_GENERATE_WEBUI_CREDS=true` environment variable; this mimics legacy first-run behavior and will persist generated credentials. Use this only in automation scripts where logs are not relied upon to deliver secrets.
+- On first startup, the web UI will open an interactive setup page where the operator can choose the initial admin username and password. The setup page also allows optionally entering an API token; if left blank the application will generate an API token and show it once on a success page so the operator can copy it securely. The password and API key hashes are persisted to the application's configured database (SQLite by default).
 
 - Timezone behavior: the container entrypoint will attempt to write `/etc/localtime` for the configured timezone. If the container image or runtime disallows modifying `/etc/localtime` (for example read-only images or non-root restraints), the entrypoint will instead export the `TZ` environment variable for the process and persist the chosen timezone to `/config/timezone` so the application and scheduler have a reliable fallback.
 - To change credentials after first-run use the User Settings page in the web UI.

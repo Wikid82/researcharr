@@ -215,9 +215,8 @@ def prune_backups(backups_dir: str | Path, cfg: Optional[dict] = None) -> None:
             for fname, mtime in list(files):
                 if mtime < cutoff:
                     try:
-                        should_keep_pre = (
-                            fname.startswith("pre-")
-                            and (now - mtime) < (pre_keep * 86400)
+                        should_keep_pre = fname.startswith("pre-") and (now - mtime) < (
+                            pre_keep * 86400
                         )
                         if should_keep_pre:
                             continue

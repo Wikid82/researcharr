@@ -6,6 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: researcharr-dev
+    user: "1000:1000"
     # Map the app ports so you can browse the UI from the host
     ports:
       - "2929:2929"

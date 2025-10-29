@@ -20,7 +20,6 @@ import sys
 from types import ModuleType
 from typing import Optional
 
-
 # Public convenience name required by some tooling/tests. Will be assigned to
 # the implementation module object when it is discovered below.
 researcharr: Optional[ModuleType] = None
@@ -225,7 +224,7 @@ __all__ = ["researcharr"]
 # Export the discovered implementation module under the convenient name
 # so tools and editors that consult module globals see the symbol.
 try:
-    if 'impl' in globals() and impl is not None:
+    if "impl" in globals() and impl is not None:
         researcharr = impl
 except Exception:
     pass

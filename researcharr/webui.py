@@ -4,6 +4,7 @@ This thin shim exists so static analysis and editors can resolve
 `researcharr.webui` to a real source file inside the `researcharr` package.
 At runtime it re-exports names from the top-level `webui` module.
 """
+
 from __future__ import annotations
 
 import importlib

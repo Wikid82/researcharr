@@ -6,6 +6,7 @@ import pathlib
 import shutil
 import time
 import zipfile
+import secrets
 from typing import TYPE_CHECKING, Any
 
 import yaml
@@ -273,11 +274,21 @@ def create_app():
             except Exception:
                 # best-effort; don't fail startup on migration errors
                 pass
+            # The webui loader already prints plaintext first-run credentials
+            # when `WEBUI_DEV_PRINT_CREDS` is enabled. Avoid duplicating that
+            # output here; keep printing responsibility in `webui.load_user_config()`.
     except Exception:
         # best-effort; if loading the user config fails we continue with the
         # default in-memory credentials to avoid preventing the UI from
         # starting.
         pass
+
+    # Record whether a persisted user config is present so routes can
+    # conditionally enable a first-run setup flow.
+    try:
+        app.config["USER_CONFIG_EXISTS"] = isinstance(ucfg, dict)
+    except Exception:
+        app.config["USER_CONFIG_EXISTS"] = False
 
     # --- Plugin registry wiring (discover local example plugins) ---
     # Allow static analysis (Pylance) to see the PluginRegistry symbol while
@@ -441,10 +452,62 @@ def create_app():
 
     @app.route("/")
     def index():
-        # Redirect root to the login page for convenience so visiting /
-        # opens the web UI instead of returning 404. Tests that expect
-        # root to be missing should continue to use explicit paths.
+        # If no user config exists, redirect to the interactive setup
+        # page so the operator can securely choose credentials. Otherwise
+        # redirect to the login page as usual.
+        try:
+            if not app.config.get("USER_CONFIG_EXISTS"):
+                return redirect(url_for("setup"))
+        except Exception:
+            pass
         return redirect(url_for("login"))
+
+    @app.route("/setup", methods=["GET", "POST"])
+    def setup():
+        # Only allow setup when no user config exists to prevent accidental
+        # re-initialization of credentials.
+        if app.config.get("USER_CONFIG_EXISTS"):
+            return redirect(url_for("login"))
+
+        error = None
+        if request.method == "POST":
+            username = request.form.get("username", "researcharr").strip()
+            password = request.form.get("password", "").strip()
+            confirm = request.form.get("confirm", "").strip()
+            api_key = request.form.get("api_key", "").strip() or None
+            # Basic validation
+            if not password:
+                error = "Password is required"
+            elif password != confirm:
+                error = "Passwords do not match"
+            elif len(password) < 8:
+                error = "Password must be at least 8 characters"
+            else:
+                # Persist user config. If no API key was provided, generate
+                # one so the operator can use the API immediately.
+                try:
+                    phash = generate_password_hash(password)
+                    generated_api = None
+                    if not api_key:
+                        generated_api = secrets.token_urlsafe(32)
+                        webui.save_user_config(username, phash, api_key=generated_api)
+                    else:
+                        webui.save_user_config(username, phash, api_key=api_key)
+                    app.config["USER_CONFIG_EXISTS"] = True
+                    # If we generated an API token, show it once on a success
+                    # page so the operator can copy it. Otherwise redirect to
+                    # the login page.
+                    if generated_api:
+                        return render_template(
+                            "setup_success.html",
+                            username=username,
+                            api_token=generated_api,
+                        )
+                    return redirect(url_for("login"))
+                except Exception:
+                    error = "Failed to save user config"
+
+        return render_template("setup.html", error=error)
 
     @app.route("/login", methods=["GET", "POST"])
     def login():

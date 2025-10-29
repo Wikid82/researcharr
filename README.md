@@ -92,15 +92,18 @@
         cat ./config/webui_user.yml
         ```
 
-        Note: the plaintext password is only logged once for operator convenience; only the hash is persisted in `webui_user.yml`.
-      - To change credentials after first-run, use the "User Settings" tab in the web UI (this updates `webui_user.yml`).
+        Note: the application no longer writes a `webui_user.yml` file. Plaintext
+        credential printing on first-run has been removed. Credentials are
+        persisted in the configured database (SQLite by default) and can be
+        inspected or changed via the Web UI.
+      - To change credentials after first-run, use the "User Settings" tab in the web UI.
       - If you need to allow unauthenticated password resets, set the environment variable `WEBUI_RESET_TOKEN` to a secret value and use the web UI "Forgot password?" link to reset credentials using that token. Without `WEBUI_RESET_TOKEN` the reset page is disabled.
     - **AJAX navigation:** Sidebar and header never reload; only the main content area updates. All forms and navigation are AJAX-powered for instant feedback.
     - **Per-instance validation:** Each Radarr and Sonarr instance has a "Validate & Save" button for instant connection testing and dry-run, with results shown in the UI.
     - **Error feedback:** All error messages (e.g., invalid config, missing API key) are shown instantly in the UI.
     - **Multi-instance:** Enable/disable and configure up to 5 Radarr and 5 Sonarr instances. All instance settings are collapsed by default; enable to expand and edit.
     - **Always-on:** The container and web UI never exit on invalid config—fix your settings at any time using the web UI.
-    - **User credentials:** Managed in `webui_user.yml` and editable from the UI.
+  - **User credentials:** Managed in the configured database (SQLite by default) and editable from the UI.
     - **Test coverage:** All endpoints and UI behaviors are covered by automated tests.
 
 ## Configuration (All Editable in Web UI)

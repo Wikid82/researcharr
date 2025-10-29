@@ -1,17 +1,8 @@
-<p align="center" style="background: rgba(255, 255, 255, 1); padding: 16px; border-radius: 8px;">
-  <img src="static/logo.jpg" alt="researcharr logo" height="150"/>
-</p>
-
-
-# researcharr
-
-A modern, always-on utility to automatically trigger searches in the *arr suite to keep files up to date with any scoring or custom format changes. Features a secure, AJAX-powered web UI for managing all settings, per-instance validation, and robust automated test coverage.
-
 # status
  
 <p align="center">
-  <a href="https://codecov.io/gh/Wikid82/researcharr">
-    <img src="https://codecov.io/gh/Wikid82/researcharr/graph/badge.svg?token=LBEJBSUPLX" alt="Codecov" />
+
+  [![CI](https://github.com/Wikid82/researcharr/workflows/CI/badge.svg)](https://github.com/Wikid82/researcharr/actions/workflows/ci.yml) [![Docs](https://github.com/Wikid82/researcharr/workflows/Deploy%20docs%20to%20GitHub%20Pages/badge.svg)](https://wikid82.github.io/researcharr/)
   </a>
   <p align="center" style="background: rgba(255, 255, 255, 1); padding: 16px; border-radius: 8px;">
     <img src="static/logo.jpg" alt="researcharr logo" height="120"/>
@@ -21,13 +12,33 @@ A modern, always-on utility to automatically trigger searches in the *arr suite 
 
   A compact, operator-friendly service to validate and trigger “arr” searches (Radarr/Sonarr/etc.) via a secure web UI and scheduler. Designed for reliable automation, observability, and easy Docker deployment.
 
-  Badges
-
-  [![CI](https://github.com/Wikid82/researcharr/workflows/CI/badge.svg)](https://github.com/Wikid82/researcharr/actions/workflows/ci.yml) [![Docs](https://github.com/Wikid82/researcharr/workflows/Deploy%20docs%20to%20GitHub%20Pages/badge.svg)](https://wikid82.github.io/researcharr/)
-
   Quick start
 
-  1) Create a config directory and run the production image (recommended):
+  1) Recommended — run with Docker Compose
+
+  ```bash
+  # create a config directory for persistent data
+  mkdir -p /path/to/config
+
+  # a minimal docker-compose you can drop in next to your project or use system-wide
+  cat > docker-compose.yml <<'EOF'
+  
+  services:
+    researcharr:
+      image: ghcr.io/wikid82/researcharr:latest
+      container_name: researcharr
+      volumes:
+        - /path/to/config:/config
+      ports:
+        - "2929:2929"
+      restart: unless-stopped
+      environment:
+        - PUID=1000
+        - PGID=1000
+        - TZ=America/Ney York
+
+
+  2) Quick alternative — run the production image directly with Docker
 
   ```bash
   mkdir -p /path/to/config
@@ -36,12 +47,13 @@ A modern, always-on utility to automatically trigger searches in the *arr suite 
     -v /path/to/config:/config \
     -p 2929:2929 \
     --restart unless-stopped \
-    ghcr.io/wikid82/researcharr:prod
+    -e PUID=1000 -e PGID=1000 -e TZ=UTC \
+    ghcr.io/wikid82/researcharr:latest
   ```
 
-  2) Visit the web UI at: http://localhost:2929/
+  3) Visit the web UI at: http://localhost:2929/
 
-  3) Want to develop or run the tests? Use the builder/dev images or the `docker-compose.dev.yml` from the repo. See docs for details.
+  If you'd like to contribute or run the test/dev images, see the docs for development instructions and the `docker-compose.dev.yml` file in the repository.
 
   Why use researcharr?
 

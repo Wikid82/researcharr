@@ -118,3 +118,14 @@ if impl is not None:
         globals()["researcharr"] = impl
     except Exception:
         pass
+
+    # Expose the top-level `plugins` package as `researcharr.plugins` so imports
+    # like `from researcharr.plugins.registry import PluginRegistry` resolve in
+    # environments where the `plugins/` package lives at the repository root.
+    try:
+        import plugins as _plugins_pkg  # type: ignore
+        import sys
+
+        sys.modules.setdefault("researcharr.plugins", _plugins_pkg)
+    except Exception:
+        pass

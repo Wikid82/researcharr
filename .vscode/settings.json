@@ -9,5 +9,10 @@
   // Help the language server find imports in the repository root.
   "python.analysis.extraPaths": ["${workspaceFolder}"],
   // Keep a modest level of type checking for developer feedback.
-  "python.analysis.typeCheckingMode": "basic"
+"python.analysis.typeCheckingMode": "basic",
+"python.testing.pytestArgs": [
+    "."
+],
+"python.testing.unittestEnabled": false,
+"python.testing.pytestEnabled": true
 }

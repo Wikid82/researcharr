@@ -438,7 +438,33 @@ def main(once: bool = False):
 
             print(f"[run.py] Starting Flask app on port {port}...")
             sys.stdout.flush()
-            app.run(host="0.0.0.0", port=port, threaded=True)
+            # Respect development/debug env vars so operators can enable
+            # Flask's debug mode for local troubleshooting. Priority order:
+            # 1. WEBUI_DEV_DEBUG  2. APP_DEBUG  3. FLASK_DEBUG
+
+            def _env_bool(name):
+                return str(os.getenv(name, "false")).lower() in (
+                    "1",
+                    "true",
+                    "yes",
+                )
+
+            run_debug = (
+                _env_bool("WEBUI_DEV_DEBUG")
+                or _env_bool("APP_DEBUG")
+                or _env_bool("FLASK_DEBUG")
+            )
+            if run_debug:
+                # Increase scheduler/logger verbosity too
+                try:
+                    logger = logging.getLogger("researcharr.cron")
+                    logger.setLevel(logging.DEBUG)
+                except Exception:
+                    pass
+                print("[run.py] Running Flask in debug mode (enabled by env)")
+                app.run(host="0.0.0.0", port=port, threaded=True, debug=True)
+            else:
+                app.run(host="0.0.0.0", port=port, threaded=True)
             print("[run.py] Flask app terminated")
             sys.stdout.flush()
         except Exception:

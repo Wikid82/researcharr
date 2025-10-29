@@ -2,9 +2,10 @@ version: '3.8'
 
 services:
   researcharr:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # Use the developer image (includes shell & dev tooling). The alpine
+    # variant is deprecated for development; use the `dev` tag for local
+    # interactive runs.
+    image: "ghcr.io/wikid82/researcharr:dev"
     container_name: researcharr-dev
     # Map the app ports so you can browse the UI from the host
     ports:
@@ -20,9 +21,9 @@ services:
       - RUN_JOB_CONCURRENCY=1
       - JOB_TIMEOUT=0
       # Development debug flags (set to 'true' to enable)
-      - WEBUI_DEV_DEBUG=false
-      - WEBUI_DEV_PRINT_CREDS=false
-      - WEBUI_DEV_ENABLE_DEBUG_ENDPOINT=false
+      - WEBUI_DEV_DEBUG=true
+      - WEBUI_DEV_PRINT_CREDS=true
+      - WEBUI_DEV_ENABLE_DEBUG_ENDPOINT=true
     volumes:
       # Mount the project source into the container for live edits & immediate debugging
       - ./:/app:delegated
@@ -31,6 +32,8 @@ services:
       - ./logs:/config/logs:rw
     tty: true
     stdin_open: true
+    # Run the entrypoint as root in dev so it can perform chown/chmod on bind mounts,
+    # then the entrypoint will drop privileges into the configured PUID/PGID.
     # Use a simple command that ensures any local changes to requirements are installed
     command: >
       /bin/sh -lc "pip install --no-cache-dir -r requirements.txt || true && \

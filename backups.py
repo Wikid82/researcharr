@@ -1,130 +1,220 @@
 """Shared backup helpers for researcharr.
 
-Provides create_backup_file() and prune_backups() used by both the
-web UI (factory.py) and the scheduler runner (run.py) to avoid
-duplicating zip/prune logic.
+Creates zip backups of the operator-managed `config/` tree and provides a
+prune helper. Backups include a metadata entry and a safe snapshot of the
+SQLite file `researcharr.db` when present.
 """
 
+from __future__ import annotations
+
+import logging
 import os
-import time
+import sqlite3
+import tempfile
 import zipfile
-from datetime import datetime
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
+
+LOGGER = logging.getLogger(__name__)
 
 
 def create_backup_file(
-    config_root: str, backups_dir: str, prefix: str = ""
+    config_root: str | Path, backups_dir: str | Path, prefix: str = ""
 ) -> Optional[str]:
-    """Create a zip backup of important config files and return the filename.
+    """Create a zip backup of the whole ``config_root`` tree.
 
-    Returns the filename (not full path) on success, or None on failure.
+    The archive will contain files under a top-level `config/` directory to
+    remain compatible with existing consumers (e.g. `config/config.yml`). If
+    a `researcharr.db` file exists, a safe sqlite snapshot is created and
+    included as `db/researcharr.db`.
+
+    Returns the backup filename (not the full path) on success.
     """
+    config_root = Path(config_root).resolve()
+    backups_dir = Path(backups_dir).resolve()
+
     try:
-        os.makedirs(backups_dir, exist_ok=True)
-        timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-        name = (
-            f"{prefix}researcharr-backup-{timestamp}.zip"
-            if prefix
-            else f"researcharr-backup-{timestamp}.zip"
-        )
-        path = os.path.join(backups_dir, name)
+        backups_dir.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        LOGGER.exception("Could not create backups directory: %s", backups_dir)
+        return None
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    name = f"{prefix}researcharr-backup-{timestamp}.zip"
+    path = backups_dir / name
+
+    # decide whether to skip a backups subtree if it's inside config_root
+    skip_backups = False
+    try:
+        backups_dir.relative_to(config_root)
+        skip_backups = True
+    except Exception:
+        skip_backups = False
+
+    tmp_snapshot: Optional[Path] = None
+
+    try:
         with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-            cfg = os.path.join(config_root, "config.yml")
-            if os.path.exists(cfg):
-                zf.write(cfg, arcname=os.path.join("config", "config.yml"))
-            userf = os.path.join(config_root, "webui_user.yml")
-            if os.path.exists(userf):
-                zf.write(userf, arcname=os.path.join("config", "webui_user.yml"))
-            dbf = os.path.join(config_root, "researcharr.db")
-            if os.path.exists(dbf):
-                zf.write(dbf, arcname=os.path.join("db", "researcharr.db"))
-            plugins_dir = os.path.join(config_root, "plugins")
-            if os.path.isdir(plugins_dir):
-                for root, dirs, files in os.walk(plugins_dir):
-                    for f in files:
-                        full = os.path.join(root, f)
-                        arc = os.path.join(
-                            "plugins", os.path.relpath(full, plugins_dir)
-                        )
-                        zf.write(full, arcname=arc)
-            app_log = os.path.join(os.path.dirname(__file__), os.pardir, "app.log")
-            if os.path.exists(app_log):
+            zf.writestr("metadata.txt", f"backup_created={timestamp}\n")
+
+            # Snapshot DB safely if present
+            db_src = config_root / "researcharr.db"
+            if db_src.exists():
                 try:
-                    zf.write(app_log, arcname=os.path.join("logs", "app.log"))
+                    tf = tempfile.NamedTemporaryFile(
+                        prefix="researcharr_db_snapshot_",
+                        delete=False,
+                    )
+                    tf.close()
+                    tmp_snapshot = Path(tf.name)
+
+                    try:
+                        ro_uri = f"file:{db_src}?mode=ro"
+                        src_conn = sqlite3.connect(ro_uri, uri=True)
+                    except Exception:
+                        src_conn = sqlite3.connect(str(db_src))
+
+                    dest_conn = sqlite3.connect(str(tmp_snapshot))
+                    with dest_conn:
+                        src_conn.backup(dest_conn)
+                    try:
+                        src_conn.close()
+                    except Exception:
+                        pass
+                    dest_conn.close()
+
+                    arcname = "db/researcharr.db"
+                    zf.write(str(tmp_snapshot), arcname=arcname)
+                except Exception:
+                    LOGGER.exception(
+                        "Failed to snapshot sqlite DB %s; skipping DB in backup",
+                        db_src,
+                    )
+                    try:
+                        if tmp_snapshot and tmp_snapshot.exists():
+                            tmp_snapshot.unlink()
+                    except Exception:
+                        pass
+
+            # Add all files under config_root, preserving relative paths under config/
+            for p in sorted(config_root.rglob("*")):
+                if not p.is_file():
+                    continue
+
+                # If we added a snapshot, skip the raw DB file
+                try:
+                    if tmp_snapshot is not None and p.resolve() == db_src.resolve():
+                        continue
                 except Exception:
                     pass
-            # Ensure the zip is never empty — include a small metadata entry so
-            # consumers can rely on a valid local-file-header when reading.
-            try:
-                zf.writestr("metadata.txt", f"backup_created={timestamp}\n")
-            except Exception:
-                pass
+
+                # Skip backups subtree if configured and p is inside it
+                if skip_backups:
+                    try:
+                        p.relative_to(backups_dir)
+                        continue
+                    except Exception:
+                        pass
+
+                rel = p.relative_to(config_root)
+                arc = Path("config") / rel
+                zf.write(p, arcname=str(arc))
+
+            # cleanup snapshot file
+            if tmp_snapshot is not None and tmp_snapshot.exists():
+                try:
+                    tmp_snapshot.unlink()
+                except Exception:
+                    LOGGER.exception(
+                        "Failed to remove temporary DB snapshot: %s",
+                        tmp_snapshot,
+                    )
+
+        LOGGER.info("Created backup: %s", path)
         return name
     except Exception:
-        # Caller should log if desired; keep this module free of app logger
+        LOGGER.exception("Failed to create backup %s", path)
+        try:
+            if path.exists():
+                path.unlink()
+        except Exception:
+            LOGGER.exception("Failed to remove incomplete backup: %s", path)
         return None
 
 
-def prune_backups(backups_dir: str, cfg: Optional[dict] = None) -> None:
+def prune_backups(backups_dir: str | Path, cfg: Optional[dict] = None) -> None:
     """Prune backup files according to cfg.
 
-    cfg is a mapping that may include:
-      - retain_count: int (max number of newest backups to keep)
-      - retain_days: int (remove backups older than this many days)
-      - pre_restore_keep_days: int (keep pre-restore backups at least this many days)
+    cfg may be a dict with keys:
+      - retain_count
+      - retain_days
+      - pre_restore_keep_days
 
     If cfg is None, nothing is removed.
     """
     try:
         if cfg is None:
             return
-        retain_count = int(cfg.get("retain_count", 0) or 0)
-        retain_days = int(cfg.get("retain_days", 0) or 0)
-        pre_keep = int(cfg.get("pre_restore_keep_days", 1) or 1)
+
+        # support being called with a plain int (legacy)
+        if isinstance(cfg, int):
+            retain_count = int(cfg)
+            retain_days = 0
+            pre_keep = 1
+        else:
+            retain_count = int(cfg.get("retain_count", 0) or 0)
+            retain_days = int(cfg.get("retain_days", 0) or 0)
+            pre_keep = int(cfg.get("pre_restore_keep_days", 1) or 1)
     except Exception:
         return
 
     try:
-        if not os.path.isdir(backups_dir):
+        if not Path(backups_dir).is_dir():
             return
         files = []
-        for fname in os.listdir(backups_dir):
-            fpath = os.path.join(backups_dir, fname)
-            if not os.path.isfile(fpath):
+        for fname in sorted(Path(backups_dir).iterdir()):
+            if not fname.is_file() or not fname.name.endswith(".zip"):
                 continue
             try:
-                st = os.stat(fpath)
-                files.append((fname, st.st_mtime))
+                st = fname.stat()
+                files.append((fname.name, st.st_mtime))
             except Exception:
                 continue
+
         # sort newest first
         files.sort(key=lambda x: x[1], reverse=True)
 
-        now = time.time()
-        # Remove by age first (if configured). Respect pre-restore keep window.
+        now = __import__("time").time()
         if retain_days > 0:
             cutoff = now - (retain_days * 86400)
             for fname, mtime in list(files):
                 if mtime < cutoff:
                     try:
-                        if fname.startswith("pre-") and (now - mtime) < (
-                            pre_keep * 86400
-                        ):
-                            # keep recent pre-restore backups
+                        should_keep_pre = (
+                            fname.startswith("pre-")
+                            and (now - mtime) < (pre_keep * 86400)
+                        )
+                        if should_keep_pre:
                             continue
-                        os.remove(os.path.join(backups_dir, fname))
-                        files = [f for f in files if f[0] != fname]
+                        try:
+                            (Path(backups_dir) / fname).unlink()
+                            files = [f for f in files if f[0] != fname]
+                        except Exception:
+                            # fall back to os.remove if unlink fails for any reason
+                            os.remove(os.path.join(backups_dir, fname))
+                            files = [f for f in files if f[0] != fname]
                     except Exception:
-                        # best-effort; continue
                         continue
 
-        # Then enforce retain_count
         if retain_count > 0 and len(files) > retain_count:
             for fname, _ in files[retain_count:]:
                 try:
-                    os.remove(os.path.join(backups_dir, fname))
+                    (Path(backups_dir) / fname).unlink()
                 except Exception:
-                    continue
+                    try:
+                        os.remove(os.path.join(backups_dir, fname))
+                    except Exception:
+                        continue
     except Exception:
-        # best-effort
         return

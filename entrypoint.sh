@@ -117,5 +117,7 @@ except Exception as e:
     print('Warning: setuid failed:', e, file=sys.stderr)
 
 # Exec the application so it becomes PID 1
-os.execv(sys.executable, [sys.executable, '/app/run.py'])
+# Updated to use scripts/ location for the run entrypoint to avoid
+# shadowing and keep runtime scripts centralized.
+os.execv(sys.executable, [sys.executable, '/app/scripts/run.py'])
 PY

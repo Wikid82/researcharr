@@ -68,12 +68,23 @@ fi
 
 # Set timezone if available and writable
 TZ=${TZ:-America/New_York}
+# Try to set system timezone by symlinking /etc/localtime. If the container
+# filesystem disallows modifying /etc (common on read-only images or when
+# running non-root), fall back to exporting TZ for the process and record
+# the desired timezone under /config so the app can read it if needed.
 if [ -n "$TZ" ] && [ -f "/usr/share/zoneinfo/$TZ" ]; then
   if ln -snf /usr/share/zoneinfo/$TZ /etc/localtime 2>/dev/null; then
     echo "$TZ" > /etc/timezone || true
     echo "Timezone set to: $TZ"
   else
-    echo "Warning: failed to set /etc/localtime (permission denied). Timezone not set inside container." >&2
+    # Don't treat this as a hard failure. Export TZ so Python/cron libs
+    # honor the configured timezone, and persist it under /config so the
+    # application can also read it from disk.
+    export TZ="$TZ"
+    if mkdir -p /config 2>/dev/null; then
+      echo "$TZ" > /config/timezone || true
+    fi
+    echo "Notice: could not write /etc/localtime; exported TZ and saved /config/timezone (TZ=${TZ})." >&2
   fi
 fi
 

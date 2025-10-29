@@ -1,31 +1,52 @@
-version: "3.8"
+version: '3.8'
 
 services:
   researcharr:
-    image: ghcr.io/wikid82/researcharr:alpine
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: researcharr-dev
+    # Map the app ports so you can browse the UI from the host
     ports:
       - "2929:2929"
       - "5678:5678" # optional debug port for debugpy
     environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_ENV=development
+      - LOGLEVEL=DEBUG
+      - WEBUI_PORT=2929
       - PUID=1000
       - PGID=1000
       - TZ=America/New_York
-      - SESSION_COOKIE_SECURE=false
-      # Development debug flags (false by default). Set to 'true' to enable.
+      # Useful runtime debugging overrides
+      - RUN_JOB_CONCURRENCY=1
+      - JOB_TIMEOUT=0
+      # Development debug flags (set to 'true' to enable)
       - WEBUI_DEV_DEBUG=false
       - WEBUI_DEV_PRINT_CREDS=false
       - WEBUI_DEV_ENABLE_DEBUG_ENDPOINT=false
-      - LOGLEVEL=DEBUG
-      - WEBUI_PORT=2929
-      - PYTHONUNBUFFERED=1
-    # Mount the repository into /app so the bundled config.example.yml remains available
-    # and you can edit code on the host while the container runs.
     volumes:
+      # Mount the project source into the container for live edits & immediate debugging
       - ./:/app:delegated
+      # Persist runtime config and DB on host so you can inspect files easily
       - ./config:/config:rw
       - ./logs:/config/logs:rw
     tty: true
     stdin_open: true
+    # Use a simple command that ensures any local changes to requirements are installed
     command: >
-      /bin/sh -lc "python -m pip install --no-cache-dir -r requirements.txt || true && python -u /app/run.py"
+      /bin/sh -lc "pip install --no-cache-dir -r requirements.txt || true && \
+      # OPTIONAL: to run under debugpy, uncomment the next line and comment the plain run line
+      # python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m runpy /app/run.py && \
+      python -u /app/run.py"
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+# Usage tips:
+# - Start in the foreground to stream logs: docker compose -f docker-compose.dev.yml up --build
+# - Follow logs from another terminal: docker compose -f docker-compose.dev.yml logs -f researcharr
+# - Inspect cron logs: tail -f logs/cron.log (on the host) or docker exec -it researcharr-dev tail -f /config/cron.log
+# - For remote debugging: install debugpy in the container and uncomment the debugpy line above; attach your IDE to port 5678

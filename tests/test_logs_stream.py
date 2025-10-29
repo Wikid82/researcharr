@@ -1,4 +1,3 @@
-import os
 
 
 def login_client(app):

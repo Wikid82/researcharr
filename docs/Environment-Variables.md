@@ -32,7 +32,7 @@ Notes on timezone handling
 
 - AUTO_GENERATE_WEBUI_CREDS
   - Default: `false`
-  - Description: When true, the application will auto-generate an initial admin password and API token on first-run and persist their hashes to `webui_user.yml`. Use this for unattended/automation-only installs. For interactive installs the application opens a setup page so operators can choose credentials without printing secrets to logs.
+  - Description: Previously allowed the application to auto-generate an initial admin password and API token on first-run and persist their hashes to `webui_user.yml`. The application now persists web UI users to the configured database and no longer supports YAML fallback; prefer seeding credentials in the DB for automation.
 
 - WEBUI_DEV_ENABLE_DEBUG_ENDPOINT
   - Default: `false`

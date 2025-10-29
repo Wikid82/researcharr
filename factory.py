@@ -229,8 +229,43 @@ def create_app():
     # generated, the loader returns the plaintext as `password` so we can set
     # the in-memory auth to allow immediate login using that password.
     try:
+        # Avoid triggering webui.load_user_config() at startup when it may
+        # auto-generate first-run credentials. Instead, detect whether a
+        # persisted user config file already exists and only invoke the
+        # loader when a file is present. This preserves the interactive
+        # setup flow (redirect to /setup) while still allowing tests that
+        # call webui.load_user_config() directly to exercise auto-generation.
+        ucfg = None
         try:
-            ucfg = webui.load_user_config()
+            # Candidate path selection: prefer an explicit USER_CONFIG_PATH
+            # when provided by the package/module. Only when no explicit
+            # USER_CONFIG_PATH is defined do we fall back to a repo-local
+            # `config/webui_user.yml`. This prevents repo-local files from
+            # accidentally overriding an explicit test-provided path.
+            existing = None
+            explicit_path = getattr(webui, "USER_CONFIG_PATH", None)
+            if explicit_path:
+                try:
+                    if os.path.exists(explicit_path):
+                        existing = explicit_path
+                except Exception:
+                    existing = None
+            else:
+                repo_local = os.path.abspath(
+                    os.path.join(os.getcwd(), "config", "webui_user.yml")
+                )
+                try:
+                    if os.path.exists(repo_local):
+                        existing = repo_local
+                except Exception:
+                    existing = None
+            if existing:
+                try:
+                    ucfg = webui.load_user_config()
+                except Exception:
+                    ucfg = None
+            else:
+                ucfg = None
         except Exception:
             ucfg = None
         if isinstance(ucfg, dict):

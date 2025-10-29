@@ -178,24 +178,29 @@ if impl:
         # Non-fatal: fall back to previously-determined impl if anything
         # goes wrong while trying to prefer the package file.
         pass
-    sys.modules["researcharr.researcharr"] = impl
-    pkg = sys.modules.get("researcharr")
-    if pkg is not None:
-        try:
-            setattr(pkg, "researcharr", impl)
-        except Exception:
-            # Non-fatal: best-effort to set the attribute for consumers.
-            pass
+    if impl is not None:
+        sys.modules["researcharr.researcharr"] = impl
+        pkg = sys.modules.get("researcharr")
+        if pkg is not None:
+            try:
+                setattr(pkg, "researcharr", impl)
+            except Exception:
+                # Non-fatal: best-effort to set the attribute for consumers.
+                pass
     # Ensure common dependent modules are available as attributes on the
     # implementation and registered in sys.modules. This makes dotted
     # import paths (used by tests and monkeypatch) resolve correctly.
     try:
+        # Annotate these names so mypy knows they may be None on some
+        # platforms/environments where the optional dependencies are missing.
+        _requests_module: ModuleType | None = None
+        _yaml_module: ModuleType | None = None
         try:
-            import requests as _requests_module
+            import requests as _requests_module  # type: ignore[assignment]
         except Exception:
             _requests_module = None
         try:
-            import yaml as _yaml_module
+            import yaml as _yaml_module  # type: ignore[assignment]
         except Exception:
             _yaml_module = None
 

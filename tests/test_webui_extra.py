@@ -34,7 +34,7 @@ def test_radarr_save_and_reload(client):
         "radarr0_max_download_queue": 20,
         "radarr0_reprocess_interval_days": 3,
     }
-    rv = client.post("/settings/radarr", data=data, follow_redirects=True)
+    client.post("/settings/radarr", data=data, follow_redirects=True)
     inst = {
         "enabled": True,
         "name": "TestRadarr",
@@ -75,7 +75,7 @@ def test_sonarr_save_and_reload(client):
         "sonarr0_max_download_queue": 12,
         "sonarr0_reprocess_interval_days": 2,
     }
-    rv = client.post("/settings/sonarr", data=data, follow_redirects=True)
+    client.post("/settings/sonarr", data=data, follow_redirects=True)
     inst = {
         "enabled": True,
         "name": "TestSonarr",
@@ -150,7 +150,7 @@ def test_radarr_multiple_instances(client):
         "radarr1_max_download_queue": 11,
         "radarr1_reprocess_interval_days": 3,
     }
-    rv = client.post("/settings/radarr", data=data, follow_redirects=True)
+    client.post("/settings/radarr", data=data, follow_redirects=True)
     # add both instances via plugin API
     inst0 = {
         "enabled": True,
@@ -208,7 +208,7 @@ def test_sonarr_multiple_instances(client):
         "sonarr1_max_download_queue": 12,
         "sonarr1_reprocess_interval_days": 3,
     }
-    rv = client.post("/settings/sonarr", data=data, follow_redirects=True)
+    client.post("/settings/sonarr", data=data, follow_redirects=True)
     r0 = client.post(
         "/api/plugins/sonarr/instances",
         json={
@@ -259,7 +259,7 @@ def test_radarr_api_pulls_and_state_mgmt(client):
         "radarr0_max_download_queue": 10,
         "radarr0_reprocess_interval_days": 2,
     }
-    rv = client.post("/settings/radarr", data=data, follow_redirects=True)
+    client.post("/settings/radarr", data=data, follow_redirects=True)
     rv = client.post(
         "/api/plugins/radarr/instances", json={"action": "add", "instance": data}
     )

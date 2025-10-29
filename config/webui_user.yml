@@ -1,0 +1,2 @@
+password_hash: scrypt:32768:8:1$DYRNA2E7qKnOFoag$1c8afe77127c6b241d6835c1f9fd32234aa7e87df26c2b112536ad9df5e219bb82a9440a7774c55e5d846ff47d1de5cc23f58925cfa38b8e60ab75bcc5ec1c31
+username: admin

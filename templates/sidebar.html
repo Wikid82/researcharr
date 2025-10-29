@@ -1,12 +1,56 @@
+<aside class="site-sidebar" role="navigation" aria-label="Main navigation">
+  <ul class="sidebar-nav">
+    <li><h1><a href="/" class="{% if request.path == '/' %}active{% endif %}">Home</a></h1></li>
 
-<aside style="position: fixed; top: 64px; left: 0; width: 220px; height: calc(100% - 64px); background: #181818; color: #fff; padding: 16px 0; z-index: 100;">
-  <span style="display:none">sidebar</span>
-  <ul style="list-style: none; padding: 0; margin: 0;">
-    <li style="padding: 8px 24px;"><a href="/settings/general" style="color: #fff; text-decoration: none;">General</a></li>
-    <li style="padding: 8px 24px;"><a href="/settings/radarr" style="color: #fff; text-decoration: none;">Radarr</a></li>
-    <li style="padding: 8px 24px;"><a href="/settings/sonarr" style="color: #fff; text-decoration: none;">Sonarr</a></li>
-    <li style="padding: 8px 24px;"><a href="/scheduling" style="color: #fff; text-decoration: none;">Scheduling</a></li>
-    <li style="padding: 8px 24px;"><a href="/user" style="color: #fff; text-decoration: none;">User Settings</a></li>
-    <li style="padding: 8px 24px;"><a href="/settings/plugins" style="color: #fff; text-decoration: none;">Plugins</a></li>
+<!-- Connections block (native details) -->
+<li class="sidebar-section">
+  <details class="sidebar-details">
+    <summary class="sidebar-summary">
+      <span class="sidebar-summary-title">Connections</span>
+      <span class="sidebar-summary-caret" aria-hidden="true">▸</span>
+    </summary>
+
+    <ul class="sidebar-sublist">
+      <li><a href="/plugins?category=media" class="{% if request.args.get('category') == 'media' %}active{% endif %}">Media</a></li>
+      <li><a href="/plugins?category=scrapers" class="{% if request.args.get('category') == 'scrapers' %}active{% endif %}">Scrapers</a></li>
+      <li><a href="/plugins?category=clients" class="{% if request.args.get('category') == 'clients' %}active{% endif %}">Clients</a></li>
+      <li><a href="/plugins?category=notifications" class="{% if request.args.get('category') == 'notifications' %}active{% endif %}">Notifications</a></li>
+    </ul>
+  </details>
+</li>
+
+
+  <li class="sidebar-section">
+    <details class="sidebar-details">
+      <summary class="sidebar-summary">
+        <span class="sidebar-summary-title">Settings</span>
+        <span class="sidebar-summary-caret" aria-hidden="true">▸</span>
+      </summary>
+
+      <ul class="sidebar-sublist">
+        <li><a href="/settings/general" class="{% if request.path.startswith('/settings/general') %}active{% endif %}">General</a></li>
+        <li><a href="/scheduling" class="{% if request.path.startswith('/scheduling') %}active{% endif %}">Scheduling</a></li>
+        <li><a href="/account" class="{% if request.path.startswith('/user') %}active{% endif %}">Account</a></li>
+      </ul>
+    </details>
+  </li>
+
+  <li class="sidebar-section">
+    <details class="sidebar-details">
+      <summary class="sidebar-summary">
+        <span class="sidebar-summary-title">System</span>
+        <span class="sidebar-summary-caret" aria-hidden="true">▸</span>
+      </summary>
+
+      <ul class="sidebar-sublist">
+        <li><a href="/status" class="{% if request.path.startswith('/status') %}active{% endif %}">Status</a></li>
+        <li><a href="/tasks" class="{% if request.path.startswith('/tasks') %}active{% endif %}">Tasks</a></li>
+        <li><a href="/backups" class="{% if request.path.startswith('/backups') %}active{% endif %}">Backups</a></li>
+        <li><a href="/updates" class="{% if request.path.startswith('/updates') %}active{% endif %}">Updates</a></li>
+        <li><a href="/logs" class="{% if request.path.startswith('/logs') %}active{% endif %}">Logs</a></li>
+      </ul>
+    </details>
+  </li>
+
   </ul>
 </aside>

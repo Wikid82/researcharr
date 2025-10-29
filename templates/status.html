@@ -1,0 +1,519 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="container main-content">
+    <h1>System Status</h1>
+    <p>Basic system status information will be displayed here.</p>
+
+    <section id="plugin-warnings">
+      <h2>Plugin connectivity warnings</h2>
+
+      <div class="status-controls">
+        <div class="auto-refresh-toggle">
+          <label>
+            <input type="checkbox" id="auto-refresh-checkbox">
+            Auto-refresh (30s)
+          </label>
+        </div>
+        <div class="last-checked" id="last-checked">Last checked: never</div>
+      </div>
+
+      <div id="warnings-list">
+        <p class="muted">Checking plugin connections…</p>
+      </div>
+    </section>
+
+    <script>
+    (function(){
+      // Helper to create an element with classes
+      function el(tag, cls){ const e = document.createElement(tag); if(cls) e.className = cls; return e }
+
+  const warningsList = document.getElementById('warnings-list');
+  const lastCheckedEl = document.getElementById('last-checked');
+  const autoRefreshCheckbox = document.getElementById('auto-refresh-checkbox');
+  const AUTO_REFRESH_KEY = 'status:autoRefresh';
+  const AUTO_REFRESH_INTERVAL_MS = 30000; // 30s
+  let autoRefreshId = null;
+
+      // Fetch plugins and validate enabled instances
+      async function loadAndCheck(){
+        // Build map of existing warning elements keyed by plugin:idx
+        const existingMap = new Map();
+        warningsList.querySelectorAll('.warning-card').forEach(elm => {
+          const k = elm.dataset.key;
+          if (k) existingMap.set(k, elm);
+        });
+
+        const seenFailures = new Set();
+
+        // Query aggregated status endpoint (includes storage + other checks)
+        try{
+          const statusResp = await fetch('/api/status');
+          if (statusResp && statusResp.ok){
+            const st = await statusResp.json();
+            // Storage paths
+            (st.storage && st.storage.paths || []).forEach(p => {
+              const skey = `storage:${p.name}`;
+              if (!p.exists || !p.readable || !p.writable){
+                let warn = existingMap.get(skey);
+                if (!warn){
+                  warn = el('div','warning-card');
+                  warn.dataset.key = skey;
+                  const title = el('div','warning-title');
+                  title.textContent = `Storage issue: ${p.path}`;
+                  warn.appendChild(title);
+                  const actions = el('div','warning-actions');
+                  const fixBtn = el('button','btn ghost');
+                  fixBtn.textContent = 'How to fix';
+                  fixBtn.addEventListener('click', function(){ openStorageHelp(p.path, p); });
+                  actions.appendChild(fixBtn);
+                  const docsBtn = el('a','btn ghost');
+                  docsBtn.href = 'https://github.com/Wikid82/researcharr/blob/main/docs/Status-and-Warnings.md#storage-mounts';
+                  docsBtn.target = '_blank';
+                  docsBtn.rel = 'noopener';
+                  docsBtn.textContent = 'Docs';
+                  actions.appendChild(docsBtn);
+                  warn.appendChild(actions);
+                  const info = el('div','muted');
+                  info.textContent = `exists: ${p.exists}, readable: ${p.readable}, writable: ${p.writable}`;
+                  warn.appendChild(info);
+                  warningsList.appendChild(warn);
+                  requestAnimationFrame(function(){ warn.classList.add('show'); });
+                  existingMap.set(skey, warn);
+                }
+              }
+            });
+
+            // DB issues
+            if (st.db && !st.db.ok){
+              const key = 'db:connect';
+              if (!existingMap.has(key)){
+                const warn = el('div','warning-card');
+                warn.dataset.key = key;
+                const title = el('div','warning-title');
+                title.textContent = `Database connectivity problem`;
+                warn.appendChild(title);
+                const actions = el('div','warning-actions');
+                const fix = el('a','btn ghost');
+                fix.href = '/backups';
+                fix.textContent = 'Backups & DB';
+                actions.appendChild(fix);
+                const docs = el('a','btn ghost');
+                docs.href = 'https://github.com/Wikid82/researcharr/blob/main/docs/Status-and-Warnings.md#database-connectivity';
+                docs.target = '_blank';
+                docs.rel = 'noopener';
+                docs.textContent = 'Docs';
+                actions.appendChild(docs);
+                warn.appendChild(actions);
+                const info = el('div','muted');
+                info.textContent = st.db.error || 'Unable to open DB file';
+                warn.appendChild(info);
+                warningsList.appendChild(warn);
+                requestAnimationFrame(function(){ warn.classList.add('show'); });
+                existingMap.set(key, warn);
+              }
+            }
+
+            // Config / API key / admin warnings
+            if (st.config && Array.isArray(st.config.issues) && st.config.issues.length){
+              st.config.issues.forEach((msg, idx) => {
+                const key = `config:${idx}`;
+                if (!existingMap.has(key)){
+                  const warn = el('div','warning-card');
+                  warn.dataset.key = key;
+                  const title = el('div','warning-title');
+                  title.textContent = `Configuration issue`;
+                  warn.appendChild(title);
+                  const actions = el('div','warning-actions');
+                  const fix = el('a','btn ghost');
+                  fix.href = '/settings/general';
+                  fix.textContent = 'Open settings';
+                  actions.appendChild(fix);
+                  const docs = el('a','btn ghost');
+                  docs.href = 'https://github.com/Wikid82/researcharr/blob/main/docs/Status-and-Warnings.md#configuration-and-api-key';
+                  docs.target = '_blank';
+                  docs.rel = 'noopener';
+                  docs.textContent = 'Docs';
+                  actions.appendChild(docs);
+                  warn.appendChild(actions);
+                  const info = el('div','muted');
+                  info.textContent = msg;
+                  warn.appendChild(info);
+                  warningsList.appendChild(warn);
+                  requestAnimationFrame(function(){ warn.classList.add('show'); });
+                  existingMap.set(key, warn);
+                }
+              });
+            }
+
+            // Log file growth
+            if (st.logs && st.logs.app_log){
+              try{
+                const l = st.logs.app_log;
+                // warn on large log (>5MB)
+                if (l.size && l.size > 5 * 1024 * 1024){
+                  const key = 'logs:app';
+                  if (!existingMap.has(key)){
+                    const warn = el('div','warning-card');
+                    warn.dataset.key = key;
+                    const title = el('div','warning-title');
+                    title.textContent = `Large log file: ${l.path}`;
+                    warn.appendChild(title);
+                    const actions = el('div','warning-actions');
+                    const open = el('a','btn ghost');
+                    open.href = '/logs';
+                    open.textContent = 'Open logs';
+                    actions.appendChild(open);
+                    const docs = el('a','btn ghost');
+                    docs.href = 'https://github.com/Wikid82/researcharr/blob/main/docs/Status-and-Warnings.md#log-growth';
+                    docs.target = '_blank';
+                    docs.rel = 'noopener';
+                    docs.textContent = 'Docs';
+                    actions.appendChild(docs);
+                    warn.appendChild(actions);
+                    const info = el('div','muted');
+                    info.textContent = `Size: ${l.size} bytes`;
+                    warn.appendChild(info);
+                    warningsList.appendChild(warn);
+                    requestAnimationFrame(function(){ warn.classList.add('show'); });
+                    existingMap.set(key, warn);
+                  }
+                }
+              }catch(e){/* ignore */}
+            }
+
+            // Missing example files
+            if (st.examples && st.examples.config_example_exists === false){
+              const key = 'examples:config';
+              if (!existingMap.has(key)){
+                const warn = el('div','warning-card');
+                warn.dataset.key = key;
+                const title = el('div','warning-title');
+                title.textContent = `Missing example config`;
+                warn.appendChild(title);
+                const actions = el('div','warning-actions');
+                const docs = el('a','btn ghost');
+                docs.href = 'https://github.com/Wikid82/researcharr/blob/main/docs/Status-and-Warnings.md#missing-example-files';
+                docs.target = '_blank';
+                docs.rel = 'noopener';
+                docs.textContent = 'Docs';
+                actions.appendChild(docs);
+                warn.appendChild(actions);
+                const info = el('div','muted');
+                info.textContent = `Expected example at ${st.examples.path}`;
+                warn.appendChild(info);
+                warningsList.appendChild(warn);
+                requestAnimationFrame(function(){ warn.classList.add('show'); });
+                existingMap.set(key, warn);
+              }
+            }
+
+            // Resources (memory pressure)
+            try{
+              if (st.resources && st.resources.meminfo){
+                const mem = st.resources.meminfo;
+                if (mem.MemTotal && mem.MemAvailable){
+                  const parseKb = v => parseInt((v||"").split(/\s+/)[0]) || 0;
+                  const total = parseKb(mem.MemTotal);
+                  const avail = parseKb(mem.MemAvailable);
+                  if (total > 0){
+                    const usedPct = Math.round(((total - avail) / total) * 100);
+                    if (usedPct >= 85){
+                      const key = 'resources:memory';
+                      if (!existingMap.has(key)){
+                        const warn = el('div','warning-card');
+                        warn.dataset.key = key;
+                        const title = el('div','warning-title');
+                        title.textContent = `High memory usage (${usedPct}%)`;
+                        warn.appendChild(title);
+                        const actions = el('div','warning-actions');
+                        const info = el('div','muted');
+                        info.textContent = `Memory used: ${usedPct}%`;
+                        warn.appendChild(actions);
+                        warn.appendChild(info);
+                        warningsList.appendChild(warn);
+                        requestAnimationFrame(function(){ warn.classList.add('show'); });
+                        existingMap.set(key, warn);
+                      }
+                    }
+                  }
+                }
+              }
+            }catch(e){/* ignore */}
+
+            // Plugin metrics summary warnings (error-rate based)
+            try{
+              if (st.plugins){
+                Object.keys(st.plugins).forEach(function(pname){
+                  try{
+                    const ps = st.plugins[pname];
+                    const va = ps.validate_attempts || 0;
+                    const ve = ps.validate_errors || 0;
+                    const vrate = ps.validate_error_rate;
+                    // Only warn when there is sufficient data (>=5 attempts)
+                    if (va >= 5 && vrate !== null && vrate !== undefined && vrate >= 20){
+                      const key = `plugin_rate:${pname}`;
+                      if (!existingMap.has(key)){
+                        const warn = el('div','warning-card');
+                        warn.dataset.key = key;
+                        const title = el('div','warning-title');
+                        title.textContent = `Plugin error rate high: ${pname}`;
+                        warn.appendChild(title);
+                        const actions = el('div','warning-actions');
+                        const open = el('a','btn ghost');
+                        open.href = `/settings/plugins#plugin-${encodeURIComponent(pname)}`;
+                        open.textContent = 'Open plugin settings';
+                        actions.appendChild(open);
+                        const view = el('a','btn ghost');
+                        view.href = '/metrics';
+                        view.textContent = 'View metrics';
+                        actions.appendChild(view);
+                        const docs = el('a','btn ghost');
+                        docs.href = `https://github.com/Wikid82/researcharr/blob/main/docs/Status-and-Warnings.md#plugin-error-rate`;
+                        docs.target = '_blank';
+                        docs.rel = 'noopener';
+                        docs.textContent = 'Docs';
+                        actions.appendChild(docs);
+                        warn.appendChild(actions);
+                        const info = el('div','muted');
+                        info.textContent = `Validation failures: ${ve}/${va} (${Math.round(vrate)}%)`;
+                        warn.appendChild(info);
+                        warningsList.appendChild(warn);
+                        requestAnimationFrame(function(){ warn.classList.add('show'); });
+                        existingMap.set(key, warn);
+                      }
+                    }
+                  }catch(e){/* ignore per-plugin errors */}
+                });
+              }
+            }catch(e){/* ignore */}
+          }
+        }catch(e){
+          // ignore aggregated status errors — we'll still try plugin checks
+        }
+
+        const resp = await fetch('/api/plugins');
+        if (!resp.ok){
+          warningsList.innerHTML = '';
+          warningsList.appendChild(el('div','muted')).textContent = 'Failed to load plugin list.';
+          updateLastChecked();
+          return;
+        }
+        const data = await resp.json();
+        const plugins = data.plugins || [];
+        const checks = [];
+        plugins.forEach(p => {
+          (p.instances || []).forEach((inst, idx) => {
+            const enabled = inst.enabled === undefined ? true : !!inst.enabled;
+            if (!enabled) return; // skip disabled instances
+            checks.push({name: p.name, idx, instance: inst});
+          });
+        });
+
+        if (!checks.length){
+          warningsList.appendChild(el('div','muted')).textContent = 'No enabled plugin instances to check.';
+          return;
+        }
+
+        // Run validations in series to avoid spamming backends
+        for (const chk of checks){
+          const key = `${chk.name}:${chk.idx}`;
+          const failed = await validateAndRender(chk.name, chk.idx, chk.instance, existingMap);
+          if (failed){
+            seenFailures.add(key);
+          }
+        }
+
+        // Any existing warning not seen now has recovered — animate then remove
+        existingMap.forEach((elm, key) => {
+          if (!seenFailures.has(key)){
+            playRecoveredAnimation(elm);
+          }
+        });
+
+        updateLastChecked();
+      }
+      async function validateAndRender(name, idx, instance, existingMap){
+        const url = `/api/plugins/${encodeURIComponent(name)}/validate/${idx}`;
+        const key = `${name}:${idx}`;
+        let ok = false;
+        try{
+          const r = await fetch(url, {method:'POST'});
+          if (r.ok){
+            const j = await r.json();
+            // Expect {result: true} or {result: {...}} ; treat falsy result as failure
+            ok = !!j.result;
+          }
+        }catch(e){
+          ok = false;
+        }
+
+        if (!ok){
+          // If there is already an element for this key, leave/update it
+          let warn = existingMap.get(key);
+          if (!warn){
+            warn = el('div','warning-card');
+            warn.dataset.key = key;
+            const title = el('div','warning-title');
+            title.textContent = `${instance.name || name} (${name}) — connection issue`;
+            warn.appendChild(title);
+
+            const actions = el('div','warning-actions');
+            const retry = el('button','btn');
+            retry.textContent = 'Retry';
+
+            retry.addEventListener('click', async function(){
+              retry.disabled = true;
+              retry.textContent = 'Checking…';
+              // call validate again
+              try{
+                const r = await fetch(url, {method:'POST'});
+                const j = await r.json();
+                const okNow = !!j.result;
+                if (okNow){
+                  playRecoveredAnimation(warn);
+                } else {
+                  retry.disabled = false;
+                  retry.textContent = 'Retry';
+                }
+              }catch(e){
+                retry.disabled = false;
+                retry.textContent = 'Retry';
+              }
+            });
+
+            const fix = el('a','btn ghost');
+            // Link to the plugin card in the settings page (anchor uses plugin name id)
+            fix.href = `/settings/plugins#plugin-${encodeURIComponent(name)}`;
+            fix.textContent = 'Open plugin settings';
+            actions.appendChild(retry);
+            actions.appendChild(fix);
+            warn.appendChild(actions);
+
+            const info = el('div','muted');
+            info.textContent = instance.url ? `Configured endpoint: ${instance.url}` : 'No endpoint configured';
+            warn.appendChild(info);
+
+            warningsList.appendChild(warn);
+            // remember in map so later checks know it existed
+            existingMap.set(key, warn);
+            // trigger enter animation
+            requestAnimationFrame(function(){ warn.classList.add('show'); });
+          }
+          return true;
+        }
+        return false;
+      }
+
+      function playRecoveredAnimation(warn){
+        // play green pulse then hide+remove
+        warn.classList.add('recovered');
+        // after pulse duration, hide with transition and remove
+        setTimeout(function(){
+          warn.classList.remove('show');
+          warn.classList.add('hide');
+          // remove after transition end
+          warn.addEventListener('transitionend', function(){ warn.remove() }, {once:true});
+        }, 900);
+      }
+
+      function updateLastChecked(){
+        try{
+          lastCheckedEl.textContent = 'Last checked: ' + new Date().toLocaleString();
+        }catch(e){/* ignore */}
+      }
+
+      function enableAutoRefresh(enabled){
+        if (autoRefreshId){ clearInterval(autoRefreshId); autoRefreshId = null }
+        if (enabled){
+          autoRefreshId = setInterval(function(){ loadAndCheck() }, AUTO_REFRESH_INTERVAL_MS);
+        }
+        try{ localStorage.setItem(AUTO_REFRESH_KEY, enabled ? '1' : '0') }catch(e){}
+      }
+
+      // initial load
+      loadAndCheck();
+
+      // Wire up the refresh button
+      const refreshBtn = document.createElement('button');
+      refreshBtn.className = 'btn';
+      refreshBtn.textContent = 'Refresh all';
+      refreshBtn.style.marginTop = '12px';
+      refreshBtn.addEventListener('click', function(){
+        refreshBtn.disabled = true;
+        loadAndCheck().finally(()=> refreshBtn.disabled = false);
+      });
+      warningsList.parentNode.insertBefore(refreshBtn, warningsList.nextSibling);
+
+      // restore auto-refresh preference
+      try{
+        const saved = localStorage.getItem(AUTO_REFRESH_KEY);
+        const enabled = saved === '1';
+        autoRefreshCheckbox.checked = enabled;
+        enableAutoRefresh(enabled);
+      }catch(e){ /* ignore storage errors */ }
+
+      autoRefreshCheckbox.addEventListener('change', function(){
+        enableAutoRefresh(!!autoRefreshCheckbox.checked);
+      });
+
+      // Storage help modal markup + helpers
+      function openStorageHelp(path, info){
+        let modal = document.getElementById('storage-help-modal');
+        if (!modal){
+          modal = document.createElement('div');
+          modal.id = 'storage-help-modal';
+          modal.style.display = 'none';
+          modal.style.position = 'fixed';
+          modal.style.inset = '0';
+          modal.style.alignItems = 'center';
+          modal.style.justifyContent = 'center';
+          modal.style.background = 'rgba(0,0,0,0.5)';
+          modal.style.zIndex = '9999';
+          modal.innerHTML = `
+            <div class="card" style="width:640px;max-width:calc(100% - 40px);">
+              <h3 id="storage-help-title">Storage help</h3>
+              <div id="storage-help-body" style="max-height:60vh;overflow:auto;margin-top:8px"></div>
+              <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+                <button id="storage-help-close" class="btn">Close</button>
+              </div>
+            </div>`;
+          document.body.appendChild(modal);
+          modal.addEventListener('click', function(e){ if (e.target === modal) closeStorageHelp(); });
+        }
+        const title = modal.querySelector('#storage-help-title');
+        const body = modal.querySelector('#storage-help-body');
+        title.textContent = 'Fix storage: ' + path;
+        // Populate help content with suggestions and commands
+        body.innerHTML = `
+          <p>Detected an issue with the mounted path <code>${path}</code>. Typical fixes:</p>
+          <ol>
+            <li>Ensure the host directory is bind-mounted into the container at <code>${path}</code>. Example (docker):
+              <pre style="background:#111;padding:8px;color:#fff;border-radius:6px;margin-top:6px">docker run --rm -v /path/on/host:/config -p 2929:2929 ghcr.io/wikid82/researcharr:latest</pre>
+            </li>
+            <li>Fix permissions so the container user can read/write the directory. Example (on host):
+              <pre style="background:#111;padding:8px;color:#fff;border-radius:6px;margin-top:6px"># give rw to user (adjust UID/GID as needed)
+sudo chown -R 1000:1000 /path/on/host
+sudo chmod -R u+rwx /path/on/host</pre>
+            </li>
+            <li>If you run via docker-compose, ensure the compose defines the volume and maps to <code>/config</code> (or set the <code>CONFIG_DIR</code> env). Example:
+              <pre style="background:#111;padding:8px;color:#fff;border-radius:6px;margin-top:6px">volumes:
+  - ./config:/config</pre>
+            </li>
+          </ol>
+          <p>More information in the project docs: <a href="https://github.com/Wikid82/researcharr/blob/main/docs/Status-and-Warnings.md#storage-mounts" target="_blank" rel="noopener">Status & Warnings — Storage mounts</a></p>
+        `;
+        modal.style.display = 'flex';
+        const closeBtn = modal.querySelector('#storage-help-close');
+        closeBtn.onclick = closeStorageHelp;
+      }
+
+      function closeStorageHelp(){
+        const modal = document.getElementById('storage-help-modal');
+        if (modal) modal.style.display = 'none';
+      }
+
+    })();
+    </script>
+  </div>
+{% endblock %}

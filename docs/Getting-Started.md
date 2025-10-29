@@ -28,6 +28,10 @@ docker-compose up -d --build
 
 2. The web UI is available on port `2929` by default.
 
+Runtime variants
+
+The project publishes two runtime variants: `distroless` (recommended for production, minimal runtime) and `alpine` (developer-friendly). For production runs use the `distroless` image and mount a persistent `/config` directory. For development, use `alpine` or the `builder` stage so you have a shell and dev tooling available.
+
 - Security and initial credentials
 
 - On first startup, if `config/webui_user.yml` does not exist, the web UI will create one and set the default username to `researcharr` and generate a secure random password. The plaintext password is logged once to the application logs to allow initial login; the password hash is stored in `config/webui_user.yml`.
@@ -38,6 +42,16 @@ docker-compose up -d --build
 Configuration and config files
 
 - See `config.example.yml` for configuration options. The container will auto-create `/config/config.yml` from the example if it's missing.
+
+Important note about bind-mounting `/app`
+
+If you mount a host directory onto `/app` (for example in a development compose where you mount your source tree into the container), files that were baked into the image at `/app` will be hidden by the mount. In particular, the bundled `config.example.yml` lives at the repository root and will be available at `/app/config.example.yml` inside the image — but it will be hidden if you mount another host folder over `/app` that doesn't contain the example file.
+
+Recommendations:
+
+- For production/operator usage: do not mount `/app`. Mount only `./config` to `/config` so the entrypoint can copy `/app/config.example.yml` into `/config/config.yml` on first-run.
+- For development: mount your repository root into `/app` (for example `- ./:/app:delegated`) so that `/app/config.example.yml` remains present and you can edit source files on the host.
+- Quick workaround if you must mount a host folder that does not contain `config.example.yml`: copy `config.example.yml` from the repository into the host path you are mounting, or copy the example into your host `./config/config.yml` before starting the container.
 	Scheduling note: the app uses an in-process scheduler (APScheduler) to run the background processing according to a cron-like scheduler expression stored in `config.yml`. Edit this expression from the Scheduling tab in the web UI or directly in `config.yml`.
 
 Health & Metrics

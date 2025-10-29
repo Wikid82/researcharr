@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="container main-content">
+    <h1>Updates</h1>
+    <p>Check for application updates and release notes here.</p>
+
+    <div id="updates-status" class="card">
+      <div class="card-body">
+        <p id="current-version">Current version: <em>loading…</em></p>
+        <div id="latest-info">Loading latest release information…</div>
+      </div>
+    </div>
+
+    <div style="margin-top:1rem;">
+      <button id="refresh-updates" class="btn btn-secondary">Refresh</button>
+      <button id="ignore-release" class="btn btn-warning">Ignore this release</button>
+      <button id="unignore" class="btn btn-outline-secondary">Unignore</button>
+    </div>
+
+    <!-- Marked.js for client-side Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+      async function fetchUpdates() {
+        const r = await fetch('/api/updates');
+        if (!r.ok) {
+          document.getElementById('latest-info').innerText = 'Failed to fetch update info';
+          return;
+        }
+        const j = await r.json();
+        document.getElementById('current-version').innerHTML = 'Current version: <strong>' + (j.current_version || 'unknown') + '</strong>';
+        const latest = j.latest || {};
+        const el = document.getElementById('latest-info');
+        if (!latest.tag_name) {
+          el.innerHTML = '<p>No release information available.</p>';
+          return;
+        }
+        let html = `<h3>Latest: ${latest.name || latest.tag_name} (${latest.tag_name})</h3>`;
+        if (latest.published_at) html += `<p>Published: ${latest.published_at}</p>`;
+        if (latest.body) html += `<div id="release-body">${marked.parse(latest.body || '')}</div>`;
+        if (latest.assets && latest.assets.length) {
+          html += '<p>Assets:</p><ul>' + latest.assets.map(a => `
+            <li>
+              <a href="${a.url}" target="_blank" rel="noopener">${a.name}</a>
+              <button class="btn btn-sm btn-outline-primary open-asset" data-url="${a.url}">Open</button>
+              <button class="btn btn-sm btn-success inapp-upgrade" data-url="${a.url}">In-app Upgrade</button>
+            </li>`).join('') + '</ul>';
+        }
+        if (j.is_ignored) html += '<p><em>Updates are currently ignored (' + (j.ignore_reason || '') + ').</em></p>';
+        if (j.in_image) html += '<p><strong>Note:</strong> in-image runtime detected; in-app upgrade actions are disabled.</p>';
+        el.innerHTML = html;
+
+        // wire buttons
+        document.querySelectorAll('.open-asset').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const u = btn.getAttribute('data-url');
+            window.open(u, '_blank');
+          });
+        });
+        document.querySelectorAll('.inapp-upgrade').forEach(btn => {
+          const disabled = j.in_image || !j.can_upgrade;
+          if (disabled) btn.disabled = true;
+          btn.addEventListener('click', async (e) => {
+            if (!confirm('Start in-app upgrade (download asset to server)?')) return;
+            const u = btn.getAttribute('data-url');
+            btn.disabled = true;
+            try {
+              const resp = await fetch('/api/updates/upgrade', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({asset_url: u})});
+              const data = await resp.json();
+              if (resp.ok) {
+                alert('Upgrade started: ' + (data.asset_url || ''));
+              } else {
+                alert('Upgrade failed: ' + (data.error || 'unknown'));
+              }
+            } catch (err) {
+              alert('Upgrade request failed');
+            }
+            fetchUpdates();
+          });
+        });
+      }
+
+      document.getElementById('refresh-updates').addEventListener('click', fetchUpdates);
+      document.getElementById('ignore-release').addEventListener('click', async () => {
+        // POST ignore for this release tag
+        const r = await fetch('/api/updates');
+        if (!r.ok) return alert('Failed to read current release');
+        const j = await r.json();
+        const tag = (j.latest && j.latest.tag_name) || null;
+        if (!tag) return alert('No release to ignore');
+        const resp = await fetch('/api/updates/ignore', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({mode: 'release', release_tag: tag})});
+        if (resp.ok) {
+          alert('Ignoring release ' + tag);
+          fetchUpdates();
+        } else {
+          alert('Failed to ignore release');
+        }
+      });
+      document.getElementById('unignore').addEventListener('click', async () => {
+        const resp = await fetch('/api/updates/unignore', {method: 'POST'});
+        if (resp.ok) {
+          alert('Cleared ignore state');
+          fetchUpdates();
+        } else alert('Failed to clear ignore');
+      });
+
+      // initial load
+      fetchUpdates();
+    </script>
+  </div>
+{% endblock %}

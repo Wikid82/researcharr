@@ -1,0 +1,40 @@
+<div id="plugin-{{ plugin.name }}" class="card plugin-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <div>
+      <strong>{{ plugin.name }}</strong>
+      <div class="muted">{{ plugin.description }}</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      {% if plugin.docs_url %}<a href="{{ plugin.docs_url }}" class="btn ghost">Docs</a>{% endif %}
+      <button class="btn" data-plugin-add="{{ plugin.name }}">Add Instance</button>
+      {% if plugin.enabled %}
+        <form method="post" action="/settings/plugins/{{ plugin.id }}/disable" style="display:inline">
+          <button class="btn">Disable</button>
+        </form>
+      {% else %}
+        <form method="post" action="/settings/plugins/{{ plugin.id }}/enable" style="display:inline">
+          <button class="btn primary">Enable</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+  {% if plugin.instances %}
+    <div class="instance-list">
+      {% for i in plugin.instances %}
+        <div class="instance-row">
+          <div class="meta">
+            <strong>{{ i.get('name', 'instance') }}</strong>
+            <div class="muted">Status: {{ 'enabled' if i.get('enabled') else 'disabled' }} • Last sync: {{ i.get('last_sync') or 'never' }}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="btn plugin-validate" data-plugin="{{ plugin.name }}" data-idx="{{ loop.index0 }}">Validate</button>
+            <button class="btn plugin-sync" data-plugin="{{ plugin.name }}" data-idx="{{ loop.index0 }}">Sync</button>
+            <button class="btn" data-plugin-edit="{{ plugin.name }}" data-idx="{{ loop.index0 }}">Edit</button>
+            <button class="btn" data-plugin-delete="{{ plugin.name }}" data-idx="{{ loop.index0 }}">Delete</button>
+            <span class="plugin-result" id="result-{{ plugin.name }}-{{ loop.index0 }}"></span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>

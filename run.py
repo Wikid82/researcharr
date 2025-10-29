@@ -8,14 +8,43 @@ cron schedule. Scheduled runs log to `/config/cron.log`.
 import argparse
 import importlib
 import importlib.util
+
+# stdlib imports grouped at top to satisfy flake8 E402
+import json
 import logging
 import os
 import subprocess
 import sys
 import threading
+import time
 from types import ModuleType
+from typing import Any, cast
 
 import yaml
+
+# Declare the temporary names with a loose Any|None so static analysis
+# allows assigning None when the optional import fails. Use importlib to
+# load the module to avoid binding a precise Callable type to these names
+# and then assigning None in an except branch (which would trigger
+# incompatible-assignment errors when a stub provides a strict signature).
+_create_backup_file: Any | None = None
+_prune_backups: Any | None = None
+try:
+    import importlib as _importlib
+
+    _backups_mod = _importlib.import_module("researcharr.backups")
+    _create_backup_file = getattr(_backups_mod, "create_backup_file", None)
+    _prune_backups = getattr(_backups_mod, "prune_backups", None)
+except Exception:
+    _create_backup_file = None
+    _prune_backups = None
+
+# Declare the public module-level names with loose Any so callers and
+# static analysis know they may be callables or None depending on
+# availability of the shared helpers.
+create_backup_file: Any | None = _create_backup_file
+prune_backups: Any | None = _prune_backups
+# (imports consolidated at file top)
 
 # `resource` is a platform-specific stdlib module (POSIX). Annotate a
 # temporary name as optional before attempting the import so mypy knows
@@ -27,6 +56,10 @@ except Exception:
     _resource = None
 
 resource: ModuleType | None = _resource
+
+# Module-level lock used for run_job concurrency control. Declare here so
+# static analyzers know the name exists.
+_run_job_lock: threading.Lock | None = None
 
 
 def _load_scheduler_classes():
@@ -112,11 +145,12 @@ def load_config():
 def run_job():
     """Run scheduled job with timeout and optional RLIMITs."""
     logger = logging.getLogger("researcharr.cron")
+    start_ts = time.time()
 
     global _run_job_lock
-    try:
-        _run_job_lock
-    except NameError:
+    # Initialize the module-level lock if not already created. Declaring the
+    # lock at module scope helps static analyzers know the name exists.
+    if _run_job_lock is None:
         _run_job_lock = threading.Lock()
 
     concurrency = int(os.getenv("RUN_JOB_CONCURRENCY", "1"))
@@ -133,6 +167,14 @@ def run_job():
         rlimit_cpu = os.getenv("JOB_RLIMIT_CPU_SECONDS")
 
         preexec = None
+        # Compute timeout regardless of resource rlimit configuration so the
+        # variable is always defined for subsequent logic.
+        try:
+            timeout_val = int(os.getenv("JOB_TIMEOUT", "0"))
+            timeout_arg = timeout_val if timeout_val > 0 else None
+        except Exception:
+            timeout_arg = None
+
         if resource is not None and (rlimit_as_mb or rlimit_cpu):
             if rlimit_as_mb:
                 try:
@@ -150,42 +192,74 @@ def run_job():
             else:
                 cpu_seconds = None
 
+            # Cast to ModuleType so static analyzers know `res` has the
+            # expected attributes (RLIMIT_* constants and setrlimit).
+            res = cast(ModuleType, resource)
+
             def _limit_resources():
                 try:
                     if as_bytes is not None:
                         as_limit = (as_bytes, as_bytes)
-                        resource.setrlimit(resource.RLIMIT_AS, as_limit)
+                        res.setrlimit(res.RLIMIT_AS, as_limit)
                     if cpu_seconds is not None:
                         cpu_limit = (cpu_seconds, cpu_seconds)
-                        resource.setrlimit(resource.RLIMIT_CPU, cpu_limit)
+                        res.setrlimit(res.RLIMIT_CPU, cpu_limit)
                 except Exception:
                     pass
 
             preexec = _limit_resources
 
-        try:
-            timeout_val = int(os.getenv("JOB_TIMEOUT", "0"))
-            timeout_arg = timeout_val if timeout_val > 0 else None
-        except Exception:
-            timeout_arg = None
+            # timeout_arg already computed above
+            pass
 
         try:
-            # Build kwargs only with keys supported/needed.
-            # Tests may monkeypatch the subprocess module with a simple
-            # object that doesn't accept
-            # `timeout` or `preexec_fn`.
-            run_kwargs = {"capture_output": True, "text": True}
+            # Build kwargs with a loose Any type so static checkers don't
+            # infer a narrow homogenous type from the initial boolean
+            # values. Tests may monkeypatch subprocess with a simplified
+            # object that doesn't accept `timeout` or `preexec_fn`.
+            run_kwargs: dict[str, Any] = {
+                "capture_output": True,
+                "text": True,
+            }
             if timeout_arg is not None:
                 run_kwargs["timeout"] = timeout_arg
             if preexec is not None:
                 run_kwargs["preexec_fn"] = preexec
 
-            res = subprocess.run([sys.executable, SCRIPT], **run_kwargs)
+            # Call via an Any-typed name to avoid picky overload/type
+            # checks from the type stubs for subprocess.run.
+            run_fn: Any = subprocess.run
+            res = run_fn([sys.executable, SCRIPT], **run_kwargs)
+
             if res.stdout:
                 logger.info("Job stdout:\n%s", res.stdout.strip())
             if res.stderr:
                 logger.error("Job stderr:\n%s", res.stderr.strip())
             logger.info("Job finished with returncode %s", res.returncode)
+
+            # Persist a structured run record to JSONL for reliable history
+            try:
+                config_dir = os.getenv("CONFIG_DIR", "/config")
+                hist_file = os.path.join(config_dir, "task_history.jsonl")
+                rec = {
+                    "start_ts": int(start_ts),
+                    "start_iso": time.strftime(
+                        "%Y-%m-%dT%H:%M:%SZ", time.gmtime(start_ts)
+                    ),
+                    "returncode": int(getattr(res, "returncode", -1)),
+                    "stdout": res.stdout or "",
+                    "stderr": res.stderr or "",
+                    "duration_seconds": round(time.time() - start_ts, 2),
+                    "success": getattr(res, "returncode", 1) == 0,
+                }
+                try:
+                    os.makedirs(config_dir, exist_ok=True)
+                    with open(hist_file, "a") as hf:
+                        hf.write(json.dumps(rec) + "\n")
+                except Exception:
+                    logger.exception("Failed to write task history to %s", hist_file)
+            except Exception:
+                logger.exception("Failed to build/persist run record")
         except getattr(subprocess, "TimeoutExpired", Exception):
             logger.error("Scheduled job exceeded timeout and was killed")
         except Exception:
@@ -196,6 +270,8 @@ def run_job():
                 _run_job_lock.release()
             except Exception:
                 pass
+
+            pass
 
 
 def main(once: bool = False):
@@ -246,6 +322,90 @@ def main(once: bool = False):
             id="researcharr_job",
             replace_existing=True,
         )
+
+        # backup helpers and scheduled prune/auto-backup
+        def _read_backups_cfg():
+            config_dir = os.getenv("CONFIG_DIR", "/config")
+            cfg_file = os.path.join(config_dir, "backups.yml")
+            defaults = {
+                "retain_count": 10,
+                "retain_days": 30,
+                "pre_restore": True,
+                "pre_restore_keep_days": 1,
+                "auto_backup_enabled": False,
+                "auto_backup_cron": "0 2 * * *",
+                "prune_cron": "0 3 * * *",
+            }
+            try:
+                if os.path.exists(cfg_file):
+                    with open(cfg_file) as fh:
+                        data = yaml.safe_load(fh) or {}
+                    defaults.update(data)
+            except Exception:
+                logger.exception("Failed to read backups config %s", cfg_file)
+            return defaults
+
+        # If the shared helpers are available, use them; otherwise fall back
+        # to no-op implementations so the scheduler can still start in tests
+        # where the package import path may differ.
+        def _create_backup_file_run(prefix: str = ""):
+            if create_backup_file is None:
+                logger.debug("create_backup_file helper not available")
+                return None
+            config_dir = os.getenv("CONFIG_DIR", "/config")
+            backups_dir = os.path.join(config_dir, "backups")
+            return create_backup_file(config_dir, backups_dir, prefix=prefix)
+
+        def _prune_backups_run():
+            if prune_backups is None:
+                logger.debug("prune_backups helper not available")
+                return
+            cfg = _read_backups_cfg()
+            config_dir = os.getenv("CONFIG_DIR", "/config")
+            backups_dir = os.path.join(config_dir, "backups")
+            prune_backups(backups_dir, cfg)
+
+        try:
+            bcfg = _read_backups_cfg()
+            # Prune job
+            prune_cron = bcfg.get("prune_cron")
+            if prune_cron:
+                try:
+                    ptrigger = CronTrigger.from_crontab(prune_cron, timezone="UTC")
+                    scheduler.add_job(
+                        _prune_backups_run,
+                        ptrigger,
+                        id="prune_backups",
+                        replace_existing=True,
+                    )
+                except Exception:
+                    logger.exception("Invalid prune cron: %s", prune_cron)
+            # Auto backup
+            if bcfg.get("auto_backup_enabled"):
+                ab_cron = bcfg.get("auto_backup_cron") or "0 2 * * *"
+                try:
+                    abtrigger = CronTrigger.from_crontab(ab_cron, timezone="UTC")
+
+                    def _auto_backup_wrapper():
+                        name = _create_backup_file_run()
+                        if name:
+                            logger.info("Auto-backup created %s", name)
+                            # prune after creating
+                            try:
+                                _prune_backups_run()
+                            except Exception:
+                                logger.exception("Prune after auto-backup failed")
+
+                    scheduler.add_job(
+                        _auto_backup_wrapper,
+                        abtrigger,
+                        id="auto_backup",
+                        replace_existing=True,
+                    )
+                except Exception:
+                    logger.exception("Invalid auto backup cron: %s", ab_cron)
+        except Exception:
+            logger.exception("Failed to schedule backup/prune jobs")
         scheduler.start()
 
         run_job()

@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Plugins{% endblock %}
+{% block content %}
+<h1>Plugins</h1>
+{% if selected_category %}
+  <h3>Category: {{ category_titles.get(selected_category, selected_category) }}</h3>
+{% endif %}
+
+{% if plugins %}
+  {% for category, plist in plugins.items() %}
+    {% if not selected_category or selected_category == category %}
+      <section style="margin-bottom:18px">
+        <h2>{{ category_titles.get(category, category|capitalize) }}</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">
+          {% for p in plist %}
+            {% set plugin = p %}
+            {% include '_plugin_card.html' %}
+            {% set plugin = None %}
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+  {% endfor %}
+{% else %}
+  <p>No plugins discovered.</p>
+{% endif %}
+
+<!-- Plugin instance modal (hidden by default) -->
+<div id="plugin-instance-modal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);z-index:9999;" class="modal">
+  <div class="card" style="width:420px;">
+    <h3 id="plugin-instance-modal-title">Plugin Instance</h3>
+    <div id="plugin-modal-error" style="color:#f6b3b3;min-height:20px"></div>
+    <div class="form-row">
+      <label class="form-label">Name</label>
+      <input name="instance_name" class="form-control">
+    </div>
+    <div class="form-row">
+      <label class="form-label">URL</label>
+      <input name="instance_url" class="form-control">
+    </div>
+    <div class="form-row">
+      <label class="form-label">API Key</label>
+      <input name="instance_api_key" class="form-control">
+    </div>
+    <div class="form-row">
+      <label><input type="checkbox" name="instance_enabled"> Enabled</label>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+      <button data-modal-cancel class="btn">Cancel</button>
+      <button id="plugin-instance-modal-save" class="btn primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// keep existing instance-level actions available via API if needed; plugin cards are primarily presentational
+// If user navigated with a fragment like #plugin-sonarr, scroll that plugin card into view and highlight it briefly
+document.addEventListener('DOMContentLoaded', function(){
+  try{
+    var h = window.location.hash;
+    if (h && h.startsWith('#plugin-')){
+      var el = document.querySelector(h);
+      if (el){
+        el.scrollIntoView({behavior:'smooth', block:'center'});
+        el.style.transition = 'box-shadow 0.3s ease';
+        el.style.boxShadow = '0 6px 18px rgba(255,180,180,0.18)';
+        setTimeout(function(){ el.style.boxShadow = ''; }, 2500);
+      }
+    }
+  }catch(e){/* ignore */}
+});
+</script>
+{% endblock %}

@@ -30,11 +30,27 @@ docs/
 # pytest cache
 .pytest_cache/
 
-# Local files
-config/
-logs/
+# Local files (ignore specific generated runtime artifacts, but keep repo config files)
+config/webui_user.yml
+config/webui_user.yml.bak*
+config/*.db
+config/*.sqlite
+config/cron.log
+config/logs/
+config/*.log
 researcharr.db
+build/
+build/artifacts/
+build/smoke-logs*
+*.tar.gz
 
 # OS
 .DS_Store
-*** End Patch
+coverage.xml
+coverage.*
+.mypy_cache/
+.tox/
+.cache/
+.venv/
+venv/
+env/

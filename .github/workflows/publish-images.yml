@@ -1,0 +1,79 @@
+name: Publish images
+
+on:
+  push:
+    branches:
+      - '**'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Determine tags
+        id: tags
+        run: |
+          ref=${GITHUB_REF#refs/heads/}
+          # sanitize branch name for tag usage
+          safe_ref=${ref//[^A-Za-z0-9._-]/-}
+          echo "ref=$ref" >> $GITHUB_OUTPUT
+          echo "safe_ref=$safe_ref" >> $GITHUB_OUTPUT
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push (development branch -> debug target)
+        if: startsWith(github.ref, 'refs/heads/development')
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          target: debug
+          tags: |
+            ghcr.io/wikid82/researcharr:dev
+            ghcr.io/wikid82/researcharr:branch-${{ steps.tags.outputs.safe_ref }}
+          build-args: |
+            BUILD_VERSION=${{ github.sha }}
+
+      - name: Build and push (main branch -> runtime)
+        if: startsWith(github.ref, 'refs/heads/main')
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          # default final stage (runtime)
+          tags: |
+            ghcr.io/wikid82/researcharr:latest
+            ghcr.io/wikid82/researcharr:prod
+            ghcr.io/wikid82/researcharr:branch-${{ steps.tags.outputs.safe_ref }}
+          build-args: |
+            BUILD_VERSION=latest
+
+      - name: Build and push (other branches -> branch tag)
+        if: >-
+          startsWith(github.ref, 'refs/heads/') &&
+          github.ref != 'refs/heads/main' &&
+          github.ref != 'refs/heads/development'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/wikid82/researcharr:branch-${{ steps.tags.outputs.safe_ref }}
+          build-args: |
+            BUILD_VERSION=${{ github.sha }}

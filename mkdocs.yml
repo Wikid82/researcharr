@@ -1,0 +1,16 @@
+site_name: researcharr
+site_description: "Documentation for researcharr — developer and user docs."
+site_author: "researcharr contributors"
+repo_name: "Wikid82/researcharr"
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: readthedocs
+
+extra_css:
+- assets/css/researcharr.css
+
+# Navigation (optional). MkDocs will auto-generate nav from docs/ if not provided.
+
+plugins: []

@@ -22,34 +22,34 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install requests
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
 
-    - name: Run GHCR cleanup (dry-run by default)
-      id: run_cleanup
-      env:
-        GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
-        OWNER: ${{ github.repository_owner }}
-        REPO: ${{ github.event.repository.name || github.repository }}
-        DAYS: ${{ github.event.inputs.days || github.event.inputs.days || '90' }}
-        DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
-        JSON_REPORT: ghcr_cleanup_report.json
-      run: |
-        python .github/scripts/ghcr_cleanup.py --json-report $JSON_REPORT --days $DAYS $( [ "$DRY_RUN" = "true" ] && echo --dry-run || echo --no-dry-run )
+      - name: Run GHCR cleanup (dry-run by default)
+        id: run_cleanup
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name || github.repository }}
+          DAYS: ${{ github.event.inputs.days || github.event.inputs.days || '90' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
+          JSON_REPORT: ghcr_cleanup_report.json
+        run: |
+          python .github/scripts/ghcr_cleanup.py --json-report $JSON_REPORT --days $DAYS $( [ "$DRY_RUN" = "true" ] && echo --dry-run || echo --no-dry-run )
 
-    - name: Upload report artifact
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: ghcr-cleanup-report
-        path: ghcr_cleanup_report.json
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghcr-cleanup-report
+          path: ghcr_cleanup_report.json

@@ -1,12 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>User Settings</title>
+  </head>
+  <body>
+    <h1>User Settings</h1>
+    <p>Username: {{ user.username if user else '' }}</p>
+  </body>
+```html
 {% extends 'base.html' %}
-{% block title %}User Settings{% endblock %}
+{% block title %}User Settings - researcharr{% endblock %}
 {% block content %}
-<form method="post" action="/user">
-  <fieldset><legend>User Settings</legend>
-    Username: <input name="username" value="{{ user.username }}"><br>
-    Password: <input name="password" type="password" placeholder="Leave blank to keep current"><br>
-    <input type="submit" value="Save User Settings">
-    {% if user_msg %}<div class="user-msg">{{ user_msg }}</div>{% endif %}
-  </fieldset>
-</form>
+  <h1>User Settings</h1>
+  <p>Username: {{ user.username if user else '' }}</p>
+  {% if user_msg %}
+    <p>{{ user_msg }}</p>
+  {% endif %}
 {% endblock %}
+
+```

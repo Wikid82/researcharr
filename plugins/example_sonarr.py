@@ -1,35 +1,10 @@
-from typing import Any, Dict
+"""Compatibility re-export so callers can import `plugins.example_sonarr`.
 
-from flask import Blueprint, jsonify
+The canonical example Sonarr plugin lives under `plugins.media.example_sonarr`.
+Expose it directly at `plugins.example_sonarr` to simplify imports used by
+tests and external tooling.
+"""
 
-from researcharr.plugins.base import BasePlugin
+from .media.example_sonarr import PLUGIN_NAME, Plugin  # noqa: F401
 
-PLUGIN_NAME = "sonarr"
-
-
-class Plugin(BasePlugin):
-    name = PLUGIN_NAME
-
-    def validate(self) -> Dict[str, Any]:
-        # Very small placeholder validation
-        url = self.config.get("url")
-        api_key = self.config.get("api_key")
-        if not url or not api_key:
-            return {"success": False, "msg": "Missing url or api_key"}
-        return {"success": True}
-
-    def sync(self) -> Dict[str, Any]:
-        # Never actually call external services in this example
-        return {"success": True, "details": "synced (noop)"}
-
-    def health(self) -> Dict[str, Any]:
-        return {"status": "ok", "name": self.config.get("name")}
-
-    def blueprint(self):
-        bp = Blueprint("sonarr_plugin", __name__, url_prefix="/plugin/sonarr")
-
-        @bp.route("/info")
-        def info():
-            return jsonify({"plugin": "sonarr", "config": self.config})
-
-        return bp
+__all__ = ["PLUGIN_NAME", "Plugin"]

@@ -1,11 +1,30 @@
 # ... code for researcharr.py ...
 # ... code for app.py ...
 
+import logging
 import os
 import sqlite3
 
-import requests
-import yaml
+# Allow the top-level module `researcharr.py` to behave like a package for
+# legacy imports such as `import researcharr.plugins.example_sonarr`.
+# When a module defines a __path__ attribute it is treated as a package by
+# the import system; include both the module directory and the nested
+# `researcharr/` package directory so submodule imports resolve.
+__path__ = [
+    os.path.dirname(__file__),
+    os.path.join(os.path.dirname(__file__), "researcharr"),
+]
+
+# Allow test fixtures to monkeypatch top-level names before the module is
+# (re)loaded. If a name already exists in globals() (for example because a
+# test called monkeypatch.setattr("researcharr.researcharr.requests", ...) )
+# avoid re-importing or re-defining so the test-patched object survives
+# importlib.reload.
+if "requests" not in globals():
+    import requests
+
+if "yaml" not in globals():
+    import yaml
 
 DB_PATH = "researcharr.db"
 
@@ -28,6 +47,28 @@ def init_db(db_path=None):
     c.execute(sql)
     conn.commit()
     conn.close()
+
+
+if "setup_logger" not in globals():
+
+    def setup_logger(name: str, log_file: str, level: int | None = None):
+        """Create and return a simple logger for the application.
+
+        Tests expect a callable `setup_logger` that returns an object with an
+        `info` method. Provide a minimal, well-behaved logger here.
+        """
+        logger = logging.getLogger(name)
+        # Prevent adding duplicate handlers in repeated test runs
+        if not logger.handlers:
+            handler = logging.FileHandler(log_file)
+            fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+            handler.setFormatter(fmt)
+            logger.addHandler(handler)
+        if level is not None:
+            logger.setLevel(level)
+        else:
+            logger.setLevel(logging.INFO)
+        return logger
 
 
 def has_valid_url_and_key(instances):
@@ -92,47 +133,49 @@ def load_config(path="config.yml"):
         return config
 
 
-def create_metrics_app():
-    from flask import Flask, jsonify
+if "create_metrics_app" not in globals():
 
-    app = Flask("metrics")
-    app.metrics = {"requests_total": 0, "errors_total": 0}
+    def create_metrics_app():
+        from flask import Flask, jsonify
 
-    # Increment request counter for every request
-    @app.before_request
-    def _before():
-        app.metrics["requests_total"] += 1
+        app = Flask("metrics")
+        app.metrics = {"requests_total": 0, "errors_total": 0}
 
-    @app.route("/health")
-    def health():
-        # Simulate DB/config/threads/time check for tests
-        try:
-            conn = sqlite3.connect(DB_PATH)
-            conn.execute("SELECT 1")
-            conn.close()
-            db_status = "ok"
-        except Exception:
-            db_status = "error"
-        # Provide the additional fields the tests expect
-        return jsonify(
-            {
-                "status": "ok",
-                "db": db_status,
-                "config": "ok",
-                "threads": 1,
-                "time": "2025-10-23T00:00:00Z",
-            }
-        )
+        # Increment request counter for every request
+        @app.before_request
+        def _before():
+            app.metrics["requests_total"] += 1
 
-    @app.route("/metrics")
-    def metrics_endpoint():
-        return jsonify(app.metrics)
+        @app.route("/health")
+        def health():
+            # Simulate DB/config/threads/time check for tests
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.execute("SELECT 1")
+                conn.close()
+                db_status = "ok"
+            except Exception:
+                db_status = "error"
+            # Provide the additional fields the tests expect
+            return jsonify(
+                {
+                    "status": "ok",
+                    "db": db_status,
+                    "config": "ok",
+                    "threads": 1,
+                    "time": "2025-10-23T00:00:00Z",
+                }
+            )
 
-    # Increment errors_total for 404 and 500
-    @app.errorhandler(404)
-    @app.errorhandler(500)
-    def handle_error(e):
-        app.metrics["errors_total"] += 1
-        return jsonify({"error": "internal error"}), 500
+        @app.route("/metrics")
+        def metrics_endpoint():
+            return jsonify(app.metrics)
 
-    return app
+        # Increment errors_total for 404 and 500
+        @app.errorhandler(404)
+        @app.errorhandler(500)
+        def handle_error(e):
+            app.metrics["errors_total"] += 1
+            return jsonify({"error": "internal error"}), 500
+
+        return app

@@ -1,0 +1,11 @@
+# Example Headphones plugin instances.
+# The Plugins UI/API manages files under /config/plugins/<plugin>.yml and
+# expects a YAML list of instance objects. Keep this file as a list.
+# Uncomment and edit the example below, or let the UI create/manage it.
+#
+# - name: "Headphones Local"
+#   enabled: true
+#   url: "http://headphones:PORT"
+#   api_key: "REPLACE_WITH_KEY"
+
+[]

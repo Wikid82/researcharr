@@ -1,0 +1,11 @@
+# Example Lidarr plugin instances.
+# The Plugins UI/API manages files under /config/plugins/<plugin>.yml and
+# expects a YAML list of instance objects. Keep this file as a list.
+# Uncomment and edit the example below, or let the UI create/manage it.
+#
+# - name: "Lidarr Local"
+#   enabled: true
+#   url: "http://lidarr:PORT"
+#   api_key: "REPLACE_WITH_KEY"
+
+[]

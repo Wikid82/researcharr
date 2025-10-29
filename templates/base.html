@@ -6,13 +6,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="/static/colors.css">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
   {% include 'header.html' %}
   {% block sidebar %}{% include 'sidebar.html' %}{% endblock %}
-  <main class="main-content" {% block main_style %}style="margin-left:220px; margin-top:64px;"{% endblock %}>
+  <main class="main-content" {% block main_style %}data-main="true"{% endblock %}>
     {% block content %}{% endblock %}
   </main>
   {% include 'footer.html' %}
+  <script src="/static/app.js" defer></script>
 </body>
 </html>

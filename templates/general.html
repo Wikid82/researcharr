@@ -1,0 +1,40 @@
+
+{% extends 'base.html' %}
+{% block title %}General Settings{% endblock %}
+{% block content %}
+<form method="post" action="/settings/general" class="card">
+  <h3>General Settings</h3>
+  <div class="form-row">
+    <label class="form-label" for="PUID">PUID (set via env var)</label>
+    <div class="chip" id="PUID">{{ puid }}</div>
+  </div>
+  <div class="form-row">
+    <label class="form-label" for="PGID">PGID (set via env var)</label>
+    <div class="chip" id="PGID">{{ pgid }}</div>
+  </div>
+  <div class="form-row">
+    <label class="form-label" for="Timezone">Timezone (set via env var)</label>
+    <div class="chip" id="Timezone">{{ timezone|default('UTC') }}</div>
+    <small>To change these values, set <code>PUID</code>, <code>PGID</code>, and <code>TIMEZONE</code> in your environment and restart the service.</small>
+  </div>
+  <div class="form-row">
+    <small>Logging level is managed on the <a href="/logs">Logs</a> page.</small>
+  </div>
+  <div class="form-row">
+    <input type="submit" class="btn primary" value="Save General Settings">
+    {% if msg %}<div class="user-msg">{{ msg }}</div>{% endif %}
+  </div>
+</form>
+<form method="post" action="/settings/general" class="card">
+  <h3>API Access</h3>
+  <div class="form-row">
+    <label class="form-label">API Key</label>
+    <div class="chip" id="api_key">{{ api_key or 'Not configured' }}</div>
+    <small>Use the header <code>X-API-Key</code> to authenticate API requests.</small>
+  </div>
+  <div class="form-row">
+    <input type="hidden" name="regen_api" value="1" />
+    <input type="submit" class="btn warn" value="Regenerate API Key">
+  </div>
+</form>
+{% endblock %}

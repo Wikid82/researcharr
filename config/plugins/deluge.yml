@@ -1,0 +1,12 @@
+# Example Deluge client plugin instances.
+# The Plugins UI/API manages files under /config/plugins/<plugin>.yml and
+# expects a YAML list of instance objects. Keep this file as a list.
+#
+# - name: "Deluge Local"
+#   enabled: true
+#   host: "deluge"
+#   port: 58846
+#   username: "user"
+#   password: "pass"
+
+[]

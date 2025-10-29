@@ -1,18 +1,17 @@
----
 services:
   researcharr:
     image: ghcr.io/wikid82/researcharr:latest
     container_name: researcharr
     restart: unless-stopped
-    environment:
-      # Ensure Python logs are unbuffered so they appear in container logs immediately
-      - PYTHONUNBUFFERED=1
-      # Expose the web UI port (matches Dockerfile EXPOSE)
-      - WEBUI_PORT=2929
-      # Default log level; can be overridden in production
-      - LOGLEVEL=INFO
     ports:
       - "2929:2929" # Expose web UI on port 2929
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - PYTHONUNBUFFERED=1
+      - WEBUI_PORT=2929
+      - LOGLEVEL=INFO
     volumes:
       # Persist runtime configuration and DB to host for inspection/troubleshooting
       - ./config:/config:rw
@@ -27,7 +26,7 @@ services:
         max-size: "50m"
         max-file: "5"
     healthcheck:
-      test: ["CMD", "/bin/sh", "-c", "curl -fsS http://localhost:2929/ || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:2929/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -39,4 +38,3 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
-      

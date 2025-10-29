@@ -1,9 +1,29 @@
+"""Pytest session helpers.
+
+Provide compatibility shim modules under the `researcharr.plugins.*` names
+so older-style imports used by the test-suite resolve to the canonical
+`plugins.*` implementations located at the repo root.
+"""
+
 import importlib
 import os
 import sys
 from unittest import mock
 
 import pytest
+
+_mappings = [
+    ("plugins.media.example_sonarr", "researcharr.plugins.example_sonarr"),
+]
+
+for src, dst in _mappings:
+    try:
+        mod = importlib.import_module(src)
+        sys.modules[dst] = mod
+    except Exception:
+        # If import fails, don't block test collection; tests that need the
+        # module will raise a clear error.
+        pass
 
 
 @pytest.fixture(autouse=True)
@@ -77,3 +97,17 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
     importlib.import_module("researcharr.researcharr")
     yield
     # Cleanup handled by tmp_path_factory
+
+
+@pytest.fixture
+def app():
+    """Provide a Flask app instance for tests that request an `app` fixture.
+
+    Use the project's application factory so tests get the same app instance
+    as those that call `create_app()` directly.
+    """
+    from researcharr.factory import create_app
+
+    app = create_app()
+    app.config["TESTING"] = True
+    return app

@@ -1,0 +1,20 @@
+name: CI — Docker
+
+on:
+  push: {}
+
+jobs:
+  docker:
+    # NOTE: corrected invalid runner label (typo) -> using 'ubuntu-latest'.
+    # If you need a Debian-specific runner, set up a self-hosted runner and
+    # update the workflow to use its label (e.g., 'self-hosted, debian-slim').
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build placeholder
+        run: echo "Docker build/push steps go here"

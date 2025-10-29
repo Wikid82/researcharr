@@ -8,13 +8,15 @@ requests>=2.32.4
 urllib3>=2.5.0
 werkzeug
 flask
-pyyaml
+pyyaml==6.0.3
+apprise==1.9.4
 
 black
 isort
 flake8
 types-requests
 types-PyYAML
+types-Markdown
 python-json-logger
 APScheduler
 pytest

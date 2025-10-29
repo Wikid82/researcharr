@@ -44,6 +44,10 @@ jobs:
     - name: Run tests with pytest
       # Ensure we run pytest from the package directory so coverage files are generated where codecov expects
       working-directory: .
+      env:
+        # Ensure top-level modules (e.g. factory.py) are importable during
+        # CI test collection by adding the repo root to PYTHONPATH.
+        PYTHONPATH: ${{ github.workspace }}
       run: |
         # Run tests and produce an XML coverage report for Codecov
         pytest tests/ \
@@ -62,7 +66,11 @@ jobs:
   docker:
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' }}
+    # Only build and push Docker images for pushes to protected branches
+    # (development or main). Feature branches / short-lived branches such
+    # as `chore` or `reception` will not trigger the Docker build here and
+    # should be built locally by authors when needed.
+    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main') }}
     permissions:
       contents: read
       packages: write
@@ -133,6 +141,26 @@ jobs:
           ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}
           ghcr.io/${{ env.REPO_NAME }}:${{ env.SAFE_BRANCH }}
           ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.SAFE_BRANCH }}
+        cache-from: type=gha,scope=researcharr-build-cache
+        cache-to: type=gha,mode=max,scope=researcharr-build-cache
+        build-args: |
+          BUILD_VERSION=${{ env.VERSION }}
+          BUILD_NUMBER=${{ env.BUILD_NUMBER }}
+          GIT_SHA=${{ env.GIT_SHA }}
+          BUILD_DATE=${{ env.BUILD_DATE }}
+          PYTHON_VERSION=3.13
+
+    - name: Build and push debug image (dev tag)
+      id: build-debug
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        platforms: linux/amd64,linux/arm64
+        target: debug
+        tags: |
+          ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-dev
+          ghcr.io/${{ env.REPO_NAME }}:dev
         cache-from: type=gha,scope=researcharr-build-cache
         cache-to: type=gha,mode=max,scope=researcharr-build-cache
         build-args: |
@@ -233,3 +261,46 @@ jobs:
         # Use --no-check-external-hash to explicitly disable the check (preferred),
         # and keep --allow-hash-href as before.
         htmlproofer site --no-check-external-hash --allow-hash-href
+
+  trivy-scan:
+    # Scan built image for vulnerabilities; run on PRs and pushes so contributors get feedback
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver: docker-container
+
+    - name: Build image for scanning
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        load: true
+        push: false
+        tags: researcharr-ci:${{ github.run_id }}
+        build-args: |
+          PYTHON_VERSION=3.13
+
+    - name: Run Trivy scan (JSON)
+      run: |
+        echo "Running Trivy against image researcharr-ci:${{ github.run_id }}"
+        # Pull latest trivy image and scan the local image. Produce JSON output.
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+          -v ${{ github.workspace }}:/workspace aquasec/trivy:latest image --format json -o /workspace/trivy-report.json researcharr-ci:${{ github.run_id }} || true
+        # Exit non-zero only if HIGH or CRITICAL vulnerabilities are found
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:latest image --exit-code 1 --severity HIGH,CRITICAL researcharr-ci:${{ github.run_id }}
+
+    - name: Upload Trivy report
+      uses: actions/upload-artifact@v4
+      with:
+        name: trivy-report-${{ github.run_id }}
+        path: trivy-report.json

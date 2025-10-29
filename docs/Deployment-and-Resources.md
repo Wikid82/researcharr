@@ -106,5 +106,32 @@ Operational guidance
 - `RUN_JOB_CONCURRENCY=1` is the safest default for single-instance
   deployments. Increase only if you explicitly want concurrent runs.
 
+Image variants
+
+The project publishes two primary runtime variants built from the same multistage `Dockerfile`:
+
+- `ghcr.io/wikid82/researcharr:prod` — production image based on Debian-slim (recommended for operators).
+- `ghcr.io/wikid82/researcharr:dev` — developer/debug image (same base as `prod` but with extra debugging tools installed).
+
+Production deploy example (prod):
+
+```bash
+docker run -d \
+  --name researcharr \
+  -v /path/to/config:/config \
+  -p 2929:2929 \
+  --restart unless-stopped \
+  ghcr.io/wikid82/researcharr:prod
+```
+
+Developer example (run debug image with shell):
+
+```bash
+docker run --rm -it \
+  -v "$(pwd)":/app -w /app \
+  -v /path/to/config:/config \
+  -p 2929:2929 \
+  ghcr.io/wikid82/researcharr:dev /bin/bash
+```
 See `docs/Environment-Variables.md` for the full list of environment
 variables and their defaults.

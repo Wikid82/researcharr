@@ -1,5 +1,44 @@
 # Changelog
 
+## 2025-10-25
+
+### Packaging & CI
+
+- Added a `Dockerfile.distroless` multi-stage build that produces a minimal distroless runtime image. The final image copies runtime packages from the builder stage into `/install` and sets `PYTHONPATH` so the distroless Python interpreter can import dependencies.
+- Added `.github/workflows/distroless-ci.yml` to validate the distroless build in CI: it builds the builder stage, runs mypy + pytest inside that builder, builds the final distroless image, runs Trivy, uploads the JSON artifact, and publishes the distroless image on successful trusted refs.
+- Continued support for `Dockerfile.alpine` and the `alpine-ci` workflow for developer-friendly and alternate-variant validation.
+
+### Notes
+
+- We recommend adopting the distroless image for production after CI validation; the repo now publishes both `-distroless` and `-alpine` variants and validates both in CI.
+
+## 2025-10-26
+
+### Developer / CI
+
+- Enforced the developer pipeline (isort + black → flake8 → mypy → pytest + coverage) in CI and locally. Project `.flake8` now excludes virtualenv directories and enforces E501 so line-length violations are surfaced and fixed.
+- Hardened the compatibility import shim used by the `researcharr` package so the real implementation module is deterministically loaded and registered in `sys.modules`. This fixes intermittent test failures caused by import/monkeypatch ordering.
+- Updated docs/README guidance with recommended debug image tags: `local/researcharr:builder` (CI-like builder), `local/researcharr:alpine` (interactive debugging), and `ghcr.io/wikid82/researcharr:distroless` (production).
+
+### Security
+
+- Secured the interactive API documentation (Swagger UI) at `/api/v1/docs` so it requires a valid API key in the `X-API-Key` header. The docs no longer allow anonymous or session-only access to avoid accidental exposure of interactive API call functionality.
+
+### Plugins (alpha)
+
+- Added a large set of example integrations (alpha/test harnesses) under `plugins/` grouped by category:
+  - `media/`: Radarr, Sonarr, Lidarr, Readarr, Whisparr, Headphones, Sick Beard, SickRage, Mylar3, Bobarr — read & safe-search examples.
+  - `clients/`: NZBGet, SABnzbd, qBittorrent, uTorrent, Deluge, Transmission, BitTorrent — read-only queue examples.
+  - `scrapers/`: Prowlarr, Jackett — read-only indexer/status examples.
+  - `notifications/`: Apprise — notifications integration (requires `apprise==1.9.4`).
+
+Notes: These plugins are experimental and intended for development and UI testing. Remote actions that can modify upstream databases are disabled by default and gated behind the `allow_remote_actions` config flag. Back up upstream service databases before enabling remote actions.
+
+### Notes for contributors
+
+- If you run the developer pipeline locally, use the project's `.venv` and install the dev tools there (mypy, pytest-cov, etc.) to avoid system package manager restrictions.
+- If you'd like me to push the verified changes to `development` and watch CI, I can do that next — confirm and I'll push and monitor the workflows.
+
 ## 2025-10-23
 
 ### Major Features Added
@@ -48,6 +87,55 @@
 - README.md updated to document health/metrics endpoints, Docker healthcheck, live loglevel control, and the new `researcharr.py` entry point.
 - New docs page: `Health-and-Metrics.md` (moved from the wiki).
 - All relevant usage and configuration docs updated.
+
+## 2025-10-27
+
+### System / Status and Monitoring
+
+- Added a System → Status page that surfaces operator-facing warnings for common operational problems including storage mounts, database connectivity, configuration/API key issues, first-run admin credentials, permissions, plugin error rates, log growth, external rate-limits, high resource usage, container restarts, and missing example files.
+- Implemented a lightweight `/api/status` aggregator endpoint that returns storage, DB, config, logs, resources, metrics and per-plugin summaries used by the UI.
+- Added per-plugin in-memory metrics counters (validate/sync attempts and errors) and included an error-rate summary in `/api/status` so repeated plugin failures are surfaced as warnings.
+- Added `docs/Status-and-Warnings.md` describing each warning and step-by-step remediation instructions. The Status UI links to the relevant docs sections for each warning.
+- Notes: plugin metrics are stored in-memory (reset on restart). Network-heavy checks (update availability, external checks) are opt-in to avoid flaky UI behavior.
+
+### Packaging & CI (consolidation)
+
+- Consolidated image strategy: CI and publishing now focus on a single Debian-slim based production image (`:prod`) plus a debug variant (`:dev`) built from the same multistage `Dockerfile`. This simplifies image maintenance and keeps glibc compatibility for manylinux wheels while providing a debug image with common troubleshooting tools.
+- The previous separate `alpine` and `distroless` variants are no longer the primary CI targets; CI now builds and validates `prod` and `dev` variants and runs Trivy checks during validation. Existing Dockerfiles for alternative variants were left in the repo for reference but are not actively published by default.
+ - Notes: plugin metrics are stored in-memory (reset on restart). Network-heavy checks (update availability, external checks) are opt-in to avoid flaky UI behavior.
+
+### Backups & Tasks
+
+- Added a Backups UI and API for operator-driven import/export and restore of application state.
+  - Backups are ZIP archives stored under the configured `CONFIG_DIR` (default `/config/backups`) and include configuration files, the SQLite DB, plugins directory, and application logs.
+  - Supported operations: create, import, download, restore, and delete backups via the web UI and `/api/backups` endpoints.
+  - Backups retention and rotation are configurable via `CONFIG_DIR/backups.yml` (keys include `retain_count`, `retain_days`, `pre_restore`, `pre_restore_keep_days`, `auto_backup_enabled`, `auto_backup_cron`, and `prune_cron`).
+  - Pre-restore snapshots are taken (opt-in) before a destructive restore and are prefixed `pre-` to help operators recover if a restore fails.
+
+- Added server-side scheduled pruning (rotation) and optional scheduled automatic backups. These are wired to the scheduler and use cron expressions stored in `backups.yml`.
+
+- Persisted Tasks history and settings so scheduled/long-running task runs can be inspected later via `CONFIG_DIR/task_history.jsonl` and `CONFIG_DIR/tasks.yml`.
+
+### Logs and Live Streaming
+
+- Added a dedicated Logs page (`/logs`) with these features:
+  - Tail and view the application log (configurable number of lines) and download the full log file.
+  - Live log-level control applied at runtime (no restart required). UI-chosen LogLevel is persisted to `CONFIG_DIR/general.yml` so it survives restarts.
+  - Optional Server-Sent Events (SSE) streaming endpoint at `/api/logs/stream` to receive initial tail and appended log lines in real-time.
+
+### Updates & Release Checks
+
+- Implemented server-side caching and exponential backoff for release checks (cache persisted at `CONFIG_DIR/updates_cache.yml`, TTL configurable via `UPDATE_CACHE_TTL`). This reduces GitHub API load and handles transient failures gracefully.
+- Added API endpoints to: list current release info (`/api/updates`), ignore/unignore releases, and a guarded in-app upgrade download that stores downloaded assets in `CONFIG_DIR/updates/downloads` when allowed (disabled when running inside immutable images).
+
+## 2025-10-28
+
+### Operator / Packaging
+
+- Added `scripts/bootstrap-config.sh` — helper to copy repository example config files into a host `./config` directory and set ownership (PUID/PGID). This simplifies first-run bootstrapping when mounting a host config directory.
+- Clarified example config handling: runtime values such as `PUID`, `PGID` and `TIMEZONE` are now configured via environment variables; plugin instances (Radarr/Sonarr) live under `/config/plugins/<plugin>.yml` and are managed by the Plugins UI/API.
+
+
 
 ---
 

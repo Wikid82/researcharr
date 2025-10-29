@@ -1,0 +1,47 @@
+name: Scheduled Trivy Scan
+
+on:
+  schedule:
+  - cron: '0 3 * * 1' # weekly on Monday at 03:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  trivy-weekly:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
+      - name: Build image for scanning
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          push: false
+          tags: researcharr-weekly:${{ github.run_id }}
+          build-args: |
+            PYTHON_VERSION=3.13
+
+      - name: Run Trivy (fail on MEDIUM+)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${{ github.workspace }}:/workspace aquasec/trivy:latest image --format json -o /workspace/trivy-weekly-${{ github.run_id }}.json researcharr-weekly:${{ github.run_id }} || true
+          # Fail if MEDIUM or higher vulnerabilities are found
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:latest image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL researcharr-weekly:${{ github.run_id }} || true
+
+      - name: Upload weekly Trivy report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-weekly-${{ github.run_id }}
+          path: trivy-weekly-${{ github.run_id }}.json

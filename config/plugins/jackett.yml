@@ -1,0 +1,10 @@
+# Example Jackett scraper plugin instances.
+# The Plugins UI/API manages files under /config/plugins/<plugin>.yml and
+# expects a YAML list of instance objects. Keep this file as a list.
+#
+# - name: "Jackett Local"
+#   enabled: true
+#   url: "http://jackett:9117"
+#   api_key: "REPLACE_WITH_KEY"
+
+[]

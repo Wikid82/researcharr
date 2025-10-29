@@ -1,0 +1,52 @@
+name: CI — Build
+
+on:
+  push: {}
+  pull_request: {}
+
+jobs:
+  build:
+    # NOTE: corrected invalid runner label (typo) -> using 'ubuntu-latest'.
+    # If you need a Debian-specific runner, set up a self-hosted runner and
+    # update the workflow to use its label (e.g., 'self-hosted, debian-slim').
+    runs-on: ubuntu-latest
+    env:
+      # Ensure the checked-out repository root is on PYTHONPATH so tests that
+      # import top-level modules (e.g. `factory`) can find them when the
+      # runner changes working directories or when pytest adjusts sys.path.
+      PYTHONPATH: ${{ github.workspace }}
+      # Expose Codecov token to job as an env var so step-level `if` can
+      # check `env.CODECOV_TOKEN` without referencing `secrets` directly in
+      # the expression (some editors flag `secrets.*` as an unrecognized
+      # named-value even though GitHub Actions evaluates it at runtime).
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    strategy:
+      matrix:
+        python-version: [3.13]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install black isort flake8 mypy pytest pytest-cov
+      - name: Run tests with pytest
+        run: |
+          pytest tests/ --maxfail=3 --disable-warnings -v \
+            --cov=researcharr --cov-report=xml:coverage.xml
+      # NOTE: `secrets.CODECOV_TOKEN` is evaluated by GitHub Actions at
+      # runtime. Some local editors/language servers cannot resolve runtime
+      # contexts and report 'Unrecognized named-value: secrets' as a false
+      # positive. To reduce that editor noise we copy the secret into an
+      # environment variable at the job level above and use `env.CODECOV_TOKEN`
+      # in the step `if` expression instead of referencing `secrets.*`.
+      - name: Upload coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ env.CODECOV_TOKEN }}
+        continue-on-error: true

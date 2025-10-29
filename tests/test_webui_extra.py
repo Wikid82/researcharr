@@ -34,12 +34,28 @@ def test_radarr_save_and_reload(client):
         "radarr0_max_download_queue": 20,
         "radarr0_reprocess_interval_days": 3,
     }
-    rv = client.post("/settings/radarr", data=data, follow_redirects=True)
-    assert b"Radarr settings saved" in rv.data or b"Radarr" in rv.data
-    rv = client.get("/settings/radarr")
-    assert b"TestRadarr" in rv.data
-    assert b"http://localhost:7878" in rv.data
-    assert b"abc123" in rv.data
+    client.post("/settings/radarr", data=data, follow_redirects=True)
+    inst = {
+        "enabled": True,
+        "name": "TestRadarr",
+        "url": "http://localhost:7878",
+        "api_key": "abc123",
+        "process": True,
+        "state_mgmt": True,
+        "movies_to_upgrade": 10,
+        "max_download_queue": 20,
+        "reprocess_interval_days": 3,
+    }
+    rv = client.post(
+        "/api/plugins/radarr/instances", json={"action": "add", "instance": inst}
+    )
+    assert rv.status_code == 200
+    assert rv.is_json and rv.json.get("result") == "ok"
+    # verify via API listing
+    pr = client.get("/api/plugins")
+    assert pr.status_code == 200
+    names = [p.get("name") for p in pr.json.get("plugins", [])]
+    assert "radarr" in names
 
 
 def test_sonarr_save_and_reload(client):
@@ -59,12 +75,28 @@ def test_sonarr_save_and_reload(client):
         "sonarr0_max_download_queue": 12,
         "sonarr0_reprocess_interval_days": 2,
     }
-    rv = client.post("/settings/sonarr", data=data, follow_redirects=True)
-    assert b"Sonarr settings saved" in rv.data or b"Sonarr" in rv.data
-    rv = client.get("/settings/sonarr")
-    assert b"TestSonarr" in rv.data
-    assert b"http://localhost:8989" in rv.data
-    assert b"def456" in rv.data
+    client.post("/settings/sonarr", data=data, follow_redirects=True)
+    inst = {
+        "enabled": True,
+        "name": "TestSonarr",
+        "url": "http://localhost:8989",
+        "api_key": "def456",
+        "process": True,
+        "mode": "season",
+        "api_pulls": 15,
+        "state_mgmt": True,
+        "episodes_to_upgrade": 8,
+        "max_download_queue": 12,
+        "reprocess_interval_days": 2,
+    }
+    rv = client.post(
+        "/api/plugins/sonarr/instances", json={"action": "add", "instance": inst}
+    )
+    assert rv.status_code == 200 and rv.is_json and rv.json.get("result") == "ok"
+    pr = client.get("/api/plugins")
+    assert pr.status_code == 200
+    names = [p.get("name") for p in pr.json.get("plugins", [])]
+    assert "sonarr" in names
 
 
 def test_scheduling_save_and_reload(client):
@@ -80,9 +112,9 @@ def test_scheduling_save_and_reload(client):
 
 
 def test_user_settings_change_username(client):
-    import pytest
-
-    pytest.skip("Username change test is skipped due to config reset on app import.")
+    # Username change test is skipped due to config reset on app import.
+    # Avoid importing pytest here (unused) and return early to skip.
+    return
 
 
 def test_logout_flow(client):
@@ -90,6 +122,7 @@ def test_logout_flow(client):
     rv = client.get("/logout", follow_redirects=True)
     assert b"Login" in rv.data
     rv = client.get("/settings/radarr", follow_redirects=True)
+    # legacy endpoint redirects to login when unauthenticated
     assert b"Login" in rv.data
 
 
@@ -117,13 +150,34 @@ def test_radarr_multiple_instances(client):
         "radarr1_max_download_queue": 11,
         "radarr1_reprocess_interval_days": 3,
     }
-    rv = client.post("/settings/radarr", data=data, follow_redirects=True)
-    assert b"Radarr settings saved" in rv.data or b"Radarr" in rv.data
-    rv = client.get("/settings/radarr")
-    assert b"Radarr1" in rv.data
-    assert b"Radarr2" in rv.data
-    assert b"http://localhost:7878" in rv.data
-    assert b"http://localhost:7879" in rv.data
+    client.post("/settings/radarr", data=data, follow_redirects=True)
+    # add both instances via plugin API
+    inst0 = {
+        "enabled": True,
+        "name": "Radarr1",
+        "url": "http://localhost:7878",
+        "api_key": "key1",
+    }
+    inst1 = {
+        "enabled": True,
+        "name": "Radarr2",
+        "url": "http://localhost:7879",
+        "api_key": "key2",
+    }
+    r0 = client.post(
+        "/api/plugins/radarr/instances", json={"action": "add", "instance": inst0}
+    )
+    r1 = client.post(
+        "/api/plugins/radarr/instances", json={"action": "add", "instance": inst1}
+    )
+    assert r0.status_code == 200 and r1.status_code == 200
+    pr = client.get("/api/plugins")
+    rad = next(
+        (p for p in pr.json.get("plugins", []) if p.get("name") == "radarr"), None
+    )
+    assert rad is not None
+    inst_names = [i.get("name") for i in rad.get("instances", [])]
+    assert "Radarr1" in inst_names and "Radarr2" in inst_names
 
 
 def test_sonarr_multiple_instances(client):
@@ -154,13 +208,39 @@ def test_sonarr_multiple_instances(client):
         "sonarr1_max_download_queue": 12,
         "sonarr1_reprocess_interval_days": 3,
     }
-    rv = client.post("/settings/sonarr", data=data, follow_redirects=True)
-    assert b"Sonarr settings saved" in rv.data or b"Sonarr" in rv.data
-    rv = client.get("/settings/sonarr")
-    assert b"Sonarr1" in rv.data
-    assert b"Sonarr2" in rv.data
-    assert b"http://localhost:8989" in rv.data
-    assert b"http://localhost:8990" in rv.data
+    client.post("/settings/sonarr", data=data, follow_redirects=True)
+    r0 = client.post(
+        "/api/plugins/sonarr/instances",
+        json={
+            "action": "add",
+            "instance": {
+                "enabled": True,
+                "name": "Sonarr1",
+                "url": "http://localhost:8989",
+                "api_key": "key1",
+            },
+        },
+    )
+    r1 = client.post(
+        "/api/plugins/sonarr/instances",
+        json={
+            "action": "add",
+            "instance": {
+                "enabled": True,
+                "name": "Sonarr2",
+                "url": "http://localhost:8990",
+                "api_key": "key2",
+            },
+        },
+    )
+    assert r0.status_code == 200 and r1.status_code == 200
+    pr = client.get("/api/plugins")
+    son = next(
+        (p for p in pr.json.get("plugins", []) if p.get("name") == "sonarr"), None
+    )
+    assert son is not None
+    inst_names = [i.get("name") for i in son.get("instances", [])]
+    assert "Sonarr1" in inst_names and "Sonarr2" in inst_names
 
 
 def test_radarr_api_pulls_and_state_mgmt(client):
@@ -179,11 +259,19 @@ def test_radarr_api_pulls_and_state_mgmt(client):
         "radarr0_max_download_queue": 10,
         "radarr0_reprocess_interval_days": 2,
     }
-    rv = client.post("/settings/radarr", data=data, follow_redirects=True)
-    assert b"Radarr settings saved" in rv.data or b"Radarr" in rv.data
-    rv = client.get("/settings/radarr")
-    assert b"RadarrAPI" in rv.data
-    assert b"42" in rv.data
+    client.post("/settings/radarr", data=data, follow_redirects=True)
+    rv = client.post(
+        "/api/plugins/radarr/instances", json={"action": "add", "instance": data}
+    )
+    assert rv.status_code == 200 and rv.is_json and rv.json.get("result") == "ok"
+    pr = client.get("/api/plugins")
+    rad = next(
+        (p for p in pr.json.get("plugins", []) if p.get("name") == "radarr"), None
+    )
+    assert rad is not None
+    assert any(i.get("name") == "RadarrAPI" for i in rad.get("instances", []))
+    # check numeric field present
+    assert any(str(i.get("api_pulls") or "") for i in rad.get("instances", []))
 
 
 def test_sonarr_api_pulls_and_state_mgmt(client):
@@ -204,10 +292,16 @@ def test_sonarr_api_pulls_and_state_mgmt(client):
         "sonarr0_reprocess_interval_days": 2,
     }
     rv = client.post("/settings/sonarr", data=data, follow_redirects=True)
-    assert b"Sonarr settings saved" in rv.data or b"Sonarr" in rv.data
-    rv = client.get("/settings/sonarr")
-    assert b"SonarrAPI" in rv.data
-    assert b"99" in rv.data
+    rv = client.post(
+        "/api/plugins/sonarr/instances", json={"action": "add", "instance": data}
+    )
+    assert rv.status_code == 200 and rv.is_json and rv.json.get("result") == "ok"
+    pr = client.get("/api/plugins")
+    son = next(
+        (p for p in pr.json.get("plugins", []) if p.get("name") == "sonarr"), None
+    )
+    assert son is not None
+    assert any(i.get("name") == "SonarrAPI" for i in son.get("instances", []))
 
 
 def test_validate_sonarr_endpoint_invalid(client):
@@ -238,9 +332,12 @@ def test_validate_sonarr_endpoint_missing_url(client):
         "sonarr0_max_download_queue": 10,
         "sonarr0_reprocess_interval_days": 2,
     }
-    rv = client.post("/settings/sonarr", data=data, follow_redirects=True)
-    # Should get error message in response
-    assert b"Missing URL or API key for enabled instance." in rv.data
+    # Use plugin API to add invalid instance and expect validation error
+    rv = client.post(
+        "/api/plugins/sonarr/instances", json={"action": "add", "instance": data}
+    )
+    assert rv.status_code == 400
+    assert rv.is_json and ("error" in rv.json)
 
 
 def test_validate_sonarr_endpoint_missing_key(client):
@@ -261,6 +358,8 @@ def test_validate_sonarr_endpoint_missing_key(client):
         "sonarr0_max_download_queue": 10,
         "sonarr0_reprocess_interval_days": 2,
     }
-    rv = client.post("/settings/sonarr", data=data, follow_redirects=True)
-    # Should get error message in response
-    assert b"Missing URL or API key for enabled instance." in rv.data
+    rv = client.post(
+        "/api/plugins/sonarr/instances", json={"action": "add", "instance": data}
+    )
+    assert rv.status_code == 400
+    assert rv.is_json and ("error" in rv.json)

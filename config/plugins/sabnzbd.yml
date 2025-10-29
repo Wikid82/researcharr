@@ -1,0 +1,10 @@
+# Example SABnzbd client plugin instances.
+# The Plugins UI/API manages files under /config/plugins/<plugin>.yml and
+# expects a YAML list of instance objects. Keep this file as a list.
+#
+# - name: "SABnzbd Local"
+#   enabled: true
+#   url: "http://sabnzbd:8080"
+#   api_key: "REPLACE_WITH_KEY"
+
+[]

@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}User Settings{% endblock %}
+{% block content %}
+<form method="post" action="/user" class="card">
+  <h3>User Settings</h3>
+  <div class="form-row">
+    <label class="form-label" for="username">Username</label>
+    <input id="username" name="username" class="form-control" value="{{ user.username }}">
+  </div>
+  <div class="form-row">
+    <label class="form-label" for="password">Password</label>
+    <input id="password" name="password" type="password" class="form-control" placeholder="Leave blank to keep current">
+  </div>
+  <div class="form-row">
+    <input type="submit" class="btn primary" value="Save User Settings">
+    {% if user_msg %}<div class="user-msg">{{ user_msg }}</div>{% endif %}
+  </div>
+</form>
+{% endblock %}

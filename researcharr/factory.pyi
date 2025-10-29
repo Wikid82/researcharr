@@ -1,0 +1,3 @@
+from ._types import FlaskApp
+
+def create_app() -> FlaskApp: ...

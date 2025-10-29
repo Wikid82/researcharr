@@ -6,7 +6,9 @@ class FlaskClient(Protocol):
         self,
         path: str,
         data: object | None = None,
+        json: object | None = None,
         follow_redirects: bool = False,
+        **kwargs: object,
     ) -> Any:
         ...
 
@@ -14,6 +16,9 @@ class FlaskClient(Protocol):
         ...
 
     def delete(self, path: str, **kwargs: object) -> Any:
+        ...
+
+    def put(self, path: str, json: object | None = None, **kwargs: object) -> Any:
         ...
 
 

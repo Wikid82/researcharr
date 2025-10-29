@@ -1,0 +1,12 @@
+# Example qBittorrent client plugin instances.
+# The Plugins UI/API manages files under /config/plugins/<plugin>.yml and
+# expects a YAML list of instance objects. Keep this file as a list.
+#
+# - name: "qBittorrent Local"
+#   enabled: true
+#   host: "qbittorrent"
+#   port: 8080
+#   username: "user"
+#   password: "pass"
+
+[]

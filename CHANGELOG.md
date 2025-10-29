@@ -17,6 +17,19 @@
 - Replaced `entrypoint.sh` with a runtime-aware script that reads `PUID`/`PGID` (env or config), chowns mounted `/config` and `/app`, creates required directories/files, sets timezone if provided, and drops privileges before exec'ing the application.
 - Adjusted the `Dockerfile` so the image build no longer forces a non-root user at build time; the entrypoint now performs privilege dropping at runtime so bind mounts can be chowned correctly.
 
+### Development & runtime housekeeping
+
+- Updated `docker-compose.dev.yml` to run the dev service as a non-root user (`user: "1000:1000"`) to better match host file permissions and reduce accidental root-owned files when developing.
+- Performed host-side ownership fixes for the development config and logs directories (chowned to `1000:1000`) so mounts are writable by the container runtime when running as UID 1000.
+- Verified dev container (`researcharr-dev`) runs the main process as UID 1000 (non-root) after the compose change and recreation.
+
+### Repo housekeeping
+
+- Cleaned up remote branches: removed several unprotected/temporary branches (for example `chore/reception-126ff92`, `ci/publish-images`, `ci/remove-trivy-reports`, and `gh-pages`) to reduce noise; `reception`, `development`, and `main` remain protected.
+- Merged `reception` into `development` and then merged `development` into `main` (see PRs created during this work; CI validated and merges completed).
+
+Notes: `gh-pages` was removed during cleanup — if you relied on it for docs hosting I can recreate it from the previous commit or add a docs deploy workflow that publishes from `main` instead.
+
 ### CI / tests / security
 
 - Added a small test helper script (`scripts/run-tests.sh`) and tuned CI to avoid building/publishing images for short-lived branches (build/publish only on persistent branches such as `development`/`main`).

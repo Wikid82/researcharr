@@ -2,8 +2,6 @@ import os
 import time
 from pathlib import Path
 
-import pytest
-
 from researcharr.backups import prune_backups
 
 

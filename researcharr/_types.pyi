@@ -1,6 +1,5 @@
 from typing import Any, Protocol, TypedDict
 
-
 class FlaskClient(Protocol):
     def post(
         self,

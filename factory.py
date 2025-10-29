@@ -1,13 +1,12 @@
 # ... code for factory.py ...
 
 import importlib.util
-import io
 import os
 import pathlib
 import shutil
 import time
 import zipfile
-from datetime import datetime
+# from datetime import datetime  (not required at module scope)
 
 import yaml
 from flask import (
@@ -25,6 +24,8 @@ from flask import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
+
+from typing import Any, TYPE_CHECKING
 
 from researcharr.backups import create_backup_file, prune_backups
 
@@ -64,7 +65,9 @@ def create_app():
     else:
         templates_path = package_templates
 
-    app = Flask(__name__, template_folder=templates_path)
+    # Annotate as Any so static type checkers (Pylance) don't warn about
+    # project-specific attributes we attach to the Flask app at runtime.
+    app: Any = Flask(__name__, template_folder=templates_path)
 
     # Development debug flags (enable via env vars). These are false by
     # default to avoid leaking sensitive info in production. Allowed true
@@ -150,7 +153,10 @@ def create_app():
         "sonarr": [],
         "scheduling": {"cron_schedule": "0 0 * * *", "timezone": "UTC"},
         "user": {"username": "admin", "password": "password"},
-        # Backups settings: retain_count (max files), retain_days (age in days), pre_restore (create snapshot before restore)
+        # Backups settings (sample defaults)
+        # retain_count: max files to keep
+        # retain_days: age in days to keep
+        # pre_restore: create snapshot before restore
         "backups": {
             "retain_count": 10,
             "retain_days": 30,
@@ -204,8 +210,17 @@ def create_app():
         pass
 
     # In-memory metrics for test isolation
-    # Structure:
-    # { requests_total: int, errors_total: int, plugins: { <plugin>: {validate_attempts, validate_errors, sync_attempts, sync_errors, last_error, last_error_msg} } }
+    # Structure example:
+    # {
+    #   "requests_total": int,
+    #   "errors_total": int,
+    #   "plugins": {
+    #       "<plugin>": {
+    #           "validate_attempts", "validate_errors", "sync_attempts",
+    #           "sync_errors", "last_error", "last_error_msg"
+    #       }
+    #   }
+    # }
     app.metrics = {"requests_total": 0, "errors_total": 0, "plugins": {}}
 
     # Ensure web UI user config exists on startup. If a first-run password is
@@ -238,15 +253,18 @@ def create_app():
                 elif "api_key" in ucfg:
                     # legacy plaintext key found; hash and persist migration
                     try:
-                        hashed = generate_password_hash(ucfg.get("api_key"))
-                        webui.save_user_config(
-                            ucfg.get("username", app.config_data["user"]["username"]),
-                            ucfg.get("password_hash"),
-                            api_key_hash=hashed,
-                        )
-                        app.config_data.setdefault("general", {})[
-                            "api_key_hash"
-                        ] = hashed
+                        api_key_val = ucfg.get("api_key")
+                        if api_key_val:
+                            hashed = generate_password_hash(str(api_key_val))
+                            username_default = app.config_data["user"]["username"]
+                            webui.save_user_config(
+                                ucfg.get("username", username_default),
+                                ucfg.get("password_hash"),
+                                api_key_hash=hashed,
+                            )
+                            app.config_data.setdefault("general", {})[
+                                "api_key_hash"
+                            ] = hashed
                     except Exception:
                         app.logger.exception(
                             "Failed to migrate plaintext api_key to api_key_hash"
@@ -261,10 +279,49 @@ def create_app():
         pass
 
     # --- Plugin registry wiring (discover local example plugins) ---
-    try:
-        from researcharr.plugins.registry import PluginRegistry
+    # Allow static analysis (Pylance) to see the PluginRegistry symbol while
+    # using a runtime-safe import path for actual execution. The runtime
+    # import attempts multiple fallbacks so the app starts under the repo
+    # layout and inside a packaged installation.
+    if TYPE_CHECKING:  # pragma: no cover - static type hint only
+        # Provide a typing alias so static type checkers know the name
+        # exists without requiring the actual module to be importable at
+        # analysis time. Use `Any` to keep the type loose.
+        PluginRegistry = Any  # type: ignore
 
-        registry = PluginRegistry()
+    try:
+        try:
+            from researcharr.plugins.registry import PluginRegistry  # type: ignore
+
+            registry = PluginRegistry()
+        except Exception:
+            # Try plain top-level `plugins.registry` (when running from
+            # repository root) before resorting to loading the file via
+            # importlib. This helps the editor/runtime find the module in
+            # both installed and source layouts.
+            try:
+                from plugins.registry import PluginRegistry  # type: ignore
+
+                registry = PluginRegistry()
+            except Exception:
+                # Fallback: attempt to load the module directly from the
+                # package directory using importlib. If this fails the
+                # surrounding except will silently continue (app will
+                # operate without plugin registry).
+                pkg_dir = os.path.dirname(__file__)
+                reg_path = os.path.join(pkg_dir, "plugins", "registry.py")
+                spec = importlib.util.spec_from_file_location(
+                    "researcharr.plugins.registry", reg_path
+                )
+                if spec is None or spec.loader is None:
+                    raise ImportError("Failed to locate plugins.registry")
+                plugin_mod = importlib.util.module_from_spec(spec)
+                loader = spec.loader
+                assert loader is not None
+                loader.exec_module(plugin_mod)
+                PluginRegistry = getattr(plugin_mod, "PluginRegistry")
+                registry = PluginRegistry()
+
         # Discover any local plugin modules placed under researcharr/plugins
         pkg_dir = os.path.dirname(__file__)
         plugins_dir = os.path.join(pkg_dir, "plugins")
@@ -408,16 +465,17 @@ def create_app():
                 # the WEBUI_DEV_DEBUG env var to avoid leaking sensitive
                 # information in production logs.
                 if app.config.get("WEBUI_DEV_DEBUG"):
-                    # Print to stdout for debugging in the container logs
-                    print(
-                        f"DEBUG_LOGIN user={username} pw_ok={pw_ok} keys={list(user.keys())}"
-                    )
+                    # Print to stdout for debugging in the container logs.
+                    # Build a compact keys list separately to avoid overly
+                    # long inline expressions that exceed line-length limits.
+                    keys_list = list(user.keys())
+                    print(f"DEBUG_LOGIN user={username} pw_ok={pw_ok} keys={keys_list}")
                     try:
                         app.logger.debug(
                             "DEBUG_LOGIN user=%s pw_ok=%s keys=%s",
                             username,
                             pw_ok,
-                            list(user.keys()),
+                            keys_list,
                         )
                     except Exception:
                         pass
@@ -582,7 +640,6 @@ def create_app():
     def api_logs():
         if not is_logged_in():
             return jsonify({"error": "unauthorized"}), 401
-        config_root = os.getenv("CONFIG_DIR", "/config")
         # allow overriding log path via env
         app_log = os.getenv(
             "WEBUI_LOG",
@@ -716,15 +773,13 @@ def create_app():
 
     @app.route("/api/logs/stream", methods=["GET"])
     def api_logs_stream():
-        """Server-sent events endpoint that tails the application log and streams new lines.
+        """Server-sent events endpoint that tails the application log.
 
         Query params:
           lines - number of initial tail lines to send (default 200)
         """
         if not is_logged_in():
             return ("", 401)
-
-        config_root = os.getenv("CONFIG_DIR", "/config")
         app_log = os.getenv(
             "WEBUI_LOG",
             os.path.abspath(
@@ -784,8 +839,8 @@ def create_app():
                         where = fh.tell()
                         line = fh.readline()
                         if line:
-                            for l in line.splitlines():
-                                yield f"data: {l}\n"
+                            for ln in line.splitlines():
+                                yield f"data: {ln}\n"
                             yield "\n"
                         else:
                             time.sleep(1.0)
@@ -1041,9 +1096,16 @@ def create_app():
 
     @app.route("/api/storage", methods=["GET"])
     def api_storage():
-        """Return simple checks for configured storage mount points (config/plugins).
+        """Return simple checks for configured storage mount points.
 
-        Returns JSON like: {"paths": [{"name": "config", "path": "/config", "exists": true, "is_dir": true, "readable": true, "writable": false}, ...]}
+        Returns JSON similar to:
+        {
+            "paths": [
+                {"name": "config", "path": "/config", "exists": true,
+                 "is_dir": true, "readable": true, "writable": false},
+                ...
+            ]
+        }
         """
         if not is_logged_in():
             return jsonify({"error": "unauthorized"}), 401
@@ -1118,7 +1180,8 @@ def create_app():
             result["storage"] = {"paths": []}
 
         # DB connectivity & file checks (best-effort)
-        db_info = {"ok": True}
+        # Annotate as Any to avoid narrow inference of the dict value types
+        db_info: dict[str, Any] = {"ok": True}
         try:
             # Prefer env override
             db_file = os.getenv(
@@ -1165,7 +1228,7 @@ def create_app():
             user = app.config_data.get("user", {})
             if user.get("password") and not user.get("password_hash"):
                 cfg_issues.append(
-                    "Web UI admin account still has first-run plaintext password in memory; rotate credentials"
+                    "Web UI admin account has first-run plaintext password; rotate it"
                 )
             if not user.get("username"):
                 cfg_issues.append("Missing web UI username")
@@ -1214,9 +1277,9 @@ def create_app():
                 with open("/proc/meminfo") as fh:
                     lines = fh.read().splitlines()
                 mem = {}
-                for l in lines:
-                    if ":" in l:
-                        k, v = l.split(":", 1)
+                for ln in lines:
+                    if ":" in ln:
+                        k, v = ln.split(":", 1)
                         mem[k.strip()] = v.strip()
                 resources["meminfo"] = (
                     {k: mem.get(k) for k in ("MemTotal", "MemAvailable")} if mem else {}
@@ -1306,6 +1369,7 @@ def create_app():
         # perform action
         if action == "add":
             inst = data.get("instance") or {}
+
             # normalize legacy form-shaped instances (e.g. sonarr0_url -> url)
             def _normalize_instance(d):
                 if not isinstance(d, dict):
@@ -1465,10 +1529,37 @@ def create_app():
 
     # Register a small API blueprint (under /api/v1) if available. This
     # exposes programmatic access to plugins, metrics and health checks.
+    # Attempt to import the API blueprint from the package. If that fails
+    # (e.g., running from source tree where api.py is a top-level module)
+    # fall back to loading the file directly similar to `webui` above.
     try:
-        from researcharr import api as _api
+        try:
+            from researcharr import api as _api  # type: ignore
 
-        app.register_blueprint(_api.bp, url_prefix="/api/v1")
+        except Exception:
+            # Try top-level api.py next
+            try:
+                from api import bp as _api_bp  # type: ignore
+
+                # construct a minimal module-like object with `bp`
+                class _TmpMod:
+                    bp = _api_bp
+
+                _api = _TmpMod()
+            except Exception:
+                # Last resort: load via importlib from file path
+                spec_path = os.path.join(os.path.dirname(__file__), "api.py")
+                spec = importlib.util.spec_from_file_location("api", spec_path)
+                if spec is None or spec.loader is None:
+                    raise ImportError("Failed to load api module")
+                _api = importlib.util.module_from_spec(spec)
+                loader = spec.loader
+                assert loader is not None
+                loader.exec_module(_api)  # type: ignore
+
+        # Register blueprint if present
+        if getattr(_api, "bp", None) is not None:
+            app.register_blueprint(_api.bp, url_prefix="/api/v1")
     except Exception:
         # Non-fatal if API blueprint cannot be loaded (tests may not need it)
         pass
@@ -1565,6 +1656,8 @@ def create_app():
             import importlib.util
 
             spec = importlib.util.spec_from_file_location("run_module", spec_path)
+            if spec is None or spec.loader is None:
+                raise ImportError("Failed to load run.py for trigger")
             run_mod = importlib.util.module_from_spec(spec)
             loader = spec.loader
             assert loader is not None
@@ -1648,7 +1741,7 @@ def create_app():
 
     def _create_backup_file(
         config_root: str, backups_dir: str, prefix: str = ""
-    ) -> str:
+    ) -> str | None:
         """Wrapper around shared create_backup_file helper.
 
         Keeps the old internal name for backwards compatibility within this
@@ -1694,14 +1787,20 @@ def create_app():
         if "file" not in request.files:
             return jsonify({"error": "missing_file"}), 400
         f = request.files.get("file")
-        if f.filename == "":
+        if not f:
+            return jsonify({"error": "missing_file"}), 400
+        fname = getattr(f, "filename", None)
+        if not fname:
             return jsonify({"error": "empty_name"}), 400
-        filename = secure_filename(f.filename)
+        filename = secure_filename(str(fname))
         config_root = os.getenv("CONFIG_DIR", "/config")
         backups_dir = os.path.join(config_root, "backups")
         try:
             os.makedirs(backups_dir, exist_ok=True)
             dest = os.path.join(backups_dir, filename)
+            # f may be a Werkzeug FileStorage; guard save() existence
+            if not hasattr(f, "save"):
+                return jsonify({"error": "invalid_file"}), 400
             f.save(dest)
             # After import, prune
             try:
@@ -2129,9 +2228,10 @@ def create_app():
     def api_updates_upgrade():
         """Start a controlled in-app upgrade by downloading the selected asset.
 
-        Request JSON: {"asset_url": "https://..."}
-        This endpoint is disabled when running in an image-managed runtime.
-        The download runs in a background thread and writes to CONFIG_DIR/updates/downloads.
+    Request JSON: {"asset_url": "https://..."}
+    This endpoint is disabled when running in an image-managed runtime.
+    The download runs in a background thread.
+    It writes to CONFIG_DIR/updates/downloads.
         """
         if not is_logged_in():
             return jsonify({"error": "unauthorized"}), 401

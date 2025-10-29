@@ -238,9 +238,7 @@ def run_job():
                     with open(hist_file, "a") as hf:
                         hf.write(json.dumps(rec) + "\n")
                 except Exception:
-                    logger.exception(
-                        "Failed to write task history to %s", hist_file
-                    )
+                    logger.exception("Failed to write task history to %s", hist_file)
             except Exception:
                 logger.exception("Failed to build/persist run record")
         except getattr(subprocess, "TimeoutExpired", Exception):

@@ -25,7 +25,7 @@ except Exception:
     prune_backups = None
 import json
 import time
-import zipfile
+from typing import Any, cast
 
 # `resource` is a platform-specific stdlib module (POSIX). Annotate a
 # temporary name as optional before attempting the import so mypy knows
@@ -37,6 +37,10 @@ except Exception:
     _resource = None
 
 resource: ModuleType | None = _resource
+
+# Module-level lock used for run_job concurrency control. Declare here so
+# static analyzers know the name exists.
+_run_job_lock: threading.Lock | None = None
 
 
 def _load_scheduler_classes():
@@ -125,9 +129,9 @@ def run_job():
     start_ts = time.time()
 
     global _run_job_lock
-    try:
-        _run_job_lock
-    except NameError:
+    # Initialize the module-level lock if not already created. Declaring the
+    # lock at module scope helps static analyzers know the name exists.
+    if _run_job_lock is None:
         _run_job_lock = threading.Lock()
 
     concurrency = int(os.getenv("RUN_JOB_CONCURRENCY", "1"))
@@ -144,6 +148,14 @@ def run_job():
         rlimit_cpu = os.getenv("JOB_RLIMIT_CPU_SECONDS")
 
         preexec = None
+        # Compute timeout regardless of resource rlimit configuration so the
+        # variable is always defined for subsequent logic.
+        try:
+            timeout_val = int(os.getenv("JOB_TIMEOUT", "0"))
+            timeout_arg = timeout_val if timeout_val > 0 else None
+        except Exception:
+            timeout_arg = None
+
         if resource is not None and (rlimit_as_mb or rlimit_cpu):
             if rlimit_as_mb:
                 try:
@@ -161,42 +173,51 @@ def run_job():
             else:
                 cpu_seconds = None
 
+            # Cast to ModuleType so static analyzers know `res` has the
+            # expected attributes (RLIMIT_* constants and setrlimit).
+            res = cast(ModuleType, resource)
+
             def _limit_resources():
                 try:
                     if as_bytes is not None:
                         as_limit = (as_bytes, as_bytes)
-                        resource.setrlimit(resource.RLIMIT_AS, as_limit)
+                        res.setrlimit(res.RLIMIT_AS, as_limit)
                     if cpu_seconds is not None:
                         cpu_limit = (cpu_seconds, cpu_seconds)
-                        resource.setrlimit(resource.RLIMIT_CPU, cpu_limit)
+                        res.setrlimit(res.RLIMIT_CPU, cpu_limit)
                 except Exception:
                     pass
 
             preexec = _limit_resources
 
-        try:
-            timeout_val = int(os.getenv("JOB_TIMEOUT", "0"))
-            timeout_arg = timeout_val if timeout_val > 0 else None
-        except Exception:
-            timeout_arg = None
+            # timeout_arg already computed above
+            pass
 
         try:
-            # Build kwargs only with keys supported/needed.
-            # Tests may monkeypatch the subprocess module with a simple
-            # object that doesn't accept
-            # `timeout` or `preexec_fn`.
-            run_kwargs = {"capture_output": True, "text": True}
+            # Build kwargs with a loose Any type so static checkers don't
+            # infer a narrow homogenous type from the initial boolean
+            # values. Tests may monkeypatch subprocess with a simplified
+            # object that doesn't accept `timeout` or `preexec_fn`.
+            run_kwargs: dict[str, Any] = {
+                "capture_output": True,
+                "text": True,
+            }
             if timeout_arg is not None:
                 run_kwargs["timeout"] = timeout_arg
             if preexec is not None:
                 run_kwargs["preexec_fn"] = preexec
 
-            res = subprocess.run([sys.executable, SCRIPT], **run_kwargs)
+            # Call via an Any-typed name to avoid picky overload/type
+            # checks from the type stubs for subprocess.run.
+            run_fn: Any = subprocess.run
+            res = run_fn([sys.executable, SCRIPT], **run_kwargs)
+
             if res.stdout:
                 logger.info("Job stdout:\n%s", res.stdout.strip())
             if res.stderr:
                 logger.error("Job stderr:\n%s", res.stderr.strip())
             logger.info("Job finished with returncode %s", res.returncode)
+
             # Persist a structured run record to JSONL for reliable history
             try:
                 config_dir = os.getenv("CONFIG_DIR", "/config")
@@ -217,9 +238,11 @@ def run_job():
                     with open(hist_file, "a") as hf:
                         hf.write(json.dumps(rec) + "\n")
                 except Exception:
-                    logger.exception("Failed to write task history to %s", hist_file)
+                    logger.exception(
+                        "Failed to write task history to %s", hist_file
+                    )
             except Exception:
-                pass
+                logger.exception("Failed to build/persist run record")
         except getattr(subprocess, "TimeoutExpired", Exception):
             logger.error("Scheduled job exceeded timeout and was killed")
         except Exception:

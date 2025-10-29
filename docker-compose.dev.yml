@@ -2,11 +2,11 @@ version: '3.8'
 
 services:
   researcharr:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # Use the developer image (includes shell & dev tooling). The alpine
+    # variant is deprecated for development; use the `dev` tag for local
+    # interactive runs.
+    image: "ghcr.io/wikid82/researcharr:dev"
     container_name: researcharr-dev
-    user: "1000:1000"
     # Map the app ports so you can browse the UI from the host
     ports:
       - "2929:2929"
@@ -16,16 +16,14 @@ services:
       - FLASK_ENV=development
       - LOGLEVEL=DEBUG
       - WEBUI_PORT=2929
-      - PUID=1000
-      - PGID=1000
       - TZ=America/New_York
       # Useful runtime debugging overrides
       - RUN_JOB_CONCURRENCY=1
       - JOB_TIMEOUT=0
       # Development debug flags (set to 'true' to enable)
-      - WEBUI_DEV_DEBUG=false
-      - WEBUI_DEV_PRINT_CREDS=false
-      - WEBUI_DEV_ENABLE_DEBUG_ENDPOINT=false
+      - WEBUI_DEV_DEBUG=true
+      - WEBUI_DEV_PRINT_CREDS=true
+      - WEBUI_DEV_ENABLE_DEBUG_ENDPOINT=true
     volumes:
       # Mount the project source into the container for live edits & immediate debugging
       - ./:/app:delegated
@@ -34,11 +32,12 @@ services:
       - ./logs:/config/logs:rw
     tty: true
     stdin_open: true
+    # Run the entrypoint as root in dev so it can perform chown/chmod on bind mounts,
+    # then the entrypoint will drop privileges into the configured PUID/PGID.
     # Use a simple command that ensures any local changes to requirements are installed
     command: >
       /bin/sh -lc "pip install --no-cache-dir -r requirements.txt || true && \
-      # OPTIONAL: to run under debugpy, uncomment the next line and comment the plain run line
-      # python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m runpy /app/run.py && \
+      # OPTIONAL: to run under debugpy, uncomment the next line and comment the plain run line\n      # python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m runpy /app/run.py && \
       python -u /app/run.py"
     logging:
       driver: json-file

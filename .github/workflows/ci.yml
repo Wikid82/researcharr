@@ -63,6 +63,17 @@ jobs:
     - name: Type check with mypy
       run: |
         mypy .
+    - name: Debug: python env & package resolution
+      run: |
+        echo "PYTHONPATH=$PYTHONPATH"
+        python .github/scripts/debug_imports.py
+        echo '--- pip show researcharr (if installed) ---'
+        pip show researcharr || true
+        echo '--- pip list (top 200) ---'
+        pip list --disable-pip-version-check | sed -n '1,200p'
+        echo '--- workspace ls (top) ---'
+        ls -la || true
+
     - name: Run tests with pytest
       # Ensure we run pytest from the package directory so coverage files are generated where codecov expects
       working-directory: .

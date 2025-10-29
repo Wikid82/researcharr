@@ -1,8 +1,4 @@
-import os
 import zipfile
-from pathlib import Path
-
-import pytest
 
 from researcharr.backups import create_backup_file
 

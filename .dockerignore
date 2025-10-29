@@ -46,4 +46,11 @@ build/smoke-logs*
 
 # OS
 .DS_Store
-*** End Patch
+coverage.xml
+coverage.*
+.mypy_cache/
+.tox/
+.cache/
+.venv/
+venv/
+env/

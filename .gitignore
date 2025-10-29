@@ -1,51 +1,68 @@
+.venv/
 .venv
 .env
+.env.*
+# Local test helper script (if present) — ignore generated wrappers
 script.sh
+
+# Bytecode, caches and editor files
 __pycache__/
-*.pyc
-.pytest_cache/
 researcharr/__pycache__/
-.pytest_cache/
+*.pyc
 *.pyo
 *.pyd
-*.log
-*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.tox/
+.cache/
+.ropeproject/
+.venv/
+venv/
+env/
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# Coverage and test reports
+coverage.xml
+coverage.*
 *.coverage
-.coverage*
 htmlcov/
+
+# Build and distribution
 dist/
-build/
-# CI and local build artifacts
 build/
 build/artifacts/
 build/smoke-logs*
 *.tar.gz
-*.sqlite3
-keeping
+*.egg-info/
+pip-wheel-metadata/
 
-# Persisted runtime files we create under CONFIG_DIR
+# Local DBs, logs and runtime artifacts (environment-specific)
+*.sqlite3
+*.sqlite
+*.db
+*.log
+.log
+
+# Persisted runtime files we create under CONFIG_DIR (ignore generated runtime data)
 /config/general.yml
 /config/updates_cache.yml
 /config/updates/
 /config/updates/downloads/
 /config/backups/
 /config/task_history.jsonl
-
-# Generated webui user credentials (do not commit)
 config/webui_user.yml
 config/webui_user.yml.bak*
-
-# Runtime DBs and logs under config/ (environment-specific)
 config/*.db
 config/*.sqlite
 config/cron.log
 config/logs/
 config/*.log
 
-# Trivy scan outputs
+# Trivy scan outputs and cache
 trivy-*.json
 **/trivy-*.json
-
-# Trivy local cache/artifact folder (if created by CI locally)
 .trivy/
 .trivy/**

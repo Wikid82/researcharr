@@ -7,6 +7,7 @@ attach the implementation module as the `researcharr` attribute on the
 package object so `from researcharr import researcharr` works regardless of
 which filesystem entry was selected by the importer.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -123,8 +124,9 @@ if impl is not None:
     # like `from researcharr.plugins.registry import PluginRegistry` resolve in
     # environments where the `plugins/` package lives at the repository root.
     try:
-        import plugins as _plugins_pkg  # type: ignore
         import sys
+
+        import plugins as _plugins_pkg  # type: ignore
 
         sys.modules.setdefault("researcharr.plugins", _plugins_pkg)
     except Exception:

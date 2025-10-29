@@ -1,4 +1,3 @@
-import os
 import time
 
 import yaml
@@ -28,7 +27,8 @@ def test_updates_skips_fetch_when_cache_fresh(tmp_path, monkeypatch):
 
     import requests
 
-    monkeypatch.setattr("requests.get", fail_get)
+    # Patch the module's get function directly so the local name is used.
+    monkeypatch.setattr(requests, "get", fail_get)
 
     from researcharr.factory import create_app
 

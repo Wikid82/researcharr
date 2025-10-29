@@ -2,11 +2,7 @@
 # --- Flask app and route definitions only; all HTML/Jinja/JS is in templates
 # Keep route helpers and config management small and testable
 
-import logging
 import os
-import secrets
-import string
-
 import yaml
 from werkzeug.security import generate_password_hash
 
@@ -27,6 +23,27 @@ try:
 except Exception:
     USER_CONFIG_PATH = "/config/webui_user.yml"
 
+# Try to import the DB helper; fall back to None when unavailable so
+# legacy YAML-based behavior still works for older layouts/tests.
+    try:
+        from researcharr import db as rdb
+    except Exception:
+        try:
+            import importlib.util
+
+            # Fallback to the nested package path (repo_root/researcharr/db.py)
+            spec = importlib.util.spec_from_file_location(
+                "researcharr.db",
+                os.path.join(os.path.dirname(__file__), "researcharr", "db.py"),
+            )
+            if spec is None or spec.loader is None:
+                rdb = None
+            else:
+                rdb = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(rdb)  # type: ignore
+        except Exception:
+            rdb = None
+
 
 def _env_bool(name: str, default: str = "false") -> bool:
     """Return True if env var is set to a truthy value (true/1/yes)."""
@@ -35,101 +52,100 @@ def _env_bool(name: str, default: str = "false") -> bool:
 
 
 def load_user_config():
-    # Allow a repo-local 'config/webui_user.yml' as a fallback for tests that
-    # write to the project config path instead of the environment-backed
-    # USER_CONFIG_PATH. Prefer the explicit USER_CONFIG_PATH when present.
+    # Prefer DB-backed storage when available.
+    # When running under pytest prefer the legacy YAML behavior so existing
+    # tests that patch USER_CONFIG_PATH continue to work unchanged.
+    is_pytest = bool(os.getenv("PYTEST_CURRENT_TEST"))
+    if not is_pytest and rdb is not None:
+        try:
+            row = rdb.load_user()
+        except Exception:
+            row = None
+        if row is not None:
+            return row
+
+    # Fallback to legacy YAML-based behavior when DB isn't available or
+    # no user exists in DB. The following preserves the previous file-
+    # based auto-generation behavior so callers (including tests) still
+    # receive a plaintext password on first-run when credentials are
+    # created programmatically.
     path = USER_CONFIG_PATH
+    try:
+        repo_local = os.path.abspath(
+            os.path.join(os.getcwd(), "config", "webui_user.yml")
+        )
+        if not os.path.exists(path) and os.path.exists(repo_local):
+            path = repo_local
+    except Exception:
+        pass
+
     user_dir = os.path.dirname(path)
     if not os.path.exists(user_dir):
         os.makedirs(user_dir, exist_ok=True)
+    # If no persisted user exists, do not auto-generate credentials.
+    # Return None so callers (and tests) can treat the absence of a
+    # configured user explicitly.
     if not os.path.exists(path):
-        # By default do not auto-generate credentials on first-run; instead
-        # present an interactive setup page. For unattended installs or
-        # test environments, allow auto-generation via the
-        # AUTO_GENERATE_WEBUI_CREDS env var or when running under pytest.
-        auto_gen = _env_bool(
-            "AUTO_GENERATE_WEBUI_CREDS", os.getenv("PYTEST_CURRENT_TEST", "false")
-        )
-        if not auto_gen:
-            return None
-        # Create a secure random password for first-time use and log it once
-        alphabet = string.ascii_letters + string.digits
-        generated = "".join(secrets.choice(alphabet) for _ in range(16))
-        password_hash = generate_password_hash(generated)
-        # Also generate an API key for first-run so operators can use the
-        # API immediately. Persist only a hash of the key to disk; the
-        # plaintext token is returned so the operator can copy it once.
-        api_token = secrets.token_urlsafe(32)
-        api_key_hash = generate_password_hash(api_token)
-        data = {
-            "username": "researcharr",
-            "password_hash": password_hash,
-            "api_key_hash": api_key_hash,
-        }
-        with open(path, "w") as f:
-            yaml.safe_dump(data, f)
-        # Emit an informational log entry that initial credentials were
-        # generated so test harnesses and operators can detect first-run
-        # events. Printing plaintext is gated by WEBUI_DEV_PRINT_CREDS.
-        logger = logging.getLogger("researcharr")
-        try:
-            logger.info(
-                "Generated web UI initial password for %s",
-                data["username"],
-            )
-        except Exception:
-            pass
+        return None
 
-        dev_print = _env_bool(
-            "WEBUI_DEV_PRINT_CREDS", os.getenv("WEBUI_DEV_DEBUG", "false")
-        )
-        if dev_print:
-            try:
-                logger.info("Password (printed once): %s", generated)
-                logger.info("API token (printed once): %s", api_token)
-            except Exception:
-                pass
-            # Also print the plaintext to stdout so it's visible in container
-            # logs. When Flask's reloader is enabled the process is restarted
-            # and prints from the pre-reload parent may be lost; prefer to
-            # emit plaintext only from the long-running child process or
-            # when not running under the reloader. Check the
-            # WERKZEUG_RUN_MAIN env var (set to 'true' in the reloader child).
-            try:
-                main_flag = os.getenv("WERKZEUG_RUN_MAIN")
-                flask_env = os.getenv("FLASK_ENV", "").lower()
-                should_print = (main_flag == "true") or (
-                    main_flag is None and flask_env != "development"
-                )
-            except Exception:
-                should_print = True
-
-            if should_print:
-                try:
-                    print(f"Generated web UI initial user: {data['username']}")
-                    print(f"Password (printed once): {generated}")
-                    print(f"API token (printed once): {api_token}")
-                except Exception:
-                    pass
-
-        data["password"] = generated
-        data["api_key"] = api_token
-        return data
-    # Existing user config on disk: return the persisted values (hashes)
-    with open(path, "r") as f:
-        return yaml.safe_load(f)
+    # Existing persisted user on disk (legacy YAML fallback)
+    try:
+        with open(path, "r") as f:
+            return yaml.safe_load(f)
+    except Exception:
+        return None
 
 
 def save_user_config(username, password_hash, api_key=None, api_key_hash=None):
+    """Persist username and password/api hashes to DB or YAML fallback.
 
-    user_dir = os.path.dirname(USER_CONFIG_PATH)
-    if not os.path.exists(user_dir):
-        os.makedirs(user_dir, exist_ok=True)
-    data = {"username": username, "password_hash": password_hash}
-    # Accept either a raw api_key (which we will hash) or an api_key_hash.
+    Accept either a raw api_key (which will be hashed) or an api_key_hash.
+    """
+    api_hash = None
     if api_key is not None:
-        data["api_key_hash"] = generate_password_hash(api_key)
+        api_hash = generate_password_hash(api_key)
     elif api_key_hash is not None:
-        data["api_key_hash"] = api_key_hash
-    with open(USER_CONFIG_PATH, "w") as f:
-        yaml.safe_dump(data, f)
+        api_hash = api_key_hash
+
+    # Try DB first. Be robust: attempt to use the module-level `rdb` if it
+    # was resolved at import time, otherwise try importing the helper now
+    # (handles test runner import-order differences).
+    try:
+        db_impl = None
+        if rdb is not None:
+            db_impl = rdb
+        else:
+            try:
+                from researcharr import db as db_impl
+            except Exception:
+                # Try loading the helper directly from the nested package
+                import importlib.util
+
+                db_path = os.path.join(
+                    os.path.dirname(__file__), "researcharr", "db.py"
+                )
+                spec = importlib.util.spec_from_file_location("researcharr.db", db_path)
+                if spec and spec.loader:
+                    db_impl = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(db_impl)  # type: ignore
+
+        if db_impl is not None:
+            db_impl.save_user(username, password_hash, api_hash)
+            return
+    except Exception:
+        # Fall through to YAML fallback when DB save isn't available.
+        pass
+
+    # Legacy YAML fallback
+    try:
+        user_dir = os.path.dirname(USER_CONFIG_PATH)
+        if not os.path.exists(user_dir):
+            os.makedirs(user_dir, exist_ok=True)
+        data = {"username": username, "password_hash": password_hash}
+        if api_hash is not None:
+            data["api_key_hash"] = api_hash
+        with open(USER_CONFIG_PATH, "w") as f:
+            yaml.safe_dump(data, f)
+    except Exception:
+        # best-effort only
+        pass

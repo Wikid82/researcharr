@@ -95,143 +95,146 @@ jobs:
   docker:
     needs: build
     runs-on: ubuntu-latest
-    # Only build and push Docker images for pushes to protected branches
-    # (development or main). Feature branches / short-lived branches such
-    # as `chore` or `reception` will not trigger the Docker build here and
-    # should be built locally by authors when needed.
-    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main') }}
+    # Build and push Docker images for any branch push. Images are tagged
+    # using a sanitized branch name (see Prepare image metadata) so feature
+    # branches get their own tags (e.g. `branch-my-feature`) and can be
+    # tested before merging down to development/main.
+    if: ${{ github.event_name == 'push' }}
     permissions:
       contents: read
       packages: write
       id-token: write
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      with:
-        driver: docker-container
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Prepare image metadata
-      id: meta
-      run: |
-        # Extract branch name from ref and create a sanitized, tag-safe variant
-        BRANCH=${GITHUB_REF#refs/heads/}
-        SAFE_BRANCH=$(echo "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed 's|/|-|g; s|[^a-z0-9._-]|-|g')
-        REPO_NAME=${GITHUB_REPOSITORY,,}
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Prepare image metadata
+        id: meta
+        run: |
+          # Extract branch name from ref and create a sanitized, tag-safe variant
+          BRANCH=${GITHUB_REF#refs/heads/}
+          SAFE_BRANCH=$(echo "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed 's|/|-|g; s|[^a-z0-9._-]|-|g')
+          REPO_NAME=${GITHUB_REPOSITORY,,}
 
-        # If the current commit has an exact tag (preferred for releases) use it
-        # otherwise fall back to a semantic pre-release version so CI builds
-        # are discoverable (e.g. 0.0.0-alpha.<run-number>).
-        RAW_TAG=$(git describe --tags --exact-match 2>/dev/null || true)
-        if [ -n "$RAW_TAG" ]; then
-          VERSION=${RAW_TAG#v}
-        else
-          DESC=$(git describe --tags --dirty --always 2>/dev/null || true)
-          if printf '%s' "$DESC" | grep -Eq '^[v]?[0-9]+\.[0-9]+\.[0-9]'; then
-            VERSION=${DESC#v}
+          # If the current commit has an exact tag (preferred for releases) use it
+          # otherwise fall back to a semantic pre-release version so CI builds
+          # are discoverable (e.g. 0.0.0-alpha.<run-number>).
+          RAW_TAG=$(git describe --tags --exact-match 2>/dev/null || true)
+          if [ -n "$RAW_TAG" ]; then
+            VERSION=${RAW_TAG#v}
           else
-            VERSION="0.0.0-alpha.${GITHUB_RUN_NUMBER}"
+            DESC=$(git describe --tags --dirty --always 2>/dev/null || true)
+            if printf '%s' "$DESC" | grep -Eq '^[v]?[0-9]+\.[0-9]+\.[0-9]'; then
+              VERSION=${DESC#v}
+            else
+              VERSION="0.0.0-alpha.${GITHUB_RUN_NUMBER}"
+            fi
           fi
-        fi
 
-        BUILD_NUMBER=${GITHUB_RUN_NUMBER}
-        GIT_SHA=${GITHUB_SHA::8}
-        BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          BUILD_NUMBER=${GITHUB_RUN_NUMBER}
+          GIT_SHA=${GITHUB_SHA::8}
+          BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-        echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
-        echo "git_sha=$GIT_SHA" >> $GITHUB_OUTPUT
-        echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
-        echo "safe_branch=$SAFE_BRANCH" >> $GITHUB_OUTPUT
-        echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "git_sha=$GIT_SHA" >> $GITHUB_OUTPUT
+          echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+          echo "safe_branch=$SAFE_BRANCH" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
 
-    - name: Build and push Docker image (all branches)
-      run: echo "Preparing to build..."
+      - name: Build and push Docker image (all branches)
+        run: echo "Preparing to build..."
 
-    - name: Build and push Docker image (all branches)
-      id: build
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        # Only push images to the registry for pushes to main, development, or tags.
-        push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/')) }}
-        platforms: linux/amd64,linux/arm64
-        tags: |
-          ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}
-          ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}-build${{ steps.meta.outputs.build_number }}
-          ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.git_sha }}
-          ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.safe_branch }}
-          ghcr.io/${{ steps.meta.outputs.repo_name }}:branch-${{ steps.meta.outputs.safe_branch }}
-        cache-from: type=gha,scope=researcharr-build-cache
-        cache-to: type=gha,mode=max,scope=researcharr-build-cache
-        build-args: |
-          BUILD_VERSION=${{ steps.meta.outputs.version }}
-          BUILD_NUMBER=${{ steps.meta.outputs.build_number }}
-          GIT_SHA=${{ steps.meta.outputs.git_sha }}
-          BUILD_DATE=${{ steps.meta.outputs.build_date }}
-          PYTHON_VERSION=3.13
-          RUNTIME_UID=1000
-          RUNTIME_GID=1000
+      - name: Build and push Docker image (all branches)
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          # Push images to the registry for any push event; images are
+          # tagged above and include a branch-specific tag so feature
+          # branches produce their own image tags.
+          push: ${{ github.event_name == 'push' }}
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}
+            ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}-build${{ steps.meta.outputs.build_number }}
+            ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.git_sha }}
+            ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.safe_branch }}
+            ghcr.io/${{ steps.meta.outputs.repo_name }}:branch-${{ steps.meta.outputs.safe_branch }}
+          cache-from: type=gha,scope=researcharr-build-cache
+          cache-to: type=gha,mode=max,scope=researcharr-build-cache
+          build-args: |
+            BUILD_VERSION=${{ steps.meta.outputs.version }}
+            BUILD_NUMBER=${{ steps.meta.outputs.build_number }}
+            GIT_SHA=${{ steps.meta.outputs.git_sha }}
+            BUILD_DATE=${{ steps.meta.outputs.build_date }}
+            PYTHON_VERSION=3.13
+            RUNTIME_UID=1000
+            RUNTIME_GID=1000
 
-    - name: Build and push debug image (dev tag)
-      id: build-debug
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        platforms: linux/amd64,linux/arm64
-        target: debug
-        tags: |
-          ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}-dev
-          ghcr.io/${{ steps.meta.outputs.repo_name }}:dev
-        cache-from: type=gha,scope=researcharr-build-cache
-        cache-to: type=gha,mode=max,scope=researcharr-build-cache
-        build-args: |
-          BUILD_VERSION=${{ steps.meta.outputs.version }}
-          BUILD_NUMBER=${{ steps.meta.outputs.build_number }}
-          GIT_SHA=${{ steps.meta.outputs.git_sha }}
-          BUILD_DATE=${{ steps.meta.outputs.build_date }}
-          PYTHON_VERSION=3.13
-          RUNTIME_UID=1000
-          RUNTIME_GID=1000
+      - name: Build and push debug image (dev tag)
+        id: build-debug
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          target: debug
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}-dev
+            ghcr.io/${{ steps.meta.outputs.repo_name }}:dev
+          cache-from: type=gha,scope=researcharr-build-cache
+          cache-to: type=gha,mode=max,scope=researcharr-build-cache
+          build-args: |
+            BUILD_VERSION=${{ steps.meta.outputs.version }}
+            BUILD_NUMBER=${{ steps.meta.outputs.build_number }}
+            GIT_SHA=${{ steps.meta.outputs.git_sha }}
+            BUILD_DATE=${{ steps.meta.outputs.build_date }}
+            PYTHON_VERSION=3.13
+            RUNTIME_UID=1000
+            RUNTIME_GID=1000
 
-    - name: Show pushed image digest and tags
-      run: |
-        echo "Pushed image digest: ${{ steps.build.outputs.digest }}"
-        echo "Pushed image tags:"
-        echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}"
-        echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}-build${{ steps.meta.outputs.build_number }}"
-        echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.git_sha }}"
-        echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.safe_branch }}"
-        echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:branch-${{ steps.meta.outputs.safe_branch }}"
-    - name: Additional tags for main/development
-      if: ${{ steps.meta.outputs.branch == 'main' || steps.meta.outputs.branch == 'development' }}
-      run: |
-        REPO=ghcr.io/${{ steps.meta.outputs.repo_name }}
-        BRANCH=${{ steps.meta.outputs.branch }}
-        # Use the pushed image identified by GIT_SHA as the source for extra tags
-        SRC_TAG=${{ steps.meta.outputs.git_sha }}
-        if [ "$BRANCH" = "main" ]; then
-          # Tag the image pushed from main as 'latest'
-          docker pull $REPO:${SRC_TAG} || true
-          docker tag $REPO:${SRC_TAG} $REPO:latest
-          docker push $REPO:latest
-        fi
-        if [ "$BRANCH" = "development" ]; then
-          # Tag the image pushed from development with a dev-<build> tag
-          docker pull $REPO:${SRC_TAG} || true
-          docker tag $REPO:${SRC_TAG} $REPO:dev-${{ steps.meta.outputs.build_number }}
-          docker push $REPO:dev-${{ steps.meta.outputs.build_number }}
-        fi
+      - name: Show pushed image digest and tags
+        run: |
+          echo "Pushed image digest: ${{ steps.build.outputs.digest }}"
+          echo "Pushed image tags:"
+          echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}"
+          echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}-build${{ steps.meta.outputs.build_number }}"
+          echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.git_sha }}"
+          echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.safe_branch }}"
+          echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:branch-${{ steps.meta.outputs.safe_branch }}"
+
+      - name: Additional tags for main/development
+        if: ${{ steps.meta.outputs.branch == 'main' || steps.meta.outputs.branch == 'development' }}
+        run: |
+          REPO=ghcr.io/${{ steps.meta.outputs.repo_name }}
+          BRANCH=${{ steps.meta.outputs.branch }}
+          # Use the pushed image identified by GIT_SHA as the source for extra tags
+          SRC_TAG=${{ steps.meta.outputs.git_sha }}
+          if [ "$BRANCH" = "main" ]; then
+            # Tag the image pushed from main as 'latest'
+            docker pull $REPO:${SRC_TAG} || true
+            docker tag $REPO:${SRC_TAG} $REPO:latest
+            docker push $REPO:latest
+          fi
+          if [ "$BRANCH" = "development" ]; then
+            # Tag the image pushed from development with a dev-<build> tag
+            docker pull $REPO:${SRC_TAG} || true
+            docker tag $REPO:${SRC_TAG} $REPO:dev-${{ steps.meta.outputs.build_number }}
+            docker push $REPO:dev-${{ steps.meta.outputs.build_number }}
+          fi
 
   docs-linkcheck:
     # Run for pull requests, and for pushes to main/development (so docs previews and main site are checked)

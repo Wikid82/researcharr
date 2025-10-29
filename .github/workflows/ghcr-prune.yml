@@ -1,0 +1,162 @@
+name: GHCR prune (hybrid keep-last-N + age)
+
+on:
+  schedule:
+    - cron: '0 4 * * 0' # weekly on Sunday 04:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'If true, show what would be deleted but do not delete (default true)'
+        required: false
+        default: 'true'
+      keep_last_n:
+        description: 'How many protected versions to keep (per protected set)'
+        required: false
+        default: '10'
+      cutoff_days:
+        description: 'Age cutoff in days for non-protected branch images'
+        required: false
+        default: '30'
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies (gh, jq)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+          if ! command -v gh >/dev/null 2>&1; then
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt-get update -y
+            sudo apt-get install -y gh
+          fi
+
+      - name: Authenticate (use CLEANUP_PAT if provided else GITHUB_TOKEN)
+        run: |
+          # If CLEANUP_PAT secret exists write it to GITHUB_ENV so we can reference
+          # it as a normal env var. This avoids some static linter warnings about
+          # direct context access in YAML mappings while still allowing secure use
+          # of the secret during the step runtime.
+          if [ -n "${{ secrets.CLEANUP_PAT }}" ]; then
+            echo "CLEANUP_PAT=${{ secrets.CLEANUP_PAT }}" >> $GITHUB_ENV
+          fi
+
+          # Authenticate with gh using the PAT if set, otherwise use GITHUB_TOKEN
+          if [ -n "${CLEANUP_PAT:-}" ]; then
+            echo "$CLEANUP_PAT" | gh auth login --with-token
+          else
+            echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+          fi
+
+      - name: "Hybrid prune: keep-last-N for protected tags, age-based for branches"
+        env:
+          GITHUB_REPOSITORY: "${{ github.repository }}"
+          DRY_RUN: "${{ github.event.inputs.dry_run || 'true' }}"
+          KEEP_LAST_N: "${{ github.event.inputs.keep_last_n || '10' }}"
+          CUTOFF_DAYS: "${{ github.event.inputs.cutoff_days || '30' }}"
+        run: |
+          set -euo pipefail
+          OWNER=${GITHUB_REPOSITORY%%/*}
+          REPO=${GITHUB_REPOSITORY##*/}
+          PACKAGE_NAME=${REPO}
+
+          # Decide endpoint: try org first, then user
+          ORG_EP="/orgs/$OWNER/packages/container/$PACKAGE_NAME/versions"
+          USER_EP="/users/$OWNER/packages/container/$PACKAGE_NAME/versions"
+
+          echo "Looking up package versions for $OWNER / $PACKAGE_NAME"
+          if gh api "$ORG_EP?per_page=1" >/dev/null 2>&1; then
+            ENDPOINT="$ORG_EP"
+            echo "Using org endpoint: $ENDPOINT"
+          else
+            ENDPOINT="$USER_EP"
+            echo "Using user endpoint: $ENDPOINT"
+          fi
+
+          cutoff_date=$(date -u -d "${CUTOFF_DAYS} days ago" +%Y-%m-%dT%H:%M:%SZ)
+          echo "Cutoff date: $cutoff_date (older => candidate for deletion if not protected)"
+
+          # Collect all versions with metadata we need
+          # We use paginate to get everything
+          all_versions=$(mktemp)
+          gh api -H "Accept: application/vnd.github+json" "$ENDPOINT?per_page=100" --paginate > "$all_versions"
+
+          # Identify protected versions (release semver tags, latest, main, development)
+          # Sort by created_at desc and keep the most recent KEEP_LAST_N
+          protected_ids=$(jq -r '.[] | select((.metadata.tags//[]) | join(" ") | test("(^| )(v[0-9]+\.[0-9]+\.[0-9]+|latest|main|development)( |$)")) | [.created_at, .id] | @tsv' "$all_versions" \
+            | sort -r | awk '{print $2}' | uniq)
+
+          echo "Found protected version ids (most recent first):"
+          echo "$protected_ids"
+
+          # Decide which protected IDs to keep
+          keep_protected=$(echo "$protected_ids" | head -n $KEEP_LAST_N | tr '\n' ' ')
+          echo "Keeping these protected IDs (last $KEEP_LAST_N): $keep_protected"
+
+          # Build a set (associative array) of ids to keep
+          declare -A KEEP_SET
+          for id in $keep_protected; do
+            KEEP_SET[$id]=1
+          done
+
+          # Iterate all versions and decide deletion
+          echo "Scanning all versions to determine deletions..."
+          jq -c '.[]' "$all_versions" | while read -r ver; do
+            id=$(jq -r '.id' <<< "$ver")
+            created=$(jq -r '.created_at' <<< "$ver")
+            tags=$(jq -r '(.metadata.tags // []) | join(",")' <<< "$ver")
+
+            # If explicitly kept due to protected set, skip
+            if [ -n "${KEEP_SET[$id]:-}" ]; then
+              echo "KEEP (protected recent): id=$id tags=$tags created=$created"
+              continue
+            fi
+
+            # If version has a protected tag (semver/latest/main/dev) but wasn't in keep set
+            # then delete if older than cutoff (this prevents infinite retention)
+            if echo "$tags" | grep -Eq '(^|,)(v[0-9]+\.[0-9]+\.[0-9]+|latest|main|development)(,|$)'; then
+              if [[ "$created" < "$cutoff_date" ]]; then
+                echo "DELETE (protected but old): id=$id tags=$tags created=$created"
+                if [ "$DRY_RUN" != "true" ]; then
+                  gh api -X DELETE -H "Accept: application/vnd.github+json" "$ENDPOINT/$id" || echo "Failed delete $id"
+                fi
+              else
+                echo "KEEP (protected recent enough): id=$id tags=$tags created=$created"
+              fi
+              continue
+            fi
+
+            # For branch/feature images (any tag starting with branch- or pr- or build-), use age-based deletion
+            if echo "$tags" | grep -Eq '(^|,)(branch-|pr-|build-)' ; then
+              if [[ "$created" < "$cutoff_date" ]]; then
+                echo "DELETE (branch/age): id=$id tags=$tags created=$created"
+                if [ "$DRY_RUN" != "true" ]; then
+                  gh api -X DELETE -H "Accept: application/vnd.github+json" "$ENDPOINT/$id" || echo "Failed delete $id"
+                fi
+              else
+                echo "KEEP (branch recent): id=$id tags=$tags created=$created"
+              fi
+              continue
+            fi
+
+            # Default: if untagged or other tags, apply age-based pruning
+            if [[ "$created" < "$cutoff_date" ]]; then
+              echo "DELETE (default/age): id=$id tags=$tags created=$created"
+              if [ "$DRY_RUN" != "true" ]; then
+                gh api -X DELETE -H "Accept: application/vnd.github+json" "$ENDPOINT/$id" || echo "Failed delete $id"
+              fi
+            else
+              echo "KEEP (default recent): id=$id tags=$tags created=$created"
+            fi
+          done
+
+          rm -f "$all_versions"
+
+          echo "Prune run complete. dry_run=$DRY_RUN"

@@ -128,6 +128,14 @@ Notes: These plugins are experimental and intended for development and UI testin
 - Implemented server-side caching and exponential backoff for release checks (cache persisted at `CONFIG_DIR/updates_cache.yml`, TTL configurable via `UPDATE_CACHE_TTL`). This reduces GitHub API load and handles transient failures gracefully.
 - Added API endpoints to: list current release info (`/api/updates`), ignore/unignore releases, and a guarded in-app upgrade download that stores downloaded assets in `CONFIG_DIR/updates/downloads` when allowed (disabled when running inside immutable images).
 
+## 2025-10-28
+
+### Operator / Packaging
+
+- Added `scripts/bootstrap-config.sh` — helper to copy repository example config files into a host `./config` directory and set ownership (PUID/PGID). This simplifies first-run bootstrapping when mounting a host config directory.
+- Clarified example config handling: runtime values such as `PUID`, `PGID` and `TIMEZONE` are now configured via environment variables; plugin instances (Radarr/Sonarr) live under `/config/plugins/<plugin>.yml` and are managed by the Plugins UI/API.
+
+
 
 ---
 

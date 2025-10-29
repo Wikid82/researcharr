@@ -4,6 +4,7 @@ This file provides a small, self-contained subset of the top-level
 `researcharr.py` implementation so the package shim can load a module when
 the repository's top-level `researcharr.py` is temporarily moved by tests.
 """
+
 from __future__ import annotations
 
 import logging
@@ -116,6 +117,7 @@ def create_metrics_app():
     try:
         from flask import Flask, jsonify
     except Exception:  # flask may not be available in some isolated checks
+
         class Dummy:
             def test_client(self):
                 raise RuntimeError("flask not available")

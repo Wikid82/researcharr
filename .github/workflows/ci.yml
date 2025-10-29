@@ -149,6 +149,8 @@ jobs:
           GIT_SHA=${{ env.GIT_SHA }}
           BUILD_DATE=${{ env.BUILD_DATE }}
           PYTHON_VERSION=3.13
+          RUNTIME_UID=1000
+          RUNTIME_GID=1000
 
     - name: Build and push debug image (dev tag)
       id: build-debug
@@ -169,6 +171,8 @@ jobs:
           GIT_SHA=${{ env.GIT_SHA }}
           BUILD_DATE=${{ env.BUILD_DATE }}
           PYTHON_VERSION=3.13
+          RUNTIME_UID=1000
+          RUNTIME_GID=1000
 
     - name: Show pushed image digest and tags
       run: |

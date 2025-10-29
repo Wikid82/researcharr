@@ -69,8 +69,23 @@ RUN chmod +x /entrypoint.sh
 RUN mkdir -p /config && touch /config/cron.log
 
 # Create a non-root user and ensure ownership of runtime dirs
-RUN groupadd -r researcharr || true && useradd -r -g researcharr researcharr || true && \
-	chown -R researcharr:researcharr /app /config || true
+## Allow overriding the runtime UID/GID at build time so images can be aligned
+## with developer host UIDs (default 1000:1000). Use build args when building
+## the image: `docker build --build-arg RUNTIME_UID=1000 --build-arg RUNTIME_GID=1000 .`
+ARG RUNTIME_UID=1000
+ARG RUNTIME_GID=1000
+
+# Create group/user with the requested numeric IDs; if a group/user already
+# exists with the same name we attempt a safe skip. Finally ensure ownership
+# of directories is set to the requested UID/GID.
+RUN set -eux; \
+	if ! getent group researcharr >/dev/null 2>&1; then \
+		groupadd -g "${RUNTIME_GID}" researcharr || true; \
+	fi; \
+	if ! id -u researcharr >/dev/null 2>&1; then \
+		useradd -u "${RUNTIME_UID}" -g researcharr -m -d /home/researcharr -s /bin/sh researcharr || true; \
+	fi; \
+	chown -R "${RUNTIME_UID}":"${RUNTIME_GID}" /app /config || true
 
 # Keep the image running the entrypoint as root so the entrypoint can
 # apply runtime PUID/PGID changes to bind-mounted directories and then

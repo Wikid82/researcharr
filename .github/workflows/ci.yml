@@ -132,7 +132,8 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        push: true
+        # Only push images to the registry for pushes to main, development, or tags.
+        push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/')) }}
         platforms: linux/amd64,linux/arm64
         tags: |
           ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}
@@ -183,16 +184,19 @@ jobs:
       run: |
         REPO=ghcr.io/${{ env.REPO_NAME }}
         BRANCH=${{ env.BRANCH }}
+        # Use the pushed image identified by GIT_SHA as the source for extra tags
+        SRC_TAG=${{ env.GIT_SHA }}
         if [ "$BRANCH" = "main" ]; then
-          # Ensure the image exists locally (pull from registry if necessary), then tag and push latest
-          docker pull $REPO:main || true
-          docker tag $REPO:main $REPO:latest
+          # Tag the image pushed from main as 'latest'
+          docker pull $REPO:${SRC_TAG} || true
+          docker tag $REPO:${SRC_TAG} $REPO:latest
           docker push $REPO:latest
         fi
         if [ "$BRANCH" = "development" ]; then
-          # Ensure the image exists locally (pull from registry if necessary) then push the development tag
-          docker pull $REPO:development || true
-          docker push $REPO:development
+          # Tag the image pushed from development with a dev-<build> tag
+          docker pull $REPO:${SRC_TAG} || true
+          docker tag $REPO:${SRC_TAG} $REPO:dev-${{ env.BUILD_NUMBER }}
+          docker push $REPO:dev-${{ env.BUILD_NUMBER }}
         fi
 
   docs-linkcheck:

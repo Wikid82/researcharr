@@ -8,18 +8,19 @@ cron schedule. Scheduled runs log to `/config/cron.log`.
 import argparse
 import importlib
 import importlib.util
+
+# stdlib imports grouped at top to satisfy flake8 E402
+import json
 import logging
 import os
 import subprocess
 import sys
 import threading
-from types import ModuleType
-# stdlib imports grouped at top to satisfy flake8 E402
-import json
 import time
+from types import ModuleType
+from typing import Any, cast
 
 import yaml
-from typing import Any, cast
 
 # Declare the names with a loose Any|None so static analysis knows the
 # symbols exist even if the import below fails; populate them from the
@@ -28,10 +29,8 @@ try:
     # Prefer importing the shared helpers from the package. Keep the
     # imported names local and assign to module-level variables only on
     # success so static analysis sees valid callables when available.
-    from researcharr.backups import (
-        create_backup_file as _create_backup_file,
-        prune_backups as _prune_backups,
-    )
+    from researcharr.backups import create_backup_file as _create_backup_file
+    from researcharr.backups import prune_backups as _prune_backups
 except Exception:
     _create_backup_file = None
     _prune_backups = None

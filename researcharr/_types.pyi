@@ -27,10 +27,14 @@ class PluginRegistry(Protocol):
 class FlaskApp(Protocol):
     # Minimal runtime attributes used by the code/tests
     config_data: dict[str, Any]
+
     # Flask exposes `app.config` in many tests; provide a basic mapping here
     config: dict[str, Any]
     metrics: dict[str, Any]
-    plugin_registry: "PluginRegistry" | None
+    # Relax to Any to allow test/dummy registries that don't implement the
+    # full PluginRegistry protocol. This is intentional to avoid Pylance
+    # assignment errors in tests that supply simplified dummy registries.
+    plugin_registry: Any | None
     secret_key: str
 
     def test_client(self) -> FlaskClient: ...

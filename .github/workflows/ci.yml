@@ -1,8 +1,7 @@
+---
 name: CI
 
-on:
-  push: {}
-  pull_request: {}
+on: [push, pull_request]
 
 jobs:
   build:
@@ -63,17 +62,6 @@ jobs:
     - name: Type check with mypy
       run: |
         mypy .
-    - name: Debug: python env & package resolution
-      run: |
-        echo "PYTHONPATH=$PYTHONPATH"
-        python .github/scripts/debug_imports.py
-        echo '--- pip show researcharr (if installed) ---'
-        pip show researcharr || true
-        echo '--- pip list (top 200) ---'
-        pip list --disable-pip-version-check | sed -n '1,200p'
-        echo '--- workspace ls (top) ---'
-        ls -la || true
-
     - name: Run tests with pytest
       # Ensure we run pytest from the package directory so coverage files are generated where codecov expects
       working-directory: .
@@ -232,8 +220,8 @@ jobs:
           echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.safe_branch }}"
           echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:branch-${{ steps.meta.outputs.safe_branch }}"
 
-      - name: Additional tags for main/development/nightly
-        if: ${{ steps.meta.outputs.branch == 'main' || steps.meta.outputs.branch == 'development' || steps.meta.outputs.branch == 'nightly' }}
+      - name: Additional tags for main/development
+        if: ${{ steps.meta.outputs.branch == 'main' || steps.meta.outputs.branch == 'development' }}
         run: |
           REPO=ghcr.io/${{ steps.meta.outputs.repo_name }}
           BRANCH=${{ steps.meta.outputs.branch }}
@@ -250,14 +238,6 @@ jobs:
             docker pull $REPO:${SRC_TAG} || true
             docker tag $REPO:${SRC_TAG} $REPO:dev-${{ steps.meta.outputs.build_number }}
             docker push $REPO:dev-${{ steps.meta.outputs.build_number }}
-          fi
-          if [ "$BRANCH" = "nightly" ]; then
-            # Tag the image pushed from nightly as a rolling 'nightly' tag and a build-specific nightly tag
-            docker pull $REPO:${SRC_TAG} || true
-            docker tag $REPO:${SRC_TAG} $REPO:nightly
-            docker push $REPO:nightly
-            docker tag $REPO:${SRC_TAG} $REPO:nightly-${{ steps.meta.outputs.build_number }}
-            docker push $REPO:nightly-${{ steps.meta.outputs.build_number }}
           fi
 
   docs-linkcheck:

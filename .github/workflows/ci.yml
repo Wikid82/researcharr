@@ -7,6 +7,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Initialize common runtime values with GitHub expressions so static
+      # analyzers in editors can validate references. These are still
+      # overwritten later by steps that compute canonical values and write
+      # into $GITHUB_ENV, so runtime semantics are unchanged.
+      REPO_NAME: "${{ github.repository }}"
+      VERSION: "${{ github.ref_name }}"
+      BUILD_NUMBER: "${{ github.run_number }}"
+      GIT_SHA: "${{ github.sha }}"
+      BUILD_DATE: "${{ github.run_id }}"
+      SAFE_BRANCH: "${{ github.ref_name }}"
+      BRANCH: "${{ github.ref_name }}"
+      # Expose CODECOV_TOKEN from secrets at job level to reduce editor warnings
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
     strategy:
       matrix:
         python-version: [ 3.13 ]
@@ -57,6 +71,18 @@ jobs:
       run: |
         echo "Coverage report files (in repo root):" && ls -l coverage.xml || true
         echo "Coverage report files (in researcharr/):" && ls -l researcharr/coverage.xml || true
+    - name: Print coverage.xml head (debug)
+      if: always()
+      run: |
+        echo "---- coverage.xml (first 80 lines) ----"
+        head -n 80 coverage.xml || true
+        echo "---- end coverage.xml head ----"
+    - name: Upload coverage artifact for debugging
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-xml
+        path: coverage.xml
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
@@ -90,31 +116,21 @@ jobs:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Determine branch name
+    - name: Prepare image metadata
+      id: meta
       run: |
         # Extract branch name from ref and create a sanitized, tag-safe variant
         BRANCH=${GITHUB_REF#refs/heads/}
-        # Lowercase and replace slashes or any disallowed char with hyphens to make a safe Docker tag
         SAFE_BRANCH=$(echo "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed 's|/|-|g; s|[^a-z0-9._-]|-|g')
-        echo "BRANCH=$BRANCH" >> $GITHUB_ENV
-        echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
-    - name: Set lowercase repository name
-      run: echo "REPO_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
-    - name: Build and push Docker image (all branches)
-      run: echo "Preparing to build..."
+        REPO_NAME=${GITHUB_REPOSITORY,,}
 
-    - name: Set image metadata
-      run: |
         # If the current commit has an exact tag (preferred for releases) use it
         # otherwise fall back to a semantic pre-release version so CI builds
         # are discoverable (e.g. 0.0.0-alpha.<run-number>).
         RAW_TAG=$(git describe --tags --exact-match 2>/dev/null || true)
         if [ -n "$RAW_TAG" ]; then
-          # Strip a leading 'v' if present (v1.2.3 -> 1.2.3)
           VERSION=${RAW_TAG#v}
         else
-          # Try to derive a descriptive version from nearby tags/commit, but
-          # prefer a stable pre-release format when nothing looks like semver.
           DESC=$(git describe --tags --dirty --always 2>/dev/null || true)
           if printf '%s' "$DESC" | grep -Eq '^[v]?[0-9]+\.[0-9]+\.[0-9]'; then
             VERSION=${DESC#v}
@@ -122,10 +138,21 @@ jobs:
             VERSION="0.0.0-alpha.${GITHUB_RUN_NUMBER}"
           fi
         fi
-        echo "VERSION=$VERSION" >> $GITHUB_ENV
-        echo "BUILD_NUMBER=${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
-        echo "GIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
-        echo "BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
+
+        BUILD_NUMBER=${GITHUB_RUN_NUMBER}
+        GIT_SHA=${GITHUB_SHA::8}
+        BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+        echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+        echo "git_sha=$GIT_SHA" >> $GITHUB_OUTPUT
+        echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+        echo "safe_branch=$SAFE_BRANCH" >> $GITHUB_OUTPUT
+        echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+    - name: Build and push Docker image (all branches)
+      run: echo "Preparing to build..."
 
     - name: Build and push Docker image (all branches)
       id: build
@@ -136,18 +163,18 @@ jobs:
         push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/')) }}
         platforms: linux/amd64,linux/arm64
         tags: |
-          ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}
-          ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-build${{ env.BUILD_NUMBER }}
-          ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}
-          ghcr.io/${{ env.REPO_NAME }}:${{ env.SAFE_BRANCH }}
-          ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.SAFE_BRANCH }}
+          ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}
+          ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}-build${{ steps.meta.outputs.build_number }}
+          ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.git_sha }}
+          ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.safe_branch }}
+          ghcr.io/${{ steps.meta.outputs.repo_name }}:branch-${{ steps.meta.outputs.safe_branch }}
         cache-from: type=gha,scope=researcharr-build-cache
         cache-to: type=gha,mode=max,scope=researcharr-build-cache
         build-args: |
-          BUILD_VERSION=${{ env.VERSION }}
-          BUILD_NUMBER=${{ env.BUILD_NUMBER }}
-          GIT_SHA=${{ env.GIT_SHA }}
-          BUILD_DATE=${{ env.BUILD_DATE }}
+          BUILD_VERSION=${{ steps.meta.outputs.version }}
+          BUILD_NUMBER=${{ steps.meta.outputs.build_number }}
+          GIT_SHA=${{ steps.meta.outputs.git_sha }}
+          BUILD_DATE=${{ steps.meta.outputs.build_date }}
           PYTHON_VERSION=3.13
           RUNTIME_UID=1000
           RUNTIME_GID=1000
@@ -161,15 +188,15 @@ jobs:
         platforms: linux/amd64,linux/arm64
         target: debug
         tags: |
-          ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-dev
-          ghcr.io/${{ env.REPO_NAME }}:dev
+          ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}-dev
+          ghcr.io/${{ steps.meta.outputs.repo_name }}:dev
         cache-from: type=gha,scope=researcharr-build-cache
         cache-to: type=gha,mode=max,scope=researcharr-build-cache
         build-args: |
-          BUILD_VERSION=${{ env.VERSION }}
-          BUILD_NUMBER=${{ env.BUILD_NUMBER }}
-          GIT_SHA=${{ env.GIT_SHA }}
-          BUILD_DATE=${{ env.BUILD_DATE }}
+          BUILD_VERSION=${{ steps.meta.outputs.version }}
+          BUILD_NUMBER=${{ steps.meta.outputs.build_number }}
+          GIT_SHA=${{ steps.meta.outputs.git_sha }}
+          BUILD_DATE=${{ steps.meta.outputs.build_date }}
           PYTHON_VERSION=3.13
           RUNTIME_UID=1000
           RUNTIME_GID=1000
@@ -178,18 +205,18 @@ jobs:
       run: |
         echo "Pushed image digest: ${{ steps.build.outputs.digest }}"
         echo "Pushed image tags:"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-build${{ env.BUILD_NUMBER }}"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.SAFE_BRANCH }}"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.SAFE_BRANCH }}"
+        echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}"
+        echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}-build${{ steps.meta.outputs.build_number }}"
+        echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.git_sha }}"
+        echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.safe_branch }}"
+        echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:branch-${{ steps.meta.outputs.safe_branch }}"
     - name: Additional tags for main/development
-      if: ${{ env.BRANCH == 'main' || env.BRANCH == 'development' }}
+      if: ${{ steps.meta.outputs.branch == 'main' || steps.meta.outputs.branch == 'development' }}
       run: |
-        REPO=ghcr.io/${{ env.REPO_NAME }}
-        BRANCH=${{ env.BRANCH }}
+        REPO=ghcr.io/${{ steps.meta.outputs.repo_name }}
+        BRANCH=${{ steps.meta.outputs.branch }}
         # Use the pushed image identified by GIT_SHA as the source for extra tags
-        SRC_TAG=${{ env.GIT_SHA }}
+        SRC_TAG=${{ steps.meta.outputs.git_sha }}
         if [ "$BRANCH" = "main" ]; then
           # Tag the image pushed from main as 'latest'
           docker pull $REPO:${SRC_TAG} || true
@@ -199,8 +226,8 @@ jobs:
         if [ "$BRANCH" = "development" ]; then
           # Tag the image pushed from development with a dev-<build> tag
           docker pull $REPO:${SRC_TAG} || true
-          docker tag $REPO:${SRC_TAG} $REPO:dev-${{ env.BUILD_NUMBER }}
-          docker push $REPO:dev-${{ env.BUILD_NUMBER }}
+          docker tag $REPO:${SRC_TAG} $REPO:dev-${{ steps.meta.outputs.build_number }}
+          docker push $REPO:dev-${{ steps.meta.outputs.build_number }}
         fi
 
   docs-linkcheck:

@@ -129,3 +129,29 @@ if impl is not None:
         sys.modules.setdefault("researcharr.plugins", _plugins_pkg)
     except Exception:
         pass
+
+# Additionally expose common top-level modules (factory, run, webui, backups,
+# api) as submodules of the `researcharr` package when those modules exist at
+# the repository root. This improves static analysis/editor resolution for
+# imports like `from researcharr import factory` or `import researcharr.factory`.
+_here = os.path.abspath(os.path.dirname(__file__))
+_repo_root = os.path.abspath(os.path.join(_here, os.pardir))
+for _mname in ("factory", "run", "webui", "backups", "api"):
+    _path = os.path.join(_repo_root, f"{_mname}.py")
+    if os.path.isfile(_path):
+        try:
+            spec = importlib.util.spec_from_file_location(
+                "researcharr." + _mname, _path
+            )
+            if spec and spec.loader:
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)  # type: ignore[arg-type]
+                sys.modules.setdefault(f"researcharr.{_mname}", mod)
+                try:
+                    globals()[_mname] = mod
+                except Exception:
+                    pass
+        except Exception:
+            # Non-fatal; this is only for editor/static analysis friendliness
+            # and should not prevent runtime.
+            pass

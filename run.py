@@ -22,22 +22,26 @@ from typing import Any, cast
 
 import yaml
 
-# Declare the names with a loose Any|None so static analysis knows the
-# symbols exist even if the import below fails; populate them from the
-# real module when available.
+# Declare the temporary names with a loose Any|None so static analysis
+# allows assigning None when the optional import fails. Use importlib to
+# load the module to avoid binding a precise Callable type to these names
+# and then assigning None in an except branch (which would trigger
+# incompatible-assignment errors when a stub provides a strict signature).
+_create_backup_file: Any | None = None
+_prune_backups: Any | None = None
 try:
-    # Prefer importing the shared helpers from the package. Keep the
-    # imported names local and assign to module-level variables only on
-    # success so static analysis sees valid callables when available.
-    from researcharr.backups import create_backup_file as _create_backup_file
-    from researcharr.backups import prune_backups as _prune_backups
+    import importlib as _importlib
+
+    _backups_mod = _importlib.import_module("researcharr.backups")
+    _create_backup_file = getattr(_backups_mod, "create_backup_file", None)
+    _prune_backups = getattr(_backups_mod, "prune_backups", None)
 except Exception:
     _create_backup_file = None
     _prune_backups = None
 
-# Declare the names with a loose Any|None so static analysis knows the
-# symbols exist even if the import above failed; populate them from the
-# real module when available.
+# Declare the public module-level names with loose Any so callers and
+# static analysis know they may be callables or None depending on
+# availability of the shared helpers.
 create_backup_file: Any | None = _create_backup_file
 prune_backups: Any | None = _prune_backups
 # (imports consolidated at file top)

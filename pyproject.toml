@@ -1,3 +1,15 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = [
+  "setuptools>=61",
+  "wheel",
+  "setuptools_scm"
+]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+# Write the discovered version into this module so runtime imports can access it
+write_to = "researcharr/_version.py"
+# Do not fail builds if git metadata is missing; setuptools_scm will generate a
+# fallback (e.g. 0.0.0.devN). CI will override this by setting
+# SETUPTOOLS_SCM_PRETEND_VERSION when a specific build number is desired.
+fallback_version = "0.0.0"

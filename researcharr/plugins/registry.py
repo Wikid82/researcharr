@@ -6,6 +6,7 @@ environment where that package isn't importable, provide a small
 fallback `PluginRegistry` implementation so editors and type checkers
 can resolve the symbol without failing imports.
 """
+
 from __future__ import annotations
 
 try:  # prefer the repository-level implementation

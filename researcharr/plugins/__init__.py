@@ -5,6 +5,7 @@ At runtime we attempt to import the top-level `plugins` package and
 re-export its public names. This keeps behavior consistent whether the
 project is used from a source checkout or as an installed package.
 """
+
 from __future__ import annotations
 
 import importlib

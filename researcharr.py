@@ -1,9 +1,19 @@
-# ... code for researcharr.py ...
-# ... code for app.py ...
-
 import logging
 import os
 import sqlite3
+
+
+# --- Debug/Container Entrypoint ---
+def serve():
+    app = create_metrics_app()
+    app.run(host="0.0.0.0", port=2929)
+
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) > 1 and sys.argv[1] == "serve":
+        serve()
 
 # Allow the top-level module `researcharr.py` to behave like a package for
 # legacy imports such as `import researcharr.plugins.example_sonarr`.

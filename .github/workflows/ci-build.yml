@@ -34,6 +34,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install black isort flake8 mypy pytest pytest-cov
+          # Install the package in editable mode so imports like
+          # `import researcharr.db` succeed during test collection. This
+          # also ensures setuptools_scm can write a reproducible _version
+          # module when tests or other steps import package metadata.
+          pip install -e .
       - name: Run tests with pytest
         run: |
           pytest tests/ --maxfail=3 --disable-warnings -v \

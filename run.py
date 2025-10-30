@@ -1,13 +1,24 @@
 #!/usr/bin/env python3
-"""Shim run.py that delegates to `scripts/run.py`.
+"""Compatibility shim: re-export the package `researcharr.run` implementation.
 
-This lightweight wrapper keeps compatibility for any tooling that invokes
-`/app/run.py` while centralizing the executable implementation under
-`/app/scripts/run.py`.
+Some consumers import the top-level `run` module; make sure it exposes the
+same public names as `researcharr.run` by importing and re-exporting them.
 """
-import os
-import sys
+from __future__ import annotations
+
+from importlib import import_module
+from typing import Any
+
+# Import the package implementation and rebind public symbols so imports of
+# the top-level `run` module remain compatible.
+_impl = import_module("researcharr.run")
+
+# Re-export commonly used names
+run_job = getattr(_impl, "run_job")
+main = getattr(_impl, "main")
+LOG_PATH = getattr(_impl, "LOG_PATH")
+SCRIPT = getattr(_impl, "SCRIPT")
 
 if __name__ == "__main__":
-    # Exec the canonical script under /app/scripts so the process becomes PID 1
-    os.execv(sys.executable, [sys.executable, "/app/scripts/run.py"])
+    # Delegate CLI execution to the package implementation
+    main()

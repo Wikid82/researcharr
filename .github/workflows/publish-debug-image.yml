@@ -35,12 +35,12 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/researcharr:debug-${{ github.sha }}
+            ghcr.io/wikid82/researcharr:debug-${{ github.sha }}
           target: debug
 
       - name: Write debug image tag file
         run: |
-          echo "ghcr.io/${{ github.repository_owner }}/researcharr:debug-${{ github.sha }}" > debug-image-tag.txt
+          echo "ghcr.io/wikid82/researcharr:debug-${{ github.sha }}" > debug-image-tag.txt
 
       - name: Upload debug image tag as artifact
         uses: actions/upload-artifact@v4

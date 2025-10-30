@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   researcharr:
     # Use the developer image (includes shell & dev tooling). The alpine

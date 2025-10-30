@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   researcharr:
     image: ghcr.io/wikid82/researcharr:latest

@@ -37,15 +37,17 @@ services:
     entrypoint: ["/app/entrypoint.sh"]
     # Run the entrypoint as root in dev so it can perform chown/chmod on bind mounts,
     # then the entrypoint will drop privileges into the configured PUID/PGID.
-    # Use a simple command that ensures any local changes to requirements are installed
-    command: >
-      /bin/sh -lc "pip install --no-cache-dir -r requirements.txt || true && \
-      # Use the documented serve command which runs the app + scheduler; avoid the
-      # placeholder /app/run.py which exits immediately when the repo is mounted.
-      # OPTIONAL: to run under debugpy, uncomment the next line and comment the
-      # plain serve line
-      # python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m runpy /app/scripts/researcharr.py && \
-      python -u /app/scripts/researcharr.py serve"
+    # Use a simple, array-form command to avoid complex quoting and inline
+    # shell comments which can produce unexpected syntax errors.
+    command:
+      - "/bin/sh"
+      - "-lc"
+      - "pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt || true && python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m runpy /app/scripts/researcharr.py serve"
+    # If you want to run under debugpy, replace the command above with:
+    # command:
+    #   - "/bin/sh"
+    #   - "-lc"
+    #   - "pip install --no-cache-dir -r requirements.txt debugpy || true && python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m runpy /app/scripts/researcharr.py serve"
     logging:
       driver: json-file
       options:

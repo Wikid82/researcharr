@@ -1,0 +1,41 @@
+# Pre-commit configuration for development
+# IMPORTANT: Replace the `rev` placeholders below with a specific tag/commit
+# for reproducible installs. See https://pre-commit.com for guidance.
+repos:
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: "refs/tags/v0.0.278"  # pinned ruff pre-commit tag (update as needed)
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+
+  - repo: https://github.com/psf/black
+    rev: "23.9.1"
+    hooks:
+      - id: black
+        language_version: python3
+
+  - repo: https://github.com/PyCQA/isort
+    rev: "5.12.0"
+    hooks:
+      - id: isort
+        name: isort (python)
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: "v1.4.1"
+    hooks:
+      - id: mypy
+        args: ["--ignore-missing-imports"]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: "v4.4.0"
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-added-large-files
+
+# Recommended usage:
+# 1. Replace all <pin-*> placeholders with concrete tag names or commit hashes.
+# 2. Install pre-commit in your environment: `pip install pre-commit`.
+# 3. Run once to install the git hook: `pre-commit install`.
+# 4. Optionally run across the repo: `pre-commit run --all-files`.

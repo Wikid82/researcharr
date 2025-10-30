@@ -39,6 +39,20 @@ jobs:
           # also ensures setuptools_scm can write a reproducible _version
           # module when tests or other steps import package metadata.
           pip install -e .
+      - name: Install dev requirements and run pre-commit hooks
+        # Run pre-commit hooks to catch style/type issues early. This step
+        # installs development-only dependencies from requirements-dev.txt
+        # (which is intentionally not included in production images) and
+        # runs the configured pre-commit hooks across the repository.
+        run: |
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          else
+            pip install pre-commit
+          fi
+          # Run all hooks and show diffs on failure so CI provides actionable
+          # output. The step will fail if hooks report problems.
+          pre-commit run --all-files --show-diff-on-failure
       - name: Run tests with pytest
         run: |
           pytest tests/ --maxfail=3 --disable-warnings -v \

@@ -103,8 +103,19 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 ### Debug stage: same runtime but with developer tooling
 FROM runtime AS debug
-# Install debugging utilities as root, then switch back to non-root
+# Install debugging utilities and development-only Python packages as root,
+# then switch back to the non-root runtime user. This ensures the debug
+# image contains dev tooling (debugpy, linters, etc.) without adding them
+# to the minimal runtime image.
 USER root
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-	bash procps iproute2 strace vim less && rm -rf /var/lib/apt/lists/*
+		bash procps iproute2 strace vim less && rm -rf /var/lib/apt/lists/*
+# If a `requirements-dev.txt` is present in the project, install it into the
+# image so debugpy and other dev tools are available in the debug image.
+RUN python -m pip install --upgrade pip setuptools wheel || true
+RUN if [ -f /app/requirements-dev.txt ]; then \
+			python -m pip install --no-cache-dir -r /app/requirements-dev.txt || true; \
+		else \
+			python -m pip install --no-cache-dir debugpy || true; \
+		fi
 USER researcharr

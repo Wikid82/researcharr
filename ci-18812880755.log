@@ -1,0 +1,17 @@
+build (3.13)	Lint with flake8	﻿2025-10-26T04:19:43.5552959Z ##[group]Run flake8 . --count --show-source --statistics
+build (3.13)	Lint with flake8	2025-10-26T04:19:43.5553396Z [36;1mflake8 . --count --show-source --statistics[0m
+build (3.13)	Lint with flake8	2025-10-26T04:19:43.5585834Z shell: /usr/bin/bash -e {0}
+build (3.13)	Lint with flake8	2025-10-26T04:19:43.5586055Z env:
+build (3.13)	Lint with flake8	2025-10-26T04:19:43.5586299Z   pythonLocation: /opt/hostedtoolcache/Python/3.13.7/x64
+build (3.13)	Lint with flake8	2025-10-26T04:19:43.5586711Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.7/x64/lib/pkgconfig
+build (3.13)	Lint with flake8	2025-10-26T04:19:43.5587100Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.7/x64
+build (3.13)	Lint with flake8	2025-10-26T04:19:43.5587447Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.7/x64
+build (3.13)	Lint with flake8	2025-10-26T04:19:43.5587786Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.7/x64
+build (3.13)	Lint with flake8	2025-10-26T04:19:43.5588126Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.7/x64/lib
+build (3.13)	Lint with flake8	2025-10-26T04:19:43.5588413Z ##[endgroup]
+build (3.13)	Lint with flake8	2025-10-26T04:19:44.2655027Z ./tests/test_plugin_instances_api.py:1:1: F401 'os' imported but unused
+build (3.13)	Lint with flake8	2025-10-26T04:19:44.2655522Z import os
+build (3.13)	Lint with flake8	2025-10-26T04:19:44.2655710Z ^
+build (3.13)	Lint with flake8	2025-10-26T04:19:44.2655896Z 1     F401 'os' imported but unused
+build (3.13)	Lint with flake8	2025-10-26T04:19:44.2656211Z 1
+build (3.13)	Lint with flake8	2025-10-26T04:19:44.2877243Z ##[error]Process completed with exit code 1.

@@ -1,0 +1,255 @@
+{
+  "SchemaVersion": 2,
+  "CreatedAt": "2025-10-28T02:27:09.389080643Z",
+  "ArtifactName": "researcharr:local",
+  "ArtifactType": "container_image",
+  "Metadata": {
+    "OS": {
+      "Family": "debian",
+      "Name": "13.1"
+    },
+    "ImageID": "sha256:0cc75d97f5b5ade837843f13be332fbb5206ce4b257a39172aef1cff6e0858a8",
+    "DiffIDs": [
+      "sha256:d7c97cb6f1fe7cae982649e9f55efe201212e8acaa64bd668c083b204e4efd4c",
+      "sha256:618eb9b43e6082eae438882ed0e6495345cdbbe837f2894ba63eb9a3a9368f76",
+      "sha256:b9e88dc86e0158a8bb7111841f9468f64a4b33dd9eeb70b097dc6342b65522da",
+      "sha256:816b1f62d73fef8ef03c114a1a7adadb787081b5004eb9a2c44af4c0b7acb62a",
+      "sha256:2b6be8b5326edb807913f0f575c4f76c4104654b9dd04d9f5f4a37fefa108b05",
+      "sha256:d00acbb3054bcd5774f43f4c0d9c4683b71def54df2029495ffd189b2c0c92fc",
+      "sha256:17021e3f9152203b6cac7de5b839903d603f974c2fdb0c62bde244aea17a1769",
+      "sha256:100fbbbef71ad8d3bf49bae41af5aafb094d8e270eb3a153146d7faa0450a0ef",
+      "sha256:fc6780dc763b46bcbc28cf8acf7d779ef8b7b57fa31cd9f28a3c20abf59f534e",
+      "sha256:8dac13e74b285e4f20eb6bb025e850dabe93a829ff66d867f5aa9deb1194dc5b",
+      "sha256:a355e26cc19412f0f6b8a19bd79dbbf1cf325bc7b14dc8f0b0dc20a669d17d91",
+      "sha256:227ebef5ad5d8202169d952b6eeeeaf59a25f1d5ae410074ab05dd4a8146a8d2",
+      "sha256:33d1a265b277661f4b5329cbb5ddddb4d35c848811ac902818f1bb52ee1313b6",
+      "sha256:0fd7cc1720aed310f7dd214d0e41ab17bfcefc7142a077da89486c03254e2273"
+    ],
+    "RepoTags": [
+      "researcharr:local"
+    ],
+    "ImageConfig": {
+      "architecture": "amd64",
+      "created": "2025-10-27T22:26:30.896731815-04:00",
+      "history": [
+        {
+          "created": "2025-10-14T21:49:24Z",
+          "created_by": "# debian.sh --arch 'amd64' out/ 'trixie' '@1760918400'",
+          "comment": "debuerreotype 0.16"
+        },
+        {
+          "created": "2025-10-14T21:49:24Z",
+          "created_by": "ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2025-10-14T21:49:24Z",
+          "created_by": "RUN /bin/sh -c set -eux; \tapt-get update; \tapt-get install -y --no-install-recommends \t\tca-certificates \t\tnetbase \t\ttzdata \t; \tapt-get dist-clean # buildkit",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2025-10-14T21:49:24Z",
+          "created_by": "ENV GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2025-10-14T21:49:24Z",
+          "created_by": "ENV PYTHON_VERSION=3.13.9",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2025-10-14T21:49:24Z",
+          "created_by": "ENV PYTHON_SHA256=ed5ef34cda36cfa2f3a340f07cac7e7814f91c7f3c411f6d3562323a866c5c66",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2025-10-14T21:49:24Z",
+          "created_by": "RUN /bin/sh -c set -eux; \t\tsavedAptMark=\"$(apt-mark showmanual)\"; \tapt-get update; \tapt-get install -y --no-install-recommends \t\tdpkg-dev \t\tgcc \t\tgnupg \t\tlibbluetooth-dev \t\tlibbz2-dev \t\tlibc6-dev \t\tlibdb-dev \t\tlibffi-dev \t\tlibgdbm-dev \t\tliblzma-dev \t\tlibncursesw5-dev \t\tlibreadline-dev \t\tlibsqlite3-dev \t\tlibssl-dev \t\tmake \t\ttk-dev \t\tuuid-dev \t\twget \t\txz-utils \t\tzlib1g-dev \t; \t\twget -O python.tar.xz \"https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz\"; \techo \"$PYTHON_SHA256 *python.tar.xz\" | sha256sum -c -; \twget -O python.tar.xz.asc \"https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz.asc\"; \tGNUPGHOME=\"$(mktemp -d)\"; export GNUPGHOME; \tgpg --batch --keyserver hkps://keys.openpgp.org --recv-keys \"$GPG_KEY\"; \tgpg --batch --verify python.tar.xz.asc python.tar.xz; \tgpgconf --kill all; \trm -rf \"$GNUPGHOME\" python.tar.xz.asc; \tmkdir -p /usr/src/python; \ttar --extract --directory /usr/src/python --strip-components=1 --file python.tar.xz; \trm python.tar.xz; \t\tcd /usr/src/python; \tgnuArch=\"$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)\"; \t./configure \t\t--build=\"$gnuArch\" \t\t--enable-loadable-sqlite-extensions \t\t--enable-optimizations \t\t--enable-option-checking=fatal \t\t--enable-shared \t\t$(test \"${gnuArch%%-*}\" != 'riscv64' \u0026\u0026 echo '--with-lto') \t\t--with-ensurepip \t; \tnproc=\"$(nproc)\"; \tEXTRA_CFLAGS=\"$(dpkg-buildflags --get CFLAGS)\"; \tLDFLAGS=\"$(dpkg-buildflags --get LDFLAGS)\"; \tLDFLAGS=\"${LDFLAGS:--Wl},--strip-all\"; \t\tarch=\"$(dpkg --print-architecture)\"; arch=\"${arch##*-}\"; \t\tcase \"$arch\" in \t\t\tamd64|arm64) \t\t\t\tEXTRA_CFLAGS=\"${EXTRA_CFLAGS:-} -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer\"; \t\t\t\t;; \t\t\ti386) \t\t\t\t;; \t\t\t*) \t\t\t\tEXTRA_CFLAGS=\"${EXTRA_CFLAGS:-} -fno-omit-frame-pointer\"; \t\t\t\t;; \t\tesac; \tmake -j \"$nproc\" \t\t\"EXTRA_CFLAGS=${EXTRA_CFLAGS:-}\" \t\t\"LDFLAGS=${LDFLAGS:-}\" \t; \trm python; \tmake -j \"$nproc\" \t\t\"EXTRA_CFLAGS=${EXTRA_CFLAGS:-}\" \t\t\"LDFLAGS=${LDFLAGS:--Wl},-rpath='\\$\\$ORIGIN/../lib'\" \t\tpython \t; \tmake install; \t\tcd /; \trm -rf /usr/src/python; \t\tfind /usr/local -depth \t\t\\( \t\t\t\\( -type d -a \\( -name test -o -name tests -o -name idle_test \\) \\) \t\t\t-o \\( -type f -a \\( -name '*.pyc' -o -name '*.pyo' -o -name 'libpython*.a' \\) \\) \t\t\\) -exec rm -rf '{}' + \t; \t\tldconfig; \t\tapt-mark auto '.*' \u003e /dev/null; \tapt-mark manual $savedAptMark; \tfind /usr/local -type f -executable -not \\( -name '*tkinter*' \\) -exec ldd '{}' ';' \t\t| awk '/=\u003e/ { so = $(NF-1); if (index(so, \"/usr/local/\") == 1) { next }; gsub(\"^/(usr/)?\", \"\", so); printf \"*%s\\n\", so }' \t\t| sort -u \t\t| xargs -rt dpkg-query --search \t\t| awk 'sub(\":$\", \"\", $1) { print $1 }' \t\t| sort -u \t\t| xargs -r apt-mark manual \t; \tapt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \tapt-get dist-clean; \t\texport PYTHONDONTWRITEBYTECODE=1; \tpython3 --version; \tpip3 --version # buildkit",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2025-10-14T21:49:24Z",
+          "created_by": "RUN /bin/sh -c set -eux; \tfor src in idle3 pip3 pydoc3 python3 python3-config; do \t\tdst=\"$(echo \"$src\" | tr -d 3)\"; \t\t[ -s \"/usr/local/bin/$src\" ]; \t\t[ ! -e \"/usr/local/bin/$dst\" ]; \t\tln -svT \"$src\" \"/usr/local/bin/$dst\"; \tdone # buildkit",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2025-10-14T21:49:24Z",
+          "created_by": "CMD [\"python3\"]",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2025-10-25T13:40:32Z",
+          "created_by": "ARG BUILD_VERSION=dev",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2025-10-25T13:40:32Z",
+          "created_by": "ARG BUILD_NUMBER=0",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2025-10-25T13:40:32Z",
+          "created_by": "ARG GIT_SHA=unknown",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2025-10-25T13:40:32Z",
+          "created_by": "ARG BUILD_DATE=unknown",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2025-10-25T13:40:32Z",
+          "created_by": "LABEL org.opencontainers.image.version=dev org.opencontainers.image.revision=unknown org.opencontainers.image.created=unknown",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2025-10-25T13:40:32Z",
+          "created_by": "ENV RESEARCHARR_VERSION=dev",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2025-10-25T13:40:32Z",
+          "created_by": "EXPOSE [2929/tcp]",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2025-10-25T13:40:32Z",
+          "created_by": "WORKDIR /app",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2025-10-28T02:24:48Z",
+          "created_by": "RUN |4 BUILD_VERSION=dev BUILD_NUMBER=0 GIT_SHA=unknown BUILD_DATE=unknown /bin/sh -c apt-get update \u0026\u0026 \tDEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \t\tca-certificates \t\u0026\u0026 rm -rf /var/lib/apt/lists/* # buildkit",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2025-10-28T02:25:35Z",
+          "created_by": "COPY /install /usr/local # buildkit",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2025-10-28T02:26:17Z",
+          "created_by": "COPY /app /app # buildkit",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2025-10-28T02:26:17Z",
+          "created_by": "COPY entrypoint.sh /entrypoint.sh # buildkit",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2025-10-28T02:26:17Z",
+          "created_by": "RUN |4 BUILD_VERSION=dev BUILD_NUMBER=0 GIT_SHA=unknown BUILD_DATE=unknown /bin/sh -c chmod +x /entrypoint.sh # buildkit",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2025-10-28T02:26:17Z",
+          "created_by": "RUN |4 BUILD_VERSION=dev BUILD_NUMBER=0 GIT_SHA=unknown BUILD_DATE=unknown /bin/sh -c mkdir -p /config \u0026\u0026 touch /config/cron.log # buildkit",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2025-10-28T02:26:21Z",
+          "created_by": "RUN |4 BUILD_VERSION=dev BUILD_NUMBER=0 GIT_SHA=unknown BUILD_DATE=unknown /bin/sh -c groupadd -r researcharr || true \u0026\u0026 useradd -r -g researcharr researcharr || true \u0026\u0026 \tchown -R researcharr:researcharr /app /config || true # buildkit",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2025-10-28T02:26:21Z",
+          "created_by": "USER researcharr",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2025-10-28T02:26:21Z",
+          "created_by": "RUN |4 BUILD_VERSION=dev BUILD_NUMBER=0 GIT_SHA=unknown BUILD_DATE=unknown /bin/sh -c printf '%s\\n' \"version=${BUILD_VERSION}\" \"build=${BUILD_NUMBER}\" \"sha=${GIT_SHA}\" \u003e /app/VERSION # buildkit",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2025-10-28T02:26:21Z",
+          "created_by": "ENTRYPOINT [\"/entrypoint.sh\"]",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2025-10-28T02:26:21Z",
+          "created_by": "USER root",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2025-10-28T02:26:30Z",
+          "created_by": "RUN |4 BUILD_VERSION=dev BUILD_NUMBER=0 GIT_SHA=unknown BUILD_DATE=unknown /bin/sh -c apt-get update \u0026\u0026 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \tbash procps iproute2 strace vim less \u0026\u0026 rm -rf /var/lib/apt/lists/* # buildkit",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2025-10-28T02:26:30Z",
+          "created_by": "USER researcharr",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        }
+      ],
+      "os": "linux",
+      "rootfs": {
+        "type": "layers",
+        "diff_ids": [
+          "sha256:d7c97cb6f1fe7cae982649e9f55efe201212e8acaa64bd668c083b204e4efd4c",
+          "sha256:618eb9b43e6082eae438882ed0e6495345cdbbe837f2894ba63eb9a3a9368f76",
+          "sha256:b9e88dc86e0158a8bb7111841f9468f64a4b33dd9eeb70b097dc6342b65522da",
+          "sha256:816b1f62d73fef8ef03c114a1a7adadb787081b5004eb9a2c44af4c0b7acb62a",
+          "sha256:2b6be8b5326edb807913f0f575c4f76c4104654b9dd04d9f5f4a37fefa108b05",
+          "sha256:d00acbb3054bcd5774f43f4c0d9c4683b71def54df2029495ffd189b2c0c92fc",
+          "sha256:17021e3f9152203b6cac7de5b839903d603f974c2fdb0c62bde244aea17a1769",
+          "sha256:100fbbbef71ad8d3bf49bae41af5aafb094d8e270eb3a153146d7faa0450a0ef",
+          "sha256:fc6780dc763b46bcbc28cf8acf7d779ef8b7b57fa31cd9f28a3c20abf59f534e",
+          "sha256:8dac13e74b285e4f20eb6bb025e850dabe93a829ff66d867f5aa9deb1194dc5b",
+          "sha256:a355e26cc19412f0f6b8a19bd79dbbf1cf325bc7b14dc8f0b0dc20a669d17d91",
+          "sha256:227ebef5ad5d8202169d952b6eeeeaf59a25f1d5ae410074ab05dd4a8146a8d2",
+          "sha256:33d1a265b277661f4b5329cbb5ddddb4d35c848811ac902818f1bb52ee1313b6",
+          "sha256:0fd7cc1720aed310f7dd214d0e41ab17bfcefc7142a077da89486c03254e2273"
+        ]
+      },
+      "config": {
+        "Entrypoint": [
+          "/entrypoint.sh"
+        ],
+        "Env": [
+          "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305",
+          "PYTHON_VERSION=3.13.9",
+          "PYTHON_SHA256=ed5ef34cda36cfa2f3a340f07cac7e7814f91c7f3c411f6d3562323a866c5c66",
+          "RESEARCHARR_VERSION=dev"
+        ],
+        "Labels": {
+          "org.opencontainers.image.created": "unknown",
+          "org.opencontainers.image.revision": "unknown",
+          "org.opencontainers.image.version": "dev"
+        },
+        "User": "researcharr",
+        "WorkingDir": "/app"
+      }
+    }
+  },
+  "Results": [
+    {
+      "Target": "researcharr:local (debian 13.1)",
+      "Class": "os-pkgs",
+      "Type": "debian"
+    },
+    {
+      "Target": "Python",
+      "Class": "lang-pkgs",
+      "Type": "python-pkg"
+    }
+  ]
+}

@@ -80,4 +80,7 @@ trivy-*.json
 # local sqlite DB
 researcharr.db
 *.db-journal
-researcharr.db
+researcharr.db-journal
+# Ignore mirror clones and any large mirrored repo directories accidentally created
+repo-mirror.git/
+repo-*.git/

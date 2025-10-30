@@ -43,6 +43,9 @@ build/smoke-logs*
 *.egg-info/
 pip-wheel-metadata/
 
+# Local container build directory (ignore user-specific image build artifacts)
+container_build/
+
 # Local DBs, logs and runtime artifacts (environment-specific)
 *.sqlite3
 *.sqlite

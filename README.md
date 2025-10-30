@@ -1,5 +1,5 @@
 # status
- 
+
 <p align="center">
 
   [![CI](https://github.com/Wikid82/researcharr/workflows/CI/badge.svg)](https://github.com/Wikid82/researcharr/actions/workflows/ci.yml) [![Docs](https://github.com/Wikid82/researcharr/workflows/Deploy%20docs%20to%20GitHub%20Pages/badge.svg)](https://wikid82.github.io/researcharr/)
@@ -22,7 +22,7 @@
 
   # a minimal docker-compose you can drop in next to your project or use system-wide
   cat > docker-compose.yml <<'EOF'
-  
+
   services:
     researcharr:
       image: ghcr.io/wikid82/researcharr:latest
@@ -200,5 +200,3 @@ how to run researcharr with Docker, Docker Compose, or Kubernetes and how
 to use the `JOB_TIMEOUT`, `JOB_RLIMIT_AS_MB`, `JOB_RLIMIT_CPU_SECONDS`,
 and `RUN_JOB_CONCURRENCY` environment variables to control job runtime
 and resource usage.
-
-

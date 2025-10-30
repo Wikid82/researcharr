@@ -27,6 +27,9 @@ repos:
         # Run mypy on the package rather than scanning the entire tree. This
         # avoids duplicate-module errors caused by auxiliary copies of the
         # package (e.g., backups-scratch/researcharr.py) living in the repo.
+        # Do not pass filenames to mypy (pre-commit normally appends them),
+        # use `pass_filenames: false` so mypy only sees the provided args.
+        pass_filenames: false
         args: ["--config-file", "mypy.ini", "--package", "researcharr", "--ignore-missing-imports"]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks

@@ -19,8 +19,8 @@ jobs:
       # check `env.CODECOV_TOKEN` without referencing `secrets` directly in
       # the expression (some editors flag `secrets.*` as an unrecognized
       # named-value even though GitHub Actions evaluates it at runtime).
-    CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
     strategy:
       matrix:
         python-version: [3.13]
@@ -59,9 +59,11 @@ jobs:
 
       # Build a developer-friendly image (debug stage) for feature-branch debugging
       - name: Set up Docker Buildx
+        if: ${{ github.ref_name != 'main' }}
         uses: docker/setup-buildx-action@v2
 
       - name: Build dev image (debug stage)
+        if: ${{ github.ref_name != 'main' }}
         run: |
           # Build the image using the Dockerfile's debug stage. We tag it locally
           # with a branch-specific name so maintainers can identify feature builds.
@@ -73,6 +75,7 @@ jobs:
           docker save "$IMAGE_NAME" -o /tmp/image-artifacts/researcharr-dev-${BRANCH_TAG}.tar
 
       - name: Upload dev image artifact
+        if: ${{ github.ref_name != 'main' }}
         uses: actions/upload-artifact@v4
         with:
           name: researcharr-dev-image
@@ -80,7 +83,7 @@ jobs:
 
       # Optional: push the dev image to GitHub Container Registry when a push token is available
       - name: Log in to GHCR (optional)
-        if: ${{ env.GHCR_TOKEN != '' }}
+        if: ${{ github.ref_name != 'main' && env.GHCR_TOKEN != '' }}
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
@@ -88,7 +91,7 @@ jobs:
           password: ${{ env.GHCR_TOKEN }}
 
       - name: Push dev image to GHCR (optional)
-        if: ${{ env.GHCR_TOKEN != '' }}
+        if: ${{ github.ref_name != 'main' && env.GHCR_TOKEN != '' }}
         run: |
           BRANCH_TAG="${{ github.ref_name || github.sha }}"
           IMAGE_BASE="ghcr.io/${{ github.repository }}"

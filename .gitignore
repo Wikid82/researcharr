@@ -76,3 +76,8 @@ trivy-*.json
 **/trivy-*.json
 .trivy/
 .trivy/**
+
+# local sqlite DB
+researcharr.db
+*.db-journal
+researcharr.db

@@ -93,31 +93,44 @@ echo "Starting researcharr (web UI + scheduler) as UID=${PUID} GID=${PGID}..."
 # Export PUID/PGID for the Python helper
 export PUID PGID
 
+# Capture any command/args passed to the entrypoint so the Python helper
+# can exec the user-supplied command after dropping privileges. Docker
+# appends the container CMD as arguments to the entrypoint, so grab them
+# here and expose via env for the python helper below.
+export ENTRYPOINT_CMD="${@:-}"
+
 # Drop privileges using a tiny Python helper which sets gid/uid and then
 # execs the target process. This avoids adding gosu/su-exec to the image.
 python3 - <<'PY'
 import os, sys
 def to_int(v, default):
-    try:
-        return int(v)
-    except Exception:
-        return default
+  try:
+    return int(v)
+  except Exception:
+    return default
 
 uid = to_int(os.environ.get('PUID'), 1000)
 gid = to_int(os.environ.get('PGID'), 1000)
 
 # setgid before setuid
 try:
-    os.setgid(gid)
+  os.setgid(gid)
 except Exception as e:
-    print('Warning: setgid failed:', e, file=sys.stderr)
+  print('Warning: setgid failed:', e, file=sys.stderr)
 try:
-    os.setuid(uid)
+  os.setuid(uid)
 except Exception as e:
-    print('Warning: setuid failed:', e, file=sys.stderr)
+  print('Warning: setuid failed:', e, file=sys.stderr)
 
-# Exec the application so it becomes PID 1
-# Updated to use scripts/ location for the run entrypoint to avoid
-# shadowing and keep runtime scripts centralized.
-os.execv(sys.executable, [sys.executable, '/app/scripts/run.py'])
+# If the entrypoint was given an explicit command (Docker CMD), exec that
+# command after dropping privileges so the container runs what the user
+# or compose file requested. Otherwise, fall back to the repository's
+# default runtime script at /app/scripts/run.py.
+cmd = os.environ.get('ENTRYPOINT_CMD')
+if cmd:
+  # Use a shell so the CMD string semantics (pipes, &&, etc.) still work
+  os.execv('/bin/sh', ['/bin/sh', '-c', cmd])
+else:
+  # Default behavior: run the repository's scripted entrypoint
+  os.execv(sys.executable, [sys.executable, '/app/scripts/run.py'])
 PY

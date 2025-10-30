@@ -40,8 +40,12 @@ services:
     # Use a simple command that ensures any local changes to requirements are installed
     command: >
       /bin/sh -lc "pip install --no-cache-dir -r requirements.txt || true && \
-      # OPTIONAL: to run under debugpy, uncomment the next line and comment the plain run line\n      # python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m runpy /app/run.py && \
-      python -u /app/run.py"
+      # Use the documented serve command which runs the app + scheduler; avoid the
+      # placeholder /app/run.py which exits immediately when the repo is mounted.
+      # OPTIONAL: to run under debugpy, uncomment the next line and comment the
+      # plain serve line
+      # python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m runpy /app/scripts/researcharr.py && \
+      python -u /app/scripts/researcharr.py serve"
     logging:
       driver: json-file
       options:

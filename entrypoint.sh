@@ -50,14 +50,31 @@ touch /config/researcharr.db >/dev/null 2>&1 || true
 
 # Attempt to set ownership so that the runtime UID/GID can write to bind mounts.
 # Some mount types (NFS with root_squash, CIFS, FUSE) or rootless Docker setups
-# may prevent chown — handle failures gracefully and attempt a permissive chmod
-# fallback so the container can proceed.
-if chown -R "${PUID}":"${PGID}" /config 2>/dev/null; then
-  echo "chown /config -> ${PUID}:${PGID}"
-else
-  echo "Warning: chown /config failed (operation not permitted). Attempting chmod fallback..."
-  chmod -R a+rwX /config 2>/dev/null || true
-fi
+# may prevent chown. Detect whether chown is possible and only warn once if
+# it isn't; otherwise fall back to a permissive chmod so the container can
+# continue. If the container is not running as root, skip chown attempts
+# (they will fail) and use chmod where helpful.
+_try_chown_or_chmod() {
+  local target="$1"
+  # If not running as root, skip chown attempts (they will fail) and do a
+  # permissive chmod so the runtime user can still write where possible.
+  if [ "$(id -u)" -ne 0 ]; then
+    echo "Note: not running as root; skipping chown for ${target} and applying permissive chmod if possible."
+    chmod -R a+rwX "${target}" 2>/dev/null || true
+    return
+  fi
+
+  if chown -R "${PUID}":"${PGID}" "${target}" 2>/dev/null; then
+    echo "chown ${target} -> ${PUID}:${PGID}"
+  else
+    # Only emit a single, clear warning to avoid log spam; apply chmod fallback
+    # so the container can proceed even when the filesystem disallows chown.
+    echo "Warning: chown ${target} failed (operation not permitted). Applying permissive chmod fallback and continuing..." >&2
+    chmod -R a+rwX "${target}" 2>/dev/null || true
+  fi
+}
+
+_try_chown_or_chmod /config
 
 # If /app is a host mount and is empty, populate it from the baked-in copy
 # so development containers that mount an empty directory still have the
@@ -67,12 +84,7 @@ if [ -d /opt/researcharr_baked ] && [ -z "$(ls -A /app 2>/dev/null)" ]; then
   cp -a /opt/researcharr_baked/. /app || true
 fi
 
-if chown -R "${PUID}":"${PGID}" /app 2>/dev/null; then
-  echo "chown /app -> ${PUID}:${PGID}"
-else
-  echo "Warning: chown /app failed (operation not permitted). Attempting chmod fallback..."
-  chmod -R a+rwX /app 2>/dev/null || true
-fi
+_try_chown_or_chmod /app
 
 # Set timezone if available and writable
 TZ=${TZ:-America/New_York}

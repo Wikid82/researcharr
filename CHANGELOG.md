@@ -4,12 +4,19 @@
 
 The following changes were made during local development and testing and are pending a release (or a PR merge into the release branch):
 
-- Fix: resolved an UnboundLocalError in the scheduler helper and improved job subprocess handling so timeouts are enforced reliably (switched to `subprocess.run(..., timeout=...)`). Child stdout/stderr are now surfaced to the logs on error so CI/tests capture diagnostics.
-- Fix: added a robust top-level `run.py` shim that deterministically loads the package implementation, mirrors public attributes for tests, and provides a small test-friendly API (`setup_logger()`, `run_job()` wrapper, and `main(once=True)` behavior) to make tests and editor tooling (monkeypatches) behave deterministically.
-- Change: updated the package fallback `researcharr/researcharr/run.py` to prefer the `SCRIPT` environment variable for script selection, use explicit `subprocess.run` keywords (avoids static analysis confusion), and emit clearer log lines used by the test-suite.
-- Chore: annotated `factory.create_app()` with a `-> Flask` return type to satisfy editor/type-checkers and improve developer experience when using `test_request_context()` in tests.
-- Test: ran the full test-suite locally inside a `.venv` (editable install). Result: 162 passed, 4 warnings; a `coverage.xml` artifact was generated for Codecov.
-- Scanning: ran the developer pipeline locally (isort/black --check, mypy, flake8) and ran Trivy scans. A small set of files were flagged for formatting and minor flake8 issues (recommend running `isort --profile black .` and `black .` and addressing the flake8 findings before merging).
+Recent local changes (pending release/merge):
+
+- Chore: pre-commit config fixed and migrated to use the `pre-commit` stage; YAML issues in `.pre-commit-config.yaml` were resolved and hooks validated (ruff, black, isort, mypy, yamllint, shellcheck wrappers, detect-secrets local wrapper).
+- Chore: untracked local DB files from the repository index (`researcharr.db`); added `.gitignore` entries and committed the removal so local DBs are no longer tracked.
+- Chore: made compose files Compose v2-friendly by removing obsolete top-level `version` keys from `docker-compose.yml`, `docker-compose.dev.yml`, and `docker-compose.feat.yml`.
+- Chore(docker): updated `Dockerfile` so dev/debug dependencies are installed during image build (debug target installs `requirements-dev.txt` or `debugpy`), and removed `|| true` fallbacks so install failures fail fast during build.
+- Chore(docker): updated `docker-compose.dev.yml` to rely on the image-baked dev deps (removed runtime `pip install` steps) and simplified the debug command to start `debugpy` directly.
+- Chore(entrypoint): improved `entrypoint.sh` to detect when `chown` is not possible (e.g., non-root or rootless mounts) and apply a permissive `chmod` fallback with a single clear warning. This reduces noisy logs on rootless or NFS-mounted volumes and keeps startup resilient.
+- Chore(pre-push): updated the test-run wrapper so pre-push pytest runs source the repository `.venv` (if present) before executing tests; this prevents `ModuleNotFoundError` during push-time checks and aligns push hooks with developer venvs.
+- Test: installed project requirements in `.venv` and ran pytest locally — full suite passed (162 passed).
+- Chore: removed runtime `pip install` from dev/feat compose `command`s and use the baked-in dependencies instead for faster, more reliable container startup.
+
+These changes are intended to improve developer onboarding, make local dev containers more reliable, and ensure CI and local pre-commit/pre-push checks behave consistently with developer environments.
 
 ## 2025-10-29
 

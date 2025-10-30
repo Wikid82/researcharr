@@ -77,8 +77,8 @@ repos:
       # Run tests before pushing to remote so pushes don't trigger CI failures.
       - id: pytest
         name: pytest (pre-push)
-        entry: pytest tests/ --maxfail=1 -q
-        language: system
+        entry: scripts/run-pytest-prepush.sh
+        language: script
         stages: [push]
 
 # Recommended usage:

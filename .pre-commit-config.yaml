@@ -74,6 +74,13 @@ repos:
         language: script
         files: ''
 
+      # Run tests before pushing to remote so pushes don't trigger CI failures.
+      - id: pytest
+        name: pytest (pre-push)
+        entry: pytest tests/ --maxfail=1 -q
+        language: system
+        stages: [push]
+
 # Recommended usage:
 # 1. Replace all <pin-*> placeholders with concrete tag names or commit hashes.
 # 2. Install pre-commit in your environment: `pip install pre-commit`.

@@ -55,6 +55,39 @@
 
   If you'd like to contribute or run the test/dev images, see the docs for development instructions and the `docker-compose.dev.yml` file in the repository.
 
+## Development & Contributing (quickstart)
+
+We try to make the developer workflow fast and deterministic. A few handy commands and scripts are included in the repository to make iteration easier:
+
+- Install and run pre-commit hooks (formatting, linting, shellcheck wrappers):
+
+```bash
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files
+```
+
+- Install the project's native git pre-push hook (recommended) so `git push` will run tests locally before sending to CI:
+
+```bash
+./scripts/install-prepush-hook.sh
+```
+
+- Run the full CI-like checks locally (pre-commit + pytest + coverage):
+
+```bash
+# fast: skip installing packages and skip Docker/Trivy
+./scripts/ci-local.sh --skip-install --no-docker --no-trivy
+
+# full run (installs deps, builds an image and runs Trivy if available):
+./scripts/ci-local.sh
+```
+
+Notes:
+- Pre-commit runs formatters and linters. We keep formatters and linters bound to the commit stage and the test-run bound to the push hook to avoid repeated formatting during push.
+- The CI runner caches pip and pre-commit environments for faster runs; this is handled automatically on GitHub Actions.
+
+
   Why use researcharr?
 
   - Small, focused: validates and schedules searches against Radarr/Sonarr-like services.

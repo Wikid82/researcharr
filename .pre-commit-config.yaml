@@ -59,6 +59,21 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
 
+  # Local hooks: shellcheck (system binary) and detect-secrets (Python tool)
+  - repo: local
+    hooks:
+      - id: shellcheck
+        name: shellcheck (local wrapper)
+        entry: scripts/run-shellcheck.sh
+        language: script
+        files: \.sh$
+
+      - id: detect-secrets
+        name: detect-secrets (local wrapper)
+        entry: scripts/run-detect-secrets.sh
+        language: script
+        files: ''
+
 # Recommended usage:
 # 1. Replace all <pin-*> placeholders with concrete tag names or commit hashes.
 # 2. Install pre-commit in your environment: `pip install pre-commit`.

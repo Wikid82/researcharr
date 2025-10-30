@@ -17,6 +17,7 @@ pip-tools
 bandit
 safety
 pytest-xdist
+detect-secrets
 
 # Documentation tooling
 mkdocs

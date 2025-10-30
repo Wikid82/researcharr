@@ -24,7 +24,9 @@ repos:
     rev: "v1.4.1"
     hooks:
       - id: mypy
-        args: ["--ignore-missing-imports"]
+        # Ensure mypy uses the project's mypy.ini and excludes backup folders
+        # that duplicate top-level module names (e.g., backups-scratch/researcharr.py).
+        args: ["--config-file", "mypy.ini", "--exclude", "^backups-scratch/", "--ignore-missing-imports"]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: "v4.4.0"

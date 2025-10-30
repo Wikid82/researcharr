@@ -303,45 +303,48 @@ def create_app() -> Flask:
     # import attempts multiple fallbacks so the app starts under the repo
     # layout and inside a packaged installation.
     if TYPE_CHECKING:  # pragma: no cover - static type hint only
-        # Provide a typing alias so static type checkers know the name
-        # exists without requiring the actual module to be importable at
-        # analysis time. Use `Any` to keep the type loose.
-        PluginRegistry = Any  # type: ignore
+        # Provide the concrete PluginRegistry symbol to static analyzers
+        # without importing it at runtime.
+        from researcharr.plugins.registry import PluginRegistry  # noqa: F401
+
+    # Loosely-typed registry variable so type checkers don't complain when
+    # runtime import logic falls back between module/class representations.
+    registry: Any = None
 
     try:
+        # Try importing the registry module via importlib. We avoid using
+        # a direct `from ... import PluginRegistry as X` at runtime to keep
+        # static type names (used in TYPE_CHECKING) separate from runtime
+        # assignments which can confuse mypy. Attempt both the packaged
+        # and top-level module names to support different layouts.
         try:
-            from researcharr.plugins.registry import (
-                PluginRegistry,  # type: ignore
-            )
+            import importlib as _importlib_mod
 
-            registry = PluginRegistry()
-        except Exception:
-            # Try plain top-level `plugins.registry` (when running from
-            # repository root) before resorting to loading the file via
-            # importlib. This helps the editor/runtime find the module in
-            # both installed and source layouts.
             try:
-                from plugins.registry import PluginRegistry  # type: ignore
-
-                registry = PluginRegistry()
+                _reg_mod = _importlib_mod.import_module("researcharr.plugins.registry")
             except Exception:
-                # Fallback: attempt to load the module directly from the
-                # package directory using importlib. If this fails the
-                # surrounding except will silently continue (app will
-                # operate without plugin registry).
-                pkg_dir = os.path.dirname(__file__)
-                reg_path = os.path.join(pkg_dir, "plugins", "registry.py")
-                spec = importlib.util.spec_from_file_location(
-                    "researcharr.plugins.registry", reg_path
-                )
-                if spec is None or spec.loader is None:
-                    raise ImportError("Failed to locate plugins.registry")
-                plugin_mod = importlib.util.module_from_spec(spec)
-                loader = spec.loader
-                assert loader is not None
-                loader.exec_module(plugin_mod)
-                PluginRegistry = getattr(plugin_mod, "PluginRegistry")
-                registry = PluginRegistry()
+                _reg_mod = _importlib_mod.import_module("plugins.registry")
+            _PluginRegistryRuntime = getattr(_reg_mod, "PluginRegistry")
+            registry = _PluginRegistryRuntime()
+        except Exception:
+            # Fallback: attempt to load the module directly from the
+            # package directory using importlib. If this fails the
+            # surrounding except will silently continue (app will
+            # operate without plugin registry).
+            pkg_dir = os.path.dirname(__file__)
+            reg_path = os.path.join(pkg_dir, "plugins", "registry.py")
+            spec = importlib.util.spec_from_file_location(
+                "researcharr.plugins.registry",
+                reg_path,
+            )
+            if spec is None or spec.loader is None:
+                raise ImportError("Failed to locate plugins.registry")
+            plugin_mod = importlib.util.module_from_spec(spec)
+            loader = spec.loader
+            assert loader is not None
+            loader.exec_module(plugin_mod)
+            _PluginRegistryRuntime = getattr(plugin_mod, "PluginRegistry")
+            registry = _PluginRegistryRuntime()
 
         # Discover any local plugin modules placed under researcharr/plugins
         pkg_dir = os.path.dirname(__file__)
@@ -1605,6 +1608,7 @@ def create_app() -> Flask:
     # Attempt to import the API blueprint from the package. If that fails
     # (e.g., running from source tree where api.py is a top-level module)
     # fall back to loading the file directly similar to `webui` above.
+    _api: Any = None
     try:
         try:
             from researcharr import api as _api  # type: ignore

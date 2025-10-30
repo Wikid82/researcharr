@@ -12,7 +12,7 @@ import os
 import subprocess as _stdlib_subprocess
 import types
 from importlib import import_module
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 # Statically-declare common module attributes only for type checkers so
 # editors (Pylance) can resolve attribute access on the dynamic shim.

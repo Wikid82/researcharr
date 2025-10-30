@@ -42,7 +42,7 @@ services:
     command:
       - "/bin/sh"
       - "-lc"
-      - "pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt || true && python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m runpy /app/scripts/researcharr.py serve"
+      - "pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt || true && python -m debugpy --listen 0.0.0.0:5678 --wait-for-client /app/scripts/researcharr.py serve"
     # If you want to run under debugpy, replace the command above with:
     # command:
     #   - "/bin/sh"

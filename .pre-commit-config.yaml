@@ -24,13 +24,32 @@ repos:
     rev: "v1.4.1"
     hooks:
       - id: mypy
-        # Run mypy on the package rather than scanning the entire tree. This
-        # avoids duplicate-module errors caused by auxiliary copies of the
-        # package (e.g., backups-scratch/researcharr.py) living in the repo.
-        # Do not pass filenames to mypy (pre-commit normally appends them),
-        # use `pass_filenames: false` so mypy only sees the provided args.
+        args:
+          - "--config-file"
+          - "mypy.ini"
+          - "--package"
+          - "researcharr"
+          - "--ignore-missing-imports"
         pass_filenames: false
-        args: ["--config-file", "mypy.ini", "--package", "researcharr", "--ignore-missing-imports"]
+        additional_dependencies: []
+
+  # YAML linting for configuration files
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.30.0
+    hooks:
+      - id: yamllint
+
+  # Note: shellcheck integration omitted because the shellcheck mirror
+  # pre-commit hook is not available in this environment. You can add
+  # a shellcheck hook later (for example via a maintained pre-commit
+  # wrapper) if desired.
+
+  # Detect secrets in the codebase (Yelp detect-secrets)
+  # Note: detect-secrets omitted here to avoid configuration mismatches; we
+  # can add it later with a proper baseline file and tested hook id.
+
+  # Note: Gitleaks integration can be added later with a tested pre-commit hook
+  # if desired; omitted here to avoid unsupported/misconfigured hook manifests.
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: "v4.4.0"

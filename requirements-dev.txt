@@ -17,3 +17,7 @@ pip-tools
 bandit
 safety
 pytest-xdist
+
+# Documentation tooling
+mkdocs
+mkdocs-material

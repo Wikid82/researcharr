@@ -6,8 +6,9 @@ dev:
 	./scripts/dev-up.sh
 
 dev-detach:
-	# Start development stack detached (useful for CI or background runs)
-	./scripts/dev-up.sh -d
+	# Start development stack detached (useful for CI or background runs).
+	# Use compose up without file-watch since --watch is incompatible with -d.
+	docker compose -f docker-compose.feat.yml up --build -d
 
 build:
 	# Build the local debug image

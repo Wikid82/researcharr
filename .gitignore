@@ -25,8 +25,9 @@ env/
 .idea/
 
 # Coverage and test reports
-coverage.xml
-coverage.*
+# Allow `coverage.xml` to be tracked (we generate it during CI and publish
+# it as an artifact). Keep per-run binary data and HTML report directories
+# ignored.
 *.coverage
 htmlcov/
 

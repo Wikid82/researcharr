@@ -20,7 +20,6 @@ jobs:
       # the expression (some editors flag `secrets.*` as an unrecognized
       # named-value even though GitHub Actions evaluates it at runtime).
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
     strategy:
       matrix:
         python-version: [3.13]
@@ -64,7 +63,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     env:
-      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      BUILD_NUMBER: ${{ github.run_number }}
+      GIT_SHA: ${{ github.sha }}
+      BRANCH_NAME: ${{ github.ref_name }}
+    outputs:
+      image_tag: ${{ steps.push-image.outputs.image_tag }}
     steps:
       - uses: actions/checkout@v4
 
@@ -76,11 +79,12 @@ jobs:
           # Build the image using the Dockerfile's debug stage. We tag it locally
           # with a branch-specific name so maintainers can identify feature builds.
           BRANCH_TAG="${{ github.ref_name || github.sha }}"
-          IMAGE_NAME="${{ github.repository }}:${BRANCH_TAG}-dev"
-          docker build --target debug -t "$IMAGE_NAME" .
+          SHORT_SHA="${GIT_SHA:0:7}"
+          IMAGE_LOCAL_TAG="${{ github.repository }}:dev-${BRANCH_TAG}-${BUILD_NUMBER}-${SHORT_SHA}"
+          docker build --target debug -t "$IMAGE_LOCAL_TAG" .
           # Save the image to a tarball for download by developers
           mkdir -p /tmp/image-artifacts
-          docker save "$IMAGE_NAME" -o /tmp/image-artifacts/researcharr-dev-${BRANCH_TAG}.tar
+          docker save "$IMAGE_LOCAL_TAG" -o /tmp/image-artifacts/researcharr-dev-${BRANCH_TAG}-${BUILD_NUMBER}-${SHORT_SHA}.tar
 
       - name: Upload dev image artifact
         uses: actions/upload-artifact@v4
@@ -88,18 +92,69 @@ jobs:
           name: researcharr-dev-image
           path: /tmp/image-artifacts/
 
-      - name: Log in to GHCR (optional)
-        if: ${{ env.GHCR_TOKEN != '' }}
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ env.GHCR_TOKEN }}
+      # GHCR login is performed in the push-image step when a token is present
 
-      - name: Push dev image to GHCR (optional)
+      - id: push-image
+        name: Push dev image to GHCR (optional)
+        # We intentionally do NOT use `if: ${{ secrets.* }}` here because
+        # some editors incorrectly flag `secrets` as an unrecognized value.
+        # Instead, the step always runs and checks at runtime whether the
+        # `GHCR_TOKEN` env var (populated below from the secret) is present.
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          # Skip pushing if no token is provided
+          if [ -z "${GHCR_TOKEN}" ]; then
+            echo "GHCR_TOKEN not set; skipping push"
+            echo "image_tag=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Derive safe branch name and short SHA
+          BRANCH_SAFE="${BRANCH_NAME//\//-}"
+          SHORT_SHA="${GIT_SHA:0:7}"
+          IMAGE_BASE="ghcr.io/${{ github.repository }}"
+          VERSION_TAG="dev-${BRANCH_SAFE}-${BUILD_NUMBER}-${SHORT_SHA}"
+          FULL_TAG="${IMAGE_BASE}:${VERSION_TAG}"
+          # Build and push the tagged image
+          docker build --target debug -t "${FULL_TAG}" .
+          echo "Logging into GHCR"
+          echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker push "${FULL_TAG}"
+          # Also push a convenience latest tag per-branch
+          LATEST_TAG="${IMAGE_BASE}:dev-${BRANCH_SAFE}-latest"
+          docker tag "${FULL_TAG}" "${LATEST_TAG}" || true
+          docker push "${LATEST_TAG}" || true
+          echo "Pushed ${FULL_TAG} and ${LATEST_TAG}"
+          echo "image_tag=${FULL_TAG}" >> "$GITHUB_OUTPUT"
+
+  image-scan:
+    if: ${{ github.ref_name != 'main' }}
+    needs: dev-image
+    runs-on: ubuntu-latest
+    env:
+      # Make GHCR token visible to steps as an env var to avoid using
+      # `secrets.*` directly in `if` expressions (editor/language-server
+      # false positives). The token remains protected in GitHub Actions.
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint Dockerfile with hadolint (docker)
+        run: |
+          docker run --rm -v "$PWD":/data hadolint/hadolint:latest hadolint /data/Dockerfile || true
+
+      - name: Docker login to GHCR (if needed)
         if: ${{ env.GHCR_TOKEN != '' }}
         run: |
-          BRANCH_TAG="${{ github.ref_name || github.sha }}"
-          IMAGE_BASE="ghcr.io/${{ github.repository }}"
-          docker build --target debug -t "${IMAGE_BASE}:${BRANCH_TAG}-dev" .
-          docker push "${IMAGE_BASE}:${BRANCH_TAG}-dev"
+          echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Scan pushed image with Trivy
+        env:
+          IMAGE_TO_SCAN: ${{ needs.dev-image.outputs.image_tag }}
+        run: |
+          if [ -z "${IMAGE_TO_SCAN}" ]; then
+            echo "No image tag available from dev-image job; skipping scan"
+            exit 0
+          fi
+          echo "Scanning image: ${IMAGE_TO_SCAN}"
+          docker run --rm aquasecurity/trivy:latest --exit-code 1 --severity HIGH,CRITICAL "${IMAGE_TO_SCAN}"

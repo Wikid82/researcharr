@@ -7,7 +7,9 @@ installed as a package or run from the repository root.
 """
 
 from __future__ import annotations
+
 import os
+
 
 def _delegate_to_top_level(name: str, *args, **kwargs):
     """Attempt to delegate a call to the top-level backups module.
@@ -20,7 +22,8 @@ def _delegate_to_top_level(name: str, *args, **kwargs):
     try:
         # import inside function to pick up top-level `backups.py` when
         # the caller's sys.path includes the repository root.
-        from backups import create_backup_file as _cb, prune_backups as _pb  # type: ignore
+        from backups import create_backup_file as _cb  # type: ignore
+        from backups import prune_backups as _pb
     except Exception:
         # If a normal import fails (for example because the current working
         # directory is the configured CONFIG_DIR during tests), try to load
@@ -29,7 +32,9 @@ def _delegate_to_top_level(name: str, *args, **kwargs):
         try:
             import importlib.util
 
-            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+            repo_root = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), os.pardir)
+            )
             candidate = os.path.join(repo_root, "backups.py")
             spec = importlib.util.spec_from_file_location("backups", candidate)
             if spec is None or spec.loader is None:

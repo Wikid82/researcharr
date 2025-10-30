@@ -5,6 +5,7 @@ used by the test-suite. It purposely keeps the behavior small and
 deterministic so tests can exercise timeout handling without starting the
 full scheduler implementation.
 """
+
 from __future__ import annotations
 
 import logging
@@ -57,7 +58,10 @@ def run_job() -> None:
     logger.debug("env SCRIPT=%r", env_script)
     try:
         top_run = sys.modules.get("run")
-        logger.debug("top-level run.SCRIPT=%r", None if top_run is None else getattr(top_run, "SCRIPT", None))
+        logger.debug(
+            "top-level run.SCRIPT=%r",
+            None if top_run is None else getattr(top_run, "SCRIPT", None),
+        )
     except Exception:
         logger.debug("top-level run.SCRIPT=<unavailable>")
     timeout = _get_job_timeout()
@@ -82,10 +86,15 @@ def run_job() -> None:
         # runtime behavior the same.
         if timeout is not None:
             completed = subprocess.run(
-                [sys.executable, str(script)], capture_output=True, text=True, timeout=timeout
+                [sys.executable, str(script)],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
             )
         else:
-            completed = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+            completed = subprocess.run(
+                [sys.executable, str(script)], capture_output=True, text=True
+            )
         out = completed.stdout
         err = completed.stderr
         # Log subprocess output for diagnostic visibility in tests.

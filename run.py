@@ -6,13 +6,13 @@ same public names as `researcharr.run` by importing and re-exporting them.
 """
 from __future__ import annotations
 
-from importlib import import_module
 import importlib.util
 import logging
 import os
-from typing import Any, Callable, TYPE_CHECKING
 import subprocess as _stdlib_subprocess
 import types
+from importlib import import_module
+from typing import TYPE_CHECKING, Any, Callable
 
 # Statically-declare common module attributes only for type checkers so
 # editors (Pylance) can resolve attribute access on the dynamic shim.
@@ -30,19 +30,29 @@ try:
 except Exception:
     _impl = None
 
+
 # If the imported module doesn't expose the expected names (possible when
 # a circular import occurs because the package __init__ re-exports the
 # repository-level modules), try loading the package's `run.py` file
 # directly from the package directory as a fallback.
 def _looks_ok(m: object | None) -> bool:
-    return bool(m and all(getattr(m, n, None) is not None for n in ("run_job", "main", "LOG_PATH", "SCRIPT")))
+    return bool(
+        m
+        and all(
+            getattr(m, n, None) is not None
+            for n in ("run_job", "main", "LOG_PATH", "SCRIPT")
+        )
+    )
+
 
 if not _looks_ok(_impl):
     try:
         pkg_dir = os.path.join(os.path.dirname(__file__), "researcharr")
         pkg_run = os.path.join(pkg_dir, "run.py")
         if os.path.isfile(pkg_run):
-            spec = importlib.util.spec_from_file_location("researcharr._run_impl", pkg_run)
+            spec = importlib.util.spec_from_file_location(
+                "researcharr._run_impl", pkg_run
+            )
             if spec and spec.loader:
                 mod = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(mod)  # type: ignore[arg-type]
@@ -60,6 +70,7 @@ def _get_impl_attr(name: str) -> Any:
     if not _looks_ok(_impl):
         raise ImportError("Could not load researcharr.run implementation")
     return getattr(_impl, name)
+
 
 # Re-export commonly used names
 _impl_run_job = None
@@ -101,7 +112,9 @@ def run_job(*args, **kwargs):
                         if not hasattr(val, "PIPE"):
                             setattr(val, "PIPE", _stdlib_subprocess.PIPE)
                         if not hasattr(val, "TimeoutExpired"):
-                            setattr(val, "TimeoutExpired", _stdlib_subprocess.TimeoutExpired)
+                            setattr(
+                                val, "TimeoutExpired", _stdlib_subprocess.TimeoutExpired
+                            )
                     except Exception:
                         pass
                 setattr(_impl, _name, val)
@@ -148,6 +161,7 @@ def main(once: bool = False) -> None:
     if _impl_main is None:
         raise ImportError("Could not load researcharr.run main implementation")
     return _impl_main(once=once)
+
 
 # Also mirror other public attributes from the implementation module into this
 # shim so callers (and tests) can monkeypatch module-level objects like
@@ -206,6 +220,7 @@ def setup_logger():
             _add_file_handler()
     return logger
 
+
 # Mirror convenient helpers from the repository-level `scripts/run.py` when
 # present (this provides `setup_logger`, `CONFIG_PATH`, `LOG_PATH`, etc.,
 # used by the lightweight test shim).
@@ -233,7 +248,9 @@ try:
     repo_root = os.path.abspath(os.path.join(here, os.pardir))
     scripts_run = os.path.join(repo_root, "scripts", "run.py")
     if os.path.isfile(scripts_run):
-        spec = importlib.util.spec_from_file_location("researcharr._scripts_run", scripts_run)
+        spec = importlib.util.spec_from_file_location(
+            "researcharr._scripts_run", scripts_run
+        )
         if spec and spec.loader:
             _scripts_mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(_scripts_mod)  # type: ignore[arg-type]

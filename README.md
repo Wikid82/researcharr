@@ -22,7 +22,11 @@
 
   # a minimal docker-compose you can drop in next to your project or use system-wide
   cat > docker-compose.yml <<'EOF'
+<<<<<<< Updated upstream
 
+=======
+
+>>>>>>> Stashed changes
   services:
     researcharr:
       image: ghcr.io/wikid82/researcharr:latest
@@ -52,6 +56,7 @@
   ```
 
   3) Visit the web UI at: http://localhost:2929/
+<<<<<<< Updated upstream
 
   If you'd like to contribute or run the test/dev images, see the docs for development instructions and the `docker-compose.dev.yml` file in the repository.
 
@@ -87,6 +92,10 @@ Notes:
 - Pre-commit runs formatters and linters. We keep formatters and linters bound to the commit stage and the test-run bound to the push hook to avoid repeated formatting during push.
 - The CI runner caches pip and pre-commit environments for faster runs; this is handled automatically on GitHub Actions.
 
+=======
+
+  If you'd like to contribute or run the test/dev images, see the docs for development instructions and the `docker-compose.dev.yml` file in the repository.
+>>>>>>> Stashed changes
 
   Why use researcharr?
 

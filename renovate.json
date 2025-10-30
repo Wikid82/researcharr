@@ -1,1 +1,4 @@
-{"extends":["github>renovate/default"], "baseBranch":"development"}
+{
+ "extends": ["config:base"],
+ "baseBranch": "development"
+}

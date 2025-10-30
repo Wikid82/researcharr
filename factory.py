@@ -49,7 +49,7 @@ except Exception:
     loader.exec_module(webui)  # type: ignore
 
 
-def create_app():
+def create_app() -> Flask:
     def logout_link():
         return '<a href="/logout">Logout</a>'
 

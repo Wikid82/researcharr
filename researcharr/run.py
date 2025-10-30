@@ -42,26 +42,24 @@ def run_job() -> None:
     # setting the module attribute on either the package module or the
     # top-level `run` module (some import paths may alias one to the
     # other in different environments).
-    script = None
+    # Prefer an explicit environment override (tests set this). Fall back to
+    # the module-level attribute, then to the package default constant.
     try:
-        script = globals().get("SCRIPT")
+        env_script = os.environ.get("SCRIPT")
     except Exception:
-        script = None
-    logger.debug("globals SCRIPT=%r", globals().get("SCRIPT"))
-    logger.debug("env SCRIPT=%r", os.environ.get("SCRIPT"))
-    if not script:
-        # Try top-level run module if present
-        try:
-            import sys
-            run_mod = sys.modules.get("run")
-            if run_mod is not None:
-                script = getattr(run_mod, "SCRIPT", None)
-        except Exception:
-            pass
-    logger.debug("top-level run.SCRIPT=%r", None if not __import__("sys").modules.get("run") else __import__("sys").modules.get("run").__dict__.get("SCRIPT"))
-    if not script:
-        # Fallback to environment
-        script = os.environ.get("SCRIPT", SCRIPT)
+        env_script = None
+    try:
+        mod_script = globals().get("SCRIPT")
+    except Exception:
+        mod_script = None
+    script = env_script or mod_script or SCRIPT
+    logger.debug("globals SCRIPT=%r", mod_script)
+    logger.debug("env SCRIPT=%r", env_script)
+    try:
+        top_run = sys.modules.get("run")
+        logger.debug("top-level run.SCRIPT=%r", None if top_run is None else getattr(top_run, "SCRIPT", None))
+    except Exception:
+        logger.debug("top-level run.SCRIPT=<unavailable>")
     timeout = _get_job_timeout()
 
     # Ensure there is something to execute
@@ -70,28 +68,55 @@ def run_job() -> None:
         return
 
     logger.debug("selected script for run_job: %s", script)
+    logger.info("Starting scheduled job: running %s", script)
 
     try:
-        # Launch the script as a subprocess and wait with optional timeout
-        proc = subprocess.Popen([sys.executable, str(script)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Use subprocess.run which raises TimeoutExpired if the child exceeds
+        # the specified timeout. This tends to be simpler and more reliable
+        # than managing Popen.communicate/timeouts manually.
+        # Call subprocess.run with explicit keyword arguments. Using a
+        # dynamically-built `run_kwargs` dict can confuse static type
+        # checkers (Pyright/Pylance) which may try to match the dict values
+        # to positional parameters and report spurious type errors. By
+        # providing the keywords directly we avoid that issue and keep the
+        # runtime behavior the same.
+        if timeout is not None:
+            completed = subprocess.run(
+                [sys.executable, str(script)], capture_output=True, text=True, timeout=timeout
+            )
+        else:
+            completed = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+        out = completed.stdout
+        err = completed.stderr
+        # Log subprocess output for diagnostic visibility in tests.
+        # Log at DEBUG normally, but if the child returned a non-zero exit
+        # status surface its stdout/stderr at INFO so tests (which set INFO)
+        # can capture diagnostic traces.
         try:
-            out, err = proc.communicate(timeout=timeout)
-            # Log subprocess output for diagnostic visibility in tests
-            try:
-                logger.debug("run_job stdout: %s", out.decode(errors="ignore"))
-            except Exception:
-                pass
-            try:
-                logger.debug("run_job stderr: %s", err.decode(errors="ignore"))
-            except Exception:
-                pass
-            logger.info("run_job finished: %s", proc.returncode)
-        except subprocess.TimeoutExpired:
-            try:
-                proc.kill()
-            except Exception:
-                pass
-            logger.error("Job exceeded timeout and was killed")
+            # Always provide the child's output at DEBUG; tests look for the
+            # more human-facing "Job stdout" / "Job stderr" lines at INFO.
+            logger.debug("run_job stdout: %s", out)
+        except Exception:
+            pass
+        try:
+            logger.debug("run_job stderr: %s", err)
+        except Exception:
+            pass
+        try:
+            if out:
+                logger.info("Job stdout: %s", out)
+        except Exception:
+            pass
+        try:
+            if err:
+                logger.info("Job stderr: %s", err)
+        except Exception:
+            pass
+        logger.info("Job finished with returncode %s", completed.returncode)
+    except subprocess.TimeoutExpired:
+        # Best-effort kill: subprocess.run already attempts to kill the child,
+        # but ensure we log the expected message for tests and diagnostics.
+        logger.error("Job exceeded timeout and was killed")
     except Exception as exc:
         logger.exception("run_job encountered an error: %s", exc)
 

@@ -15,9 +15,9 @@ services:
       - LOGLEVEL=INFO
     volumes:
       # Persist runtime configuration and DB to host for inspection/troubleshooting
-      - ./config:/config:rw
+      - ${HOST_CONFIG_PATH:-./config}:/config:rw
       # Persist logs written under /config/logs (cron, scheduler, etc.)
-      - ./logs:/config/logs:rw
+      - ${HOST_LOGS_PATH:-./logs}:/config/logs:rw
     logging:
       driver: json-file
       options:

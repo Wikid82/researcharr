@@ -2,6 +2,9 @@
 .venv
 .env
 .env.*
+.env.example
+.env.example.local
+!.env.example
 # Local test helper script (if present) — ignore generated wrappers
 script.sh
 

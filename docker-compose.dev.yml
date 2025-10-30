@@ -25,10 +25,10 @@ services:
       - WEBUI_DEV_ENABLE_DEBUG_ENDPOINT=true
     volumes:
       # Mount the project source into the container for live edits & immediate debugging
-      - ./:/app:delegated
+      - ${HOST_APP_PATH:-./}:/app:delegated
       # Persist runtime config and DB on host so you can inspect files easily
-      - ./config:/config:rw
-      - ./logs:/config/logs:rw
+      - ${HOST_CONFIG_PATH:-./config}:/config:rw
+      - ${HOST_LOGS_PATH:-./logs}:/config/logs:rw
     tty: true
     stdin_open: true
     # Use the repository-local entrypoint (mounted into /app) so local

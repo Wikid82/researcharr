@@ -112,10 +112,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 		bash procps iproute2 strace vim less && rm -rf /var/lib/apt/lists/*
 # If a `requirements-dev.txt` is present in the project, install it into the
 # image so debugpy and other dev tools are available in the debug image.
-RUN python -m pip install --upgrade pip setuptools wheel || true
+RUN python -m pip install --upgrade pip setuptools wheel
 RUN if [ -f /app/requirements-dev.txt ]; then \
-			python -m pip install --no-cache-dir -r /app/requirements-dev.txt || true; \
+			python -m pip install --no-cache-dir -r /app/requirements-dev.txt; \
 		else \
-			python -m pip install --no-cache-dir debugpy || true; \
+			python -m pip install --no-cache-dir debugpy; \
 		fi
 USER researcharr

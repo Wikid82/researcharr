@@ -198,6 +198,29 @@ docker run --rm -v /path/to/config:/config -p 2929:2929 ghcr.io/wikid82/research
 </ul>
 <p>Contact and help</p>
 <p>If you're stuck, open an issue or ask in the PR discussion. Include the failing CI log snippets and the output of <code>pre-commit run --all-files</code> if applicable.</p>
+<p>Local developer helpers</p>
+<ul>
+<li>We include a small installer for a native git pre-push hook that runs the test suite before pushing. This prevents pushes that would fail CI and provides fast local feedback. To install the hook run:</li>
+</ul>
+<pre><code class="language-bash">./scripts/install-prepush-hook.sh
+</code></pre>
+<ul>
+<li>There's also a small local CI helper that mirrors the repository <code>build</code> job (installs deps, runs pre-commit, runs pytest and writes <code>coverage.xml</code>, with optional Docker/Trivy steps):</li>
+</ul>
+<pre><code class="language-bash"># quick: assume deps already installed
+./scripts/ci-local.sh --skip-install --no-docker --no-trivy
+
+# full: install deps, build image, run trivy
+./scripts/ci-local.sh
+</code></pre>
+<p>Caching in CI</p>
+<ul>
+<li>The CI workflow caches pip packages and pre-commit environments on the GitHub runner to reduce iteration time. This keeps subsequent CI runs (and pre-commit initializations) much faster.</li>
+</ul>
+<p>Developer note</p>
+<ul>
+<li>After cloning, run <code>pre-commit install</code> and (optionally) <code>./scripts/install-prepush-hook.sh</code> to get the same quick, guarded push behavior contributors use locally.</li>
+</ul>
               
             </div>
           </div><footer>

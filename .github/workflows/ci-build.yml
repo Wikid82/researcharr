@@ -56,14 +56,22 @@ jobs:
         with:
           token: ${{ env.CODECOV_TOKEN }}
         continue-on-error: true
+      - name: Build complete
+        run: echo "build job finished"
 
-      # Build a developer-friendly image (debug stage) for feature-branch debugging
+  dev-image:
+    if: ${{ github.ref_name != 'main' }}
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Set up Docker Buildx
-        if: ${{ github.ref_name != 'main' }}
         uses: docker/setup-buildx-action@v2
 
       - name: Build dev image (debug stage)
-        if: ${{ github.ref_name != 'main' }}
         run: |
           # Build the image using the Dockerfile's debug stage. We tag it locally
           # with a branch-specific name so maintainers can identify feature builds.
@@ -75,15 +83,13 @@ jobs:
           docker save "$IMAGE_NAME" -o /tmp/image-artifacts/researcharr-dev-${BRANCH_TAG}.tar
 
       - name: Upload dev image artifact
-        if: ${{ github.ref_name != 'main' }}
         uses: actions/upload-artifact@v4
         with:
           name: researcharr-dev-image
           path: /tmp/image-artifacts/
 
-      # Optional: push the dev image to GitHub Container Registry when a push token is available
       - name: Log in to GHCR (optional)
-        if: ${{ github.ref_name != 'main' && env.GHCR_TOKEN != '' }}
+        if: ${{ env.GHCR_TOKEN != '' }}
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
@@ -91,7 +97,7 @@ jobs:
           password: ${{ env.GHCR_TOKEN }}
 
       - name: Push dev image to GHCR (optional)
-        if: ${{ github.ref_name != 'main' && env.GHCR_TOKEN != '' }}
+        if: ${{ env.GHCR_TOKEN != '' }}
         run: |
           BRANCH_TAG="${{ github.ref_name || github.sha }}"
           IMAGE_BASE="ghcr.io/${{ github.repository }}"

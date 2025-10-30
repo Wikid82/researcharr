@@ -115,12 +115,34 @@ export PUID PGID
 
 # Capture any command/args passed to the entrypoint so the Python helper
 # can exec the user-supplied command after dropping privileges. Docker
-# appends the container CMD as arguments to the entrypoint, so grab them
-# here and expose via env for the python helper below.
-export ENTRYPOINT_CMD="${*:-}"
+# appends the container CMD as arguments to the entrypoint; preserve the
+# passed arguments reliably (works for array-form or string commands).
+# Use "$*" to join positional parameters into a single string, and
+# ensure the env var is present (empty when no CMD was provided).
+if [ "$#" -gt 0 ]; then
+  ENTRYPOINT_CMD="$*"
+else
+  ENTRYPOINT_CMD=""
+fi
+export ENTRYPOINT_CMD
+
+# Debug: show the resolved command (this line can be removed once debugging is complete)
+# (debug echo removed)
 
 # Drop privileges using a tiny Python helper which sets gid/uid and then
 # execs the target process. This avoids adding gosu/su-exec to the image.
+# Allow bypassing the privilege-drop helper for debugging or constrained
+# environments by setting BYPASS_DROP=1. In that case exec the CMD string
+# directly (this keeps behavior identical to running the shell command in
+# the container). This is a safe opt-in and useful for debugging only.
+if [ "${BYPASS_DROP:-0}" = "1" ]; then
+  if [ -n "${ENTRYPOINT_CMD}" ]; then
+    exec /bin/sh -c "${ENTRYPOINT_CMD}"
+  else
+    exec /bin/sh -c "python -u /app/researcharr.py serve"
+  fi
+fi
+
 python3 - <<'PY'
 import os, sys
 def to_int(v, default):

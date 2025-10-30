@@ -1,0 +1,23 @@
+<nav class="site-nav" role="navigation">
+  <div class="container">
+    <a class="site-title" href="{{ site.baseurl | default: '/' }}">{{ site.title | default: "researcharr" }}</a>
+    <ul class="nav-links">
+      <li><a href="{{ site.baseurl | append: '/' }}">Home</a></li>
+      <li><a href="{{ site.baseurl | append: '/Getting-Started.html' }}">Getting Started</a></li>
+      <li><a href="{{ site.baseurl | append: '/Health-and-Metrics.html' }}">Health & Metrics</a></li>
+      <li><a href="{{ site.baseurl | append: '/Environment-Variables.html' }}">Env Vars</a></li>
+      <li><a href="{{ site.baseurl | append: '/FAQ.html' }}">FAQ</a></li>
+      <li><a href="{{ site.baseurl | append: '/Changelog.html' }}">Changelog</a></li>
+    </ul>
+  </div>
+</nav>
+
+<style>
+/* Minimal navbar styles: you can override these in docs/style.css or site CSS */
+.site-nav{background:#0b3d91;color:#fff;padding:0.5rem 0}
+.site-nav .container{display:flex;align-items:center;max-width:1100px;margin:0 auto;padding:0 1rem}
+.site-title{font-weight:700;color:#fff;margin-right:1rem;text-decoration:none}
+.nav-links{list-style:none;margin:0;padding:0;display:flex;gap:0.75rem}
+.nav-links a{color:#fff;text-decoration:none;padding:0.25rem 0.5rem}
+.nav-links a:hover{text-decoration:underline}
+</style>

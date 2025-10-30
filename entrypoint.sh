@@ -59,6 +59,14 @@ else
   chmod -R a+rwX /config 2>/dev/null || true
 fi
 
+# If /app is a host mount and is empty, populate it from the baked-in copy
+# so development containers that mount an empty directory still have the
+# repository files available. This runs as root before we drop privileges.
+if [ -d /opt/researcharr_baked ] && [ -z "$(ls -A /app 2>/dev/null)" ]; then
+  echo "Populating /app from baked image copy at /opt/researcharr_baked"
+  cp -a /opt/researcharr_baked/. /app || true
+fi
+
 if chown -R ${PUID}:${PGID} /app 2>/dev/null; then
   echo "chown /app -> ${PUID}:${PGID}"
 else

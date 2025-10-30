@@ -61,6 +61,10 @@ COPY --from=builder /install /usr/local
 # Copy app files
 COPY --from=builder /app /app
 
+# Keep a baked copy of the application in the image so development containers
+# that mount an empty host directory into /app can be auto-populated at start.
+RUN mkdir -p /opt/researcharr_baked && cp -a /app/. /opt/researcharr_baked || true
+
 # Entrypoint
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

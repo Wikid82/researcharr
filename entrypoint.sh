@@ -52,7 +52,7 @@ touch /config/researcharr.db >/dev/null 2>&1 || true
 # Some mount types (NFS with root_squash, CIFS, FUSE) or rootless Docker setups
 # may prevent chown — handle failures gracefully and attempt a permissive chmod
 # fallback so the container can proceed.
-if chown -R ${PUID}:${PGID} /config 2>/dev/null; then
+if chown -R "${PUID}":"${PGID}" /config 2>/dev/null; then
   echo "chown /config -> ${PUID}:${PGID}"
 else
   echo "Warning: chown /config failed (operation not permitted). Attempting chmod fallback..."
@@ -67,7 +67,7 @@ if [ -d /opt/researcharr_baked ] && [ -z "$(ls -A /app 2>/dev/null)" ]; then
   cp -a /opt/researcharr_baked/. /app || true
 fi
 
-if chown -R ${PUID}:${PGID} /app 2>/dev/null; then
+if chown -R "${PUID}":"${PGID}" /app 2>/dev/null; then
   echo "chown /app -> ${PUID}:${PGID}"
 else
   echo "Warning: chown /app failed (operation not permitted). Attempting chmod fallback..."
@@ -81,7 +81,7 @@ TZ=${TZ:-America/New_York}
 # running non-root), fall back to exporting TZ for the process and record
 # the desired timezone under /config so the app can read it if needed.
 if [ -n "$TZ" ] && [ -f "/usr/share/zoneinfo/$TZ" ]; then
-  if ln -snf /usr/share/zoneinfo/$TZ /etc/localtime 2>/dev/null; then
+  if ln -snf /usr/share/zoneinfo/"$TZ" /etc/localtime 2>/dev/null; then
     echo "$TZ" > /etc/timezone || true
     echo "Timezone set to: $TZ"
   else
@@ -105,7 +105,7 @@ export PUID PGID
 # can exec the user-supplied command after dropping privileges. Docker
 # appends the container CMD as arguments to the entrypoint, so grab them
 # here and expose via env for the python helper below.
-export ENTRYPOINT_CMD="${@:-}"
+export ENTRYPOINT_CMD="${*:-}"
 
 # Drop privileges using a tiny Python helper which sets gid/uid and then
 # execs the target process. This avoids adding gosu/su-exec to the image.

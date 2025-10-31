@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -39,7 +39,7 @@ jobs:
 
       - name: Build and push (development branch -> debug target)
         if: startsWith(github.ref, 'refs/heads/development')
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
@@ -54,7 +54,7 @@ jobs:
 
       - name: Build and push (main branch -> runtime)
         if: startsWith(github.ref, 'refs/heads/main')
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
@@ -71,7 +71,7 @@ jobs:
           startsWith(github.ref, 'refs/heads/') &&
           github.ref != 'refs/heads/main' &&
           github.ref != 'refs/heads/development'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true

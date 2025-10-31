@@ -256,9 +256,9 @@ def create_app() -> Flask:
             # persist a migration.
             try:
                 if "api_key_hash" in ucfg:
-                    app.config_data.setdefault("general", {})[
-                        "api_key_hash"
-                    ] = ucfg.get("api_key_hash")
+                    app.config_data.setdefault("general", {})["api_key_hash"] = (
+                        ucfg.get("api_key_hash")
+                    )
                 elif "api_key" in ucfg:
                     # legacy plaintext key found; hash and persist migration
                     try:

@@ -196,11 +196,12 @@ if "create_metrics_app" not in globals():
 
         return app
 
-    if __name__ == "__main__":
-        import sys
 
-        # When executed as `python researcharr.py serve` run the server. This
-        # statement is placed after `create_metrics_app` so the `serve()`
-        # helper can call it without NameError.
-        if len(sys.argv) > 1 and sys.argv[1] == "serve":
-            serve()
+if __name__ == "__main__":
+    import sys
+
+    # When executed as `python researcharr.py serve` run the server. This
+    # statement is placed after `create_metrics_app` so the `serve()`
+    # helper can call it without NameError.
+    if len(sys.argv) > 1 and sys.argv[1] == "serve":
+        serve()

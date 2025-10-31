@@ -142,4 +142,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--once", action="store_true")
     args = parser.parse_args()
-    print("Placeholder run.py moved to scripts/")
+    # Use the logger so behavior is consistent with the rest of the scripts
+    # and so the message appears in `/config/cron.log` when running in a
+    # container. This accurately describes the file's behavior instead of
+    # printing a misleading placeholder message.
+    logger = setup_logger()
+    logger.info(
+        "Starting run script: launches web UI and in-process scheduler; "
+        "use --once to run a single scheduled job"
+    )

@@ -109,7 +109,7 @@ FROM runtime AS debug
 # to the minimal runtime image.
 USER root
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-		bash procps iproute2 strace vim less && rm -rf /var/lib/apt/lists/*
+    bash procps iproute2 strace vim less && rm -rf /var/lib/apt/lists/*
 # If a `requirements-dev.txt` is present in the project, install it into the
 # image so debugpy and other dev tools are available in the debug image.
 RUN python -m pip install --upgrade pip setuptools wheel

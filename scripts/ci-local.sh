@@ -19,7 +19,10 @@ while [[ $# -gt 0 ]]; do
     --no-docker) DO_DOCKER=0; shift ;;
     --no-trivy) DO_TRIVY=0; shift ;;
     -h|--help)
-      sed -n '1,160p' "$0";
+      # Print the usage block starting at the "# Usage:" marker until the
+      # first blank line, which keeps the help text maintainable in the
+      # script body instead of relying on a magic line count.
+      awk '/^# Usage:/ {show=1; next} show && /^$/ {exit} show {print}' "$0"
       exit 0
       ;;
     *) echo "Unknown arg: $1"; exit 2 ;;

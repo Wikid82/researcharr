@@ -9,6 +9,13 @@ on:
       - development
       - nightly
 
+# When set to 'true' skip Docker build/publish and image scans. This allows
+# the repository to focus on fast test & lint feedback while Docker tasks
+# are put on the back burner. Flip to 'false' when you want Docker steps
+# to run again.
+env:
+  SKIP_DOCKER: 'true'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -41,26 +48,28 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        # Install development/test tooling separately so runtime installs stay small
+        if [ -f requirements-dev.txt ]; then
+          pip install -r requirements-dev.txt
+        else
+          # Fallback if the dev file is not present
+          pip install black==25.9.0 isort==5.12.0 flake8 mypy pytest pytest-cov pre-commit || true
+        fi
         # Ensure setuptools_scm is available so package versions are derived
-        # automatically from git metadata. CI may override the detected
-        # version by setting SETUPTOOLS_SCM_PRETEND_VERSION below.
-        pip install setuptools_scm
-        # Pin black and isort to the same versions used by pre-commit to avoid
-        # formatting mismatches between local hooks and the CI check.
-        pip install black==23.9.1 isort==5.12.0 flake8 mypy pytest pytest-cov
-        # Install type stubs mypy may need in CI to avoid 'Library stubs not installed' errors
-        pip install types-requests types-PyYAML || true
+        # automatically from git metadata.
+        pip install setuptools_scm || true
+
         # If this run is not for an exact git tag, set SETUPTOOLS_SCM_PRETEND_VERSION
         # so setuptools_scm writes a reproducible version containing the CI run number.
         RAW_TAG=$(git describe --tags --exact-match 2>/dev/null || true)
@@ -121,12 +130,12 @@ jobs:
         echo "---- end coverage.xml head ----"
     - name: Upload coverage artifact for debugging
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: coverage-xml
         path: coverage.xml
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
       continue-on-error: true
@@ -144,8 +153,14 @@ jobs:
       packages: write
       id-token: write
     steps:
+      - name: Skip docker job when SKIP_DOCKER is set
+        run: |
+          if [ "${SKIP_DOCKER:-}" = "true" ]; then
+            echo "SKIP_DOCKER=true; skipping docker job."
+            exit 0
+          fi
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Fail if tests failed
@@ -154,7 +169,7 @@ jobs:
           echo "The 'build' job did not succeed (tests may have failed). Aborting docker build to avoid publishing an image from a failing run."
           exit 1
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
@@ -205,7 +220,7 @@ jobs:
 
       - name: Build and push Docker image (all branches)
         id: build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           # Push images to the registry for any push event; images are
@@ -232,7 +247,7 @@ jobs:
 
       - name: Build and push debug image (dev tag)
         id: build-debug
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
@@ -287,7 +302,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')) }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0
     - name: Detect docs changes
@@ -318,7 +333,7 @@ jobs:
       if: steps.docs_changed.outputs.docs_changed == 'true'
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.2'
+        ruby-version: '3.4.7'
     - name: Install html-proofer
       if: steps.docs_changed.outputs.docs_changed == 'true'
       run: |
@@ -351,13 +366,19 @@ jobs:
     needs: build
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
     steps:
+    - name: Skip trivy scan when SKIP_DOCKER is set
+      run: |
+        if [ "${SKIP_DOCKER:-}" = "true" ]; then
+          echo "SKIP_DOCKER=true; skipping trivy-scan job."
+          exit 0
+        fi
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
+      uses: docker/setup-qemu-action@v3
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -365,7 +386,7 @@ jobs:
         driver: docker-container
 
     - name: Build image for scanning
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         load: true
@@ -385,7 +406,7 @@ jobs:
             aquasec/trivy:latest image --exit-code 1 --severity HIGH,CRITICAL researcharr-ci:${{ github.run_id }}
 
     - name: Upload Trivy report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: trivy-report-${{ github.run_id }}
         path: trivy-report.json

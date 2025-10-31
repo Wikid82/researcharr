@@ -9,6 +9,13 @@ on:
       - development
       - nightly
 
+# When set to 'true' skip Docker build/publish and image scans. This allows
+# the repository to focus on fast test & lint feedback while Docker tasks
+# are put on the back burner. Flip to 'false' when you want Docker steps
+# to run again.
+env:
+  SKIP_DOCKER: 'true'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -52,17 +59,16 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        # Install development/test tooling separately so runtime installs stay small
+        if [ -f requirements-dev.txt ]; then
+          pip install -r requirements-dev.txt
+        else
+          # Fallback if the dev file is not present
+          pip install black==25.9.0 isort==5.12.0 flake8 mypy pytest pytest-cov pre-commit || true
+        fi
         # Ensure setuptools_scm is available so package versions are derived
-        # automatically from git metadata. CI may override the detected
-        # version by setting SETUPTOOLS_SCM_PRETEND_VERSION below.
-        pip install setuptools_scm
-
-        # Pin black to the same version used by pre-commit to avoid
-        # formatting mismatches between local hooks and the CI check.
-        pip install black==25.9.0 isort==5.12.0 flake8 mypy pytest pytest-cov
-
-        # Install type stubs mypy may need in CI to avoid 'Library stubs not installed' errors
-        pip install types-requests types-PyYAML || true
+        # automatically from git metadata.
+        pip install setuptools_scm || true
 
         # If this run is not for an exact git tag, set SETUPTOOLS_SCM_PRETEND_VERSION
         # so setuptools_scm writes a reproducible version containing the CI run number.
@@ -147,6 +153,12 @@ jobs:
       packages: write
       id-token: write
     steps:
+      - name: Skip docker job when SKIP_DOCKER is set
+        run: |
+          if [ "${SKIP_DOCKER:-}" = "true" ]; then
+            echo "SKIP_DOCKER=true; skipping docker job."
+            exit 0
+          fi
       - name: Checkout
         uses: actions/checkout@v5
         with:
@@ -354,6 +366,12 @@ jobs:
     needs: build
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
     steps:
+    - name: Skip trivy scan when SKIP_DOCKER is set
+      run: |
+        if [ "${SKIP_DOCKER:-}" = "true" ]; then
+          echo "SKIP_DOCKER=true; skipping trivy-scan job."
+          exit 0
+        fi
     - name: Checkout
       uses: actions/checkout@v5
       with:

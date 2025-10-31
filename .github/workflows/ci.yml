@@ -56,12 +56,14 @@ jobs:
         # automatically from git metadata. CI may override the detected
         # version by setting SETUPTOOLS_SCM_PRETEND_VERSION below.
         pip install setuptools_scm
-    # Pin black and isort to the same versions used by pre-commit to avoid
-    # formatting mismatches between local hooks and the CI check.
-    # Updated black to match the developer environment and pre-commit hook.
-    pip install black==25.9.0 isort==5.12.0 flake8 mypy pytest pytest-cov
+
+        # Pin black to the same version used by pre-commit to avoid
+        # formatting mismatches between local hooks and the CI check.
+        pip install black==25.9.0 isort==5.12.0 flake8 mypy pytest pytest-cov
+
         # Install type stubs mypy may need in CI to avoid 'Library stubs not installed' errors
         pip install types-requests types-PyYAML || true
+
         # If this run is not for an exact git tag, set SETUPTOOLS_SCM_PRETEND_VERSION
         # so setuptools_scm writes a reproducible version containing the CI run number.
         RAW_TAG=$(git describe --tags --exact-match 2>/dev/null || true)

@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
@@ -69,13 +69,13 @@ jobs:
       # in the step `if` expression instead of referencing `secrets.*`.
       - name: Upload coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ env.CODECOV_TOKEN }}
         continue-on-error: true
       - name: Post legacy statuses for compatibility (pytest, linting)
         if: ${{ success() }}
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -113,7 +113,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Build dev image (debug stage)
         run: |
@@ -121,9 +121,10 @@ jobs:
           # filesystem- and Docker-safe branch name. Prefer the branch name and
           # fall back to the commit SHA when the branch name is empty.
           BRANCH_TAG="${BRANCH_NAME:-${GIT_SHA}}"
-          # Replace any '/' characters (present in branch names like feature/foo)
-          # with '-' so the resulting Docker tag and filenames are valid.
-          BRANCH_SAFE="${BRANCH_TAG//\//-}"
+          # Create a tag-safe, lowercase branch name. Replace '/' and any
+          # characters not allowed in Docker tags with '-' and lowercase the
+          # result so tags are consistent across systems.
+          BRANCH_SAFE=$(echo "$BRANCH_TAG" | tr '[:upper:]' '[:lower:]' | sed 's|/|-|g; s|[^a-z0-9._-]|-|g')
           SHORT_SHA="${GIT_SHA:0:7}"
           IMAGE_LOCAL_TAG="${{ github.repository }}:dev-${BRANCH_SAFE}-${BUILD_NUMBER}-${SHORT_SHA}"
           docker build --target debug -t "$IMAGE_LOCAL_TAG" .
@@ -132,7 +133,7 @@ jobs:
           docker save "$IMAGE_LOCAL_TAG" -o /tmp/image-artifacts/researcharr-dev-${BRANCH_SAFE}-${BUILD_NUMBER}-${SHORT_SHA}.tar
 
       - name: Upload dev image artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: researcharr-dev-image
           path: /tmp/image-artifacts/
@@ -154,8 +155,8 @@ jobs:
             echo "image_tag=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Derive safe branch name and short SHA
-          BRANCH_SAFE="${BRANCH_NAME//\//-}"
+          # Derive a tag-safe, lowercase branch name and short SHA
+          BRANCH_SAFE=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | sed 's|/|-|g; s|[^a-z0-9._-]|-|g')
           SHORT_SHA="${GIT_SHA:0:7}"
           IMAGE_BASE="ghcr.io/${{ github.repository }}"
           VERSION_TAG="dev-${BRANCH_SAFE}-${BUILD_NUMBER}-${SHORT_SHA}"

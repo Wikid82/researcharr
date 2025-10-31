@@ -41,7 +41,6 @@ except Exception:  # pragma: no cover - fallback for editor/type-checker
             return cls(config)
 
         def list_plugins(self) -> List[str]:
-
             return list(self._plugins.keys())
 
 

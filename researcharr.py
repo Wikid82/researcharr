@@ -1,10 +1,18 @@
-# ... code for researcharr.py ...
-# ... code for app.py ...
-
 import logging
 import os
 import sqlite3
 
+
+# --- Debug/Container Entrypoint ---
+def serve():
+    app = create_metrics_app()
+    app.run(host="0.0.0.0", port=2929)
+
+
+# NOTE: the actual __main__ invocation is placed at the end of the
+# module (after `create_metrics_app`) so the helper functions are
+# defined before `serve()` is called. This top-level note preserves
+# compatibility for tools that inspect the module.
 # Allow the top-level module `researcharr.py` to behave like a package for
 # legacy imports such as `import researcharr.plugins.example_sonarr`.
 # When a module defines a __path__ attribute it is treated as a package by
@@ -175,7 +183,24 @@ if "create_metrics_app" not in globals():
         @app.errorhandler(404)
         @app.errorhandler(500)
         def handle_error(e):
+            # Log the exception details so running containers record a
+            # traceback in their logs. This helps debugging in development
+            # environments where Flask's debug page is not enabled.
+            try:
+                app.logger.exception("Unhandled exception in request: %s", e)
+            except Exception:
+                # If logging fails for any reason, do not raise further
+                pass
             app.metrics["errors_total"] += 1
             return jsonify({"error": "internal error"}), 500
 
-        return app
+            return app
+
+    if __name__ == "__main__":
+        import sys
+
+        # When executed as `python researcharr.py serve` run the server. This
+        # statement is placed after `create_metrics_app` so the `serve()`
+        # helper can call it without NameError.
+        if len(sys.argv) > 1 and sys.argv[1] == "serve":
+            serve()

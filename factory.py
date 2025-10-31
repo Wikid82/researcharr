@@ -3,6 +3,7 @@
 import importlib.util
 import os
 import pathlib
+import secrets
 import shutil
 import time
 import zipfile
@@ -48,7 +49,7 @@ except Exception:
     loader.exec_module(webui)  # type: ignore
 
 
-def create_app():
+def create_app() -> Flask:
     def logout_link():
         return '<a href="/logout">Logout</a>'
 
@@ -228,8 +229,15 @@ def create_app():
     # generated, the loader returns the plaintext as `password` so we can set
     # the in-memory auth to allow immediate login using that password.
     try:
+        # Delegate to webui.load_user_config() directly. The loader contains
+        # the logic to prefer repo-local fallbacks and to avoid generating
+        # first-run credentials during app startup; calling it directly
+        # keeps that behavior centralized and easier to test.
         try:
-            ucfg = webui.load_user_config()
+            try:
+                ucfg = webui.load_user_config()
+            except Exception:
+                ucfg = None
         except Exception:
             ucfg = None
         if isinstance(ucfg, dict):
@@ -248,9 +256,9 @@ def create_app():
             # persist a migration.
             try:
                 if "api_key_hash" in ucfg:
-                    app.config_data.setdefault("general", {})["api_key_hash"] = (
-                        ucfg.get("api_key_hash")
-                    )
+                    app.config_data.setdefault("general", {})[
+                        "api_key_hash"
+                    ] = ucfg.get("api_key_hash")
                 elif "api_key" in ucfg:
                     # legacy plaintext key found; hash and persist migration
                     try:
@@ -273,11 +281,21 @@ def create_app():
             except Exception:
                 # best-effort; don't fail startup on migration errors
                 pass
+            # The webui loader already prints plaintext first-run credentials
+            # when `WEBUI_DEV_PRINT_CREDS` is enabled. Avoid duplicating that
+            # output here; keep printing responsibility in `webui.load_user_config()`.
     except Exception:
         # best-effort; if loading the user config fails we continue with the
         # default in-memory credentials to avoid preventing the UI from
         # starting.
         pass
+
+    # Record whether a persisted user config is present so routes can
+    # conditionally enable a first-run setup flow.
+    try:
+        app.config["USER_CONFIG_EXISTS"] = isinstance(ucfg, dict)
+    except Exception:
+        app.config["USER_CONFIG_EXISTS"] = False
 
     # --- Plugin registry wiring (discover local example plugins) ---
     # Allow static analysis (Pylance) to see the PluginRegistry symbol while
@@ -285,45 +303,48 @@ def create_app():
     # import attempts multiple fallbacks so the app starts under the repo
     # layout and inside a packaged installation.
     if TYPE_CHECKING:  # pragma: no cover - static type hint only
-        # Provide a typing alias so static type checkers know the name
-        # exists without requiring the actual module to be importable at
-        # analysis time. Use `Any` to keep the type loose.
-        PluginRegistry = Any  # type: ignore
+        # Provide the concrete PluginRegistry symbol to static analyzers
+        # without importing it at runtime.
+        from researcharr.plugins.registry import PluginRegistry  # noqa: F401
+
+    # Loosely-typed registry variable so type checkers don't complain when
+    # runtime import logic falls back between module/class representations.
+    registry: Any = None
 
     try:
+        # Try importing the registry module via importlib. We avoid using
+        # a direct `from ... import PluginRegistry as X` at runtime to keep
+        # static type names (used in TYPE_CHECKING) separate from runtime
+        # assignments which can confuse mypy. Attempt both the packaged
+        # and top-level module names to support different layouts.
         try:
-            from researcharr.plugins.registry import (
-                PluginRegistry,  # type: ignore
-            )
+            import importlib as _importlib_mod
 
-            registry = PluginRegistry()
-        except Exception:
-            # Try plain top-level `plugins.registry` (when running from
-            # repository root) before resorting to loading the file via
-            # importlib. This helps the editor/runtime find the module in
-            # both installed and source layouts.
             try:
-                from plugins.registry import PluginRegistry  # type: ignore
-
-                registry = PluginRegistry()
+                _reg_mod = _importlib_mod.import_module("researcharr.plugins.registry")
             except Exception:
-                # Fallback: attempt to load the module directly from the
-                # package directory using importlib. If this fails the
-                # surrounding except will silently continue (app will
-                # operate without plugin registry).
-                pkg_dir = os.path.dirname(__file__)
-                reg_path = os.path.join(pkg_dir, "plugins", "registry.py")
-                spec = importlib.util.spec_from_file_location(
-                    "researcharr.plugins.registry", reg_path
-                )
-                if spec is None or spec.loader is None:
-                    raise ImportError("Failed to locate plugins.registry")
-                plugin_mod = importlib.util.module_from_spec(spec)
-                loader = spec.loader
-                assert loader is not None
-                loader.exec_module(plugin_mod)
-                PluginRegistry = getattr(plugin_mod, "PluginRegistry")
-                registry = PluginRegistry()
+                _reg_mod = _importlib_mod.import_module("plugins.registry")
+            _PluginRegistryRuntime = getattr(_reg_mod, "PluginRegistry")
+            registry = _PluginRegistryRuntime()
+        except Exception:
+            # Fallback: attempt to load the module directly from the
+            # package directory using importlib. If this fails the
+            # surrounding except will silently continue (app will
+            # operate without plugin registry).
+            pkg_dir = os.path.dirname(__file__)
+            reg_path = os.path.join(pkg_dir, "plugins", "registry.py")
+            spec = importlib.util.spec_from_file_location(
+                "researcharr.plugins.registry",
+                reg_path,
+            )
+            if spec is None or spec.loader is None:
+                raise ImportError("Failed to locate plugins.registry")
+            plugin_mod = importlib.util.module_from_spec(spec)
+            loader = spec.loader
+            assert loader is not None
+            loader.exec_module(plugin_mod)
+            _PluginRegistryRuntime = getattr(plugin_mod, "PluginRegistry")
+            registry = _PluginRegistryRuntime()
 
         # Discover any local plugin modules placed under researcharr/plugins
         pkg_dir = os.path.dirname(__file__)
@@ -441,10 +462,62 @@ def create_app():
 
     @app.route("/")
     def index():
-        # Redirect root to the login page for convenience so visiting /
-        # opens the web UI instead of returning 404. Tests that expect
-        # root to be missing should continue to use explicit paths.
+        # If no user config exists, redirect to the interactive setup
+        # page so the operator can securely choose credentials. Otherwise
+        # redirect to the login page as usual.
+        try:
+            if not app.config.get("USER_CONFIG_EXISTS"):
+                return redirect(url_for("setup"))
+        except Exception:
+            pass
         return redirect(url_for("login"))
+
+    @app.route("/setup", methods=["GET", "POST"])
+    def setup():
+        # Only allow setup when no user config exists to prevent accidental
+        # re-initialization of credentials.
+        if app.config.get("USER_CONFIG_EXISTS"):
+            return redirect(url_for("login"))
+
+        error = None
+        if request.method == "POST":
+            username = request.form.get("username", "researcharr").strip()
+            password = request.form.get("password", "").strip()
+            confirm = request.form.get("confirm", "").strip()
+            api_key = request.form.get("api_key", "").strip() or None
+            # Basic validation
+            if not password:
+                error = "Password is required"
+            elif password != confirm:
+                error = "Passwords do not match"
+            elif len(password) < 8:
+                error = "Password must be at least 8 characters"
+            else:
+                # Persist user config. If no API key was provided, generate
+                # one so the operator can use the API immediately.
+                try:
+                    phash = generate_password_hash(password)
+                    generated_api = None
+                    if not api_key:
+                        generated_api = secrets.token_urlsafe(32)
+                        webui.save_user_config(username, phash, api_key=generated_api)
+                    else:
+                        webui.save_user_config(username, phash, api_key=api_key)
+                    app.config["USER_CONFIG_EXISTS"] = True
+                    # If we generated an API token, show it once on a success
+                    # page so the operator can copy it. Otherwise redirect to
+                    # the login page.
+                    if generated_api:
+                        return render_template(
+                            "setup_success.html",
+                            username=username,
+                            api_token=generated_api,
+                        )
+                    return redirect(url_for("login"))
+                except Exception:
+                    error = "Failed to save user config"
+
+        return render_template("setup.html", error=error)
 
     @app.route("/login", methods=["GET", "POST"])
     def login():
@@ -1535,6 +1608,7 @@ def create_app():
     # Attempt to import the API blueprint from the package. If that fails
     # (e.g., running from source tree where api.py is a top-level module)
     # fall back to loading the file directly similar to `webui` above.
+    _api: Any = None
     try:
         try:
             from researcharr import api as _api  # type: ignore

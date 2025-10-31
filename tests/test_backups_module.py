@@ -9,9 +9,8 @@ def test_create_backup_includes_expected_files(tmp_path):
     config_root.mkdir()
     backups_dir.mkdir()
 
-    # create expected files
+    # create expected files (no webui YAML; user persisted in DB)
     (config_root / "config.yml").write_text("name: testconfig")
-    (config_root / "webui_user.yml").write_text("user: test")
     (config_root / "researcharr.db").write_text("SQLITE")
     plugins = config_root / "plugins"
     plugins.mkdir()
@@ -25,7 +24,6 @@ def test_create_backup_includes_expected_files(tmp_path):
     # Inspect zip contents
     with zipfile.ZipFile(str(zip_path), "r") as zf:
         names = zf.namelist()
-        assert "config/config.yml" in names
-        assert "config/webui_user.yml" in names
-        assert "db/researcharr.db" in names
-        assert any(n.startswith("plugins/") for n in names)
+    assert "config/config.yml" in names
+    assert "db/researcharr.db" in names
+    assert any(n.startswith("plugins/") for n in names)

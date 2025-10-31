@@ -11,8 +11,8 @@ def _clear_researcharr_modules():
 
 
 def _repo_root_researcharr_py():
-    # Candidate checked by the shim: cwd/researcharr.py
-    return os.path.abspath(os.path.join(os.getcwd(), "researcharr.py"))
+    # Candidate checked by the shim: cwd/entrypoint.py (top-level entry script)
+    return os.path.abspath(os.path.join(os.getcwd(), "entrypoint.py"))
 
 
 def test_shim_fallback_when_top_level_missing(tmp_path):

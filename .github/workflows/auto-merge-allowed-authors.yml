@@ -1,0 +1,95 @@
+name: Auto-merge trusted authors
+
+on:
+  pull_request_target:
+    types: [synchronize, opened, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-merge trusted authors
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.AUTO_MERGE_TOKEN }}
+          script: |
+            const allowed = new Set(['Wikid82', 'renovate[bot]']); // update as needed
+
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.info('No pull_request payload available; exiting.');
+              return;
+            }
+
+            // Skip forks: require PR head repo to be same repo (no external forks)
+            if (pr.head.repo && pr.head.repo.fork) {
+              core.info(`PR #${pr.number} is from a fork; skipping auto-merge`);
+              return;
+            }
+
+            const author = pr.user && pr.user.login;
+            if (!allowed.has(author)) {
+              core.info(`Author ${author} is not on the allow-list; skipping auto-merge`);
+              return;
+            }
+
+            if (pr.draft) {
+              core.info('Draft PR; skipping auto-merge');
+              return;
+            }
+
+            // Check that the PR is mergeable and that checks are passing for the head sha
+            const headSha = pr.head.sha;
+
+            // List check runs for the PR head
+            const checks = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: headSha,
+            });
+
+            // If there are check runs, ensure none are in a failing state.
+            if (checks.data.check_runs && checks.data.check_runs.length > 0) {
+              const nonSuccessful = checks.data.check_runs.find(
+                (c) => c.conclusion !== 'success' && c.conclusion !== 'neutral'
+              );
+              if (nonSuccessful) {
+                core.info(`Checks are not all successful (failing: ${nonSuccessful.name}); skipping`);
+                return;
+              }
+            }
+
+            // As a final safety check, re-fetch PR to ensure it's still open and mergeable
+            const { data: prInfo } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+            });
+
+            if (prInfo.state !== 'open') {
+              core.info(`PR #${pr.number} is not open (state=${prInfo.state}); skipping`);
+              return;
+            }
+
+            if (prInfo.mergeable === false) {
+              core.info(`PR #${pr.number} is not mergeable (mergeable=false); skipping`);
+              return;
+            }
+
+            // Merge using squash to keep history tidy
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                merge_method: 'squash',
+              });
+              core.info(`Auto-merged PR #${pr.number} by ${author}`);
+            } catch (err) {
+              core.warning(`Failed to auto-merge PR #${pr.number}: ${err.message}`);
+            }

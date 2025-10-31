@@ -1,0 +1,48 @@
+name: Publish debug image
+
+on:
+  push:
+    # Build/push debug images on branch pushes only (no pull_request runs)
+    branches-ignore: [ main ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push debug image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/wikid82/researcharr:debug-${{ github.sha }}
+          target: debug
+
+      - name: Write debug image tag file
+        run: |
+          echo "ghcr.io/wikid82/researcharr:debug-${{ github.sha }}" > debug-image-tag.txt
+
+      - name: Upload debug image tag as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-image-tag
+          path: debug-image-tag.txt

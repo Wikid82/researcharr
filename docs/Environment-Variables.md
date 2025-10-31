@@ -16,11 +16,31 @@ This document lists runtime environment variables used by researcharr. Set these
   - Default: `UTC`
   - Description: Timezone used for scheduling and display. Example: `Europe/London` or `America/Los_Angeles`.
 
+Notes on timezone handling
+
+- The entrypoint attempts to set `/etc/localtime` to match the configured `TIMEZONE`. If the container runtime disallows modifying `/etc` (read-only image or non-root runtime), the entrypoint exports the `TZ` environment variable and writes the configured timezone into `/config/timezone` as a fallback. The application reads `TZ` and `/config/timezone` so scheduling and display remain correct even when `/etc/localtime` cannot be updated.
+
 ## Optional / runtime
 
 - LOGLEVEL
   - Default: `INFO`
   - Description: Controls the default log level for the web UI and background scheduler. Can still be adjusted at runtime through the General Settings page.
+
+- WEBUI_DEV_DEBUG
+  - Default: `false`
+  - Description: Development-only flag. When true, enables additional debug behavior in the web UI and local runtime (more verbose logging and developer-only endpoints). Do not enable in production.
+
+- AUTO_GENERATE_WEBUI_CREDS
+  - Default: `false`
+  - Description: Previously allowed the application to auto-generate an initial admin password and API token on first-run and persist their hashes to `webui_user.yml`. The application now persists web UI users to the configured database and no longer supports YAML fallback; prefer seeding credentials in the DB for automation.
+
+- WEBUI_DEV_ENABLE_DEBUG_ENDPOINT
+  - Default: `false`
+  - Description: Enables a development-only introspection endpoint (`/__debug_auth`) used by automated tests and developer tooling to exercise authentication flows. Disabled by default.
+
+- APP_DEBUG / FLASK_DEBUG
+  - Default: `false`
+  - Description: If any of `APP_DEBUG`, `FLASK_DEBUG`, or `WEBUI_DEV_DEBUG` is truthy, the run script will start Flask in debug mode (useful for local troubleshooting). This also increases scheduler logging verbosity. Do not enable on production hosts.
 
 - WEBUI_PORT
   - Default: `2929`

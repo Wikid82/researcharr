@@ -1,0 +1,19 @@
+extends: default
+
+rules:
+  # Allow longer lines in workflow files (tags and echo lines are long)
+  line-length:
+    max: 200
+    level: warning
+
+  # Keep document-start rule enabled (we add '---' at top of our CI file)
+  document-start:
+    present: true
+
+  # The repository's workflow files use GitHub Actions idioms that sometimes
+  # conflict with strict yamllint rules (e.g. step list indentation and
+  # bracket spacing). Relax a few rules to avoid noise while keeping useful
+  # checks enabled.
+  indentation: disable
+  brackets: disable
+  truthy: disable

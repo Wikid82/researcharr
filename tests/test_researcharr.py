@@ -28,11 +28,7 @@ def patch_config_paths(tmp_path_factory, monkeypatch):
         lambda name, log_file, level=None: mock.Mock(),
         raising=False,
     )
-    monkeypatch.setattr(
-        "researcharr.researcharr.USER_CONFIG_PATH",
-        str(temp_dir / "webui_user.yml"),
-        raising=False,
-    )
+    # YAML fallback removed; use DB_PATH for user persistence in tests
     # Patch config file loading to use temp config
     config_path = temp_dir / "config.yml"
     with open(config_path, "w") as f:

@@ -30,11 +30,14 @@ class FlaskApp(Protocol):
 
     # Flask exposes `app.config` in many tests; provide a basic mapping here
     config: dict[str, Any]
+
     metrics: dict[str, Any]
+
     # Relax to Any to allow test/dummy registries that don't implement the
     # full PluginRegistry protocol. This is intentional to avoid Pylance
     # assignment errors in tests that supply simplified dummy registries.
     plugin_registry: Any | None
+
     secret_key: str
 
     def test_client(self) -> FlaskClient: ...
@@ -52,7 +55,11 @@ class UserConfig(TypedDict, total=False):
     """
 
     username: str
+
     password_hash: str
+
     api_key_hash: str
+
     password: str
+
     api_key: str

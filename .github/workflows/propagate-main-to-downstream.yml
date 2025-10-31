@@ -1,8 +1,16 @@
-name: Propagate main to downstream
+name: Propagate development to downstream
 
 on:
   push:
-    branches: [ main ]
+    branches: [ development ]
+  workflow_dispatch:
+    inputs:
+      head:
+        description: 'Branch to propagate from (defaults to the pushed branch or "development")'
+        required: false
+      downstreams:
+        description: 'Comma-separated list of downstream branches to open PRs into (defaults: staging,release)'
+        required: false
 
 permissions:
   contents: write
@@ -18,9 +26,15 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const head = context.ref.replace('refs/heads/', '');
-            // Configure downstream branches you want to forward changes to
-            const downstreams = ['development'];
+            // Determine head branch: prefer workflow_dispatch input 'head', otherwise the pushed branch
+            let head = (github.context.eventName === 'workflow_dispatch' && github.context.payload && github.context.payload.inputs && github.context.payload.inputs.head) ? github.context.payload.inputs.head : context.ref.replace('refs/heads/', '');
+            if (!head) head = 'development';
+
+            // Determine downstreams: allow passing comma-separated list via workflow_dispatch; default to these branches
+            let downstreams = ['staging', 'release'];
+            if (github.context.eventName === 'workflow_dispatch' && github.context.payload && github.context.payload.inputs && github.context.payload.inputs.downstreams) {
+              downstreams = github.context.payload.inputs.downstreams.split(',').map(s => s.trim()).filter(Boolean);
+            }
 
             for (const base of downstreams) {
               core.info(`Checking for existing open PRs from ${head} -> ${base}`);

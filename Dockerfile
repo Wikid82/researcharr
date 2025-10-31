@@ -1,6 +1,6 @@
 ## Multi-stage build
 ## Builder stage: install build dependencies and install Python packages into /install
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 # Build-time metadata (set these from CI)
 ARG BUILD_VERSION=dev
@@ -35,7 +35,7 @@ RUN python -m pip install --upgrade pip setuptools wheel && \
 COPY . /app
 
 ### Runtime stage: minimal runtime built from the same base (Debian slim)
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 ARG BUILD_VERSION=dev
 ARG BUILD_NUMBER=0
 ARG GIT_SHA=unknown

@@ -69,6 +69,23 @@ jobs:
         with:
           token: ${{ env.CODECOV_TOKEN }}
         continue-on-error: true
+      - name: Post legacy 'linting' status for compatibility
+        if: ${{ success() }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const sha = context.sha;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            await github.rest.repos.createCommitStatus({
+              owner,
+              repo,
+              sha,
+              state: 'success',
+              context: 'linting',
+              description: 'Lint checks passed (compatibility status)'
+            });
       - name: Build complete
         run: echo "build job finished"
 

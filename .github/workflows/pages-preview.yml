@@ -19,7 +19,7 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.14'
 
       - name: Install docs deps
         run: |
@@ -58,8 +58,10 @@ jobs:
           set -euo pipefail
           rm -rf site
           mkdir -p site/previews
-          # Sanitize branch name for filesystems and URLs (replace / with -)
-          PREVIEW_BRANCH_SAFE="${PREVIEW_BRANCH//\//-}"
+          # Sanitize branch name for filesystems and URLs. Lowercase and
+          # replace '/' and other non-allowed characters with '-' to avoid
+          # creating directories with invalid names.
+          PREVIEW_BRANCH_SAFE=$(echo "$PREVIEW_BRANCH" | tr '[:upper:]' '[:lower:]' | sed 's|/|-|g; s|[^a-z0-9._-]|-|g')
           # Ensure the exact target directory exists so `cp` won't fail creating
           # intermediate directories when branch names contain slashes.
           mkdir -p "site/previews/${PREVIEW_BRANCH_SAFE}"

@@ -1,8 +1,12 @@
 name: CI — Build
 
 on:
-  push: {}
   pull_request: {}
+  push:
+    branches:
+      - main
+      - development
+      - nightly
 
 jobs:
   build:
@@ -69,7 +73,7 @@ jobs:
         with:
           token: ${{ env.CODECOV_TOKEN }}
         continue-on-error: true
-      - name: Post legacy 'linting' status for compatibility
+      - name: Post legacy statuses for compatibility (pytest, linting)
         if: ${{ success() }}
         uses: actions/github-script@v6
         with:
@@ -78,14 +82,20 @@ jobs:
             const sha = context.sha;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            await github.rest.repos.createCommitStatus({
-              owner,
-              repo,
-              sha,
-              state: 'success',
-              context: 'linting',
-              description: 'Lint checks passed (compatibility status)'
-            });
+            const states = [
+              {context: 'pytest', state: 'success', description: 'pytest passed'},
+              {context: 'linting', state: 'success', description: 'lint checks passed'}
+            ];
+            for (const s of states) {
+              await github.rest.repos.createCommitStatus({
+                owner,
+                repo,
+                sha,
+                state: s.state,
+                context: s.context,
+                description: s.description
+              });
+            }
       - name: Build complete
         run: echo "build job finished"
 

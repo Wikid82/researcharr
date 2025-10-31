@@ -18,6 +18,14 @@ test:
 	# Run the local pytest suite
 	python -m pytest -q
 
+precommit:
+	@echo "Running pre-commit inside project venv"
+	./scripts/run_precommit.sh
+
+install-hooks:
+	@echo "Installing git hooks (sets core.hooksPath to .githooks for this repo)"
+	@git config core.hooksPath .githooks && echo "git hooks installed"
+
 stop:
 	# Stop and remove the development stack
 	docker compose -f docker-compose.feat.yml down

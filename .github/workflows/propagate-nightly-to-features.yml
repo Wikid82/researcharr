@@ -28,13 +28,13 @@ jobs:
             const repo = context.repo.repo;
 
             // Determine head: prefer manual input, otherwise the pushed ref
-            let head = (github.context.eventName === 'workflow_dispatch' && github.context.payload && github.context.payload.inputs && github.context.payload.inputs.head) ? github.context.payload.inputs.head : context.ref.replace('refs/heads/', '');
+            let head = (context.eventName === 'workflow_dispatch' && context.payload && context.payload.inputs && context.payload.inputs.head) ? context.payload.inputs.head : context.ref.replace('refs/heads/', '');
             if (!head) head = 'nightly';
 
             // Determine branch pattern (prefix) to match targets
             let pattern = 'feature/';
-            if (github.context.eventName === 'workflow_dispatch' && github.context.payload && github.context.payload.inputs && github.context.payload.inputs.pattern) {
-              pattern = github.context.payload.inputs.pattern;
+            if (context.eventName === 'workflow_dispatch' && context.payload && context.payload.inputs && context.payload.inputs.pattern) {
+              pattern = context.payload.inputs.pattern;
             }
 
             core.info(`Propagating from ${head} to branches matching '${pattern}'`);

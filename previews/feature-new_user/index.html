@@ -13,7 +13,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "researcharr documentation";
+        var mkdocs_page_name = "researcharr documentation \u2014 Day One";
         var mkdocs_page_input_path = "index.md";
         var mkdocs_page_url = null;
       </script>
@@ -37,12 +37,8 @@
 
       <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul class="current">
-                <li class="toctree-l1 current"><a class="reference internal current" href="#">researcharr documentation</a>
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">researcharr documentation — Day One</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#table-of-contents">Table of contents</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#how-this-page-is-used">How this page is used</a>
-    </li>
     </ul>
                 </li>
               </ul>
@@ -132,7 +128,7 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href="." class="icon icon-home" aria-label="Docs"></a></li>
-      <li class="breadcrumb-item active">researcharr documentation</li>
+      <li class="breadcrumb-item active">researcharr documentation — Day One</li>
     <li class="wy-breadcrumbs-aside">
     </li>
   </ul>
@@ -141,29 +137,21 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="researcharr-documentation">researcharr documentation</h1>
-<p>Welcome — this repository contains the documentation that powers the project website and GitHub Pages site. Use these pages for quick onboarding, deployment guidance, CI notes, and operational reference.</p>
-<p>Below is a suggested table of contents (order follows the README and operator/developer flow):</p>
-<h2 id="table-of-contents">Table of contents</h2>
-<ol>
-<li><a href="Getting-Started/">Getting Started</a> — Quick start for running researcharr locally or in Docker, initial credentials, and basic configuration.</li>
-<li><a href="Environment-Variables/">Environment variables</a> — All runtime environment variables (PUID, PGID, TIMEZONE, WEBUI_PORT, and more) with examples.</li>
-<li><a href="Deployment-and-Resources/">Deployment and Resource Recommendations</a> — Docker / Compose / Kubernetes examples and job/runtime caps (JOB_TIMEOUT, JOB_RLIMIT_AS_MB, JOB_RLIMIT_CPU_SECONDS).</li>
-<li><a href="Health-and-Metrics/">Health and Metrics</a> — <code>/health</code> and <code>/metrics</code> endpoints, Docker healthcheck examples, and metrics exposed by the app.</li>
-<li><a href="Versioning/">Versioning &amp; Releases</a> — Image labels, <code>/api/version</code>, CI tagging and best practices for tracing builds.</li>
-<li><a href="Packaging-and-Distribution/">Packaging and Distribution</a> — Packaging targets, CI packaging jobs, and recommended approaches for releases.</li>
-<li><a href="CI-and-Development/">CI and Development</a> — CI checks, formatting, pre-commit guidance, and branch/PR workflow for contributors.</li>
-<li><a href="Contributing/">Contributing</a> — Contributor guide, branching model, tests, and pre-commit checklist.</li>
-<li><a href="PR_INSTRUCTIONS.txt">PR Instructions</a> — Quick commands and PR template guidance for submitting changes.</li>
-<li><a href="Changelog/">Changelog</a> — Canonical changelog and recent release notes.</li>
-<li><a href="Recent-Changes/">Recent Changes</a> — Short summary of recent repo changes contributors should know about.</li>
-<li><a href="Roadmap/">Roadmap</a> — Project priorities and near-term goals.</li>
-<li><a href="FAQ/">FAQ</a> — Frequently asked questions and troubleshooting tips.</li>
-</ol>
-<h2 id="how-this-page-is-used">How this page is used</h2>
+                <h1 id="researcharr-documentation-day-one">researcharr documentation — Day One</h1>
+<p>Welcome. The documentation site is intentionally minimal during the Day One
+phase. We are focused on stabilizing core code and tests; detailed operator
+and UI documentation is deferred to the <code>ROADMAP.md</code> and will be added as
+features are proven.</p>
+<p>Quick links</p>
 <ul>
-<li>GitHub Pages: The <code>docs/</code> folder is published to GitHub Pages. <code>index.md</code> is the landing page used when the docs site is served from this folder.</li>
+<li>ROADMAP: <code>ROADMAP.md</code> — planned features and priorities</li>
+<li>CONTRIBUTING: <code>docs/Contributing.md</code> — how to run tests, submit PRs, and
+    get involved</li>
+<li>TESTS: <code>tests/</code> — unit tests and test guidance</li>
 </ul>
+<p>If you'd like to expand the docs, open a PR against <code>docs/</code> — new pages will
+be reviewed and added as core functionality is validated.
+9. <a href="PR_INSTRUCTIONS.txt">PR Instructions</a> — Quick commands and PR template guidance for submitting changes.</p>
               
             </div>
           </div><footer>
@@ -215,5 +203,5 @@
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2025-10-31 17:29:51.722096+00:00
+Build Date UTC : 2025-10-31 19:18:47.700214+00:00
 -->

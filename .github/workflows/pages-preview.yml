@@ -16,39 +16,61 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Prepare preview site directory and cleanup stale previews
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install docs deps
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          else
+            pip install mkdocs mkdocs-material
+          fi
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Build MkDocs site
+        run: |
+          rm -rf site_build
+          if command -v mkdocs >/dev/null 2>&1; then
+            mkdocs build -d site_build
+          fi
+
+      - name: Upload built site artifact (preview)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mkdocs-site-${{ github.sha }}
+          path: site_build
+
+      - name: Prepare preview site directory and copy built docs
         env:
-          REPO: ${{ github.repository }}
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: ${{ github.ref_name }}
+          PREVIEW_BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           rm -rf site
-          # try to clone existing gh-pages branch to preserve main site and other previews
-          if git ls-remote --exit-code https://x-access-token:${TOKEN}@github.com/${REPO} gh-pages; then
-            git clone --branch gh-pages https://x-access-token:${TOKEN}@github.com/${REPO} site
+          mkdir -p site/previews
+          # Sanitize branch name for filesystems and URLs. Lowercase and
+          # replace '/' and other non-allowed characters with '-' to avoid
+          # creating directories with invalid names.
+          PREVIEW_BRANCH_SAFE=$(echo "$PREVIEW_BRANCH" | tr '[:upper:]' '[:lower:]' | sed 's|/|-|g; s|[^a-z0-9._-]|-|g')
+          # Ensure the exact target directory exists so `cp` won't fail creating
+          # intermediate directories when branch names contain slashes.
+          mkdir -p "site/previews/${PREVIEW_BRANCH_SAFE}"
+          # If a built MkDocs site exists, publish the built HTML. Otherwise fall back to raw docs.
+          if [ -d site_build ]; then
+            cp -a site_build/. "site/previews/${PREVIEW_BRANCH_SAFE}"
           else
-            mkdir site
+            cp -a docs/. "site/previews/${PREVIEW_BRANCH_SAFE}"
           fi
-          # Cleanup: remove preview folders for branches that no longer exist
-          echo "Checking for stale previews to remove..."
-          REMOTE_BRANCHES=$(git ls-remote --heads https://x-access-token:${TOKEN}@github.com/${REPO} | awk '{print $2}' | sed 's|refs/heads/||')
-          for D in site/previews/*; do
-            [ -d "$D" ] || continue
-            NAME=$(basename "$D")
-            if ! echo "$REMOTE_BRANCHES" | grep -xq "$NAME"; then
-              echo "Removing preview for deleted branch: $NAME"
-              rm -rf "$D"
-            fi
-          done
-          # Also remove previews older than 90 days to limit gh-pages size
-          if [ -d site/previews ]; then
-            find site/previews -mindepth 1 -maxdepth 2 -type d -mtime +90 -print0 | xargs -0 -r rm -rf || true
-          fi
-          # remove any existing preview for this branch and copy new docs
-          rm -rf "site/previews/${BRANCH}"
-          mkdir -p "site/previews/${BRANCH}"
-          cp -a docs/. "site/previews/${BRANCH}/" || true
 
       - name: Deploy previews to gh-pages
         uses: peaceiris/actions-gh-pages@v4

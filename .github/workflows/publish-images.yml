@@ -49,6 +49,8 @@ jobs:
             ghcr.io/wikid82/researcharr:branch-${{ steps.tags.outputs.safe_ref }}
           build-args: |
             BUILD_VERSION=${{ github.sha }}
+            RUNTIME_UID=1000
+            RUNTIME_GID=1000
 
       - name: Build and push (main branch -> runtime)
         if: startsWith(github.ref, 'refs/heads/main')

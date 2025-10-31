@@ -1,0 +1,24 @@
+# Development-only Python requirements
+# Add packages here that are only needed for local development, debugging, or testing
+# These will be installed in dev containers and not in production images
+
+debugpy
+pytest>=7.0
+pytest-cov
+ruff
+black
+isort
+mypy
+pre-commit
+ipython
+ipdb
+tox
+pip-tools
+bandit
+safety
+pytest-xdist
+detect-secrets
+
+# Documentation tooling
+mkdocs
+mkdocs-material

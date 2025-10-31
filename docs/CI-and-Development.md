@@ -87,3 +87,29 @@ Security and housekeeping
 Contact and help
 
 If you're stuck, open an issue or ask in the PR discussion. Include the failing CI log snippets and the output of `pre-commit run --all-files` if applicable.
+
+Local developer helpers
+
+- We include a small installer for a native git pre-push hook that runs the test suite before pushing. This prevents pushes that would fail CI and provides fast local feedback. To install the hook run:
+
+```bash
+./scripts/install-prepush-hook.sh
+```
+
+- There's also a small local CI helper that mirrors the repository `build` job (installs deps, runs pre-commit, runs pytest and writes `coverage.xml`, with optional Docker/Trivy steps):
+
+```bash
+# quick: assume deps already installed
+./scripts/ci-local.sh --skip-install --no-docker --no-trivy
+
+# full: install deps, build image, run trivy
+./scripts/ci-local.sh
+```
+
+Caching in CI
+
+- The CI workflow caches pip packages and pre-commit environments on the GitHub runner to reduce iteration time. This keeps subsequent CI runs (and pre-commit initializations) much faster.
+
+Developer note
+
+- After cloning, run `pre-commit install` and (optionally) `./scripts/install-prepush-hook.sh` to get the same quick, guarded push behavior contributors use locally.

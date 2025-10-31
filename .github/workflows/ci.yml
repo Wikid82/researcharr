@@ -1,12 +1,34 @@
+---
 name: CI
 
 on:
-  push: {}
   pull_request: {}
+  push:
+    branches:
+      - main
+      - development
+      - nightly
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Initialize common runtime values with GitHub expressions so static
+      # analyzers in editors can validate references. These are still
+      # overwritten later by steps that compute canonical values and write
+      # into $GITHUB_ENV, so runtime semantics are unchanged.
+      REPO_NAME: "${{ github.repository }}"
+      VERSION: "${{ github.ref_name }}"
+      BUILD_NUMBER: "${{ github.run_number }}"
+      GIT_SHA: "${{ github.sha }}"
+      BUILD_DATE: "${{ github.run_id }}"
+      SAFE_BRANCH: "${{ github.ref_name }}"
+      BRANCH: "${{ github.ref_name }}"
+      # Expose CODECOV_TOKEN from secrets at job level to reduce editor warnings
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+      # Use an explicit sqlite DATABASE_URL during CI so DB-backed tests run
+      # against an isolated file in the workspace.
+      DATABASE_URL: "sqlite:///${{ github.workspace }}/researcharr-test.db"
     strategy:
       matrix:
         python-version: [ 3.13 ]
@@ -20,6 +42,8 @@ jobs:
           ${{ runner.os }}-pip-
 
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
@@ -28,27 +52,62 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install black isort flake8 mypy pytest pytest-cov
-    - name: Lint with flake8
+        # Ensure setuptools_scm is available so package versions are derived
+        # automatically from git metadata. CI may override the detected
+        # version by setting SETUPTOOLS_SCM_PRETEND_VERSION below.
+        pip install setuptools_scm
+
+        # Pin black to the same version used by pre-commit to avoid
+        # formatting mismatches between local hooks and the CI check.
+        pip install black==25.9.0 isort==5.12.0 flake8 mypy pytest pytest-cov
+
+        # Install type stubs mypy may need in CI to avoid 'Library stubs not installed' errors
+        pip install types-requests types-PyYAML || true
+
+        # If this run is not for an exact git tag, set SETUPTOOLS_SCM_PRETEND_VERSION
+        # so setuptools_scm writes a reproducible version containing the CI run number.
+        RAW_TAG=$(git describe --tags --exact-match 2>/dev/null || true)
+        if [ -z "$RAW_TAG" ]; then
+          # Use nearest semver tag if present, else fallback to 0.0.0
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          if printf '%s' "$LATEST_TAG" | grep -Eq '^[v]?[0-9]+\.[0-9]+\.[0-9]'; then
+            BASE=${LATEST_TAG#v}
+          else
+            BASE="0.0.0"
+          fi
+          export SETUPTOOLS_SCM_PRETEND_VERSION="${BASE}.dev${GITHUB_RUN_NUMBER}"
+        fi
+
+        # Install the package (setuptools_scm will write researcharr/_version.py)
+        pip install -e .
+
+    - name: Cache pre-commit environments
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pre-commit
+        key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pre-commit-
+
+    - name: Run pre-commit hooks
       run: |
-        flake8 . --count --show-source --statistics
-    - name: Check formatting with black
-      run: |
-        black --check .
-    - name: Check import order with isort
-      run: |
-        isort --check-only .
-    - name: Type check with mypy
-      run: |
-        mypy .
+        python -m pip install --upgrade pip
+        pip install pre-commit
+        # Run the configured hooks across the repository so CI matches local
+        # developer pre-commit runs (this includes black, ruff, isort, mypy, yamllint, etc.).
+        pre-commit run --all-files
     - name: Run tests with pytest
-      # Ensure we run pytest from the package directory so coverage files are generated where codecov expects
+      # Ensure pytest prefers the installed package in site-packages over
+      # any top-level module file in the repo (e.g. researcharr.py), which can
+      # shadow the actual package. We detect the interpreter's site-packages
+      # path and prepend it to PYTHONPATH before running tests.
       working-directory: .
-      env:
-        # Ensure top-level modules (e.g. factory.py) are importable during
-        # CI test collection by adding the repo root to PYTHONPATH.
-        PYTHONPATH: ${{ github.workspace }}
       run: |
+        # Detect site-packages for the chosen interpreter
+        SITE_PACKAGES=$(python -c 'import sysconfig, json; print(sysconfig.get_paths()["purelib"])')
+        echo "Using site-packages: $SITE_PACKAGES"
+        export PYTHONPATH="$SITE_PACKAGES:$PYTHONPATH"
+
         # Run tests and produce an XML coverage report for Codecov
         pytest tests/ \
           --maxfail=3 --disable-warnings -v \
@@ -57,6 +116,18 @@ jobs:
       run: |
         echo "Coverage report files (in repo root):" && ls -l coverage.xml || true
         echo "Coverage report files (in researcharr/):" && ls -l researcharr/coverage.xml || true
+    - name: Print coverage.xml head (debug)
+      if: always()
+      run: |
+        echo "---- coverage.xml (first 80 lines) ----"
+        head -n 80 coverage.xml || true
+        echo "---- end coverage.xml head ----"
+    - name: Upload coverage artifact for debugging
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-xml
+        path: coverage.xml
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
@@ -66,138 +137,153 @@ jobs:
   docker:
     needs: build
     runs-on: ubuntu-latest
-    # Only build and push Docker images for pushes to protected branches
-    # (development or main). Feature branches / short-lived branches such
-    # as `chore` or `reception` will not trigger the Docker build here and
-    # should be built locally by authors when needed.
-    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main') }}
+    # Build and push Docker images for any branch push. Images are tagged
+    # using a sanitized branch name (see Prepare image metadata) so feature
+    # branches get their own tags (e.g. `branch-my-feature`) and can be
+    # tested before merging down to development/main.
+    if: ${{ github.event_name == 'push' }}
     permissions:
       contents: read
       packages: write
       id-token: write
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      with:
-        driver: docker-container
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Determine branch name
-      run: |
-        # Extract branch name from ref and create a sanitized, tag-safe variant
-        BRANCH=${GITHUB_REF#refs/heads/}
-        # Lowercase and replace slashes or any disallowed char with hyphens to make a safe Docker tag
-        SAFE_BRANCH=$(echo "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed 's|/|-|g; s|[^a-z0-9._-]|-|g')
-        echo "BRANCH=$BRANCH" >> $GITHUB_ENV
-        echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
-    - name: Set lowercase repository name
-      run: echo "REPO_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
-    - name: Build and push Docker image (all branches)
-      run: echo "Preparing to build..."
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fail if tests failed
+        if: ${{ needs.build.result != 'success' }}
+        run: |
+          echo "The 'build' job did not succeed (tests may have failed). Aborting docker build to avoid publishing an image from a failing run."
+          exit 1
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Prepare image metadata
+        id: meta
+        run: |
+          # Extract branch name from ref and create a sanitized, tag-safe variant
+          BRANCH=${GITHUB_REF#refs/heads/}
+          SAFE_BRANCH=$(echo "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed 's|/|-|g; s|[^a-z0-9._-]|-|g')
+          REPO_NAME=${GITHUB_REPOSITORY,,}
 
-    - name: Set image metadata
-      run: |
-        # If the current commit has an exact tag (preferred for releases) use it
-        # otherwise fall back to a semantic pre-release version so CI builds
-        # are discoverable (e.g. 0.0.0-alpha.<run-number>).
-        RAW_TAG=$(git describe --tags --exact-match 2>/dev/null || true)
-        if [ -n "$RAW_TAG" ]; then
-          # Strip a leading 'v' if present (v1.2.3 -> 1.2.3)
-          VERSION=${RAW_TAG#v}
-        else
-          # Try to derive a descriptive version from nearby tags/commit, but
-          # prefer a stable pre-release format when nothing looks like semver.
-          DESC=$(git describe --tags --dirty --always 2>/dev/null || true)
-          if printf '%s' "$DESC" | grep -Eq '^[v]?[0-9]+\.[0-9]+\.[0-9]'; then
-            VERSION=${DESC#v}
+          # If the current commit has an exact tag (preferred for releases) use it
+          # otherwise fall back to a semantic pre-release version so CI builds
+          # are discoverable (e.g. 0.0.0-alpha.<run-number>).
+          RAW_TAG=$(git describe --tags --exact-match 2>/dev/null || true)
+          if [ -n "$RAW_TAG" ]; then
+            VERSION=${RAW_TAG#v}
           else
-            VERSION="0.0.0-alpha.${GITHUB_RUN_NUMBER}"
+            DESC=$(git describe --tags --dirty --always 2>/dev/null || true)
+            if printf '%s' "$DESC" | grep -Eq '^[v]?[0-9]+\.[0-9]+\.[0-9]'; then
+              VERSION=${DESC#v}
+            else
+              VERSION="0.0.0-alpha.${GITHUB_RUN_NUMBER}"
+            fi
           fi
-        fi
-        echo "VERSION=$VERSION" >> $GITHUB_ENV
-        echo "BUILD_NUMBER=${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
-        echo "GIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
-        echo "BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
 
-    - name: Build and push Docker image (all branches)
-      id: build
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        # Only push images to the registry for pushes to main, development, or tags.
-        push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/')) }}
-        platforms: linux/amd64,linux/arm64
-        tags: |
-          ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}
-          ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-build${{ env.BUILD_NUMBER }}
-          ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}
-          ghcr.io/${{ env.REPO_NAME }}:${{ env.SAFE_BRANCH }}
-          ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.SAFE_BRANCH }}
-        cache-from: type=gha,scope=researcharr-build-cache
-        cache-to: type=gha,mode=max,scope=researcharr-build-cache
-        build-args: |
-          BUILD_VERSION=${{ env.VERSION }}
-          BUILD_NUMBER=${{ env.BUILD_NUMBER }}
-          GIT_SHA=${{ env.GIT_SHA }}
-          BUILD_DATE=${{ env.BUILD_DATE }}
-          PYTHON_VERSION=3.13
+          BUILD_NUMBER=${GITHUB_RUN_NUMBER}
+          GIT_SHA=${GITHUB_SHA::8}
+          BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-    - name: Build and push debug image (dev tag)
-      id: build-debug
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        platforms: linux/amd64,linux/arm64
-        target: debug
-        tags: |
-          ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-dev
-          ghcr.io/${{ env.REPO_NAME }}:dev
-        cache-from: type=gha,scope=researcharr-build-cache
-        cache-to: type=gha,mode=max,scope=researcharr-build-cache
-        build-args: |
-          BUILD_VERSION=${{ env.VERSION }}
-          BUILD_NUMBER=${{ env.BUILD_NUMBER }}
-          GIT_SHA=${{ env.GIT_SHA }}
-          BUILD_DATE=${{ env.BUILD_DATE }}
-          PYTHON_VERSION=3.13
+          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "git_sha=$GIT_SHA" >> $GITHUB_OUTPUT
+          echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+          echo "safe_branch=$SAFE_BRANCH" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
 
-    - name: Show pushed image digest and tags
-      run: |
-        echo "Pushed image digest: ${{ steps.build.outputs.digest }}"
-        echo "Pushed image tags:"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.VERSION }}-build${{ env.BUILD_NUMBER }}"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.GIT_SHA }}"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:${{ env.SAFE_BRANCH }}"
-        echo "  - ghcr.io/${{ env.REPO_NAME }}:branch-${{ env.SAFE_BRANCH }}"
-    - name: Additional tags for main/development
-      if: ${{ env.BRANCH == 'main' || env.BRANCH == 'development' }}
-      run: |
-        REPO=ghcr.io/${{ env.REPO_NAME }}
-        BRANCH=${{ env.BRANCH }}
-        # Use the pushed image identified by GIT_SHA as the source for extra tags
-        SRC_TAG=${{ env.GIT_SHA }}
-        if [ "$BRANCH" = "main" ]; then
-          # Tag the image pushed from main as 'latest'
-          docker pull $REPO:${SRC_TAG} || true
-          docker tag $REPO:${SRC_TAG} $REPO:latest
-          docker push $REPO:latest
-        fi
-        if [ "$BRANCH" = "development" ]; then
-          # Tag the image pushed from development with a dev-<build> tag
-          docker pull $REPO:${SRC_TAG} || true
-          docker tag $REPO:${SRC_TAG} $REPO:dev-${{ env.BUILD_NUMBER }}
-          docker push $REPO:dev-${{ env.BUILD_NUMBER }}
-        fi
+      - name: Build and push Docker image (all branches)
+        run: echo "Preparing to build..."
+
+      - name: Build and push Docker image (all branches)
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          # Push images to the registry for any push event; images are
+          # tagged above and include a branch-specific tag so feature
+          # branches produce their own image tags.
+          push: ${{ github.event_name == 'push' }}
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}
+            ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}-build${{ steps.meta.outputs.build_number }}
+            ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.git_sha }}
+            ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.safe_branch }}
+            ghcr.io/${{ steps.meta.outputs.repo_name }}:branch-${{ steps.meta.outputs.safe_branch }}
+          cache-from: type=gha,scope=researcharr-build-cache
+          cache-to: type=gha,mode=max,scope=researcharr-build-cache
+          build-args: |
+            BUILD_VERSION=${{ steps.meta.outputs.version }}
+            BUILD_NUMBER=${{ steps.meta.outputs.build_number }}
+            GIT_SHA=${{ steps.meta.outputs.git_sha }}
+            BUILD_DATE=${{ steps.meta.outputs.build_date }}
+            PYTHON_VERSION=3.13
+            RUNTIME_UID=1000
+            RUNTIME_GID=1000
+
+      - name: Build and push debug image (dev tag)
+        id: build-debug
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          target: debug
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}-dev
+            ghcr.io/${{ steps.meta.outputs.repo_name }}:dev
+          cache-from: type=gha,scope=researcharr-build-cache
+          cache-to: type=gha,mode=max,scope=researcharr-build-cache
+          build-args: |
+            BUILD_VERSION=${{ steps.meta.outputs.version }}
+            BUILD_NUMBER=${{ steps.meta.outputs.build_number }}
+            GIT_SHA=${{ steps.meta.outputs.git_sha }}
+            BUILD_DATE=${{ steps.meta.outputs.build_date }}
+            PYTHON_VERSION=3.13
+            RUNTIME_UID=1000
+            RUNTIME_GID=1000
+
+      - name: Show pushed image digest and tags
+        run: |
+          echo "Pushed image digest: ${{ steps.build.outputs.digest }}"
+          echo "Pushed image tags:"
+          echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}"
+          echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.version }}-build${{ steps.meta.outputs.build_number }}"
+          echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.git_sha }}"
+          echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:${{ steps.meta.outputs.safe_branch }}"
+          echo "  - ghcr.io/${{ steps.meta.outputs.repo_name }}:branch-${{ steps.meta.outputs.safe_branch }}"
+
+      - name: Additional tags for main/development
+        if: ${{ steps.meta.outputs.branch == 'main' || steps.meta.outputs.branch == 'development' }}
+        run: |
+          REPO=ghcr.io/${{ steps.meta.outputs.repo_name }}
+          BRANCH=${{ steps.meta.outputs.branch }}
+          # Use the pushed image identified by GIT_SHA as the source for extra tags
+          SRC_TAG=${{ steps.meta.outputs.git_sha }}
+          if [ "$BRANCH" = "main" ]; then
+            # Tag the image pushed from main as 'latest'
+            docker pull $REPO:${SRC_TAG} || true
+            docker tag $REPO:${SRC_TAG} $REPO:latest
+            docker push $REPO:latest
+          fi
+          if [ "$BRANCH" = "development" ]; then
+            # Tag the image pushed from development with a dev-<build> tag
+            docker pull $REPO:${SRC_TAG} || true
+            docker tag $REPO:${SRC_TAG} $REPO:dev-${{ steps.meta.outputs.build_number }}
+            docker push $REPO:dev-${{ steps.meta.outputs.build_number }}
+          fi
 
   docs-linkcheck:
     # Run for pull requests, and for pushes to main/development (so docs previews and main site are checked)
@@ -270,6 +356,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v2

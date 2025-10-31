@@ -1,0 +1,98 @@
+# Pre-commit configuration for development
+# IMPORTANT: Replace the `rev` placeholders below with a specific tag/commit
+# for reproducible installs. See https://pre-commit.com for guidance.
+repos:
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: "refs/tags/v0.0.278"  # pinned ruff pre-commit tag (update as needed)
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+        stages: [pre-commit]
+
+  - repo: https://github.com/psf/black
+    rev: "25.9.0"
+    hooks:
+      - id: black
+        language_version: python3
+        stages: [pre-commit]
+
+  - repo: https://github.com/PyCQA/isort
+    rev: "5.12.0"
+    hooks:
+      - id: isort
+        name: isort (python)
+        stages: [pre-commit]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: "v1.4.1"
+    hooks:
+      - id: mypy
+        args:
+          - "--config-file"
+          - "mypy.ini"
+          - "--package"
+          - "researcharr"
+          - "--ignore-missing-imports"
+        pass_filenames: false
+        additional_dependencies: []
+        stages: [pre-commit]
+
+  # YAML linting for configuration files
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.30.0
+    hooks:
+      - id: yamllint
+        stages: [pre-commit]
+
+  # Note: shellcheck integration omitted because the shellcheck mirror
+  # pre-commit hook is not available in this environment. You can add
+  # a shellcheck hook later (for example via a maintained pre-commit
+  # wrapper) if desired.
+
+  # Detect secrets in the codebase (Yelp detect-secrets)
+  # Note: detect-secrets omitted here to avoid configuration mismatches; we
+  # can add it later with a proper baseline file and tested hook id.
+
+  # Note: Gitleaks integration can be added later with a tested pre-commit hook
+  # if desired; omitted here to avoid unsupported/misconfigured hook manifests.
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: "v6.0.0"
+    hooks:
+      - id: end-of-file-fixer
+        stages: [pre-commit]
+      - id: trailing-whitespace
+        stages: [pre-commit]
+      - id: check-yaml
+        stages: [pre-commit]
+      - id: check-added-large-files
+        stages: [pre-commit]
+
+  # Local hooks: shellcheck (system binary) and detect-secrets (Python tool)
+  - repo: local
+    hooks:
+      - id: shellcheck
+        name: shellcheck (local wrapper)
+        entry: scripts/run-shellcheck.sh
+        language: script
+        files: \.sh$
+        stages: [pre-commit]
+      - id: detect-secrets
+        name: detect-secrets (local wrapper)
+        entry: scripts/run-detect-secrets.sh
+        language: script
+        files: ''
+        stages: [pre-commit]
+
+      # run local wrapper hooks at the pre-commit stage
+      # (keeps behavior equivalent to prior config while using new stage name)
+
+      # NOTE: pytest pre-push hook removed; a dedicated git pre-push hook will
+      # be installed locally instead to avoid pre-commit re-running formatters
+      # and other hooks during the push stage.
+
+# Recommended usage:
+# 1. Replace all <pin-*> placeholders with concrete tag names or commit hashes.
+# 2. Install pre-commit in your environment: `pip install pre-commit`.
+# 3. Run once to install the git hook: `pre-commit install`.
+# 4. Optionally run across the repo: `pre-commit run --all-files`.

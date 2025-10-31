@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 
 def load_top_level_module(tmp_path):
-    path = os.path.abspath("researcharr.py")
+    path = os.path.abspath("entrypoint.py")
     spec = importlib.util.spec_from_file_location("researcharr_impl", path)
     # Ensure spec and its loader are present before creating a module from it
     assert spec is not None and spec.loader is not None

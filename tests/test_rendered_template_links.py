@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from flask import render_template
 
-from factory import create_app
+from researcharr.factory import create_app
 
 
 def _extract_links_from_rendered(html: str):

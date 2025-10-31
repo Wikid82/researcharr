@@ -1,0 +1,70 @@
+name: Propagate development to downstream
+
+on:
+  push:
+    branches: [ development ]
+  workflow_dispatch:
+    inputs:
+      head:
+        description: 'Branch to propagate from (defaults to the pushed branch or "development")'
+        required: false
+      downstreams:
+        description: 'Comma-separated list of downstream branches to open PRs into (defaults: staging,release)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  create-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create PRs from main into downstream branches
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            // Determine head branch: prefer workflow_dispatch input 'head', otherwise the pushed branch
+            let head = (context.eventName === 'workflow_dispatch' && context.payload && context.payload.inputs && context.payload.inputs.head) ? context.payload.inputs.head : context.ref.replace('refs/heads/', '');
+            if (!head) head = 'development';
+
+            // Determine downstreams: allow passing comma-separated list via workflow_dispatch; default to these branches
+            let downstreams = ['staging', 'release'];
+            if (context.eventName === 'workflow_dispatch' && context.payload && context.payload.inputs && context.payload.inputs.downstreams) {
+              downstreams = context.payload.inputs.downstreams.split(',').map(s => s.trim()).filter(Boolean);
+            }
+
+            for (const base of downstreams) {
+              core.info(`Checking for existing open PRs from ${head} -> ${base}`);
+              const { data: prs } = await github.rest.pulls.list({
+                owner,
+                repo,
+                state: 'open',
+                head: `${owner}:${head}`,
+                base,
+              });
+
+              if (prs.length > 0) {
+                core.info(`Open PR already exists: ${prs[0].html_url}`);
+                continue;
+              }
+
+              const title = `chore(ci): propagate ${head} -> ${base}`;
+              const body = `This is an automated PR created by CI to propagate changes from **${head}** into **${base}**.\n\nTriggered by commit: ${context.sha}`;
+
+              try {
+                const { data: pr } = await github.rest.pulls.create({
+                  owner,
+                  repo,
+                  title,
+                  head,
+                  base,
+                  body,
+                });
+                core.info(`Created PR: ${pr.html_url}`);
+              } catch (err) {
+                core.warning(`Failed to create PR ${head} -> ${base}: ${err}`);
+              }
+            }

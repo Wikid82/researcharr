@@ -1,0 +1,29 @@
+black==25.9.0
+isort==5.12.0
+flake8
+mypy
+pre-commit
+pytest>=7.0
+pytest-cov
+types-requests
+types-PyYAML
+types-Markdown
+
+# Optional tooling (development-only)
+setuptools_scm
+python-json-logger
+debugpy
+ruff
+ipython
+ipdb
+tox
+pip-tools
+bandit
+safety
+pytest-xdist
+detect-secrets
+
+# Documentation tooling
+mkdocs
+mkdocs-material
+pip-tools

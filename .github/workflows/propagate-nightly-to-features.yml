@@ -1,0 +1,65 @@
+name: Propagate nightly to feature branches
+
+on:
+  push:
+    branches: [ nightly ]
+  workflow_dispatch:
+    inputs:
+      pattern:
+        description: 'Branch name prefix or pattern to match target branches (default: feature/)'
+        required: false
+      head:
+        description: 'Branch to propagate from (defaults to pushed branch or nightly)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  create-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create PRs from nightly into feature branches
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Determine head: prefer manual input, otherwise the pushed ref
+            let head = (context.eventName === 'workflow_dispatch' && context.payload && context.payload.inputs && context.payload.inputs.head) ? context.payload.inputs.head : context.ref.replace('refs/heads/', '');
+            if (!head) head = 'nightly';
+
+            // Determine branch pattern (prefix) to match targets
+            let pattern = 'feature/';
+            if (context.eventName === 'workflow_dispatch' && context.payload && context.payload.inputs && context.payload.inputs.pattern) {
+              pattern = context.payload.inputs.pattern;
+            }
+
+            core.info(`Propagating from ${head} to branches matching '${pattern}'`);
+
+            // List branches and filter by prefix. For repos with many branches
+            // this may need pagination; listBranches supports per_page.
+            const branches = await github.rest.repos.listBranches({ owner, repo, per_page: 100 });
+            const targets = branches.data.map(b => b.name).filter(n => n.startsWith(pattern));
+
+            core.info(`Found ${targets.length} target branches`);
+
+            for (const base of targets) {
+              core.info(`Checking for existing open PRs from ${head} -> ${base}`);
+              const { data: prs } = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${head}`, base });
+              if (prs.length > 0) {
+                core.info(`Open PR already exists for ${head} -> ${base}: ${prs[0].html_url}`);
+                continue;
+              }
+
+              const title = `chore(ci): propagate ${head} -> ${base}`;
+              const body = `Automated PR to propagate changes from **${head}** into **${base}** for compatibility testing. Trigger commit: ${context.sha}`;
+              try {
+                const { data: pr } = await github.rest.pulls.create({ owner, repo, title, head, base, body });
+                core.info(`Created PR: ${pr.html_url}`);
+              } catch (err) {
+                core.warning(`Failed to create PR ${head} -> ${base}: ${err}`);
+              }
+            }

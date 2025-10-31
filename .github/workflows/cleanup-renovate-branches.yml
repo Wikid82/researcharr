@@ -1,0 +1,66 @@
+name: Cleanup Renovate branches
+
+on:
+  schedule:
+    # Daily at 04:00 UTC
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete stale renovate branches
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const thresholdHours = 24; // 24 hours
+            const thresholdMs = thresholdHours * 60 * 60 * 1000;
+            const now = Date.now();
+
+            core.info(`Checking branches for pattern renovate/** older than ${thresholdHours}h`);
+
+            // Paginate branches
+            const branches = [];
+            for (let page = 1;; page++) {
+              const resp = await github.rest.repos.listBranches({ owner, repo, per_page: 100, page });
+              if (!resp.data.length) break;
+              branches.push(...resp.data);
+              if (resp.data.length < 100) break;
+            }
+
+            for (const br of branches) {
+              const name = br.name;
+              if (!name.startsWith('renovate/')) continue;
+              if (br.protected) { core.info(`Skipping protected branch: ${name}`); continue; }
+
+              const commitDate = new Date(br.commit.commit.author.date).getTime();
+              const ageMs = now - commitDate;
+              // Find PRs for this head
+              const head = `${owner}:${name}`;
+              const prs = await github.rest.pulls.list({ owner, repo, head, per_page: 10 });
+
+              if (prs.data && prs.data.length > 0) {
+                const pr = prs.data[0];
+                if (pr.state === 'open') { core.info(`Skipping branch with open PR: ${name}`); continue; }
+                const closedAt = pr.closed_at ? new Date(pr.closed_at).getTime() : commitDate;
+                if (now - closedAt < thresholdMs) { core.info(`PR for ${name} closed recently; keeping`); continue; }
+              } else {
+                if (ageMs < thresholdMs) { core.info(`Branch ${name} too new; skipping`); continue; }
+              }
+
+              // Delete ref
+              try {
+                await github.rest.git.deleteRef({ owner, repo, ref: `heads/${name}` });
+                core.info(`Deleted branch: ${name}`);
+              } catch (err) {
+                core.warning(`Failed to delete ${name}: ${err.message}`);
+              }
+            }

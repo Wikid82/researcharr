@@ -15,7 +15,7 @@ pip install -r requirements.txt
 2. Run the app (example):
 
 ```bash
-python researcharr.py serve
+python scripts/researcharr.py serve
 ```
 
 Docker

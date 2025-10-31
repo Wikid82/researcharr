@@ -31,8 +31,9 @@ docs/
 .pytest_cache/
 
 # Local files (ignore specific generated runtime artifacts, but keep repo config files)
-config/webui_user.yml
-config/webui_user.yml.bak*
+## webui user file removed; DB-backed users in sqlite
+# config/webui_user.yml
+# config/webui_user.yml.bak*
 config/*.db
 config/*.sqlite
 config/cron.log

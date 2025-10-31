@@ -10,14 +10,8 @@ werkzeug
 flask
 pyyaml==6.0.3
 apprise==1.9.5
-
-black
-isort
-flake8
-types-requests
-types-PyYAML
-types-Markdown
 python-json-logger
 APScheduler
-pytest
-pytest-cov
+
+# Development/formatting/testing tools have been moved to
+# requirements-dev.txt so CI can install a minimal runtime by default.

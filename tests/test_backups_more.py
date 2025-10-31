@@ -6,9 +6,8 @@ import zipfile
 def test_create_backup_includes_expected_files(tmp_path, monkeypatch):
     cfg_root = tmp_path / "cfg"
     cfg_root.mkdir()
-    # create sample config and db and webui user
+    # create sample config and db (no webui YAML; users are stored in DB)
     (cfg_root / "config.yml").write_text("researcharr: {}\n")
-    (cfg_root / "webui_user.yml").write_text("username: a\n")
     (cfg_root / "researcharr.db").write_text("sqlite")
     # plugin file
     plugins = cfg_root / "plugins"
@@ -26,11 +25,10 @@ def test_create_backup_includes_expected_files(tmp_path, monkeypatch):
 
     with zipfile.ZipFile(str(zip_path), "r") as z:
         namelist = z.namelist()
-        assert "config/config.yml" in namelist
-        assert "config/webui_user.yml" in namelist
-        assert "db/researcharr.db" in namelist
-        # plugin entry
-        assert any(n.startswith("plugins/") for n in namelist)
+    assert "config/config.yml" in namelist
+    assert "db/researcharr.db" in namelist
+    # plugin entry
+    assert any(n.startswith("plugins/") for n in namelist)
 
 
 def test_prune_backups_respects_retention(tmp_path):

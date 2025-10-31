@@ -23,12 +23,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
+          python-version: '3.14'
 
       - name: Install dependencies
         run: |
@@ -38,7 +38,11 @@ jobs:
       - name: Run GHCR cleanup (dry-run by default)
         id: run_cleanup
         env:
-          GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
+          # Use the built-in GITHUB_TOKEN by default (repo permissions set above
+          # include `packages: write`). If you prefer a personal access token,
+          # create a repository secret named `GHCR_PAT` and set the value here
+          # to `${{ secrets.GHCR_PAT }}` instead.
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name || github.repository }}
           DAYS: ${{ github.event.inputs.days || github.event.inputs.days || '90' }}
@@ -49,7 +53,7 @@ jobs:
 
       - name: Upload report artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ghcr-cleanup-report
           path: ghcr_cleanup_report.json

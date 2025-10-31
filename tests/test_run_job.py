@@ -37,6 +37,9 @@ def test_run_job_timeout(tmp_path, monkeypatch, caplog):
     monkeypatch.setenv("LOG_PATH", str(logfile))
     run_mod.LOG_PATH = str(logfile)
     run_mod.SCRIPT = str(script)
+    # Ensure researcharr.run.run_job reads the script path from the environment,
+    # so the subprocess picks up the correct test script path.
+    monkeypatch.setenv("SCRIPT", str(script))
 
     caplog.set_level(logging.INFO)
     # Call run_job() which should timeout and log an error

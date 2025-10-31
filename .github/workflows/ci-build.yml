@@ -90,15 +90,19 @@ jobs:
 
       - name: Build dev image (debug stage)
         run: |
-          # Build the image using the Dockerfile's debug stage. We tag it locally
-          # with a branch-specific name so maintainers can identify feature builds.
-          BRANCH_TAG="${{ github.ref_name || github.sha }}"
+          # Build the image using the Dockerfile's debug stage. Tag locally with a
+          # filesystem- and Docker-safe branch name. Prefer the branch name and
+          # fall back to the commit SHA when the branch name is empty.
+          BRANCH_TAG="${BRANCH_NAME:-${GIT_SHA}}"
+          # Replace any '/' characters (present in branch names like feature/foo)
+          # with '-' so the resulting Docker tag and filenames are valid.
+          BRANCH_SAFE="${BRANCH_TAG//\//-}"
           SHORT_SHA="${GIT_SHA:0:7}"
-          IMAGE_LOCAL_TAG="${{ github.repository }}:dev-${BRANCH_TAG}-${BUILD_NUMBER}-${SHORT_SHA}"
+          IMAGE_LOCAL_TAG="${{ github.repository }}:dev-${BRANCH_SAFE}-${BUILD_NUMBER}-${SHORT_SHA}"
           docker build --target debug -t "$IMAGE_LOCAL_TAG" .
           # Save the image to a tarball for download by developers
           mkdir -p /tmp/image-artifacts
-          docker save "$IMAGE_LOCAL_TAG" -o /tmp/image-artifacts/researcharr-dev-${BRANCH_TAG}-${BUILD_NUMBER}-${SHORT_SHA}.tar
+          docker save "$IMAGE_LOCAL_TAG" -o /tmp/image-artifacts/researcharr-dev-${BRANCH_SAFE}-${BUILD_NUMBER}-${SHORT_SHA}.tar
 
       - name: Upload dev image artifact
         uses: actions/upload-artifact@v4

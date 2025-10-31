@@ -1,4 +1,4 @@
-name: Propagate development to downstream
+8 name: Propagate development to downstream
 
 on:
   push:

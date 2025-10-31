@@ -22,15 +22,6 @@
 
   # a minimal docker-compose you can drop in next to your project or use system-wide
   cat > docker-compose.yml <<'EOF'
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-
-=======
-
->>>>>>> Stashed changes
-=======
-
->>>>>>> Stashed changes
   services:
     researcharr:
       image: ghcr.io/wikid82/researcharr:latest
@@ -43,8 +34,8 @@
       environment:
         - PUID=1000
         - PGID=1000
-        - TZ=America/Ney York
-
+        - TZ=America/New_York
+EOF
 
   2) Quick alternative — run the production image directly with Docker
 
@@ -60,8 +51,6 @@
   ```
 
   3) Visit the web UI at: http://localhost:2929/
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 
   If you'd like to contribute or run the test/dev images, see the docs for development instructions and the `docker-compose.dev.yml` file in the repository.
 

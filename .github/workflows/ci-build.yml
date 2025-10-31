@@ -1,8 +1,12 @@
 name: CI — Build
 
 on:
-  push: {}
   pull_request: {}
+  push:
+    branches:
+      - main
+      - development
+      - nightly
 
 jobs:
   build:
@@ -34,6 +38,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install black isort flake8 mypy pytest pytest-cov
+          # Install the package in editable mode so imports like
+          # `import researcharr.db` succeed during test collection. This
+          # also ensures setuptools_scm can write a reproducible _version
+          # module when tests or other steps import package metadata.
+          pip install -e .
+      - name: Install dev requirements and run pre-commit hooks
+        # Run pre-commit hooks to catch style/type issues early. This step
+        # installs development-only dependencies from requirements-dev.txt
+        # (which is intentionally not included in production images) and
+        # runs the configured pre-commit hooks across the repository.
+        run: |
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          else
+            pip install pre-commit
+          fi
+          # Run all hooks and show diffs on failure so CI provides actionable
+          # output. The step will fail if hooks report problems.
+          pre-commit run --all-files --show-diff-on-failure
       - name: Run tests with pytest
         run: |
           pytest tests/ --maxfail=3 --disable-warnings -v \
@@ -50,3 +73,133 @@ jobs:
         with:
           token: ${{ env.CODECOV_TOKEN }}
         continue-on-error: true
+      - name: Post legacy statuses for compatibility (pytest, linting)
+        if: ${{ success() }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const sha = context.sha;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const states = [
+              {context: 'pytest', state: 'success', description: 'pytest passed'},
+              {context: 'linting', state: 'success', description: 'lint checks passed'}
+            ];
+            for (const s of states) {
+              await github.rest.repos.createCommitStatus({
+                owner,
+                repo,
+                sha,
+                state: s.state,
+                context: s.context,
+                description: s.description
+              });
+            }
+      - name: Build complete
+        run: echo "build job finished"
+
+  dev-image:
+    if: ${{ github.ref_name != 'main' }}
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      BUILD_NUMBER: ${{ github.run_number }}
+      GIT_SHA: ${{ github.sha }}
+      BRANCH_NAME: ${{ github.ref_name }}
+    outputs:
+      image_tag: ${{ steps.push-image.outputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build dev image (debug stage)
+        run: |
+          # Build the image using the Dockerfile's debug stage. Tag locally with a
+          # filesystem- and Docker-safe branch name. Prefer the branch name and
+          # fall back to the commit SHA when the branch name is empty.
+          BRANCH_TAG="${BRANCH_NAME:-${GIT_SHA}}"
+          # Replace any '/' characters (present in branch names like feature/foo)
+          # with '-' so the resulting Docker tag and filenames are valid.
+          BRANCH_SAFE="${BRANCH_TAG//\//-}"
+          SHORT_SHA="${GIT_SHA:0:7}"
+          IMAGE_LOCAL_TAG="${{ github.repository }}:dev-${BRANCH_SAFE}-${BUILD_NUMBER}-${SHORT_SHA}"
+          docker build --target debug -t "$IMAGE_LOCAL_TAG" .
+          # Save the image to a tarball for download by developers
+          mkdir -p /tmp/image-artifacts
+          docker save "$IMAGE_LOCAL_TAG" -o /tmp/image-artifacts/researcharr-dev-${BRANCH_SAFE}-${BUILD_NUMBER}-${SHORT_SHA}.tar
+
+      - name: Upload dev image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: researcharr-dev-image
+          path: /tmp/image-artifacts/
+
+      # GHCR login is performed in the push-image step when a token is present
+
+      - id: push-image
+        name: Push dev image to GHCR (optional)
+        # We intentionally do NOT use `if: ${{ secrets.* }}` here because
+        # some editors incorrectly flag `secrets` as an unrecognized value.
+        # Instead, the step always runs and checks at runtime whether the
+        # `GHCR_TOKEN` env var (populated below from the secret) is present.
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          # Skip pushing if no token is provided
+          if [ -z "${GHCR_TOKEN}" ]; then
+            echo "GHCR_TOKEN not set; skipping push"
+            echo "image_tag=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Derive safe branch name and short SHA
+          BRANCH_SAFE="${BRANCH_NAME//\//-}"
+          SHORT_SHA="${GIT_SHA:0:7}"
+          IMAGE_BASE="ghcr.io/${{ github.repository }}"
+          VERSION_TAG="dev-${BRANCH_SAFE}-${BUILD_NUMBER}-${SHORT_SHA}"
+          FULL_TAG="${IMAGE_BASE}:${VERSION_TAG}"
+          # Build and push the tagged image
+          docker build --target debug -t "${FULL_TAG}" .
+          echo "Logging into GHCR"
+          echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker push "${FULL_TAG}"
+          # Also push a convenience latest tag per-branch
+          LATEST_TAG="${IMAGE_BASE}:dev-${BRANCH_SAFE}-latest"
+          docker tag "${FULL_TAG}" "${LATEST_TAG}" || true
+          docker push "${LATEST_TAG}" || true
+          echo "Pushed ${FULL_TAG} and ${LATEST_TAG}"
+          echo "image_tag=${FULL_TAG}" >> "$GITHUB_OUTPUT"
+
+  image-scan:
+    if: ${{ github.ref_name != 'main' }}
+    needs: dev-image
+    runs-on: ubuntu-latest
+    env:
+      # Make GHCR token visible to steps as an env var to avoid using
+      # `secrets.*` directly in `if` expressions (editor/language-server
+      # false positives). The token remains protected in GitHub Actions.
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint Dockerfile with hadolint (docker)
+        run: |
+          docker run --rm -v "$PWD":/data hadolint/hadolint:latest hadolint /data/Dockerfile || true
+
+      - name: Docker login to GHCR (if needed)
+        if: ${{ env.GHCR_TOKEN != '' }}
+        run: |
+          echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Scan pushed image with Trivy
+        env:
+          IMAGE_TO_SCAN: ${{ needs.dev-image.outputs.image_tag }}
+        run: |
+          if [ -z "${IMAGE_TO_SCAN}" ]; then
+            echo "No image tag available from dev-image job; skipping scan"
+            exit 0
+          fi
+          echo "Scanning image: ${IMAGE_TO_SCAN}"
+          docker run --rm aquasecurity/trivy:latest --exit-code 1 --severity HIGH,CRITICAL "${IMAGE_TO_SCAN}"

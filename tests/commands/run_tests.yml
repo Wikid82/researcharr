@@ -1,1 +1,0 @@
-isort --profile=black . && black . && ./.venv/bin/flake8 . --count --show-source --statistics && ./.venv/bin/python -m pytest researcharr/tests/

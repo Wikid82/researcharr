@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   researcharr:
     # Use the developer image (includes shell & dev tooling). The alpine
@@ -25,10 +23,10 @@ services:
       - WEBUI_DEV_ENABLE_DEBUG_ENDPOINT=true
     volumes:
       # Mount the project source into the container for live edits & immediate debugging
-      - ./:/app:delegated
+      - ${HOST_APP_PATH:-./}:/app:delegated
       # Persist runtime config and DB on host so you can inspect files easily
-      - ./config:/config:rw
-      - ./logs:/config/logs:rw
+      - ${HOST_CONFIG_PATH:-./config}:/config:rw
+      - ${HOST_LOGS_PATH:-./logs}:/config/logs:rw
     tty: true
     stdin_open: true
     # Use the repository-local entrypoint (mounted into /app) so local
@@ -37,11 +35,17 @@ services:
     entrypoint: ["/app/entrypoint.sh"]
     # Run the entrypoint as root in dev so it can perform chown/chmod on bind mounts,
     # then the entrypoint will drop privileges into the configured PUID/PGID.
-    # Use a simple command that ensures any local changes to requirements are installed
-    command: >
-      /bin/sh -lc "pip install --no-cache-dir -r requirements.txt || true && \
-      # OPTIONAL: to run under debugpy, uncomment the next line and comment the plain run line\n      # python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m runpy /app/run.py && \
-      python -u /app/run.py"
+    # Use a simple, array-form command to avoid complex quoting and inline
+    # shell comments which can produce unexpected syntax errors.
+    command:
+      - "/bin/sh"
+      - "-lc"
+      - "python -m debugpy --listen 0.0.0.0:5678 --wait-for-client /app/scripts/researcharr.py serve"
+    # If you want to run under debugpy, replace the command above with:
+    # command:
+    #   - "/bin/sh"
+    #   - "-lc"
+    #   - "python -m pip install --no-cache-dir -r requirements.txt debugpy && python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m runpy /app/scripts/researcharr.py serve"
     logging:
       driver: json-file
       options:

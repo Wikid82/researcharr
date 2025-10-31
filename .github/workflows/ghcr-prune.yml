@@ -88,9 +88,9 @@ jobs:
           all_versions=$(mktemp)
           gh api -H "Accept: application/vnd.github+json" "$ENDPOINT?per_page=100" --paginate > "$all_versions"
 
-          # Identify protected versions (release semver tags, latest, main, development)
+          # Identify protected versions (release semver tags, latest, main, development, nightly)
           # Sort by created_at desc and keep the most recent KEEP_LAST_N
-          protected_ids=$(jq -r '.[] | select((.metadata.tags//[]) | join(" ") | test("(^| )(v[0-9]+\.[0-9]+\.[0-9]+|latest|main|development)( |$)")) | [.created_at, .id] | @tsv' "$all_versions" \
+          protected_ids=$(jq -r '.[] | select((.metadata.tags//[]) | join(" ") | test("(^| )(v[0-9]+\.[0-9]+\.[0-9]+|latest|main|development|nightly)( |$)")) | [.created_at, .id] | @tsv' "$all_versions" \
             | sort -r | awk '{print $2}' | uniq)
 
           echo "Found protected version ids (most recent first):"

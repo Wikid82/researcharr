@@ -58,11 +58,16 @@ jobs:
           set -euo pipefail
           rm -rf site
           mkdir -p site/previews
+          # Sanitize branch name for filesystems and URLs (replace / with -)
+          PREVIEW_BRANCH_SAFE="${PREVIEW_BRANCH//\//-}"
+          # Ensure the exact target directory exists so `cp` won't fail creating
+          # intermediate directories when branch names contain slashes.
+          mkdir -p "site/previews/${PREVIEW_BRANCH_SAFE}"
           # If a built MkDocs site exists, publish the built HTML. Otherwise fall back to raw docs.
           if [ -d site_build ]; then
-            cp -a site_build/. site/previews/${PREVIEW_BRANCH}
+            cp -a site_build/. "site/previews/${PREVIEW_BRANCH_SAFE}"
           else
-            cp -a docs/. site/previews/${PREVIEW_BRANCH}
+            cp -a docs/. "site/previews/${PREVIEW_BRANCH_SAFE}"
           fi
 
       - name: Deploy previews to gh-pages

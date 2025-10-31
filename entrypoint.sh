@@ -146,14 +146,14 @@ fi
 python3 - <<'PY'
 import os, sys
 
-def to_int(v, default):
-    try:
-        return int(v)
-    except Exception:
-        return default
+def safe_int(v, default):
+  try:
+    return int(v)
+  except Exception:
+    return default
 
-uid = to_int(os.environ.get('PUID'), 1000)
-gid = to_int(os.environ.get('PGID'), 1000)
+uid = safe_int(os.environ.get('PUID'), 1000)
+gid = safe_int(os.environ.get('PGID'), 1000)
 
 # setgid before setuid
 try:

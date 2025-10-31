@@ -205,7 +205,7 @@ jobs:
 
       - name: Build and push Docker image (all branches)
         id: build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           # Push images to the registry for any push event; images are
@@ -232,7 +232,7 @@ jobs:
 
       - name: Build and push debug image (dev tag)
         id: build-debug
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
@@ -365,7 +365,7 @@ jobs:
         driver: docker-container
 
     - name: Build image for scanning
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         load: true

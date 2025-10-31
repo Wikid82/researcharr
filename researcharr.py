@@ -183,6 +183,14 @@ if "create_metrics_app" not in globals():
         @app.errorhandler(404)
         @app.errorhandler(500)
         def handle_error(e):
+            # Log the exception details so running containers record a
+            # traceback in their logs. This helps debugging in development
+            # environments where Flask's debug page is not enabled.
+            try:
+                app.logger.exception("Unhandled exception in request: %s", e)
+            except Exception:
+                # If logging fails for any reason, do not raise further
+                pass
             app.metrics["errors_total"] += 1
             return jsonify({"error": "internal error"}), 500
 

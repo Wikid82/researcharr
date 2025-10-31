@@ -194,7 +194,7 @@ if "create_metrics_app" not in globals():
             app.metrics["errors_total"] += 1
             return jsonify({"error": "internal error"}), 500
 
-        return app
+            return app
 
     if __name__ == "__main__":
         import sys

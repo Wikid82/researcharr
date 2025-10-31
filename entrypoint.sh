@@ -145,24 +145,25 @@ fi
 
 python3 - <<'PY'
 import os, sys
+
 def to_int(v, default):
-  try:
-    return int(v)
-  except Exception:
-    return default
+    try:
+        return int(v)
+    except Exception:
+        return default
 
 uid = to_int(os.environ.get('PUID'), 1000)
 gid = to_int(os.environ.get('PGID'), 1000)
 
 # setgid before setuid
 try:
-  os.setgid(gid)
+    os.setgid(gid)
 except Exception as e:
-  print('Warning: setgid failed:', e, file=sys.stderr)
+    print('Warning: setgid failed:', e, file=sys.stderr)
 try:
-  os.setuid(uid)
+    os.setuid(uid)
 except Exception as e:
-  print('Warning: setuid failed:', e, file=sys.stderr)
+    print('Warning: setuid failed:', e, file=sys.stderr)
 
 # If the entrypoint was given an explicit command (Docker CMD), exec that
 # command after dropping privileges so the container runs what the user
@@ -170,9 +171,9 @@ except Exception as e:
 # default runtime script at /app/scripts/run.py.
 cmd = os.environ.get('ENTRYPOINT_CMD')
 if cmd:
-  # Use a shell so the CMD string semantics (pipes, &&, etc.) still work
-  os.execv('/bin/sh', ['/bin/sh', '-c', cmd])
+    # Use a shell so the CMD string semantics (pipes, &&, etc.) still work
+    os.execv('/bin/sh', ['/bin/sh', '-c', cmd])
 else:
-  # Default behavior: run the repository's scripted entrypoint
-  os.execv(sys.executable, [sys.executable, '/app/scripts/run.py'])
+    # Default behavior: run the repository's scripted entrypoint
+    os.execv(sys.executable, [sys.executable, '/app/scripts/run.py'])
 PY

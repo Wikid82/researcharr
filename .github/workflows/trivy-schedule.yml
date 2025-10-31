@@ -12,7 +12,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -23,7 +23,7 @@ jobs:
           driver: docker-container
 
       - name: Build image for scanning
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           load: true
@@ -41,7 +41,7 @@ jobs:
             aquasec/trivy:latest image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL researcharr-weekly:${{ github.run_id }} || true
 
       - name: Upload weekly Trivy report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: trivy-weekly-${{ github.run_id }}
           path: trivy-weekly-${{ github.run_id }}.json

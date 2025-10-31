@@ -121,7 +121,7 @@ jobs:
         echo "---- end coverage.xml head ----"
     - name: Upload coverage artifact for debugging
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: coverage-xml
         path: coverage.xml
@@ -385,7 +385,7 @@ jobs:
             aquasec/trivy:latest image --exit-code 1 --severity HIGH,CRITICAL researcharr-ci:${{ github.run_id }}
 
     - name: Upload Trivy report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: trivy-report-${{ github.run_id }}
         path: trivy-report.json

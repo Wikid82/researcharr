@@ -20,20 +20,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Create PRs from main into downstream branches
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             // Determine head branch: prefer workflow_dispatch input 'head', otherwise the pushed branch
-            let head = (github.context.eventName === 'workflow_dispatch' && github.context.payload && github.context.payload.inputs && github.context.payload.inputs.head) ? github.context.payload.inputs.head : context.ref.replace('refs/heads/', '');
+            let head = (context.eventName === 'workflow_dispatch' && context.payload && context.payload.inputs && context.payload.inputs.head) ? context.payload.inputs.head : context.ref.replace('refs/heads/', '');
             if (!head) head = 'development';
 
             // Determine downstreams: allow passing comma-separated list via workflow_dispatch; default to these branches
             let downstreams = ['staging', 'release'];
-            if (github.context.eventName === 'workflow_dispatch' && github.context.payload && github.context.payload.inputs && github.context.payload.inputs.downstreams) {
-              downstreams = github.context.payload.inputs.downstreams.split(',').map(s => s.trim()).filter(Boolean);
+            if (context.eventName === 'workflow_dispatch' && context.payload && context.payload.inputs && context.payload.inputs.downstreams) {
+              downstreams = context.payload.inputs.downstreams.split(',').map(s => s.trim()).filter(Boolean);
             }
 
             for (const base of downstreams) {

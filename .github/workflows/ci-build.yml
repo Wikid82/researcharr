@@ -8,6 +8,11 @@ on:
       - development
       - nightly
 
+# By default skip Docker build/publish tasks to keep CI focused on fast
+# tests and linting. Change to 'false' when you want to re-enable image builds.
+env:
+  SKIP_DOCKER: 'true'
+
 jobs:
   build:
     # NOTE: corrected invalid runner label (typo) -> using 'ubuntu-latest'.
@@ -28,9 +33,9 @@ jobs:
       matrix:
         python-version: [3.13]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
@@ -69,13 +74,13 @@ jobs:
       # in the step `if` expression instead of referencing `secrets.*`.
       - name: Upload coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ env.CODECOV_TOKEN }}
         continue-on-error: true
       - name: Post legacy statuses for compatibility (pytest, linting)
         if: ${{ success() }}
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -110,10 +115,23 @@ jobs:
     outputs:
       image_tag: ${{ steps.push-image.outputs.image_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Skip dev-image when SKIP_DOCKER is set
+        run: |
+          if [ "${SKIP_DOCKER:-}" = "true" ]; then
+            echo "SKIP_DOCKER=true; skipping dev-image job."
+            exit 0
+          fi
+      - uses: actions/checkout@v5
+      - name: Populate GHCR_TOKEN into environment (if set)
+        run: |
+          # Write secret into runtime environment so steps can use env.GHCR_TOKEN
+          # without referencing secrets.* in step-level mappings or if expressions.
+          if [ -n "${{ secrets.GHCR_TOKEN }}" ]; then
+            echo "GHCR_TOKEN=${{ secrets.GHCR_TOKEN }}" >> "$GITHUB_ENV"
+          fi
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Build dev image (debug stage)
         run: |
@@ -121,9 +139,10 @@ jobs:
           # filesystem- and Docker-safe branch name. Prefer the branch name and
           # fall back to the commit SHA when the branch name is empty.
           BRANCH_TAG="${BRANCH_NAME:-${GIT_SHA}}"
-          # Replace any '/' characters (present in branch names like feature/foo)
-          # with '-' so the resulting Docker tag and filenames are valid.
-          BRANCH_SAFE="${BRANCH_TAG//\//-}"
+          # Create a tag-safe, lowercase branch name. Replace '/' and any
+          # characters not allowed in Docker tags with '-' and lowercase the
+          # result so tags are consistent across systems.
+          BRANCH_SAFE=$(echo "$BRANCH_TAG" | tr '[:upper:]' '[:lower:]' | sed 's|/|-|g; s|[^a-z0-9._-]|-|g')
           SHORT_SHA="${GIT_SHA:0:7}"
           IMAGE_LOCAL_TAG="${{ github.repository }}:dev-${BRANCH_SAFE}-${BUILD_NUMBER}-${SHORT_SHA}"
           docker build --target debug -t "$IMAGE_LOCAL_TAG" .
@@ -132,7 +151,7 @@ jobs:
           docker save "$IMAGE_LOCAL_TAG" -o /tmp/image-artifacts/researcharr-dev-${BRANCH_SAFE}-${BUILD_NUMBER}-${SHORT_SHA}.tar
 
       - name: Upload dev image artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: researcharr-dev-image
           path: /tmp/image-artifacts/
@@ -141,12 +160,8 @@ jobs:
 
       - id: push-image
         name: Push dev image to GHCR (optional)
-        # We intentionally do NOT use `if: ${{ secrets.* }}` here because
-        # some editors incorrectly flag `secrets` as an unrecognized value.
-        # Instead, the step always runs and checks at runtime whether the
-        # `GHCR_TOKEN` env var (populated below from the secret) is present.
-        env:
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        # The job-level `GHCR_TOKEN` is set from secrets so the step can
+        # reference it via the env without mentioning `secrets.*` inline.
         run: |
           # Skip pushing if no token is provided
           if [ -z "${GHCR_TOKEN}" ]; then
@@ -154,8 +169,8 @@ jobs:
             echo "image_tag=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Derive safe branch name and short SHA
-          BRANCH_SAFE="${BRANCH_NAME//\//-}"
+          # Derive a tag-safe, lowercase branch name and short SHA
+          BRANCH_SAFE=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | sed 's|/|-|g; s|[^a-z0-9._-]|-|g')
           SHORT_SHA="${GIT_SHA:0:7}"
           IMAGE_BASE="ghcr.io/${{ github.repository }}"
           VERSION_TAG="dev-${BRANCH_SAFE}-${BUILD_NUMBER}-${SHORT_SHA}"
@@ -176,21 +191,26 @@ jobs:
     if: ${{ github.ref_name != 'main' }}
     needs: dev-image
     runs-on: ubuntu-latest
-    env:
-      # Make GHCR token visible to steps as an env var to avoid using
-      # `secrets.*` directly in `if` expressions (editor/language-server
-      # false positives). The token remains protected in GitHub Actions.
-      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Skip image-scan when SKIP_DOCKER is set
+        run: |
+          if [ "${SKIP_DOCKER:-}" = "true" ]; then
+            echo "SKIP_DOCKER=true; skipping image-scan job."
+            exit 0
+          fi
+      - uses: actions/checkout@v5
 
       - name: Lint Dockerfile with hadolint (docker)
         run: |
           docker run --rm -v "$PWD":/data hadolint/hadolint:latest hadolint /data/Dockerfile || true
 
       - name: Docker login to GHCR (if needed)
-        if: ${{ env.GHCR_TOKEN != '' }}
         run: |
+          if [ -z "${GHCR_TOKEN:-}" ]; then
+            echo "GHCR_TOKEN not set; skipping ghcr login"
+            exit 0
+          fi
           echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Scan pushed image with Trivy

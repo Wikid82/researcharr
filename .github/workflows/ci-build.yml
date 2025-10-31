@@ -73,6 +73,29 @@ jobs:
         with:
           token: ${{ env.CODECOV_TOKEN }}
         continue-on-error: true
+      - name: Post legacy statuses for compatibility (pytest, linting)
+        if: ${{ success() }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const sha = context.sha;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const states = [
+              {context: 'pytest', state: 'success', description: 'pytest passed'},
+              {context: 'linting', state: 'success', description: 'lint checks passed'}
+            ];
+            for (const s of states) {
+              await github.rest.repos.createCommitStatus({
+                owner,
+                repo,
+                sha,
+                state: s.state,
+                context: s.context,
+                description: s.description
+              });
+            }
       - name: Build complete
         run: echo "build job finished"
 

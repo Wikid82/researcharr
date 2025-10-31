@@ -60,7 +60,7 @@ if not _looks_ok(_impl):
     except Exception:
         # Non-fatal here; we'll raise an informative ImportError later if
         # callers try to use the exported symbols.
-        _impl = _impl
+        pass
 
 
 # Helper that raises a clear error if the implementation couldn't be

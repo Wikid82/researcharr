@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Run the repository venv-based pre-commit wrapper before pushing.
+# This ensures formatting/linting is applied across all files, not just
+# staged files. If the hook exits non-zero, the push will be aborted.
+
+ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
+echo "Running pre-push checks (pre-commit --all-files) from $ROOT_DIR"
+bash "$ROOT_DIR/scripts/run_precommit.sh"
+
+exit 0

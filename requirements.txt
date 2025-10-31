@@ -20,4 +20,3 @@ types-Markdown
 python-json-logger
 APScheduler
 pytest
-pytest-cov

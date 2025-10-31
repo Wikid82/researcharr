@@ -18,6 +18,10 @@ test:
 	# Run the local pytest suite
 	python -m pytest -q
 
+precommit:
+	@echo "Running pre-commit inside project venv"
+	./scripts/run_precommit.sh
+
 stop:
 	# Stop and remove the development stack
 	docker compose -f docker-compose.feat.yml down

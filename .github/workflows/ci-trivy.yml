@@ -42,7 +42,7 @@ jobs:
             aquasec/trivy:latest image --exit-code 1 --severity HIGH,CRITICAL researcharr-ci:${{ github.run_id }} || true
 
       - name: Upload Trivy report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: trivy-report-${{ github.run_id }}
           path: trivy-report.json

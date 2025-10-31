@@ -42,7 +42,7 @@ jobs:
           echo "ghcr.io/wikid82/researcharr:debug-${{ github.sha }}" > debug-image-tag.txt
 
       - name: Upload debug image tag as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: debug-image-tag
           path: debug-image-tag.txt

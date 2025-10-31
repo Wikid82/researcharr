@@ -41,7 +41,7 @@ jobs:
             aquasec/trivy:latest image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL researcharr-weekly:${{ github.run_id }} || true
 
       - name: Upload weekly Trivy report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: trivy-weekly-${{ github.run_id }}
           path: trivy-weekly-${{ github.run_id }}.json

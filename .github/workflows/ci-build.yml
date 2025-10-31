@@ -133,7 +133,7 @@ jobs:
           docker save "$IMAGE_LOCAL_TAG" -o /tmp/image-artifacts/researcharr-dev-${BRANCH_SAFE}-${BUILD_NUMBER}-${SHORT_SHA}.tar
 
       - name: Upload dev image artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: researcharr-dev-image
           path: /tmp/image-artifacts/

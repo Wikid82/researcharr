@@ -184,9 +184,3 @@ Notes: These plugins are experimental and intended for development and UI testin
 
 - Added `scripts/bootstrap-config.sh` — helper to copy repository example config files into a host `./config` directory and set ownership (PUID/PGID). This simplifies first-run bootstrapping when mounting a host config directory.
 - Clarified example config handling: runtime values such as `PUID`, `PGID` and `TIMEZONE` are now configured via environment variables; plugin instances (Radarr/Sonarr) live under `/config/plugins/<plugin>.yml` and are managed by the Plugins UI/API.
-
-
-
----
-
-For previous changes, see the project commit history.

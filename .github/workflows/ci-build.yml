@@ -1,8 +1,12 @@
 name: CI — Build
 
 on:
-  push: {}
   pull_request: {}
+  push:
+    branches:
+      - main
+      - development
+      - nightly
 
 jobs:
   build:

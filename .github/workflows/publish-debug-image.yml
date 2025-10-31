@@ -2,9 +2,8 @@ name: Publish debug image
 
 on:
   push:
+    # Build/push debug images on branch pushes only (no pull_request runs)
     branches-ignore: [ main ]
-  pull_request:
-    branches: [ '**' ]
 
 jobs:
   build-and-push:

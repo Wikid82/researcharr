@@ -25,16 +25,16 @@ for py_cmd in "${PYTHON_VERSIONS[@]}"; do
     if command -v "$py_cmd" &> /dev/null; then
         # Get the actual Python version to avoid testing the same interpreter twice
         py_version=$($py_cmd -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "unknown")
-        
+
         # Skip if we've already tested this version
         if [[ " ${TESTED_INTERPRETERS[*]} " =~ " ${py_version} " ]]; then
             echo -e "  ${YELLOW}⚠ $py_cmd (Python $py_version) already tested${NC}"
             continue
         fi
-        
+
         echo -e "Testing with ${YELLOW}$py_cmd${NC} (Python $py_version)..."
         TESTED_INTERPRETERS+=("$py_version")
-        
+
         # Test basic import and syntax
         if $py_cmd -c "
 import sys

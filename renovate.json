@@ -1,4 +1,5 @@
 {
- "extends": ["config:base"],
- "baseBranch": "development"
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "baseBranches": ["development"]
 }

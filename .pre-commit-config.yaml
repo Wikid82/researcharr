@@ -44,6 +44,15 @@ repos:
       - id: yamllint
         stages: [pre-commit]
 
+  # Security linting with bandit
+  - repo: https://github.com/PyCQA/bandit
+    rev: "1.8.6"
+    hooks:
+      - id: bandit
+        args: ["-c", ".bandit.yaml", "-r", "."]
+        additional_dependencies: ["pbr"]
+        stages: [pre-commit]
+
   # Note: shellcheck integration omitted because the shellcheck mirror
   # pre-commit hook is not available in this environment. You can add
   # a shellcheck hook later (for example via a maintained pre-commit

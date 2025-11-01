@@ -18,6 +18,7 @@ env:
 
 jobs:
   build:
+    name: "Build & Test (Python ${{ matrix.python-version }})"
     runs-on: ubuntu-latest
     env:
       # Initialize common runtime values with GitHub expressions so static
@@ -37,15 +38,17 @@ jobs:
       # against an isolated file in the workspace.
       DATABASE_URL: "sqlite:///${{ github.workspace }}/researcharr-test.db"
     strategy:
+      fail-fast: false
       matrix:
-        python-version: [ 3.13 ]
+        python-version: [ "3.9", "3.10", "3.11", "3.12", "3.13" ]
     steps:
     - name: Cache pip
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}-
           ${{ runner.os }}-pip-
 
     - uses: actions/checkout@v5
@@ -64,7 +67,7 @@ jobs:
           pip install -r requirements-dev.txt
         else
           # Fallback if the dev file is not present
-          pip install black==25.9.0 isort==5.12.0 flake8 mypy pytest pytest-cov pre-commit || true
+          pip install black==25.9.0 isort==5.12.0 flake8 mypy pytest pytest-cov bandit pre-commit || true
         fi
         # Ensure setuptools_scm is available so package versions are derived
         # automatically from git metadata.
@@ -91,8 +94,9 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/pre-commit
-        key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+        key: ${{ runner.os }}-pre-commit-${{ matrix.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}
         restore-keys: |
+          ${{ runner.os }}-pre-commit-${{ matrix.python-version }}-
           ${{ runner.os }}-pre-commit-
 
     - name: Run pre-commit hooks
@@ -100,8 +104,13 @@ jobs:
         python -m pip install --upgrade pip
         pip install pre-commit
         # Run the configured hooks across the repository so CI matches local
-        # developer pre-commit runs (this includes black, ruff, isort, mypy, yamllint, etc.).
+        # developer pre-commit runs (this includes black, ruff, isort, mypy, yamllint, bandit, etc.).
         pre-commit run --all-files
+    - name: Run security checks with bandit
+      run: |
+        # Run bandit security linter explicitly for visibility in CI logs
+        bandit -c .bandit.yaml -r . --format json --output bandit-report.json || true
+        bandit -c .bandit.yaml -r . || true
     - name: Run tests with pytest
       # Ensure pytest prefers the installed package in site-packages over
       # any top-level module file in the repo (e.g. researcharr.py), which can
@@ -132,8 +141,14 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v5
       with:
-        name: coverage-xml
+        name: coverage-xml-python-${{ matrix.python-version }}
         path: coverage.xml
+    - name: Upload bandit security report
+      if: always()
+      uses: actions/upload-artifact@v5
+      with:
+        name: bandit-report-python-${{ matrix.python-version }}
+        path: bandit-report.json
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       with:

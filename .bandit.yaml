@@ -1,0 +1,18 @@
+# Configuration for bandit security linter
+# https://bandit.readthedocs.io/en/latest/config.html
+
+exclude_dirs:
+  - 'tests'
+  - '*test*'
+  - '.tox'
+  - '.venv'
+  - 'venv'
+  - 'build'
+  - 'dist'
+  - '__pycache__'
+
+# Test IDs to skip (uncomment to use)
+skips:
+  - 'B110'  # Test for try/except pass - common pattern in this codebase
+  - 'B112'  # Test for try/except continue - common pattern in this codebase
+  - 'B101'  # Test for use of assert - used in type checking patterns

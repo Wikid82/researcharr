@@ -28,7 +28,7 @@ pyflakes==3.4.0
 Pygments==2.19.2
 pytest==8.4.2
 pytest-cov==7.0.0
-python-dotenv==1.1.0
+python-dotenv==1.2.1
 python-json-logger==4.0.0
 pytokens==0.2.0
 PyYAML==6.0.3

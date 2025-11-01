@@ -38,10 +38,7 @@ except Exception:
 def _looks_ok(m: object | None) -> bool:
     return bool(
         m
-        and all(
-            getattr(m, n, None) is not None
-            for n in ("run_job", "main", "LOG_PATH", "SCRIPT")
-        )
+        and all(getattr(m, n, None) is not None for n in ("run_job", "main", "LOG_PATH", "SCRIPT"))
     )
 
 
@@ -50,9 +47,7 @@ if not _looks_ok(_impl):
         pkg_dir = os.path.join(os.path.dirname(__file__), "researcharr")
         pkg_run = os.path.join(pkg_dir, "run.py")
         if os.path.isfile(pkg_run):
-            spec = importlib.util.spec_from_file_location(
-                "researcharr._run_impl", pkg_run
-            )
+            spec = importlib.util.spec_from_file_location("researcharr._run_impl", pkg_run)
             if spec and spec.loader:
                 mod = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(mod)  # type: ignore[arg-type]
@@ -112,9 +107,7 @@ def run_job(*args, **kwargs):
                         if not hasattr(val, "PIPE"):
                             setattr(val, "PIPE", _stdlib_subprocess.PIPE)
                         if not hasattr(val, "TimeoutExpired"):
-                            setattr(
-                                val, "TimeoutExpired", _stdlib_subprocess.TimeoutExpired
-                            )
+                            setattr(val, "TimeoutExpired", _stdlib_subprocess.TimeoutExpired)
                     except Exception:
                         pass
                 setattr(_impl, _name, val)
@@ -248,9 +241,7 @@ try:
     repo_root = os.path.abspath(os.path.join(here, os.pardir))
     scripts_run = os.path.join(repo_root, "scripts", "run.py")
     if os.path.isfile(scripts_run):
-        spec = importlib.util.spec_from_file_location(
-            "researcharr._scripts_run", scripts_run
-        )
+        spec = importlib.util.spec_from_file_location("researcharr._scripts_run", scripts_run)
         if spec and spec.loader:
             _scripts_mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(_scripts_mod)  # type: ignore[arg-type]

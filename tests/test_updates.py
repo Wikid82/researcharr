@@ -98,9 +98,7 @@ def test_updates_ignore_and_unignore(tmp_path, monkeypatch):
     client = login_client(app)
 
     # ignore a specific release
-    r = client.post(
-        "/api/updates/ignore", json={"mode": "release", "release_tag": "v9"}
-    )
+    r = client.post("/api/updates/ignore", json={"mode": "release", "release_tag": "v9"})
     assert r.status_code == 200
     j = r.get_json()
     assert j.get("result") == "ok"

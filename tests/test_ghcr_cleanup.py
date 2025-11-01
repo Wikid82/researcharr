@@ -1,9 +1,7 @@
 import json
 import os
 
-SCRIPT = os.path.join(
-    os.path.dirname(__file__), "..", ".github", "scripts", "ghcr_cleanup.py"
-)
+SCRIPT = os.path.join(os.path.dirname(__file__), "..", ".github", "scripts", "ghcr_cleanup.py")
 
 
 def _fake_response(json_data, status_code=200):
@@ -117,9 +115,7 @@ def test_dry_run_writes_report(monkeypatch, tmp_path):
     }
 
     # run the script (it defaults to dry-run)
-    run_script_capture(
-        monkeypatch, tmp_path, fake_get, fake_delete, env=env, args=["--dry-run"]
-    )
+    run_script_capture(monkeypatch, tmp_path, fake_get, fake_delete, env=env, args=["--dry-run"])
 
     report = tmp_path / "report.json"
     if not report.exists():
@@ -230,9 +226,7 @@ def test_deletion_calls_delete_endpoint(monkeypatch, tmp_path):
         "DRY_RUN": "false",
     }
 
-    run_script_capture(
-        monkeypatch, tmp_path, fake_get, fake_delete, env=env, args=["--no-dry-run"]
-    )
+    run_script_capture(monkeypatch, tmp_path, fake_get, fake_delete, env=env, args=["--no-dry-run"])
     report = tmp_path / "report.json"
     if not report.exists():
         print(f"DEBUG: Contents of {tmp_path}: {list(tmp_path.iterdir())}")

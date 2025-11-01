@@ -46,9 +46,7 @@ def test_radarr_save_and_reload(client):
         "max_download_queue": 20,
         "reprocess_interval_days": 3,
     }
-    rv = client.post(
-        "/api/plugins/radarr/instances", json={"action": "add", "instance": inst}
-    )
+    rv = client.post("/api/plugins/radarr/instances", json={"action": "add", "instance": inst})
     assert rv.status_code == 200
     assert rv.is_json and rv.json.get("result") == "ok"
     # verify via API listing
@@ -89,9 +87,7 @@ def test_sonarr_save_and_reload(client):
         "max_download_queue": 12,
         "reprocess_interval_days": 2,
     }
-    rv = client.post(
-        "/api/plugins/sonarr/instances", json={"action": "add", "instance": inst}
-    )
+    rv = client.post("/api/plugins/sonarr/instances", json={"action": "add", "instance": inst})
     assert rv.status_code == 200 and rv.is_json and rv.json.get("result") == "ok"
     pr = client.get("/api/plugins")
     assert pr.status_code == 200
@@ -164,17 +160,11 @@ def test_radarr_multiple_instances(client):
         "url": "http://localhost:7879",
         "api_key": "key2",
     }
-    r0 = client.post(
-        "/api/plugins/radarr/instances", json={"action": "add", "instance": inst0}
-    )
-    r1 = client.post(
-        "/api/plugins/radarr/instances", json={"action": "add", "instance": inst1}
-    )
+    r0 = client.post("/api/plugins/radarr/instances", json={"action": "add", "instance": inst0})
+    r1 = client.post("/api/plugins/radarr/instances", json={"action": "add", "instance": inst1})
     assert r0.status_code == 200 and r1.status_code == 200
     pr = client.get("/api/plugins")
-    rad = next(
-        (p for p in pr.json.get("plugins", []) if p.get("name") == "radarr"), None
-    )
+    rad = next((p for p in pr.json.get("plugins", []) if p.get("name") == "radarr"), None)
     assert rad is not None
     inst_names = [i.get("name") for i in rad.get("instances", [])]
     assert "Radarr1" in inst_names and "Radarr2" in inst_names
@@ -235,9 +225,7 @@ def test_sonarr_multiple_instances(client):
     )
     assert r0.status_code == 200 and r1.status_code == 200
     pr = client.get("/api/plugins")
-    son = next(
-        (p for p in pr.json.get("plugins", []) if p.get("name") == "sonarr"), None
-    )
+    son = next((p for p in pr.json.get("plugins", []) if p.get("name") == "sonarr"), None)
     assert son is not None
     inst_names = [i.get("name") for i in son.get("instances", [])]
     assert "Sonarr1" in inst_names and "Sonarr2" in inst_names
@@ -260,14 +248,10 @@ def test_radarr_api_pulls_and_state_mgmt(client):
         "radarr0_reprocess_interval_days": 2,
     }
     client.post("/settings/radarr", data=data, follow_redirects=True)
-    rv = client.post(
-        "/api/plugins/radarr/instances", json={"action": "add", "instance": data}
-    )
+    rv = client.post("/api/plugins/radarr/instances", json={"action": "add", "instance": data})
     assert rv.status_code == 200 and rv.is_json and rv.json.get("result") == "ok"
     pr = client.get("/api/plugins")
-    rad = next(
-        (p for p in pr.json.get("plugins", []) if p.get("name") == "radarr"), None
-    )
+    rad = next((p for p in pr.json.get("plugins", []) if p.get("name") == "radarr"), None)
     assert rad is not None
     assert any(i.get("name") == "RadarrAPI" for i in rad.get("instances", []))
     # check numeric field present
@@ -292,14 +276,10 @@ def test_sonarr_api_pulls_and_state_mgmt(client):
         "sonarr0_reprocess_interval_days": 2,
     }
     rv = client.post("/settings/sonarr", data=data, follow_redirects=True)
-    rv = client.post(
-        "/api/plugins/sonarr/instances", json={"action": "add", "instance": data}
-    )
+    rv = client.post("/api/plugins/sonarr/instances", json={"action": "add", "instance": data})
     assert rv.status_code == 200 and rv.is_json and rv.json.get("result") == "ok"
     pr = client.get("/api/plugins")
-    son = next(
-        (p for p in pr.json.get("plugins", []) if p.get("name") == "sonarr"), None
-    )
+    son = next((p for p in pr.json.get("plugins", []) if p.get("name") == "sonarr"), None)
     assert son is not None
     assert any(i.get("name") == "SonarrAPI" for i in son.get("instances", []))
 
@@ -333,9 +313,7 @@ def test_validate_sonarr_endpoint_missing_url(client):
         "sonarr0_reprocess_interval_days": 2,
     }
     # Use plugin API to add invalid instance and expect validation error
-    rv = client.post(
-        "/api/plugins/sonarr/instances", json={"action": "add", "instance": data}
-    )
+    rv = client.post("/api/plugins/sonarr/instances", json={"action": "add", "instance": data})
     assert rv.status_code == 400
     assert rv.is_json and ("error" in rv.json)
 
@@ -358,8 +336,6 @@ def test_validate_sonarr_endpoint_missing_key(client):
         "sonarr0_max_download_queue": 10,
         "sonarr0_reprocess_interval_days": 2,
     }
-    rv = client.post(
-        "/api/plugins/sonarr/instances", json={"action": "add", "instance": data}
-    )
+    rv = client.post("/api/plugins/sonarr/instances", json={"action": "add", "instance": data})
     assert rv.status_code == 400
     assert rv.is_json and ("error" in rv.json)

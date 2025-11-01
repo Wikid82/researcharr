@@ -59,9 +59,7 @@ def create_app() -> Flask:
     repo_templates = os.path.abspath(
         os.path.join(os.path.dirname(__file__), os.pardir, "templates")
     )
-    package_templates = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "templates")
-    )
+    package_templates = os.path.abspath(os.path.join(os.path.dirname(__file__), "templates"))
     if os.path.isdir(repo_templates):
         templates_path = repo_templates
     else:
@@ -111,21 +109,14 @@ def create_app() -> Flask:
         # Will be visible in logs once the app logger is configured; use
         # print as a fallback in early startup paths.
         try:
-            print(
-                (
-                    "WARNING: using insecure default SECRET_KEY; "
-                    "set SECRET_KEY in production"
-                )
-            )
+            print(("WARNING: using insecure default SECRET_KEY; " "set SECRET_KEY in production"))
         except Exception:
             pass
     app.secret_key = secret
 
     # Session cookie configuration — configurable via env vars but default
     # to secure settings suitable for production behind TLS.
-    app.config["SESSION_COOKIE_SECURE"] = os.getenv(
-        "SESSION_COOKIE_SECURE", "true"
-    ).lower() in (
+    app.config["SESSION_COOKIE_SECURE"] = os.getenv("SESSION_COOKIE_SECURE", "true").lower() in (
         "1",
         "true",
         "yes",
@@ -181,9 +172,7 @@ def create_app() -> Flask:
                 app.config_data.setdefault("tasks", {}).update(tcfg)
             except Exception:
                 try:
-                    app.logger.exception(
-                        "Failed to load tasks settings %s", tasks_cfg_file
-                    )
+                    app.logger.exception("Failed to load tasks settings %s", tasks_cfg_file)
                 except Exception:
                     pass
     except Exception:
@@ -203,9 +192,7 @@ def create_app() -> Flask:
                     )
             except Exception:
                 try:
-                    app.logger.exception(
-                        "Failed to load general settings %s", general_cfg_file
-                    )
+                    app.logger.exception("Failed to load general settings %s", general_cfg_file)
                 except Exception:
                     pass
     except Exception:
@@ -256,8 +243,8 @@ def create_app() -> Flask:
             # persist a migration.
             try:
                 if "api_key_hash" in ucfg:
-                    app.config_data.setdefault("general", {})["api_key_hash"] = (
-                        ucfg.get("api_key_hash")
+                    app.config_data.setdefault("general", {})["api_key_hash"] = ucfg.get(
+                        "api_key_hash"
                     )
                 elif "api_key" in ucfg:
                     # legacy plaintext key found; hash and persist migration
@@ -271,13 +258,9 @@ def create_app() -> Flask:
                                 ucfg.get("password_hash"),
                                 api_key_hash=hashed,
                             )
-                            app.config_data.setdefault("general", {})[
-                                "api_key_hash"
-                            ] = hashed
+                            app.config_data.setdefault("general", {})["api_key_hash"] = hashed
                     except Exception:
-                        app.logger.exception(
-                            "Failed to migrate plaintext api_key to api_key_hash"
-                        )
+                        app.logger.exception("Failed to migrate plaintext api_key to api_key_hash")
             except Exception:
                 # best-effort; don't fail startup on migration errors
                 pass
@@ -368,9 +351,7 @@ def create_app() -> Flask:
                             # Set in-memory config_data so UI and APIs use it
                             app.config_data[name] = data
                     except Exception:
-                        app.logger.exception(
-                            "Failed to load plugin config %s", cfg_file
-                        )
+                        app.logger.exception("Failed to load plugin config %s", cfg_file)
         except Exception:
             # best-effort; don't prevent startup if config path is unwritable
             app.logger.debug(
@@ -606,9 +587,7 @@ def create_app() -> Flask:
                 # Persist to file if webui.save_user_config is available
                 try:
                     pwd_hash = generate_password_hash(password)
-                    webui.save_user_config(
-                        app.config_data["user"]["username"], pwd_hash
-                    )
+                    webui.save_user_config(app.config_data["user"]["username"], pwd_hash)
                 except Exception:
                     # best-effort persistence; ignore failures here
                     pass
@@ -719,9 +698,7 @@ def create_app() -> Flask:
         # allow overriding log path via env
         app_log = os.getenv(
             "WEBUI_LOG",
-            os.path.abspath(
-                os.path.join(os.path.dirname(__file__), os.pardir, "app.log")
-            ),
+            os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "app.log")),
         )
         # optional query params
         try:
@@ -773,9 +750,7 @@ def create_app() -> Flask:
         config_root = os.getenv("CONFIG_DIR", "/config")
         hist_file = os.path.join(config_root, "task_history.jsonl")
         limit = int(
-            request.args.get(
-                "limit", app.config_data.get("tasks", {}).get("show_count", 20)
-            )
+            request.args.get("limit", app.config_data.get("tasks", {}).get("show_count", 20))
         )
         offset = int(request.args.get("offset", 0))
         status_filter = request.args.get("status")  # e.g., 'failed'
@@ -791,11 +766,7 @@ def create_app() -> Flask:
                         if not line:
                             continue
                         try:
-                            rec = (
-                                yaml.safe_load(line)
-                                if line.lstrip().startswith("-")
-                                else None
-                            )
+                            rec = yaml.safe_load(line) if line.lstrip().startswith("-") else None
                         except Exception:
                             rec = None
                         if rec is None:
@@ -814,24 +785,16 @@ def create_app() -> Flask:
                         if status_filter == "failed":
                             if not (
                                 r.get("success") is False
-                                or (
-                                    r.get("returncode") is not None
-                                    and r.get("returncode") != 0
-                                )
+                                or (r.get("returncode") is not None and r.get("returncode") != 0)
                                 or r.get("stderr")
                             ):
                                 return False
                         # other status types may be added
                     if search_text:
-                        target = (
-                            (r.get("stdout", "") or "")
-                            + "\n"
-                            + (r.get("stderr", "") or "")
-                        )
+                        target = (r.get("stdout", "") or "") + "\n" + (r.get("stderr", "") or "")
                         if (
                             search_text.lower() not in target.lower()
-                            and search_text.lower()
-                            not in str(r.get("start_ts", "")).lower()
+                            and search_text.lower() not in str(r.get("start_ts", "")).lower()
                         ):
                             return False
                     return True
@@ -858,9 +821,7 @@ def create_app() -> Flask:
             return ("", 401)
         app_log = os.getenv(
             "WEBUI_LOG",
-            os.path.abspath(
-                os.path.join(os.path.dirname(__file__), os.pardir, "app.log")
-            ),
+            os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "app.log")),
         )
         try:
             initial_lines = int(request.args.get("lines", 200))
@@ -959,11 +920,7 @@ def create_app() -> Flask:
                 instances = app.config_data.get(name, [])
                 cls = registry.get(name)
                 # Prefer a class-level category attribute, default to 'plugins'
-                category = (
-                    getattr(cls, "category", "plugins")
-                    if cls is not None
-                    else "plugins"
-                )
+                category = getattr(cls, "category", "plugins") if cls is not None else "plugins"
                 description = getattr(cls, "description", "") if cls is not None else ""
                 docs_url = getattr(cls, "docs_url", None) if cls is not None else None
                 plugins_by_category.setdefault(category, []).append(
@@ -1090,9 +1047,7 @@ def create_app() -> Flask:
             if not result:
                 try:
                     if pmetrics is not None:
-                        pmetrics["validate_errors"] = (
-                            pmetrics.get("validate_errors", 0) + 1
-                        )
+                        pmetrics["validate_errors"] = pmetrics.get("validate_errors", 0) + 1
                         pmetrics["last_error"] = int(time.time())
                         pmetrics["last_error_msg"] = "validation returned falsy"
                 except Exception:
@@ -1318,9 +1273,7 @@ def create_app() -> Flask:
             # app.log in repository root or env override
             app_log = os.getenv(
                 "WEBUI_LOG",
-                os.path.abspath(
-                    os.path.join(os.path.dirname(__file__), os.pardir, "app.log")
-                ),
+                os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "app.log")),
             )
             if os.path.exists(app_log):
                 st = os.stat(app_log)
@@ -1492,12 +1445,7 @@ def create_app() -> Flask:
             app.config_data[plugin_name] = instances
         elif action == "update":
             idx = data.get("idx")
-            if (
-                idx is None
-                or not isinstance(idx, int)
-                or idx < 0
-                or idx >= len(instances)
-            ):
+            if idx is None or not isinstance(idx, int) or idx < 0 or idx >= len(instances):
                 return jsonify({"error": "invalid_instance"}), 400
             inst = data.get("instance") or {}
             ok, err = _validate_instance(inst)
@@ -1507,12 +1455,7 @@ def create_app() -> Flask:
             app.config_data[plugin_name] = instances
         elif action == "delete":
             idx = data.get("idx")
-            if (
-                idx is None
-                or not isinstance(idx, int)
-                or idx < 0
-                or idx >= len(instances)
-            ):
+            if idx is None or not isinstance(idx, int) or idx < 0 or idx >= len(instances):
                 return jsonify({"error": "invalid_instance"}), 400
             instances.pop(idx)
             app.config_data[plugin_name] = instances
@@ -1528,9 +1471,7 @@ def create_app() -> Flask:
             with open(cfg_file, "w") as fh:
                 yaml.safe_dump(app.config_data.get(plugin_name, []), fh)
         except Exception:
-            app.logger.exception(
-                "Failed to persist plugin instances for %s", plugin_name
-            )
+            app.logger.exception("Failed to persist plugin instances for %s", plugin_name)
             # don't fail the request; inform the client
             return jsonify({"result": "ok", "warning": "persist_failed"}), 200
 
@@ -1781,9 +1722,7 @@ def create_app() -> Flask:
         except Exception:
             # Don't fail the request if persistence fails; return ok but
             # include a warning for callers that persistence didn't work.
-            return jsonify(
-                {"result": "ok", "tasks": tasks_cfg, "warning": "persist_failed"}
-            )
+            return jsonify({"result": "ok", "tasks": tasks_cfg, "warning": "persist_failed"})
 
         return jsonify({"result": "ok", "tasks": tasks_cfg})
 
@@ -1806,9 +1745,7 @@ def create_app() -> Flask:
                 fpath = os.path.join(backups_dir, fname)
                 try:
                     st = os.stat(fpath)
-                    files.append(
-                        {"name": fname, "size": st.st_size, "mtime": int(st.st_mtime)}
-                    )
+                    files.append({"name": fname, "size": st.st_size, "mtime": int(st.st_mtime)})
                 except Exception:
                     continue
             return jsonify({"backups": files})
@@ -1816,9 +1753,7 @@ def create_app() -> Flask:
             app.logger.exception("Failed to list backups: %s", e)
             return jsonify({"error": "failed_to_list"}), 500
 
-    def _create_backup_file(
-        config_root: str, backups_dir: str, prefix: str = ""
-    ) -> str | None:
+    def _create_backup_file(config_root: str, backups_dir: str, prefix: str = "") -> str | None:
         """Wrapper around shared create_backup_file helper.
 
         Keeps the old internal name for backwards compatibility within this
@@ -1947,9 +1882,7 @@ def create_app() -> Flask:
             try:
                 pre_cfg = app.config_data.get("backups", {})
                 if bool(pre_cfg.get("pre_restore", True)):
-                    pre_name = _create_backup_file(
-                        config_root, backups_dir, prefix="pre-"
-                    )
+                    pre_name = _create_backup_file(config_root, backups_dir, prefix="pre-")
                     try:
                         _prune_backups(backups_dir)
                     except Exception:
@@ -2027,9 +1960,7 @@ def create_app() -> Flask:
                 yaml.safe_dump(backups_cfg, fh)
         except Exception:
             app.logger.exception("Failed to persist backups settings")
-            return jsonify(
-                {"result": "ok", "warning": "persist_failed", "backups": backups_cfg}
-            )
+            return jsonify({"result": "ok", "warning": "persist_failed", "backups": backups_cfg})
 
         return jsonify({"result": "ok", "backups": backups_cfg})
 
@@ -2230,14 +2161,8 @@ def create_app() -> Flask:
                         ignore_reason = "ignored_until"
                 except Exception:
                     pass
-            if (
-                not is_ignored
-                and "ignored_release" in ucfg
-                and ucfg.get("ignored_release")
-            ):
-                if latest.get("tag_name") and ucfg.get("ignored_release") == latest.get(
-                    "tag_name"
-                ):
+            if not is_ignored and "ignored_release" in ucfg and ucfg.get("ignored_release"):
+                if latest.get("tag_name") and ucfg.get("ignored_release") == latest.get("tag_name"):
                     is_ignored = True
                     ignore_reason = "ignored_release"
         except Exception:

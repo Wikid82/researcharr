@@ -31,7 +31,7 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     strategy:
       matrix:
-        python-version: [3.13]
+        python-version: [3.11, 3.12, 3.13, 3.14]
     steps:
       - uses: actions/checkout@v5
       - name: Set up Python
@@ -123,11 +123,13 @@ jobs:
           fi
       - uses: actions/checkout@v5
       - name: Populate GHCR_TOKEN into environment (if set)
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
           # Write secret into runtime environment so steps can use env.GHCR_TOKEN
           # without referencing secrets.* in step-level mappings or if expressions.
-          if [ -n "${{ secrets.GHCR_TOKEN }}" ]; then
-            echo "GHCR_TOKEN=${{ secrets.GHCR_TOKEN }}" >> "$GITHUB_ENV"
+          if [ -n "${GHCR_TOKEN}" ]; then
+            echo "GHCR_TOKEN=${GHCR_TOKEN}" >> "$GITHUB_ENV"
           fi
 
       - name: Set up Docker Buildx

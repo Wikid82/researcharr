@@ -6,9 +6,7 @@ from researcharr.factory import create_app
 def test_docs_require_api_key():
     app = create_app()
     token = "docstestkey"
-    app.config_data.setdefault("general", {})["api_key_hash"] = generate_password_hash(
-        token
-    )
+    app.config_data.setdefault("general", {})["api_key_hash"] = generate_password_hash(token)
 
     client = app.test_client()
 

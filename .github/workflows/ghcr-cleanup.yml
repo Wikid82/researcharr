@@ -41,7 +41,7 @@ jobs:
           # Use the built-in GITHUB_TOKEN by default (repo permissions set above
           # include `packages: write`). If you prefer a personal access token,
           # create a repository secret named `GHCR_PAT` and set the value here
-          # to `${{ secrets.GHCR_PAT }}` instead.
+          # to `secrets.GHCR_PAT` instead.
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name || github.repository }}

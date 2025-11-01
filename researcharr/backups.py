@@ -32,9 +32,7 @@ def _delegate_to_top_level(name: str, *args, **kwargs):
         try:
             import importlib.util
 
-            repo_root = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), os.pardir)
-            )
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
             candidate = os.path.join(repo_root, "backups.py")
             spec = importlib.util.spec_from_file_location("backups", candidate)
             if spec is None or spec.loader is None:

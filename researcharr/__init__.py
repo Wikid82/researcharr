@@ -142,9 +142,7 @@ for _mname in ("factory", "run", "webui", "backups", "api"):
     _path = os.path.join(_repo_root, f"{_mname}.py")
     if os.path.isfile(_path):
         try:
-            spec = importlib.util.spec_from_file_location(
-                "researcharr." + _mname, _path
-            )
+            spec = importlib.util.spec_from_file_location("researcharr." + _mname, _path)
             if spec and spec.loader:
                 mod = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(mod)  # type: ignore[arg-type]

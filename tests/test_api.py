@@ -7,9 +7,7 @@ def test_api_requires_key_and_returns_plugins():
     from werkzeug.security import generate_password_hash
 
     token = "testkey"
-    app.config_data.setdefault("general", {})["api_key_hash"] = generate_password_hash(
-        token
-    )
+    app.config_data.setdefault("general", {})["api_key_hash"] = generate_password_hash(token)
 
     client = app.test_client()
 

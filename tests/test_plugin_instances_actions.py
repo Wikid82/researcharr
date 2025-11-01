@@ -67,9 +67,7 @@ def test_plugin_instances_add_update_delete_and_persist(tmp_path, monkeypatch):
     assert persisted2[0].get("url") == new_inst["url"]
 
     # delete the instance
-    r4 = client.post(
-        f"/api/plugins/{plugin_name}/instances", json={"action": "delete", "idx": 0}
-    )
+    r4 = client.post(f"/api/plugins/{plugin_name}/instances", json={"action": "delete", "idx": 0})
     assert r4.status_code == 200
     assert r4.get_json().get("result") == "ok"
     persisted3 = yaml.safe_load(p.read_text())

@@ -12,9 +12,7 @@ def patch_config_paths(tmp_path_factory, monkeypatch):
     temp_dir = tmp_path_factory.mktemp("config")
     # Patch all /config paths before importing app
     monkeypatch.setenv("TZ", "America/New_York")
-    monkeypatch.setattr(
-        "os.environ", {**os.environ, "TZ": "America/New_York"}, raising=False
-    )
+    monkeypatch.setattr("os.environ", {**os.environ, "TZ": "America/New_York"}, raising=False)
     monkeypatch.setattr(
         "researcharr.researcharr.DB_PATH",
         str(temp_dir / "researcharr.db"),
@@ -106,9 +104,7 @@ def test_radarr_connection_unreachable(monkeypatch):
     from researcharr import researcharr as app
 
     logger = mock.Mock()
-    with mock.patch(
-        "researcharr.researcharr.requests.get", side_effect=Exception("unreachable")
-    ):
+    with mock.patch("researcharr.researcharr.requests.get", side_effect=Exception("unreachable")):
         app.check_radarr_connection("http://badhost", "abc", logger)
         logger.error.assert_called()
 
@@ -117,9 +113,7 @@ def test_sonarr_connection_unreachable(monkeypatch):
     from researcharr import researcharr as app
 
     logger = mock.Mock()
-    with mock.patch(
-        "researcharr.researcharr.requests.get", side_effect=Exception("unreachable")
-    ):
+    with mock.patch("researcharr.researcharr.requests.get", side_effect=Exception("unreachable")):
         app.check_sonarr_connection("http://badhost", "abc", logger)
         logger.error.assert_called()
 
@@ -152,9 +146,7 @@ def test_radarr_connection_timeout(monkeypatch):
     logger = mock.Mock()
     import requests
 
-    with mock.patch(
-        "researcharr.researcharr.requests.get", side_effect=requests.Timeout
-    ):
+    with mock.patch("researcharr.researcharr.requests.get", side_effect=requests.Timeout):
         app.check_radarr_connection("http://localhost", "abc", logger)
         logger.error.assert_called()
 
@@ -165,9 +157,7 @@ def test_sonarr_connection_timeout(monkeypatch):
     logger = mock.Mock()
     import requests
 
-    with mock.patch(
-        "researcharr.researcharr.requests.get", side_effect=requests.Timeout
-    ):
+    with mock.patch("researcharr.researcharr.requests.get", side_effect=requests.Timeout):
         app.check_sonarr_connection("http://localhost", "abc", logger)
         logger.error.assert_called()
 
@@ -247,9 +237,7 @@ def test_insert_and_retrieve_radarr_queue(tmp_path, monkeypatch):
         (42, "2025-10-22"),
     )
     conn.commit()
-    cursor.execute(
-        "SELECT movie_id, last_processed FROM radarr_queue WHERE movie_id=42"
-    )
+    cursor.execute("SELECT movie_id, last_processed FROM radarr_queue WHERE movie_id=42")
     row = cursor.fetchone()
     assert row == (42, "2025-10-22")
     conn.close()
@@ -268,9 +256,7 @@ def test_insert_and_retrieve_sonarr_queue(tmp_path, monkeypatch):
         (99, "2025-10-22"),
     )
     conn.commit()
-    cursor.execute(
-        "SELECT episode_id, last_processed FROM sonarr_queue WHERE episode_id=99"
-    )
+    cursor.execute("SELECT episode_id, last_processed FROM sonarr_queue WHERE episode_id=99")
     row = cursor.fetchone()
     assert row == (99, "2025-10-22")
     conn.close()

@@ -66,8 +66,7 @@ def setup_logger(name: str, log_file: str, level: int | None = None):
 
 def has_valid_url_and_key(instances) -> bool:
     return all(
-        not i.get("enabled")
-        or (i.get("url", "").startswith("http") and i.get("api_key"))
+        not i.get("enabled") or (i.get("url", "").startswith("http") and i.get("api_key"))
         for i in instances
     )
 

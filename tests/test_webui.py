@@ -139,18 +139,14 @@ def test_user_settings_page_content(client):
 
 def test_general_settings_save(client):
     login(client)
-    rv = client.post(
-        "/save", data={"puid": "1001", "pgid": "1001"}, follow_redirects=True
-    )
+    rv = client.post("/save", data={"puid": "1001", "pgid": "1001"}, follow_redirects=True)
     assert rv.status_code == 200
     assert b"General" in rv.data or b"Settings" in rv.data
 
 
 def test_user_settings_save_blank_username(client):
     login(client)
-    rv = client.post(
-        "/user", data={"username": "", "password": ""}, follow_redirects=True
-    )
+    rv = client.post("/user", data={"username": "", "password": ""}, follow_redirects=True)
     assert b"cannot be blank" in rv.data or b"User settings" in rv.data
 
 
@@ -182,9 +178,7 @@ def test_radarr_settings_save_invalid(client):
         sess["logged_in"] = True
     # attempt to add an invalid radarr instance via API
     inst = {"enabled": True, "name": "", "url": "", "api_key": ""}
-    rv = client.post(
-        "/api/plugins/radarr/instances", json={"action": "add", "instance": inst}
-    )
+    rv = client.post("/api/plugins/radarr/instances", json={"action": "add", "instance": inst})
     assert rv.status_code == 400
     assert rv.is_json and ("error" in rv.json)
 
@@ -194,8 +188,6 @@ def test_sonarr_settings_save_invalid(client):
     with client.session_transaction() as sess:
         sess["logged_in"] = True
     inst = {"enabled": True, "name": "", "url": "", "api_key": ""}
-    rv = client.post(
-        "/api/plugins/sonarr/instances", json={"action": "add", "instance": inst}
-    )
+    rv = client.post("/api/plugins/sonarr/instances", json={"action": "add", "instance": inst})
     assert rv.status_code == 400
     assert rv.is_json and ("error" in rv.json)

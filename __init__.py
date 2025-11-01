@@ -48,9 +48,7 @@ def _load_by_path(candidates: list[str]) -> Optional[ModuleType]:
             continue
         if os.path.isfile(path):
             try:
-                spec = importlib.util.spec_from_file_location(
-                    "researcharr.researcharr", path
-                )
+                spec = importlib.util.spec_from_file_location("researcharr.researcharr", path)
                 if spec and spec.loader:
                     mod = importlib.util.module_from_spec(spec)
                     # Execute module in its own namespace
@@ -165,9 +163,7 @@ if impl:
         if os.path.isfile(pkg_impl_path):
             # Only reload if the current impl doesn't already come from
             # that path.
-            if os.path.abspath(getattr(impl, "__file__", "")) != os.path.abspath(
-                pkg_impl_path
-            ):
+            if os.path.abspath(getattr(impl, "__file__", "")) != os.path.abspath(pkg_impl_path):
                 name = "researcharr.researcharr"
                 spec = importlib.util.spec_from_file_location(name, pkg_impl_path)
                 if spec and spec.loader:

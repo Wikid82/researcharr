@@ -104,9 +104,9 @@ def test_rendered_templates_links_and_forms(template):
             has_label = False
             if idm:
                 idval = idm.group(1)
-                if re.search(
-                    rf'<label[^>]*for="{re.escape(idval)}"', f, re.I
-                ) or re.search(rf'<label[^>]*for="{re.escape(idval)}"', html, re.I):
+                if re.search(rf'<label[^>]*for="{re.escape(idval)}"', f, re.I) or re.search(
+                    rf'<label[^>]*for="{re.escape(idval)}"', html, re.I
+                ):
                     has_label = True
             # Inputs can also be wrapped by a <label>...</label> element
             if not has_label:

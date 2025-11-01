@@ -76,9 +76,7 @@ def list_packages(owner: str, token: str) -> List[Dict[str, Any]]:
     return packages
 
 
-def list_package_versions(
-    owner: str, package_name: str, token: str
-) -> List[Dict[str, Any]]:
+def list_package_versions(owner: str, package_name: str, token: str) -> List[Dict[str, Any]]:
     headers = get_auth_headers(token)
     versions: List[Dict[str, Any]] = []
     # try org path then user path
@@ -176,9 +174,7 @@ def delete_version(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="GHCR cleanup with dry-run and JSON reporting"
-    )
+    parser = argparse.ArgumentParser(description="GHCR cleanup with dry-run and JSON reporting")
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "--dry-run",
@@ -245,9 +241,7 @@ def main() -> None:
     owner = os.getenv("OWNER")
     repo = os.getenv("REPO")
     days = args.days if args.days is not None else int(os.getenv("DAYS", "90"))
-    protected_tags = set(
-        t.strip() for t in (args.protected_tags or "").split(",") if t.strip()
-    )
+    protected_tags = set(t.strip() for t in (args.protected_tags or "").split(",") if t.strip())
 
     if not owner or not repo:
         gh_repo = os.getenv("GITHUB_REPOSITORY")
@@ -272,10 +266,7 @@ def main() -> None:
             break
 
     if not target:
-        print(
-            "No container package named '%s' found in account '%s'. Exiting."
-            % (repo, owner)
-        )
+        print("No container package named '%s' found in account '%s'. Exiting." % (repo, owner))
         sys.exit(0)
 
     print(f"Found package: {target.get('name')} (id: {target.get('id')})")
@@ -372,8 +363,7 @@ def main() -> None:
     for c in would_delete:
         vid = c["version_id"]
         print(
-            "Deleting version %s created_at=%s tags=%s..."
-            % (vid, c["created_at"], c["tags"]),
+            "Deleting version %s created_at=%s tags=%s..." % (vid, c["created_at"], c["tags"]),
             end=" ",
         )
         ok = delete_version(owner, repo, vid, token)

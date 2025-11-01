@@ -22,9 +22,7 @@ def _find_app_routes(factory_path: Path):
     for m in re.finditer(r"@app\.route\(\s*['\"]([^'\"]+)['\"]", text):
         routes.add(m.group(1))
     # Find registered blueprints with url_prefix
-    for m in re.finditer(
-        r"register_blueprint\([^,]+,\s*url_prefix=\s*['\"]([^'\"]+)['\"]", text
-    ):
+    for m in re.finditer(r"register_blueprint\([^,]+,\s*url_prefix=\s*['\"]([^'\"]+)['\"]", text):
         routes.add(m.group(1).rstrip("/"))
     return routes
 
@@ -73,6 +71,4 @@ def test_templates_have_matching_routes():
         if not _is_covered(link, routes):
             missing.append(link)
 
-    assert (
-        not missing
-    ), f"Found template links with no matching route/blueprint: {missing}"
+    assert not missing, f"Found template links with no matching route/blueprint: {missing}"

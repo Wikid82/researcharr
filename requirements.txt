@@ -1,9 +1,9 @@
 
 
-certifi==2025.4.26
+certifi==2025.10.5
 charset-normalizer==3.4.4
-idna==3.10
-python-dotenv==1.1.0
+idna==3.11
+python-dotenv==1.2.1
 requests>=2.32.4
 urllib3>=2.5.0
 werkzeug

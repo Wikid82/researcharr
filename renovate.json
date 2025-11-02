@@ -39,7 +39,7 @@
       "groupName": "Python dependencies"
     },
     {
-      "description": "Group Docker base images",
+      "description": "Group Docker base images - matches official 'python' image only",
       "matchDatasources": ["docker"],
       "matchPackagePatterns": ["^python$"],
       "groupName": "Docker Python base images",
@@ -71,9 +71,6 @@
       "enabled": false
     }
   ],
-  "pip_requirements": {
-    "fileMatch": ["(^|/)([\\w-]*)requirements([\\w-]*)\\.txt$"]
-  },
   "ignoreDeps": [],
   "ignoreTests": false,
   "commitMessagePrefix": "chore(deps):",

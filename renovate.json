@@ -61,18 +61,6 @@
       "stabilityDays": 7
     },
     {
-      "description": "Security updates - immediate",
-      "matchDatasources": ["pypi"],
-      "matchUpdateTypes": ["patch"],
-      "matchPackagePatterns": [".*"],
-      "vulnerabilityAlerts": {
-        "enabled": true
-      },
-      "schedule": ["at any time"],
-      "automerge": true,
-      "stabilityDays": 0
-    },
-    {
       "description": "Pin development dependencies",
       "matchFileNames": ["requirements-dev.txt"],
       "rangeStrategy": "pin"
@@ -89,7 +77,6 @@
   },
   "ignoreDeps": [],
   "ignoreTests": false,
-  "postUpdateOptions": ["gomodTidy", "npmDedupe"],
   "commitMessagePrefix": "chore(deps):",
   "commitMessageAction": "update",
   "commitMessageTopic": "{{depName}}",

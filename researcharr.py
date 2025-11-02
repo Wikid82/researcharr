@@ -178,7 +178,6 @@ if "create_metrics_app" not in globals():
         def metrics_endpoint():
             return jsonify(app.metrics)
 
-        # Increment errors_total for 404 and 500
         @app.errorhandler(404)
         @app.errorhandler(500)
         def handle_error(e):
@@ -193,13 +192,14 @@ if "create_metrics_app" not in globals():
             app.metrics["errors_total"] += 1
             return jsonify({"error": "internal error"}), 500
 
-            return app
+        return app
 
-    if __name__ == "__main__":
-        import sys
 
-        # When executed as `python researcharr.py serve` run the server. This
-        # statement is placed after `create_metrics_app` so the `serve()`
-        # helper can call it without NameError.
-        if len(sys.argv) > 1 and sys.argv[1] == "serve":
-            serve()
+if __name__ == "__main__":
+    import sys
+
+    # When executed as `python researcharr.py serve` run the server. This
+    # statement is placed after `create_metrics_app` so the `serve()`
+    # helper can call it without NameError.
+    if len(sys.argv) > 1 and sys.argv[1] == "serve":
+        serve()

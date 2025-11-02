@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   auto-merge:
+    if: ${{ github.event.pull_request.base.ref == 'development' }}
     runs-on: ubuntu-latest
     steps:
       - name: Auto-merge trusted authors
@@ -23,6 +24,13 @@ jobs:
             const pr = context.payload.pull_request;
             if (!pr) {
               core.info('No pull_request payload available; exiting.');
+              return;
+            }
+
+            // Only auto-merge PRs targeting the development branch
+            const baseBranch = pr.base && pr.base.ref;
+            if (baseBranch !== 'development') {
+              core.info(`PR #${pr.number} targets '${baseBranch}', not 'development'; skipping auto-merge`);
               return;
             }
 

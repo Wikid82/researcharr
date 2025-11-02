@@ -24,7 +24,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           echo "🔄 Attempting to add issue #${{ github.event.issue.number }} to project..."
-          
+
           # Get project ID
           PROJECT_RESULT=$(gh api graphql -f query='
             query($owner: String!, $number: Int!) {
@@ -34,17 +34,17 @@ jobs:
                 }
               }
             }' -f owner=${{ github.repository_owner }} -F number=${{ env.PROJECT_NUMBER }} 2>/dev/null || echo '{"data": {"user": {"projectV2": null}}}')
-          
+
           PROJECT_ID=$(echo $PROJECT_RESULT | jq -r '.data.user.projectV2.id // "null"')
-          
+
           if [ "$PROJECT_ID" = "null" ]; then
             echo "❌ Could not find project #${{ env.PROJECT_NUMBER }}"
             echo "📍 Manual action required: Add issue to project at https://github.com/users/${{ github.repository_owner }}/projects/${{ env.PROJECT_NUMBER }}"
             exit 0
           fi
-          
+
           echo "✅ Found project ID: $PROJECT_ID"
-          
+
           # Attempt to add issue to project
           ADD_RESULT=$(gh api graphql -f query='
             mutation($projectId: ID!, $contentId: ID!) {
@@ -57,7 +57,7 @@ jobs:
                 }
               }
             }' -f projectId=$PROJECT_ID -f contentId=${{ github.event.issue.node_id }} 2>/dev/null || echo '{"errors":[{"message":"API_ERROR"}]}')
-          
+
           if echo "$ADD_RESULT" | jq -e '.errors' > /dev/null; then
             ERROR_MSG=$(echo "$ADD_RESULT" | jq -r '.errors[0].message // "Unknown error"')
             echo "⚠️  Automation limitation: $ERROR_MSG"

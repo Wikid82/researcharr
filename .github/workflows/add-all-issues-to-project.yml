@@ -25,7 +25,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           echo "🚀 Adding issues ${{ github.event.inputs.start_issue || '80' }} to ${{ github.event.inputs.end_issue || '113' }} to project #${{ env.PROJECT_NUMBER }}"
-          
+
           # Get project ID
           PROJECT_DATA=$(gh api graphql -f query='
             query($owner: String!, $number: Int!) {
@@ -47,40 +47,40 @@ jobs:
                 }
               }
             }' -f owner=${{ github.repository_owner }} -F number=${{ env.PROJECT_NUMBER }})
-          
+
           PROJECT_ID=$(echo $PROJECT_DATA | jq -r '.data.user.projectV2.id')
-          
+
           if [ "$PROJECT_ID" = "null" ]; then
             echo "❌ Could not find project #${{ env.PROJECT_NUMBER }}"
             exit 1
           fi
-          
+
           echo "✅ Found project ID: $PROJECT_ID"
-          
+
           # Get backlog status option ID
           BACKLOG_ID=$(echo $PROJECT_DATA | jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "Backlog") | .id')
           STATUS_FIELD_ID=$(echo $PROJECT_DATA | jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .id')
-          
+
           echo "📊 Status field ID: $STATUS_FIELD_ID"
           echo "📋 Backlog option ID: $BACKLOG_ID"
-          
+
           # Add issues
           START_ISSUE=${{ github.event.inputs.start_issue || '80' }}
           END_ISSUE=${{ github.event.inputs.end_issue || '113' }}
           ADDED_COUNT=0
-          
+
           for issue_num in $(seq $START_ISSUE $END_ISSUE); do
             echo "Processing issue #$issue_num..."
-            
+
             # Get issue node ID
             ISSUE_DATA=$(gh api repos/${{ github.repository }} issues/$issue_num 2>/dev/null || echo '{"node_id": null}')
             ISSUE_NODE_ID=$(echo $ISSUE_DATA | jq -r '.node_id')
-            
+
             if [ "$ISSUE_NODE_ID" = "null" ]; then
               echo "⚠️  Issue #$issue_num not found"
               continue
             fi
-            
+
             # Add issue to project
             ADD_RESULT=$(gh api graphql -f query='
               mutation($projectId: ID!, $contentId: ID!) {
@@ -93,13 +93,13 @@ jobs:
                   }
                 }
               }' -f projectId=$PROJECT_ID -f contentId=$ISSUE_NODE_ID 2>/dev/null || echo '{"data": {"addProjectV2ItemByContentId": {"item": null}}}')
-            
+
             ITEM_ID=$(echo $ADD_RESULT | jq -r '.data.addProjectV2ItemByContentId.item.id')
-            
+
             if [ "$ITEM_ID" != "null" ]; then
               echo "✅ Added issue #$issue_num to project"
               ADDED_COUNT=$((ADDED_COUNT + 1))
-              
+
               # Set to Backlog status if we have the field IDs
               if [ "$STATUS_FIELD_ID" != "null" ] && [ "$BACKLOG_ID" != "null" ]; then
                 gh api graphql -f query='
@@ -120,11 +120,11 @@ jobs:
             else
               echo "❌ Failed to add issue #$issue_num (may already be in project)"
             fi
-            
+
             # Small delay to avoid rate limits
             sleep 0.5
           done
-          
+
           echo ""
           echo "🎉 Successfully processed issues. Added $ADDED_COUNT new issues to the project."
           echo "📍 Visit your project: https://github.com/users/${{ github.repository_owner }}/projects/${{ env.PROJECT_NUMBER }}"

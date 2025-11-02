@@ -83,9 +83,10 @@ jobs:
           ORGANIZATION: ${{ github.repository_owner }}
           PROJECT_NUMBER: ${{ env.PROJECT_NUMBER }}
         run: |
+          # Try user project first (since Wikid82 is a user, not org)
           gh api graphql -f query='
-            query($org: String!, $number: Int!) {
-              organization(login: $org) {
+            query($owner: String!, $number: Int!) {
+              user(login: $owner) {
                 projectV2(number: $number) {
                   id
                   fields(first:20) {
@@ -106,7 +107,7 @@ jobs:
                   }
                 }
               }
-            }' -f org=$ORGANIZATION -F number=$PROJECT_NUMBER > project_data.json
+            }' -f owner=$ORGANIZATION -F number=$PROJECT_NUMBER > project_data.json 2>/dev/null || echo '{"data": {"user": {"projectV2": null}}}' > project_data.json
 
       - name: Add issue to project
         if: github.event_name == 'issues' && github.event.action == 'opened'
@@ -114,7 +115,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_ID: ${{ github.event.issue.node_id }}
         run: |
-          PROJECT_ID=$(jq -r '.data.organization.projectV2.id' project_data.json)
+          PROJECT_ID=$(jq -r '.data.user.projectV2.id' project_data.json)
 
           gh api graphql -f query='
             mutation($project:ID!, $contentId:ID!) {
@@ -131,7 +132,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_ID: ${{ github.event.pull_request.node_id }}
         run: |
-          PROJECT_ID=$(jq -r '.data.organization.projectV2.id' project_data.json)
+          PROJECT_ID=$(jq -r '.data.user.projectV2.id' project_data.json)
 
           gh api graphql -f query='
             mutation($project:ID!, $contentId:ID!) {

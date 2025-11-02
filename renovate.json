@@ -9,6 +9,7 @@
     "group:recommended",
     "workarounds:all"
   ],
+  "dependencyDashboardAutoclose": true,
   "baseBranches": ["development"],
   "schedule": ["before 6am on Monday"],
   "timezone": "UTC",

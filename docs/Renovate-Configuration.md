@@ -36,7 +36,18 @@ The Renovate configuration is located in `renovate.json` at the root of the repo
 - **`group:recommended`**: Groups related dependencies (e.g., linters, testing tools)
 - **`workarounds:all`**: Applies known workarounds for common Renovate issues
 
-### 2. Schedule Configuration
+### 2. Dependency Dashboard Autoclose
+
+```json
+"dependencyDashboardAutoclose": true
+```
+
+**Why This Matters:**
+- Automatically closes the dependency dashboard issue when there are no pending updates
+- Creates a new dashboard issue instead of reopening closed ones
+- Keeps the issue list clean and organized
+
+### 3. Schedule Configuration
 
 ```json
 "schedule": ["before 6am on Monday"],
@@ -50,7 +61,7 @@ The Renovate configuration is located in `renovate.json` at the root of the repo
 - Limits concurrent PRs to avoid overwhelming reviewers
 - Prevents rate-limiting issues with external services
 
-### 3. Stability Days
+### 4. Stability Days
 
 ```json
 "stabilityDays": 3
@@ -61,7 +72,7 @@ The Renovate configuration is located in `renovate.json` at the root of the repo
 - Allows time for community to discover critical bugs
 - Reduces risk of adopting broken releases
 
-### 4. Vulnerability Alerts
+### 5. Vulnerability Alerts
 
 ```json
 "vulnerabilityAlerts": {
@@ -76,7 +87,7 @@ The Renovate configuration is located in `renovate.json` at the root of the repo
 - Automatically labeled for easy identification
 - Can be processed immediately to protect the project
 
-### 5. Automerge Strategy
+### 6. Automerge Strategy
 
 ```json
 {
@@ -94,7 +105,7 @@ The Renovate configuration is located in `renovate.json` at the root of the repo
 - Uses squash strategy for clean commit history
 - Requires CI checks to pass before merging
 
-### 6. Dependency Grouping
+### 7. Dependency Grouping
 
 The configuration groups related dependencies:
 
@@ -133,7 +144,7 @@ The configuration groups related dependencies:
 - Pins to specific SHA digests for security
 - Can be automerged as they rarely break
 
-### 7. Major Update Handling
+### 8. Major Update Handling
 
 ```json
 {
@@ -149,7 +160,7 @@ The configuration groups related dependencies:
 - Extra stability period (7 days)
 - Special labels for visibility
 
-### 8. Development Dependencies
+### 9. Development Dependencies
 
 ```json
 {
@@ -163,7 +174,7 @@ The configuration groups related dependencies:
 - Ensures consistent developer environments
 - Reduces "works on my machine" issues
 
-### 9. Frozen Requirements
+### 10. Frozen Requirements
 
 ```json
 {

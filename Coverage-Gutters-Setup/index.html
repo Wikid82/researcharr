@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="researcharr contributors" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Packaging and Distribution - researcharr</title>
+    <title>Coverage Gutters Setup - researcharr</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -13,8 +13,8 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Packaging and Distribution";
-        var mkdocs_page_input_path = "Packaging-and-Distribution.md";
+        var mkdocs_page_name = "Coverage Gutters Setup";
+        var mkdocs_page_input_path = "Coverage-Gutters-Setup.md";
         var mkdocs_page_url = null;
       </script>
     
@@ -68,8 +68,36 @@
                 <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Quick-Start/">Coverage Gutters - Visual Quick Start Guide</a>
                 </li>
               </ul>
-              <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Setup/">Coverage Gutters Setup</a>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Coverage Gutters Setup</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#quick-start">Quick Start</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#vs-code-tasks">VS Code Tasks</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#extension-features">Extension Features</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#visual-indicators">Visual Indicators</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#commands">Commands</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#status-bar">Status Bar</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#tips">Tips</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#color-customization">Color Customization</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#references">References</a>
+    </li>
+    </ul>
                 </li>
               </ul>
               <ul>
@@ -104,8 +132,8 @@
                 <li class="toctree-l1"><a class="reference internal" href="../Logs/">Logs and Live Streaming</a>
                 </li>
               </ul>
-              <ul class="current">
-                <li class="toctree-l1 current"><a class="reference internal current" href="#">Packaging and Distribution</a>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Packaging-and-Distribution/">Packaging and Distribution</a>
                 </li>
               </ul>
               <ul>
@@ -142,7 +170,7 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-      <li class="breadcrumb-item active">Packaging and Distribution</li>
+      <li class="breadcrumb-item active">Coverage Gutters Setup</li>
     <li class="wy-breadcrumbs-aside">
     </li>
   </ul>
@@ -151,57 +179,104 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <p>Packaging and Distribution</p>
-<p>This project aims to provide convenient distribution options once the core application and CI are stable. The goal of packaging is to make it simple for users to run <code>researcharr</code> without dealing with Python virtualenvs or Docker if they prefer native installs.</p>
-<p>Target platforms and formats</p>
-<ul>
-<li>Linux: DEB, RPM, AppImage, Flatpak</li>
-<li>macOS: PKG, Homebrew formula / tap</li>
-<li>Windows: EXE (NSIS), MSI</li>
-<li>Container images: GHCR images are available for all published branches</li>
-</ul>
-<p>When to produce packages</p>
-<ul>
-<li>Packaging work should begin after tests and CI are stable and the tool's runtime configuration is finalized.</li>
-<li>Start with Linux DEB/APPIMAGE for widest immediate reach and CI automation.</li>
-</ul>
-<p>Recommended approach</p>
+                <h1 id="coverage-gutters-setup">Coverage Gutters Setup</h1>
+<p>This project is configured to work with the <a href="https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters">Coverage Gutters</a> VS Code extension.</p>
+<h2 id="quick-start">Quick Start</h2>
 <ol>
-<li>Prepare reproducible build steps (Docker-based builders are recommended).</li>
-<li>Write small CI jobs that build artifacts and attach them to releases, or publish to package repos (e.g., Homebrew tap, GitHub Releases, Debian repository).</li>
-<li>Sign artifacts using a dedicated signing key for releases.</li>
+<li><strong>Install the Extension</strong> (if not already installed):</li>
+<li>Search for "Coverage Gutters" in VS Code Extensions</li>
+<li>
+<p>Or install via CLI: <code>code --install-extension ryanluker.vscode-coverage-gutters</code></p>
+</li>
+<li>
+<p><strong>Generate Coverage</strong>:</p>
+</li>
+<li>Run tests via the test task: <code>Ctrl+Shift+P</code> → "Tasks: Run Test Task"</li>
+<li>Or manually: <code>python -m pytest tests/ --cov=. --cov-report=xml</code></li>
+<li>
+<p>This creates <code>coverage.xml</code> in the project root</p>
+</li>
+<li>
+<p><strong>View Coverage in Editor</strong>:</p>
+</li>
+<li>Click "Watch" in the VS Code status bar (bottom), or</li>
+<li>Use command palette: <code>Coverage Gutters: Display Coverage</code></li>
+<li>
+<p>Green/red indicators will appear in the gutter and on lines</p>
+</li>
+<li>
+<p><strong>Preview HTML Report</strong>:</p>
+</li>
+<li>Command: <code>Coverage Gutters: Preview Coverage Report</code></li>
+<li>Opens <code>htmlcov/index.html</code> in browser</li>
 </ol>
-<p>Example CI tasks to add (high-level)</p>
+<h2 id="configuration">Configuration</h2>
+<p>The project is pre-configured with:</p>
 <ul>
-<li><code>ci/package-deb.yml</code> — Build a DEB package in a reproducible Docker environment and upload the artifact to GitHub Releases when a tag is pushed.</li>
-<li><code>ci/package-appimage.yml</code> — Produce AppImage; useful for Linux desktop users.</li>
-<li><code>ci/release.yml</code> — Orchestrates tagging, building, signing, and publishing packages and Docker images.</li>
+<li><strong>Coverage file</strong>: <code>coverage.xml</code> (auto-generated by pytest)</li>
+<li><strong>HTML report</strong>: <code>htmlcov/index.html</code></li>
+<li><strong>Gutter icons</strong>: Green (covered), Red (uncovered), Yellow (partial)</li>
+<li><strong>Line highlighting</strong>: Enabled with subtle colors</li>
 </ul>
-<p>Notes about Docker images</p>
+<h3 id="vs-code-tasks">VS Code Tasks</h3>
+<p>Use <code>Ctrl+Shift+P</code> → "Tasks: Run Task":</p>
 <ul>
-<li>The repository builds and pushes GHCR images for branches. Images are tagged per-branch (e.g. <code>ghcr.io/wikid82/researcharr:development</code>) plus special branches (<code>latest</code>, <code>development</code>).</li>
-<li>CI currently uses caching for pip and Docker build layers. Adjust the publish rules if you want to disallow publishing from forks or PRs.</li>
+<li><strong>Run Tests with Coverage</strong> (default test task) - Full suite with coverage</li>
+<li><strong>Run Tests (Quick)</strong> - Fast run without coverage</li>
+<li><strong>Run Current Test File with Coverage</strong> - Test only the open file</li>
 </ul>
-<p>Security and reproducible builds</p>
+<h2 id="extension-features">Extension Features</h2>
+<h3 id="visual-indicators">Visual Indicators</h3>
 <ul>
-<li>Keep dependency versions pinned in <code>requirements.txt</code> for reproducible packaging.</li>
-<li>Use a dedicated signing key and protect it in CI secrets when signing release artifacts.</li>
+<li><strong>Gutter icons</strong>: Green/red/yellow bars in the left margin</li>
+<li><strong>Line highlighting</strong>: Background colors on code lines</li>
+<li><strong>Ruler marks</strong>: Small colored marks in the scrollbar</li>
 </ul>
-<p>Next steps</p>
-<p>If you'd like, I can draft the first <code>ci/package-deb.yml</code> workflow that:</p>
+<h3 id="commands">Commands</h3>
+<p>Access via <code>Ctrl+Shift+P</code>:</p>
 <ul>
-<li>Uses a small Docker builder image (e.g., <code>python:3.X-slim</code>),</li>
-<li>Installs build dependencies,</li>
-<li>Assembles a minimal filesystem structure for the DEB,</li>
-<li>Builds a DEB and uploads it as a release artifact.</li>
+<li><code>Coverage Gutters: Display Coverage</code> - Show coverage</li>
+<li><code>Coverage Gutters: Watch</code> - Auto-refresh when coverage file changes</li>
+<li><code>Coverage Gutters: Remove Coverage</code> - Hide coverage</li>
+<li><code>Coverage Gutters: Preview Coverage Report</code> - Open HTML report</li>
 </ul>
-<p>Ask if you want that prototype and which platform to target first.</p>
+<h3 id="status-bar">Status Bar</h3>
+<p>Click the coverage indicator in the bottom status bar to toggle coverage display.</p>
+<h2 id="tips">Tips</h2>
+<ol>
+<li><strong>Enable Watch Mode</strong>: Click "Watch" so coverage updates automatically after running tests</li>
+<li><strong>Focus on Files</strong>: The extension shows coverage for the currently open file</li>
+<li><strong>Multiple Formats</strong>: Configured to look for <code>coverage.xml</code>, <code>cov.xml</code>, and <code>lcov.info</code></li>
+<li><strong>HTML Reports</strong>: Use the preview command to see full detailed coverage tables</li>
+</ol>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<p>If coverage doesn't appear:</p>
+<ol>
+<li>Ensure <code>coverage.xml</code> exists in the project root</li>
+<li>Click "Watch" in the status bar</li>
+<li>Try <code>Coverage Gutters: Display Coverage</code> command</li>
+<li>Check the Output panel (select "Coverage Gutters" from dropdown)</li>
+</ol>
+<h2 id="color-customization">Color Customization</h2>
+<p>Edit <code>.vscode/settings.json</code> to customize highlight colors:</p>
+<pre><code class="language-json">{
+  &quot;coverage-gutters.highlightdark&quot;: &quot;rgba(20, 200, 20, 0.3)&quot;,      // Green for covered
+  &quot;coverage-gutters.noHighlightDark&quot;: &quot;rgba(200, 20, 20, 0.3)&quot;,    // Red for uncovered
+  &quot;coverage-gutters.partialHighlightDark&quot;: &quot;rgba(200, 200, 20, 0.3)&quot; // Yellow for partial
+}
+</code></pre>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://github.com/ryanluker/vscode-coverage-gutters">Extension Documentation</a></li>
+<li><a href="https://github.com/ryanluker/vscode-coverage-gutters/tree/main/example/python">Python Example</a></li>
+<li><a href="./pyproject.toml">Our Coverage Config</a> - See <code>[tool.coverage.*]</code> sections</li>
+</ul>
               
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../Logs/" class="btn btn-neutral float-left" title="Logs and Live Streaming"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../Plugins/" class="btn btn-neutral float-right" title="Plugins and instance configuration">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../Coverage-Gutters-Quick-Start/" class="btn btn-neutral float-left" title="Coverage Gutters - Visual Quick Start Guide"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../DEV/" class="btn btn-neutral float-right" title="DEV">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -228,10 +303,10 @@
         </span>
     
     
-      <span><a href="../Logs/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../Coverage-Gutters-Quick-Start/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../Plugins/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../DEV/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

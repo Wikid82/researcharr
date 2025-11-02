@@ -11,16 +11,50 @@ on:
 
 env:
   PROJECT_NUMBER: 2  # Update this with your actual project number
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
 
 jobs:
   manage_project:
     runs-on: ubuntu-latest
     name: Manage Project Board
     steps:
+      - name: Add issue to project
+        if: github.event_name == 'issues' && github.event.action == 'opened'
+        env:
+          GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          # Add the newly created issue to the project
+          gh api graphql -f query='
+            query($owner: String!, $number: Int!) {
+              user(login: $owner) {
+                projectV2(number: $number) {
+                  id
+                }
+              }
+            }' -f owner=${{ github.repository_owner }} -F number=${{ env.PROJECT_NUMBER }} > project.json
+          
+          PROJECT_ID=$(cat project.json | jq -r '.data.user.projectV2.id')
+          
+          if [ "$PROJECT_ID" != "null" ]; then
+            gh api graphql -f query='
+              mutation($projectId: ID!, $contentId: ID!) {
+                addProjectV2ItemByContentId(input: {
+                  projectId: $projectId,
+                  contentId: $contentId
+                }) {
+                  item {
+                    id
+                  }
+                }
+              }' -f projectId=$PROJECT_ID -f contentId=${{ github.event.issue.node_id }}
+            echo "✅ Added issue #${{ github.event.issue.number }} to project"
+          else
+            echo "❌ Could not find project #${{ env.PROJECT_NUMBER }}"
+          fi
+
       - name: Get project data
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
           ORGANIZATION: ${{ github.repository_owner }}
           PROJECT_NUMBER: ${{ env.PROJECT_NUMBER }}
         run: |

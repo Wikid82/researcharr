@@ -142,7 +142,7 @@ class TestResearcharrRunModule(unittest.TestCase):
         """Test that run module functions are available."""
         # Import should not raise errors
         try:
-            import researcharr.run
+            import researcharr.run  # noqa: F401
 
             self.assertTrue(True)
         except ImportError:
@@ -319,7 +319,7 @@ class TestResearcharrIntegration(unittest.TestCase):
             import researcharr.factory
             import researcharr.researcharr
             import researcharr.run
-            import researcharr.webui
+            import researcharr.webui  # noqa: F401
 
             # All imports should succeed
             self.assertTrue(True)

@@ -185,7 +185,7 @@ class TestMiscellaneousConsolidated(unittest.TestCase):
             # Test various shim imports
             import researcharr.backups
             import researcharr.factory
-            import researcharr.webui
+            import researcharr.webui  # noqa: F401
 
             # Should all import without errors
             self.assertTrue(True)
@@ -280,7 +280,7 @@ class TestErrorHandlingConsolidated(unittest.TestCase):
         """Test import error handling."""
         # Test handling of missing modules
         try:
-            import nonexistent_module
+            import nonexistent_module  # noqa: F401
         except ImportError:
             # Expected behavior
             self.assertTrue(True)

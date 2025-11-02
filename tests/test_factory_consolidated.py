@@ -103,11 +103,13 @@ class TestFactoryMainRoutes(unittest.TestCase):
         with app.test_client() as client:
             with patch("factory.check_password_hash") as mock_check:
                 with patch("factory.get_user_by_username") as mock_get_user:
-                    mock_get_user.return_value = {"username": "test", "password": "hashed"}
+                    mock_get_user.return_value = {"username": "test", "password": " // pragma: allowlist secret
+"password": "hashed"}
                     mock_check.return_value = True
 
                     response = client.post(
-                        "/login", data={"username": "test", "password": "password"}
+                        "/login", data={"username": "test", "password": " // pragma: allowlist secret
+"password": "password"}
                     )
                     self.assertIn(response.status_code, [200, 302])
 
@@ -118,13 +120,15 @@ class TestFactoryMainRoutes(unittest.TestCase):
         with app.test_client() as client:
             with patch("factory.check_password_hash") as mock_check:
                 with patch("factory.get_user_by_username") as mock_get_user:
-                    mock_get_user.return_value = {"username": "test", "password": "hashed"}
+                    mock_get_user.return_value = {"username": "test", "password": " // pragma: allowlist secret
+"password": "hashed"}
                     mock_check.return_value = False
 
                     with patch("factory.render_template") as mock_render:
                         mock_render.return_value = "login_error"
                         response = client.post(
-                            "/login", data={"username": "test", "password": "wrong"}
+                            "/login", data={"username": "test", "password": " // pragma: allowlist secret
+"password": "wrong"}
                         )
                         self.assertEqual(response.status_code, 200)
 
@@ -325,7 +329,7 @@ class TestFactoryHelperFunctions(unittest.TestCase):
 
                 # Test that the function works without errors
                 try:
-                    from flask import request
+                    from flask import request  # noqa: F401
 
                     with patch("flask.request") as mock_request:
                         mock_request.form = form_data

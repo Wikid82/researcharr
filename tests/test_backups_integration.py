@@ -13,7 +13,7 @@ def login_client(app):
     client = app.test_client()
     client.post(
         "/login",
-        data={"username": "admin", "password": "password"},
+        data={"username": "admin", "password": "password"},  # pragma: allowlist secret
         follow_redirects=True,
     )
     return client
@@ -297,7 +297,7 @@ class TestBackupsIntegrationScenarios(unittest.TestCase):
 
         try:
             import threading
-            import time
+            import time  # noqa: F401
 
             import backups
 

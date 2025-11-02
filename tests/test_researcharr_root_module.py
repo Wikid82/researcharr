@@ -1,4 +1,4 @@
-"""Comprehensive tests for researcharr.py root module."""
+"""Comprehensive tests for researcharr_root.py root module."""
 
 import importlib.util
 import logging
@@ -7,17 +7,17 @@ import tempfile
 import unittest
 from unittest.mock import Mock, mock_open, patch
 
-# Import the root researcharr.py module directly (not the package)
-# Load researcharr.py as a module
+# Import the root researcharr_root.py module directly (not the package)
+# Load researcharr_root.py as a module
 spec = importlib.util.spec_from_file_location(
-    "researcharr_root", "/home/jeremy/Server/Projects/researcharr/researcharr.py"
+    "researcharr_root", "/home/jeremy/Server/Projects/researcharr/researcharr_root.py"
 )
 researcharr_root = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(researcharr_root)
 
 
 class TestResearcharrRootModule(unittest.TestCase):
-    """Test the root researcharr.py module functionality."""
+    """Test the root researcharr_root.py module functionality."""
 
     def setUp(self):
         """Set up test environment."""
@@ -34,7 +34,7 @@ class TestResearcharrRootModule(unittest.TestCase):
 
     def test_module_constants(self):
         """Test module-level constants and attributes."""
-        self.assertEqual(researcharr_root.DB_PATH, "researcharr.db")
+        self.assertEqual(researcharr_root.DB_PATH, "researcharr_root.db")
 
         # Check that __path__ is defined as expected for package-like behavior
         self.assertTrue(hasattr(researcharr_root, "__path__"))
@@ -63,7 +63,7 @@ class TestResearcharrRootModule(unittest.TestCase):
 
             researcharr_root.init_db()
 
-            mock_connect.assert_called_once_with("researcharr.db")
+            mock_connect.assert_called_once_with("researcharr_root.db")
             mock_conn.cursor.assert_called_once()
             mock_cursor.execute.assert_called()
 
@@ -101,7 +101,7 @@ class TestResearcharrRootModule(unittest.TestCase):
     def test_setup_logger_new_logger(self):
         """Test setup_logger creates new logger."""
         log_file = "test.log"
-        logger = researcharr.setup_logger("test_logger", log_file, logging.DEBUG)
+        logger = researcharr_root.setup_logger("test_logger", log_file, logging.DEBUG)
 
         self.assertIsInstance(logger, logging.Logger)
         self.assertEqual(logger.name, "test_logger")
@@ -113,11 +113,11 @@ class TestResearcharrRootModule(unittest.TestCase):
         log_file = "test.log"
 
         # Create logger first time
-        logger1 = researcharr.setup_logger("existing_logger", log_file)
+        logger1 = researcharr_root.setup_logger("existing_logger", log_file)
         handler_count = len(logger1.handlers)
 
         # Create same logger again
-        logger2 = researcharr.setup_logger("existing_logger", log_file)
+        logger2 = researcharr_root.setup_logger("existing_logger", log_file)
 
         # Should be same logger and not add duplicate handlers
         self.assertIs(logger1, logger2)
@@ -126,7 +126,7 @@ class TestResearcharrRootModule(unittest.TestCase):
     def test_setup_logger_default_level(self):
         """Test setup_logger with default level."""
         log_file = "test.log"
-        logger = researcharr.setup_logger("default_level_logger", log_file)
+        logger = researcharr_root.setup_logger("default_level_logger", log_file)
 
         self.assertEqual(logger.level, logging.INFO)
 
@@ -138,7 +138,7 @@ class TestResearcharrRootModule(unittest.TestCase):
             {"enabled": False, "url": "", "api_key": ""},  # Disabled, so ignored
         ]
 
-        result = researcharr.has_valid_url_and_key(instances)
+        result = researcharr_root.has_valid_url_and_key(instances)
         self.assertTrue(result)
 
     def test_has_valid_url_and_key_invalid_url(self):
@@ -147,7 +147,7 @@ class TestResearcharrRootModule(unittest.TestCase):
             {"enabled": True, "url": "ftp://invalid.com", "api_key": "key1"},
         ]
 
-        result = researcharr.has_valid_url_and_key(instances)
+        result = researcharr_root.has_valid_url_and_key(instances)
         self.assertFalse(result)
 
     def test_has_valid_url_and_key_missing_api_key(self):
@@ -156,12 +156,12 @@ class TestResearcharrRootModule(unittest.TestCase):
             {"enabled": True, "url": "http://test.com", "api_key": ""},
         ]
 
-        result = researcharr.has_valid_url_and_key(instances)
+        result = researcharr_root.has_valid_url_and_key(instances)
         self.assertFalse(result)
 
     def test_has_valid_url_and_key_empty_list(self):
         """Test has_valid_url_and_key with empty list."""
-        result = researcharr.has_valid_url_and_key([])
+        result = researcharr_root.has_valid_url_and_key([])
         self.assertTrue(result)
 
     def test_has_valid_url_and_key_disabled_instances(self):
@@ -171,19 +171,19 @@ class TestResearcharrRootModule(unittest.TestCase):
             {"enabled": False, "url": "", "api_key": "invalid"},
         ]
 
-        result = researcharr.has_valid_url_and_key(instances)
+        result = researcharr_root.has_valid_url_and_key(instances)
         self.assertTrue(result)
 
     def test_check_radarr_connection_success(self):
         """Test successful Radarr connection."""
         mock_logger = Mock()
 
-        with patch("researcharr.requests.get") as mock_get:
+        with patch("researcharr_root.requests.get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_get.return_value = mock_response
 
-            result = researcharr.check_radarr_connection(
+            result = researcharr_root.check_radarr_connection(
                 "http://radarr.local", "test_key", mock_logger
             )
 
@@ -195,7 +195,7 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test Radarr connection with missing URL."""
         mock_logger = Mock()
 
-        result = researcharr.check_radarr_connection("", "test_key", mock_logger)
+        result = researcharr_root.check_radarr_connection("", "test_key", mock_logger)
 
         self.assertFalse(result)
         mock_logger.warning.assert_called_once_with("Missing Radarr URL or API key")
@@ -204,7 +204,7 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test Radarr connection with missing API key."""
         mock_logger = Mock()
 
-        result = researcharr.check_radarr_connection("http://radarr.local", "", mock_logger)
+        result = researcharr_root.check_radarr_connection("http://radarr.local", "", mock_logger)
 
         self.assertFalse(result)
         mock_logger.warning.assert_called_once_with("Missing Radarr URL or API key")
@@ -213,12 +213,12 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test Radarr connection with non-200 status."""
         mock_logger = Mock()
 
-        with patch("researcharr.requests.get") as mock_get:
+        with patch("researcharr_root.requests.get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 404
             mock_get.return_value = mock_response
 
-            result = researcharr.check_radarr_connection(
+            result = researcharr_root.check_radarr_connection(
                 "http://radarr.local", "test_key", mock_logger
             )
 
@@ -231,10 +231,10 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test Radarr connection with exception."""
         mock_logger = Mock()
 
-        with patch("researcharr.requests.get") as mock_get:
+        with patch("researcharr_root.requests.get") as mock_get:
             mock_get.side_effect = Exception("Connection failed")
 
-            result = researcharr.check_radarr_connection(
+            result = researcharr_root.check_radarr_connection(
                 "http://radarr.local", "test_key", mock_logger
             )
 
@@ -245,12 +245,12 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test successful Sonarr connection."""
         mock_logger = Mock()
 
-        with patch("researcharr.requests.get") as mock_get:
+        with patch("researcharr_root.requests.get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_get.return_value = mock_response
 
-            result = researcharr.check_sonarr_connection(
+            result = researcharr_root.check_sonarr_connection(
                 "http://sonarr.local", "test_key", mock_logger
             )
 
@@ -262,7 +262,7 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test Sonarr connection with missing URL."""
         mock_logger = Mock()
 
-        result = researcharr.check_sonarr_connection("", "test_key", mock_logger)
+        result = researcharr_root.check_sonarr_connection("", "test_key", mock_logger)
 
         self.assertFalse(result)
         mock_logger.warning.assert_called_once_with("Missing Sonarr URL or API key")
@@ -271,7 +271,7 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test Sonarr connection with missing API key."""
         mock_logger = Mock()
 
-        result = researcharr.check_sonarr_connection("http://sonarr.local", "", mock_logger)
+        result = researcharr_root.check_sonarr_connection("http://sonarr.local", "", mock_logger)
 
         self.assertFalse(result)
         mock_logger.warning.assert_called_once_with("Missing Sonarr URL or API key")
@@ -280,12 +280,12 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test Sonarr connection with non-200 status."""
         mock_logger = Mock()
 
-        with patch("researcharr.requests.get") as mock_get:
+        with patch("researcharr_root.requests.get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 500
             mock_get.return_value = mock_response
 
-            result = researcharr.check_sonarr_connection(
+            result = researcharr_root.check_sonarr_connection(
                 "http://sonarr.local", "test_key", mock_logger
             )
 
@@ -298,10 +298,10 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test Sonarr connection with exception."""
         mock_logger = Mock()
 
-        with patch("researcharr.requests.get") as mock_get:
+        with patch("researcharr_root.requests.get") as mock_get:
             mock_get.side_effect = Exception("Connection failed")
 
-            result = researcharr.check_sonarr_connection(
+            result = researcharr_root.check_sonarr_connection(
                 "http://sonarr.local", "test_key", mock_logger
             )
 
@@ -313,39 +313,39 @@ class TestResearcharrRootModule(unittest.TestCase):
         config_data = {"test": "value", "nested": {"key": "val"}}
 
         with patch("builtins.open", mock_open(read_data="test: value\nnested:\n  key: val")):
-            with patch("researcharr.os.path.exists", return_value=True):
-                with patch("researcharr.yaml.safe_load", return_value=config_data):
-                    result = researcharr.load_config("test.yml")
+            with patch("researcharr_root.os.path.exists", return_value=True):
+                with patch("researcharr_root.yaml.safe_load", return_value=config_data):
+                    result = researcharr_root.load_config("test.yml")
 
                     self.assertEqual(result, config_data)
 
     def test_load_config_missing_file(self):
         """Test load_config with missing file."""
-        with patch("researcharr.os.path.exists", return_value=False):
+        with patch("researcharr_root.os.path.exists", return_value=False):
             with self.assertRaises(FileNotFoundError):
-                researcharr.load_config("missing.yml")
+                researcharr_root.load_config("missing.yml")
 
     def test_load_config_empty_file(self):
         """Test load_config with empty file."""
         with patch("builtins.open", mock_open(read_data="")):
-            with patch("researcharr.os.path.exists", return_value=True):
-                with patch("researcharr.yaml.safe_load", return_value=None):
-                    result = researcharr.load_config("empty.yml")
+            with patch("researcharr_root.os.path.exists", return_value=True):
+                with patch("researcharr_root.yaml.safe_load", return_value=None):
+                    result = researcharr_root.load_config("empty.yml")
 
                     self.assertEqual(result, {})
 
     def test_load_config_default_path(self):
         """Test load_config with default path."""
         with patch("builtins.open", mock_open(read_data="key: value")):
-            with patch("researcharr.os.path.exists", return_value=True):
-                with patch("researcharr.yaml.safe_load", return_value={"key": "value"}):
-                    result = researcharr.load_config()
+            with patch("researcharr_root.os.path.exists", return_value=True):
+                with patch("researcharr_root.yaml.safe_load", return_value={"key": "value"}):
+                    result = researcharr_root.load_config()
 
                     self.assertEqual(result, {"key": "value"})
 
     def test_create_metrics_app(self):
         """Test create_metrics_app creates Flask app."""
-        app = researcharr.create_metrics_app()
+        app = researcharr_root.create_metrics_app()
 
         self.assertEqual(app.name, "metrics")
         self.assertIn("requests_total", app.metrics)
@@ -355,7 +355,7 @@ class TestResearcharrRootModule(unittest.TestCase):
 
     def test_create_metrics_app_routes(self):
         """Test create_metrics_app has expected routes."""
-        app = researcharr.create_metrics_app()
+        app = researcharr_root.create_metrics_app()
 
         with app.test_client() as client:
             # Test health endpoint
@@ -371,7 +371,7 @@ class TestResearcharrRootModule(unittest.TestCase):
 
     def test_create_metrics_app_metrics_endpoint(self):
         """Test metrics endpoint."""
-        app = researcharr.create_metrics_app()
+        app = researcharr_root.create_metrics_app()
 
         with app.test_client() as client:
             response = client.get("/metrics")
@@ -383,7 +383,7 @@ class TestResearcharrRootModule(unittest.TestCase):
 
     def test_create_metrics_app_request_counter(self):
         """Test request counter increments."""
-        app = researcharr.create_metrics_app()
+        app = researcharr_root.create_metrics_app()
 
         with app.test_client() as client:
             # Make a request to increment counter
@@ -396,7 +396,7 @@ class TestResearcharrRootModule(unittest.TestCase):
 
     def test_create_metrics_app_error_counter(self):
         """Test error counter increments on 404."""
-        app = researcharr.create_metrics_app()
+        app = researcharr_root.create_metrics_app()
 
         with app.test_client() as client:
             # Make request to non-existent endpoint
@@ -410,9 +410,9 @@ class TestResearcharrRootModule(unittest.TestCase):
     def test_create_metrics_app_health_db_check(self):
         """Test health endpoint with actual DB check."""
         # Create a test database
-        researcharr.init_db()
+        researcharr_root.init_db()
 
-        app = researcharr.create_metrics_app()
+        app = researcharr_root.create_metrics_app()
 
         with app.test_client() as client:
             response = client.get("/health")
@@ -422,10 +422,10 @@ class TestResearcharrRootModule(unittest.TestCase):
 
     def test_create_metrics_app_health_db_error(self):
         """Test health endpoint with DB error."""
-        app = researcharr.create_metrics_app()
+        app = researcharr_root.create_metrics_app()
 
         # Mock DB_PATH to non-existent file
-        with patch("researcharr.DB_PATH", "/invalid/path/db.sqlite"):
+        with patch("researcharr_root.DB_PATH", "/invalid/path/db.sqlite"):
             with app.test_client() as client:
                 response = client.get("/health")
                 data = response.get_json()
@@ -434,7 +434,7 @@ class TestResearcharrRootModule(unittest.TestCase):
 
     def test_create_metrics_app_error_handlers(self):
         """Test error handlers."""
-        app = researcharr.create_metrics_app()
+        app = researcharr_root.create_metrics_app()
 
         # Add a route that raises an exception
         @app.route("/test_error")
@@ -456,8 +456,8 @@ class TestResearcharrRootModule(unittest.TestCase):
 
     def test_main_execution_with_serve_argument(self):
         """Test __main__ execution with serve argument."""
-        with patch("researcharr.serve") as mock_serve:
-            with patch("sys.argv", ["researcharr.py", "serve"]):
+        with patch("researcharr_root.serve") as mock_serve:
+            with patch("sys.argv", ["researcharr_root.py", "serve"]):
                 # Simulate the __main__ execution
                 exec(
                     """
@@ -466,15 +466,15 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "serve":
         serve()
 """,
-                    researcharr.__dict__,
+                    researcharr_root.__dict__,
                 )
 
                 mock_serve.assert_called_once()
 
     def test_main_execution_without_serve_argument(self):
         """Test __main__ execution without serve argument."""
-        with patch("researcharr.serve") as mock_serve:
-            with patch("sys.argv", ["researcharr.py"]):
+        with patch("researcharr_root.serve") as mock_serve:
+            with patch("sys.argv", ["researcharr_root.py"]):
                 # Simulate the __main__ execution
                 exec(
                     """
@@ -483,7 +483,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "serve":
         serve()
 """,
-                    researcharr.__dict__,
+                    researcharr_root.__dict__,
                 )
 
                 mock_serve.assert_not_called()
@@ -491,20 +491,20 @@ if __name__ == "__main__":
     def test_globals_preservation(self):
         """Test that globals preservation works for test fixtures."""
         # This tests the conditional import pattern used for test compatibility
-        original_requests = researcharr.requests
+        original_requests = researcharr_root.requests
 
         # The module should preserve existing globals
-        self.assertIs(researcharr.requests, original_requests)
+        self.assertIs(researcharr_root.requests, original_requests)
 
     def test_package_path_structure(self):
         """Test __path__ includes both directories."""
         expected_paths = [
-            os.path.dirname(researcharr.__file__),
-            os.path.join(os.path.dirname(researcharr.__file__), "researcharr"),
+            os.path.dirname(researcharr_root.__file__),
+            os.path.join(os.path.dirname(researcharr_root.__file__), "researcharr"),
         ]
 
         for expected_path in expected_paths:
-            self.assertIn(expected_path, researcharr.__path__)
+            self.assertIn(expected_path, researcharr_root.__path__)
 
 
 if __name__ == "__main__":

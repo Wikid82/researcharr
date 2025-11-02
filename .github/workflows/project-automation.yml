@@ -109,40 +109,6 @@ jobs:
               }
             }' -f owner=$ORGANIZATION -F number=$PROJECT_NUMBER > project_data.json 2>/dev/null || echo '{"data": {"user": {"projectV2": null}}}' > project_data.json
 
-      - name: Add issue to project
-        if: github.event_name == 'issues' && github.event.action == 'opened'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_ID: ${{ github.event.issue.node_id }}
-        run: |
-          PROJECT_ID=$(jq -r '.data.user.projectV2.id' project_data.json)
-
-          gh api graphql -f query='
-            mutation($project:ID!, $contentId:ID!) {
-              addProjectV2ItemByContentId(input: {projectId: $project, contentId: $contentId}) {
-                item {
-                  id
-                }
-              }
-            }' -f project=$PROJECT_ID -f contentId=$ISSUE_ID
-
-      - name: Add PR to project
-        if: github.event_name == 'pull_request' && github.event.action == 'opened'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_ID: ${{ github.event.pull_request.node_id }}
-        run: |
-          PROJECT_ID=$(jq -r '.data.user.projectV2.id' project_data.json)
-
-          gh api graphql -f query='
-            mutation($project:ID!, $contentId:ID!) {
-              addProjectV2ItemByContentId(input: {projectId: $project, contentId: $contentId}) {
-                item {
-                  id
-                }
-              }
-            }' -f project=$PROJECT_ID -f contentId=$PR_ID
-
       - name: Move to In Progress when assigned
         if: github.event_name == 'issues' && github.event.action == 'assigned'
         env:

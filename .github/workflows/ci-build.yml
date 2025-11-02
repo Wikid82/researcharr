@@ -66,6 +66,13 @@ jobs:
         run: |
           pytest tests/ --maxfail=3 --disable-warnings -v \
             --cov=researcharr --cov-report=xml:coverage.xml
+      - name: Ensure coverage.xml exists (even if tests failed)
+        if: ${{ always() }}
+        run: |
+          if [ ! -f coverage.xml ]; then
+            echo "coverage.xml not found; creating placeholder file so upload can proceed."
+            echo "<?xml version=\"1.0\" ?><coverage line-rate=\"0.0\"></coverage>" > coverage.xml
+          fi
       # NOTE: `secrets.CODECOV_TOKEN` is evaluated by GitHub Actions at
       # runtime. Some local editors/language servers cannot resolve runtime
       # contexts and report 'Unrecognized named-value: secrets' as a false
@@ -73,7 +80,7 @@ jobs:
       # environment variable at the job level above and use `env.CODECOV_TOKEN`
       # in the step `if` expression instead of referencing `secrets.*`.
       - name: Upload coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
+        if: ${{ always() && env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ env.CODECOV_TOKEN }}

@@ -21,7 +21,7 @@ class TestAPIConsolidated(unittest.TestCase):
     def test_api_blueprint_registration(self):
         """Test API blueprint registration."""
         try:
-            import api
+            import api  # noqa: F401
             from researcharr.factory import create_app
 
             app = create_app()

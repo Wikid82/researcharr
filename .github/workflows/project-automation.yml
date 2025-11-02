@@ -1,0 +1,275 @@
+name: Project Board Automation
+
+on:
+  issues:
+    types: [opened, closed, reopened, assigned, unassigned, labeled]
+  pull_request:
+    types: [opened, closed, reopened, ready_for_review, converted_to_draft]
+  pull_request_review:
+    types: [submitted]
+
+env:
+  PROJECT_NUMBER: 2  # Update this with your actual project number
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  manage_project:
+    runs-on: ubuntu-latest
+    name: Manage Project Board
+    steps:
+      - name: Get project data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ORGANIZATION: ${{ github.repository_owner }}
+          PROJECT_NUMBER: ${{ env.PROJECT_NUMBER }}
+        run: |
+          gh api graphql -f query='
+            query($org: String!, $number: Int!) {
+              organization(login: $org) {
+                projectV2(number: $number) {
+                  id
+                  fields(first:20) {
+                    nodes {
+                      ... on ProjectV2Field {
+                        id
+                        name
+                      }
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                        options {
+                          id
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }' -f org=$ORGANIZATION -F number=$PROJECT_NUMBER > project_data.json
+
+      - name: Add issue to project
+        if: github.event_name == 'issues' && github.event.action == 'opened'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_ID: ${{ github.event.issue.node_id }}
+        run: |
+          PROJECT_ID=$(jq -r '.data.organization.projectV2.id' project_data.json)
+
+          gh api graphql -f query='
+            mutation($project:ID!, $contentId:ID!) {
+              addProjectV2ItemByContentId(input: {projectId: $project, contentId: $contentId}) {
+                item {
+                  id
+                }
+              }
+            }' -f project=$PROJECT_ID -f contentId=$ISSUE_ID
+
+      - name: Add PR to project
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_ID: ${{ github.event.pull_request.node_id }}
+        run: |
+          PROJECT_ID=$(jq -r '.data.organization.projectV2.id' project_data.json)
+
+          gh api graphql -f query='
+            mutation($project:ID!, $contentId:ID!) {
+              addProjectV2ItemByContentId(input: {projectId: $project, contentId: $contentId}) {
+                item {
+                  id
+                }
+              }
+            }' -f project=$PROJECT_ID -f contentId=$PR_ID
+
+      - name: Move to In Progress when assigned
+        if: github.event_name == 'issues' && github.event.action == 'assigned'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_ID: ${{ github.event.issue.node_id }}
+        run: |
+          PROJECT_ID=$(jq -r '.data.organization.projectV2.id' project_data.json)
+          STATUS_FIELD_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .id' project_data.json)
+          IN_PROGRESS_OPTION_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "In Progress") | .id' project_data.json)
+
+          # Get the project item ID
+          ITEM_ID=$(gh api graphql -f query='
+            query($project:ID!, $contentId:ID!) {
+              node(id: $project) {
+                ... on ProjectV2 {
+                  items(first: 100) {
+                    nodes {
+                      id
+                      content {
+                        ... on Issue {
+                          id
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }' -f project=$PROJECT_ID -f contentId=$ISSUE_ID | jq -r '.data.node.items.nodes[] | select(.content.id == "'$ISSUE_ID'") | .id')
+
+          # Update the status
+          gh api graphql -f query='
+            mutation($project:ID!, $item:ID!, $field:ID!, $value:String!) {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: $project
+                itemId: $item
+                fieldId: $field
+                value: {
+                  singleSelectOptionId: $value
+                }
+              }) {
+                projectV2Item {
+                  id
+                }
+              }
+            }' -f project=$PROJECT_ID -f item=$ITEM_ID -f field=$STATUS_FIELD_ID -f value=$IN_PROGRESS_OPTION_ID
+
+      - name: Move to Done when closed
+        if: (github.event_name == 'issues' && github.event.action == 'closed') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PROJECT_ID=$(jq -r '.data.organization.projectV2.id' project_data.json)
+          STATUS_FIELD_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .id' project_data.json)
+          DONE_OPTION_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "Done") | .id' project_data.json)
+
+          if [ "${{ github.event_name }}" == "issues" ]; then
+            CONTENT_ID=${{ github.event.issue.node_id }}
+          else
+            CONTENT_ID=${{ github.event.pull_request.node_id }}
+          fi
+
+          # Get the project item ID
+          ITEM_ID=$(gh api graphql -f query='
+            query($project:ID!, $contentId:ID!) {
+              node(id: $project) {
+                ... on ProjectV2 {
+                  items(first: 100) {
+                    nodes {
+                      id
+                      content {
+                        ... on Issue {
+                          id
+                        }
+                        ... on PullRequest {
+                          id
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }' -f project=$PROJECT_ID -f contentId=$CONTENT_ID | jq -r '.data.node.items.nodes[] | select(.content.id == "'$CONTENT_ID'") | .id')
+
+          # Update the status
+          gh api graphql -f query='
+            mutation($project:ID!, $item:ID!, $field:ID!, $value:String!) {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: $project
+                itemId: $item
+                fieldId: $field
+                value: {
+                  singleSelectOptionId: $value
+                }
+              }) {
+                projectV2Item {
+                  id
+                }
+              }
+            }' -f project=$PROJECT_ID -f item=$ITEM_ID -f field=$STATUS_FIELD_ID -f value=$DONE_OPTION_ID
+
+      - name: Move PR to In Review
+        if: github.event_name == 'pull_request' && github.event.action == 'ready_for_review'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_ID: ${{ github.event.pull_request.node_id }}
+        run: |
+          PROJECT_ID=$(jq -r '.data.organization.projectV2.id' project_data.json)
+          STATUS_FIELD_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .id' project_data.json)
+          REVIEW_OPTION_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "Review") | .id' project_data.json)
+
+          # Get the project item ID
+          ITEM_ID=$(gh api graphql -f query='
+            query($project:ID!, $contentId:ID!) {
+              node(id: $project) {
+                ... on ProjectV2 {
+                  items(first: 100) {
+                    nodes {
+                      id
+                      content {
+                        ... on PullRequest {
+                          id
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }' -f project=$PROJECT_ID -f contentId=$PR_ID | jq -r '.data.node.items.nodes[] | select(.content.id == "'$PR_ID'") | .id')
+
+          # Update the status
+          gh api graphql -f query='
+            mutation($project:ID!, $item:ID!, $field:ID!, $value:String!) {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: $project
+                itemId: $item
+                fieldId: $field
+                value: {
+                  singleSelectOptionId: $value
+                }
+              }) {
+                projectV2Item {
+                  id
+                }
+              }
+            }' -f project=$PROJECT_ID -f item=$ITEM_ID -f field=$STATUS_FIELD_ID -f value=$REVIEW_OPTION_ID
+
+      - name: Move to Beta Candidate on release label
+        if: github.event_name == 'issues' && github.event.action == 'labeled' && contains(github.event.label.name, 'beta')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_ID: ${{ github.event.issue.node_id }}
+        run: |
+          PROJECT_ID=$(jq -r '.data.organization.projectV2.id' project_data.json)
+          STATUS_FIELD_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .id' project_data.json)
+          BETA_OPTION_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "Beta Candidate") | .id' project_data.json)
+
+          # Get the project item ID
+          ITEM_ID=$(gh api graphql -f query='
+            query($project:ID!, $contentId:ID!) {
+              node(id: $project) {
+                ... on ProjectV2 {
+                  items(first: 100) {
+                    nodes {
+                      id
+                      content {
+                        ... on Issue {
+                          id
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }' -f project=$PROJECT_ID -f contentId=$ISSUE_ID | jq -r '.data.node.items.nodes[] | select(.content.id == "'$ISSUE_ID'") | .id')
+
+          # Update the status
+          gh api graphql -f query='
+            mutation($project:ID!, $item:ID!, $field:ID!, $value:String!) {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: $project
+                itemId: $item
+                fieldId: $field
+                value: {
+                  singleSelectOptionId: $value
+                }
+              }) {
+                projectV2Item {
+                  id
+                }
+              }
+            }' -f project=$PROJECT_ID -f item=$ITEM_ID -f field=$STATUS_FIELD_ID -f value=$BETA_OPTION_ID

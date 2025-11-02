@@ -146,12 +146,12 @@ if "create_metrics_app" not in globals():
         from flask import Flask, jsonify
 
         app = Flask("metrics")
-        app.metrics = {"requests_total": 0, "errors_total": 0}
+        app.config["metrics"] = {"requests_total": 0, "errors_total": 0}
 
         # Increment request counter for every request
         @app.before_request
         def _before():
-            app.metrics["requests_total"] += 1
+            app.config["metrics"]["requests_total"] += 1
 
         @app.route("/health")
         def health():
@@ -176,7 +176,7 @@ if "create_metrics_app" not in globals():
 
         @app.route("/metrics")
         def metrics_endpoint():
-            return jsonify(app.metrics)
+            return jsonify(app.config["metrics"])
 
         @app.errorhandler(404)
         @app.errorhandler(500)
@@ -189,7 +189,7 @@ if "create_metrics_app" not in globals():
             except Exception:
                 # If logging fails for any reason, do not raise further
                 pass
-            app.metrics["errors_total"] += 1
+            app.config["metrics"]["errors_total"] += 1
             return jsonify({"error": "internal error"}), 500
 
         return app

@@ -450,6 +450,7 @@ class TestResearcharrRootModule(unittest.TestCase):
 
     def test_conditional_imports(self):
         """Test that conditional imports work."""
+        import researcharr
         # These should be available if not already imported
         self.assertTrue(hasattr(researcharr, "requests"))
         self.assertTrue(hasattr(researcharr, "yaml"))

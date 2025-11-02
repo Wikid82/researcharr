@@ -67,15 +67,23 @@ jobs:
           pytest tests/ --maxfail=3 --disable-warnings -v \
             --cov=researcharr --cov-report=xml:coverage.xml
 
+      - name: Ensure coverage.xml exists (even if tests failed)
+        if: ${{ always() && env.RENOVATE_BYPASS != '1' }}
+        run: |
+          if [ ! -f coverage.xml ]; then
+            echo "coverage.xml not found; creating placeholder file so upload can proceed."
+            echo "<?xml version=\"1.0\" ?><coverage line-rate=\"0.0\"></coverage>" > coverage.xml
+          fi
+
       - name: Upload coverage artifact
-        if: ${{ env.RENOVATE_BYPASS != '1' }}
+        if: ${{ always() && env.RENOVATE_BYPASS != '1' }}
         uses: actions/upload-artifact@v5
         with:
           name: coverage-xml-python-${{ matrix.python-version }}
           path: coverage.xml
 
       - name: Upload coverage to Codecov
-        if: ${{ env.RENOVATE_BYPASS != '1' && env.CODECOV_TOKEN != '' }}
+        if: ${{ always() && env.RENOVATE_BYPASS != '1' && env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

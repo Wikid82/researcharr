@@ -1,0 +1,166 @@
+name: Create Project Board
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: 'Name for the project board'
+        required: true
+        default: 'Researcharr Development'
+      project_description:
+        description: 'Description for the project board'
+        required: false
+        default: 'Development board for Researcharr project management'
+
+jobs:
+  create_project:
+    runs-on: ubuntu-latest
+    name: Create Project Board
+    steps:
+      - name: Create Project
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROJECT_NAME: ${{ github.event.inputs.project_name }}
+          PROJECT_DESCRIPTION: ${{ github.event.inputs.project_description }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          # Create the project
+          PROJECT_RESPONSE=$(gh api graphql -f query='
+            mutation($ownerId: ID!, $title: String!, $description: String) {
+              createProjectV2(input: {ownerId: $ownerId, title: $title, description: $description}) {
+                projectV2 {
+                  id
+                  number
+                  title
+                  url
+                }
+              }
+            }' -f ownerId="$(gh api graphql -f query='query($login: String!) { user(login: $login) { id } }' -f login=$OWNER --jq '.data.user.id')" -f title="$PROJECT_NAME" -f description="$PROJECT_DESCRIPTION")
+
+          PROJECT_ID=$(echo $PROJECT_RESPONSE | jq -r '.data.createProjectV2.projectV2.id')
+          PROJECT_NUMBER=$(echo $PROJECT_RESPONSE | jq -r '.data.createProjectV2.projectV2.number')
+          PROJECT_URL=$(echo $PROJECT_RESPONSE | jq -r '.data.createProjectV2.projectV2.url')
+
+          echo "Project created with ID: $PROJECT_ID"
+          echo "Project number: $PROJECT_NUMBER"
+          echo "Project URL: $PROJECT_URL"
+
+          # Add Status field with custom options
+          gh api graphql -f query='
+            mutation($projectId: ID!, $name: String!, $options: [ProjectV2SingleSelectFieldOptionInput!]!) {
+              createProjectV2Field(input: {
+                projectId: $projectId
+                dataType: SINGLE_SELECT
+                name: $name
+                singleSelectOptions: $options
+              }) {
+                projectV2Field {
+                  ... on ProjectV2SingleSelectField {
+                    id
+                    name
+                    options {
+                      id
+                      name
+                    }
+                  }
+                }
+              }
+            }' -f projectId=$PROJECT_ID -f name="Status" -f options='[
+              {name: "Backlog", color: "GRAY"},
+              {name: "In Progress", color: "BLUE"},
+              {name: "Review", color: "PURPLE"},
+              {name: "Done", color: "GREEN"},
+              {name: "Beta Candidate", color: "ORANGE"}
+            ]'
+
+          # Add Priority field
+          gh api graphql -f query='
+            mutation($projectId: ID!, $name: String!, $options: [ProjectV2SingleSelectFieldOptionInput!]!) {
+              createProjectV2Field(input: {
+                projectId: $projectId
+                dataType: SINGLE_SELECT
+                name: $name
+                singleSelectOptions: $options
+              }) {
+                projectV2Field {
+                  ... on ProjectV2SingleSelectField {
+                    id
+                    name
+                    options {
+                      id
+                      name
+                    }
+                  }
+                }
+              }
+            }' -f projectId=$PROJECT_ID -f name="Priority" -f options='[
+              {name: "Low", color: "GREEN"},
+              {name: "Medium", color: "YELLOW"},
+              {name: "High", color: "ORANGE"},
+              {name: "Critical", color: "RED"}
+            ]'
+
+          # Add Effort field (number field for story points)
+          gh api graphql -f query='
+            mutation($projectId: ID!, $name: String!) {
+              createProjectV2Field(input: {
+                projectId: $projectId
+                dataType: NUMBER
+                name: $name
+              }) {
+                projectV2Field {
+                  ... on ProjectV2Field {
+                    id
+                    name
+                  }
+                }
+              }
+            }' -f projectId=$PROJECT_ID -f name="Story Points"
+
+          # Create a Kanban view
+          gh api graphql -f query='
+            mutation($projectId: ID!, $name: String!) {
+              createProjectV2View(input: {
+                projectId: $projectId
+                name: $name
+                layout: BOARD_LAYOUT
+              }) {
+                projectV2View {
+                  id
+                  name
+                }
+              }
+            }' -f projectId=$PROJECT_ID -f name="Kanban Board"
+
+          # Create a Table view
+          gh api graphql -f query='
+            mutation($projectId: ID!, $name: String!) {
+              createProjectV2View(input: {
+                projectId: $projectId
+                name: $name
+                layout: TABLE_LAYOUT
+              }) {
+                projectV2View {
+                  id
+                  name
+                }
+              }
+            }' -f projectId=$PROJECT_ID -f name="All Items"
+
+          # Output project details
+          echo "::notice title=Project Created::Project '$PROJECT_NAME' created successfully at $PROJECT_URL"
+          echo "::notice title=Project Number::Update PROJECT_NUMBER to $PROJECT_NUMBER in project-automation.yml"
+
+          # Link repository to project
+          REPO_ID=$(gh api repos/${{ github.repository }} --jq '.node_id')
+          gh api graphql -f query='
+            mutation($projectId: ID!, $repositoryId: ID!) {
+              linkProjectV2ToRepository(input: {
+                projectId: $projectId
+                repositoryId: $repositoryId
+              }) {
+                repository {
+                  id
+                }
+              }
+            }' -f projectId=$PROJECT_ID -f repositoryId=$REPO_ID

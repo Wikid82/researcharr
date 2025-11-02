@@ -1,0 +1,73 @@
+name: Create Beta Issues
+
+on:
+  workflow_dispatch:
+    inputs:
+      create_issues:
+        description: 'Create beta tracking issues'
+        type: boolean
+        required: true
+        default: true
+
+jobs:
+  create_beta_issues:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.create_issues == 'true' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+
+      - name: Create beta tracking issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/create-beta-issues.py
+
+      - name: Add issues to project board
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROJECT_NUMBER: 2
+        run: |
+          # Get recently created issues with beta label
+          ISSUES=$(gh api repos/${{ github.repository }}/issues \
+            --jq '.[] | select(.labels[]?.name == "beta") | select(.created_at > (now - 86400 | strftime("%Y-%m-%dT%H:%M:%SZ"))) | {id: .node_id, number: .number}')
+
+          # Get project ID
+          PROJECT_ID=$(gh api graphql -f query='
+            query($org: String!, $number: Int!) {
+              organization(login: $org) {
+                projectV2(number: $number) {
+                  id
+                }
+              }
+            }' -f org=${{ github.repository_owner }} -F number=$PROJECT_NUMBER --jq '.data.organization.projectV2.id')
+
+          # Add each issue to the project
+          echo "$ISSUES" | while IFS= read -r issue; do
+            if [ -n "$issue" ]; then
+              ISSUE_ID=$(echo $issue | jq -r '.id')
+              ISSUE_NUMBER=$(echo $issue | jq -r '.number')
+
+              echo "Adding issue #$ISSUE_NUMBER to project..."
+
+              gh api graphql -f query='
+                mutation($project:ID!, $contentId:ID!) {
+                  addProjectV2ItemByContentId(input: {projectId: $project, contentId: $contentId}) {
+                    item {
+                      id
+                    }
+                  }
+                }' -f project=$PROJECT_ID -f contentId=$ISSUE_ID
+
+              echo "Issue #$ISSUE_NUMBER added to project board"
+            fi
+          done

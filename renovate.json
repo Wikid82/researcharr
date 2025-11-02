@@ -22,7 +22,7 @@
     "stabilityDays": 0
   },
   "labels": ["dependencies"],
-  "assignees": ["@Wikid82"],
+  "assignees": ["Wikid82"],
   "reviewers": [],
   "packageRules": [
     {
@@ -66,10 +66,9 @@
       "rangeStrategy": "pin"
     },
     {
-      "description": "Update frozen requirements separately",
+      "description": "Update frozen requirements separately (currently disabled for manual control)",
       "matchFileNames": ["requirements-frozen.txt"],
-      "enabled": false,
-      "groupName": "Frozen dependencies (manual)"
+      "enabled": false
     }
   ],
   "pip_requirements": {
@@ -80,7 +79,6 @@
   "commitMessagePrefix": "chore(deps):",
   "commitMessageAction": "update",
   "commitMessageTopic": "{{depName}}",
-  "commitMessageExtra": "to {{#if isPinDigest}}{{{newDigestShort}}}{{else}}{{#if isMajor}}{{prettyNewMajor}}{{else}}{{#if isSingleVersion}}{{prettyNewVersion}}{{else}}{{#if newValue}}{{{newValue}}}{{else}}{{{newDigestShort}}}{{/if}}{{/if}}{{/if}}{{/if}}",
   "prBodyColumns": ["Package", "Update", "Type", "Change"],
   "prBodyDefinitions": {
     "Package": "{{{depNameLinked}}}",

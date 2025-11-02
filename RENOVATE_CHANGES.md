@@ -105,7 +105,7 @@ The configuration has been validated for:
 - ✅ Valid JSON syntax
 - ✅ Schema compliance
 - ✅ 7 presets properly extended
-- ✅ 8 package rules defined
+- ✅ 7 package rules defined
 - ✅ Security features enabled
 
 ## Next Steps

@@ -73,9 +73,6 @@
   ],
   "ignoreDeps": [],
   "ignoreTests": false,
-  "commitMessagePrefix": "chore(deps):",
-  "commitMessageAction": "update",
-  "commitMessageTopic": "{{depName}}",
   "prBodyColumns": ["Package", "Update", "Type", "Change"],
   "prBodyDefinitions": {
     "Package": "{{{depNameLinked}}}",

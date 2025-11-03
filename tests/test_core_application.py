@@ -180,7 +180,8 @@ Timezone: "UTC"
     @patch("researcharr.core.application.importlib.util.spec_from_file_location")
     def test_setup_user_authentication_with_webui(self, mock_spec):
         """Test user authentication setup with webui integration."""
-        # In our test environment, webui loads successfully and has a real implementation
+        # In our test environment, webui loads successfully and has a real
+        # implementation
         # So we test that the method completes and returns config
         user_config = self.factory.setup_user_authentication(str(self.temp_dir))
 

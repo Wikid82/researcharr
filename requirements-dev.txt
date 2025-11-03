@@ -3,7 +3,7 @@ isort==7.0.0
 flake8
 mypy
 pre-commit
-pytest>=7.0
+pytest==8.4.2
 pytest-cov
 types-requests
 types-PyYAML

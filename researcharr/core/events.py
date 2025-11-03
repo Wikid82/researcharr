@@ -105,9 +105,7 @@ class EventBus:
         event = Event(name=event_name, data=data, source=source)
         self.publish(event)
 
-    def get_event_history(
-        self, event_name: Optional[str] = None, limit: int = 100
-    ) -> List[Event]:
+    def get_event_history(self, event_name: Optional[str] = None, limit: int = 100) -> List[Event]:
         """Get recent event history, optionally filtered by event name."""
         with self._lock:
             events = self._event_history.copy()
@@ -177,9 +175,7 @@ def publish(event: Event) -> None:
     get_event_bus().publish(event)
 
 
-def publish_simple(
-    event_name: str, data: Any = None, source: Optional[str] = None
-) -> None:
+def publish_simple(event_name: str, data: Any = None, source: Optional[str] = None) -> None:
     """Publish a simple event to the global event bus."""
     get_event_bus().publish_simple(event_name, data, source)
 

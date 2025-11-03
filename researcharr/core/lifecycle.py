@@ -87,9 +87,7 @@ class ApplicationLifecycle:
         with self._lock:
             old_state = self._state
             self._state = new_state
-            LOGGER.info(
-                "Application state changed: %s -> %s", old_state.value, new_state.value
-            )
+            LOGGER.info("Application state changed: %s -> %s", old_state.value, new_state.value)
 
             # Publish state change event
             event_map = {
@@ -151,9 +149,7 @@ class ApplicationLifecycle:
         """Execute startup sequence. Returns True if successful."""
         with self._lock:
             if self._state != ApplicationState.CREATED:
-                LOGGER.warning(
-                    "Cannot start application in state: %s", self._state.value
-                )
+                LOGGER.warning("Cannot start application in state: %s", self._state.value)
                 return False
 
             self._set_state(ApplicationState.STARTING)

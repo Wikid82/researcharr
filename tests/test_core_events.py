@@ -241,9 +241,7 @@ class TestEventBus(unittest.TestCase):
         # Check counts
         self.assertEqual(self.event_bus.get_subscriber_count("test.event"), 2)
         self.assertEqual(self.event_bus.get_subscriber_count("other.event"), 1)
-        self.assertEqual(
-            self.event_bus.get_subscriber_count(), 4
-        )  # 3 specific + 1 wildcard
+        self.assertEqual(self.event_bus.get_subscriber_count(), 4)  # 3 specific + 1 wildcard
 
     def test_list_events(self):
         """Test listing events with subscribers."""

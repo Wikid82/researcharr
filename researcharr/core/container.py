@@ -71,18 +71,14 @@ class ServiceContainer:
             return self.resolve(implementation_name)
 
         self._factories[interface_name] = interface_factory
-        LOGGER.debug(
-            "Registered interface: %s -> %s", interface_name, implementation_name
-        )
+        LOGGER.debug("Registered interface: %s -> %s", interface_name, implementation_name)
 
     def resolve(self, name: str) -> Any:
         """Resolve a service by name."""
         with self._lock:
             # Check for circular dependencies
             if name in self._resolving:
-                raise RuntimeError(
-                    f"Circular dependency detected resolving service: {name}"
-                )
+                raise RuntimeError(f"Circular dependency detected resolving service: {name}")
 
             # Check singletons first
             if name in self._singletons:

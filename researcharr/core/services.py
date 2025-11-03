@@ -74,9 +74,7 @@ class LoggingService:
     def __init__(self):
         self._loggers: Dict[str, logging.Logger] = {}
 
-    def setup_logger(
-        self, name: str, log_file: str, level: Optional[int] = None
-    ) -> logging.Logger:
+    def setup_logger(self, name: str, log_file: str, level: Optional[int] = None) -> logging.Logger:
         """Create and return a configured logger.
 
         Tests expect a callable `setup_logger` that returns an object with an
@@ -122,14 +120,11 @@ class ConnectivityService:
     def has_valid_url_and_key(self, instances: List[Dict[str, Any]]) -> bool:
         """Check if all instances have valid URLs and API keys."""
         return all(
-            not i.get("enabled")
-            or (i.get("url", "").startswith("http") and i.get("api_key"))
+            not i.get("enabled") or (i.get("url", "").startswith("http") and i.get("api_key"))
             for i in instances
         )
 
-    def check_radarr_connection(
-        self, url: str, api_key: str, logger: logging.Logger
-    ) -> bool:
+    def check_radarr_connection(self, url: str, api_key: str, logger: logging.Logger) -> bool:
         """Check Radarr service connectivity."""
         if not url or not api_key:
             logger.warning("Missing Radarr URL or API key")
@@ -172,9 +167,7 @@ class ConnectivityService:
             )
             return False
 
-    def check_sonarr_connection(
-        self, url: str, api_key: str, logger: logging.Logger
-    ) -> bool:
+    def check_sonarr_connection(self, url: str, api_key: str, logger: logging.Logger) -> bool:
         """Check Sonarr service connectivity."""
         if not url or not api_key:
             logger.warning("Missing Sonarr URL or API key")
@@ -257,9 +250,7 @@ class HealthService:
             }
 
         # Overall status
-        component_statuses = [
-            comp["status"] for comp in health_status["components"].values()
-        ]
+        component_statuses = [comp["status"] for comp in health_status["components"].values()]
         if "error" in component_statuses:
             health_status["status"] = "error"
         elif "warning" in component_statuses:
@@ -333,16 +324,12 @@ def create_metrics_app() -> Flask:
         health_status = health_service.check_system_health()
 
         # Add some backwards compatibility fields for existing tests
-        db_status = (
-            health_status["components"].get("database", {}).get("status", "error")
-        )
+        db_status = health_status["components"].get("database", {}).get("status", "error")
 
         response = {
             "status": health_status["status"],
             "db": db_status,
-            "config": health_status["components"]
-            .get("configuration", {})
-            .get("status", "ok"),
+            "config": health_status["components"].get("configuration", {}).get("status", "ok"),
             "threads": 1,  # Backwards compatibility
             "time": "2025-11-02T00:00:00Z",  # Backwards compatibility
             "components": health_status["components"],
@@ -422,9 +409,7 @@ def init_db(db_path: Optional[str] = None) -> None:
     db_service.init_db()
 
 
-def setup_logger(
-    name: str, log_file: str, level: Optional[int] = None
-) -> logging.Logger:
+def setup_logger(name: str, log_file: str, level: Optional[int] = None) -> logging.Logger:
     """Setup logger (backwards compatibility)."""
     logging_service = LoggingService()
     return logging_service.setup_logger(name, log_file, level)

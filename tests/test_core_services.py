@@ -52,15 +52,11 @@ class TestDatabaseService(unittest.TestCase):
         cursor = conn.cursor()
 
         # Check radarr_queue table
-        cursor.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='radarr_queue'"
-        )
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='radarr_queue'")
         self.assertIsNotNone(cursor.fetchone())
 
         # Check sonarr_queue table
-        cursor.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='sonarr_queue'"
-        )
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='sonarr_queue'")
         self.assertIsNotNone(cursor.fetchone())
 
         conn.close()
@@ -257,9 +253,7 @@ class TestConnectivityService(unittest.TestCase):
     def test_check_radarr_connection_missing_credentials(self):
         """Test Radarr connection check with missing credentials."""
         # Test missing URL
-        result = self.connectivity_service.check_radarr_connection(
-            "", "test_key", self.logger
-        )
+        result = self.connectivity_service.check_radarr_connection("", "test_key", self.logger)
         self.assertFalse(result)
 
         # Test missing API key
@@ -365,23 +359,17 @@ class TestMetricsService(unittest.TestCase):
         initial_count = self.metrics_service.metrics["requests_total"]
 
         self.metrics_service.increment_requests()
-        self.assertEqual(
-            self.metrics_service.metrics["requests_total"], initial_count + 1
-        )
+        self.assertEqual(self.metrics_service.metrics["requests_total"], initial_count + 1)
 
         self.metrics_service.increment_requests()
-        self.assertEqual(
-            self.metrics_service.metrics["requests_total"], initial_count + 2
-        )
+        self.assertEqual(self.metrics_service.metrics["requests_total"], initial_count + 2)
 
     def test_increment_errors(self):
         """Test error counter increment."""
         initial_count = self.metrics_service.metrics["errors_total"]
 
         self.metrics_service.increment_errors()
-        self.assertEqual(
-            self.metrics_service.metrics["errors_total"], initial_count + 1
-        )
+        self.assertEqual(self.metrics_service.metrics["errors_total"], initial_count + 1)
 
     def test_record_service_metric(self):
         """Test recording service-specific metrics."""

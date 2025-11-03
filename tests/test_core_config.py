@@ -162,9 +162,7 @@ class TestConfigurationManager(unittest.TestCase):
         self.config_manager.load_config()
 
         # Test deep access
-        self.assertEqual(
-            self.config_manager.get("level1.level2.level3.value"), "deep_value"
-        )
+        self.assertEqual(self.config_manager.get("level1.level2.level3.value"), "deep_value")
 
         # Test partial access
         level2 = self.config_manager.get("level1.level2")
@@ -199,9 +197,7 @@ class TestConfigurationManager(unittest.TestCase):
 
         # And that non-existent keys return None/default
         self.assertIsNone(self.config_manager.get("totally_nonexistent_key"))
-        self.assertEqual(
-            self.config_manager.get("nonexistent.key", "default"), "default"
-        )
+        self.assertEqual(self.config_manager.get("nonexistent.key", "default"), "default")
 
     def test_get_config_section(self):
         """Test getting entire configuration sections."""
@@ -336,16 +332,10 @@ class TestConfigurationManager(unittest.TestCase):
         self.assertTrue(result)
 
         # Check merged result - last loaded (override) should win
-        self.assertEqual(
-            self.config_manager.get("database.host"), "remote.db.com"
-        )  # Overridden
+        self.assertEqual(self.config_manager.get("database.host"), "remote.db.com")  # Overridden
         self.assertEqual(self.config_manager.get("database.port"), 5432)  # From base
-        self.assertEqual(
-            self.config_manager.get("database.options.timeout"), 60
-        )  # Overridden
-        self.assertEqual(
-            self.config_manager.get("database.options.pool_size"), 10
-        )  # From base
+        self.assertEqual(self.config_manager.get("database.options.timeout"), 60)  # Overridden
+        self.assertEqual(self.config_manager.get("database.options.pool_size"), 10)  # From base
 
     def test_save_config(self):
         """Test saving configuration to file."""

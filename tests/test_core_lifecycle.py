@@ -122,9 +122,7 @@ class TestApplicationLifecycle(unittest.TestCase):
             executed.append("normal")
 
         # Add non-critical hook that fails
-        self.lifecycle.add_startup_hook(
-            "fail", failing_hook, critical=False, priority=1
-        )
+        self.lifecycle.add_startup_hook("fail", failing_hook, critical=False, priority=1)
         self.lifecycle.add_startup_hook("normal", normal_hook, priority=2)
 
         # Starting should succeed, both hooks should be attempted
@@ -252,9 +250,7 @@ class TestApplicationLifecycle(unittest.TestCase):
             timeout_executed.append("completed")
 
         # Add hook with timeout
-        self.lifecycle.add_startup_hook(
-            "slow", slow_hook, timeout=0.05
-        )  # Shorter than sleep
+        self.lifecycle.add_startup_hook("slow", slow_hook, timeout=0.05)  # Shorter than sleep
 
         # Start - might timeout depending on implementation
         result = self.lifecycle.startup()
@@ -310,12 +306,8 @@ class TestApplicationLifecycle(unittest.TestCase):
         self.assertTrue(startup_result)
 
         # Check sequence
-        self.assertEqual(
-            sequence[:2], ["startup1", "startup2"]
-        )  # Startup in priority order
-        self.assertEqual(
-            sequence[2:], ["shutdown2", "shutdown1"]
-        )  # Shutdown in reverse priority
+        self.assertEqual(sequence[:2], ["startup1", "startup2"])  # Startup in priority order
+        self.assertEqual(sequence[2:], ["shutdown2", "shutdown1"])  # Shutdown in reverse priority
 
 
 if __name__ == "__main__":

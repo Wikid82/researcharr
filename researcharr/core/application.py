@@ -142,9 +142,7 @@ class CoreApplicationFactory:
                 import importlib as _importlib_mod
 
                 try:
-                    _reg_mod = _importlib_mod.import_module(
-                        "researcharr.plugins.registry"
-                    )
+                    _reg_mod = _importlib_mod.import_module("researcharr.plugins.registry")
                 except Exception:
                     _reg_mod = _importlib_mod.import_module("plugins.registry")
                 _PluginRegistryRuntime = getattr(_reg_mod, "PluginRegistry")
@@ -203,9 +201,7 @@ class CoreApplicationFactory:
 
                     # Update configuration with plugin configs
                     for name, config in plugin_configs.items():
-                        self.config_manager.set(
-                            f"plugins.{name}", config, "plugin_loader"
-                        )
+                        self.config_manager.set(f"plugins.{name}", config, "plugin_loader")
 
                 except Exception:
                     pass  # Best effort
@@ -256,9 +252,7 @@ class CoreApplicationFactory:
                             )
                         elif "api_key" in ucfg:
                             # Migrate plaintext API key to hash
-                            api_key_val = ucfg.get(
-                                "api_key"
-                            )  # pragma: allowlist secret
+                            api_key_val = ucfg.get("api_key")  # pragma: allowlist secret
                             if api_key_val:
                                 hashed = generate_password_hash(str(api_key_val))
                                 webui.save_user_config(

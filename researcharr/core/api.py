@@ -28,14 +28,10 @@ def require_api_key(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         # Allow either a valid session (web UI) or an API key header
-        if getattr(current_app, "config_data", None) and request.headers.get(
-            "X-API-Key"
-        ):
+        if getattr(current_app, "config_data", None) and request.headers.get("X-API-Key"):
             key = request.headers.get("X-API-Key")
             stored_hash = (
-                getattr(current_app, "config_data", {})
-                .get("general", {})
-                .get("api_key_hash")
+                getattr(current_app, "config_data", {}).get("general", {}).get("api_key_hash")
             )
             # If an API key hash is configured, verify the presented token
             if stored_hash and key and check_password_hash(stored_hash, key):
@@ -47,11 +43,7 @@ def require_api_key(func):
             "session_cookie_name",
             current_app.config.get("SESSION_COOKIE_NAME"),
         )
-        if (
-            cookie_name
-            and request.cookies.get(cookie_name)
-            and request.authorization is None
-        ):
+        if cookie_name and request.cookies.get(cookie_name) and request.authorization is None:
             # Let the view decide if session is valid; for now allow and let
             # route-level checks mirror UI behaviour.
             return func(*args, **kwargs)
@@ -70,11 +62,7 @@ def require_api_key_only(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         key = request.headers.get("X-API-Key")
-        stored_hash = (
-            getattr(current_app, "config_data", {})
-            .get("general", {})
-            .get("api_key_hash")
-        )
+        stored_hash = getattr(current_app, "config_data", {}).get("general", {}).get("api_key_hash")
         if stored_hash and key and check_password_hash(stored_hash, key):
             return func(*args, **kwargs)
         return jsonify({"error": "unauthorized"}), 401
@@ -91,12 +79,8 @@ def health():
         health_status = health_service.check_system_health()
 
         # Maintain backwards compatibility
-        db_status = (
-            health_status["components"].get("database", {}).get("status", "error")
-        )
-        config_status = (
-            health_status["components"].get("configuration", {}).get("status", "ok")
-        )
+        db_status = health_status["components"].get("database", {}).get("status", "error")
+        config_status = health_status["components"].get("configuration", {}).get("status", "ok")
 
         response = {
             "status": health_status["status"],
@@ -152,9 +136,7 @@ def plugins():
         for name in registry.list_plugins():
             instances = getattr(current_app, "config_data", {}).get(name, [])
             cls = registry.get(name)
-            category = (
-                getattr(cls, "category", "plugins") if cls is not None else "plugins"
-            )
+            category = getattr(cls, "category", "plugins") if cls is not None else "plugins"
             description = getattr(cls, "description", "") if cls is not None else ""
             data["plugins"].append(
                 {
@@ -413,9 +395,7 @@ def openapi():
                                                         "name": {"type": "string"},
                                                         "instances": {"type": "array"},
                                                         "category": {"type": "string"},
-                                                        "description": {
-                                                            "type": "string"
-                                                        },
+                                                        "description": {"type": "string"},
                                                     },
                                                 },
                                             }

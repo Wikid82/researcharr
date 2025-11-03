@@ -432,9 +432,7 @@ class TestEnvironmentIntegration(unittest.TestCase):
         self.assertEqual(general_config["Timezone"], "Europe/London")
         self.assertEqual(general_config["LogLevel"], "DEBUG")
 
-    @patch.dict(
-        os.environ, {"SECRET_KEY": "test_secret_key"}
-    )  # pragma: allowlist secret
+    @patch.dict(os.environ, {"SECRET_KEY": "test_secret_key"})  # pragma: allowlist secret
     def test_secret_key_from_environment(self):
         """Test that Flask secret key comes from environment."""
         app = self.factory.create_core_app(str(self.temp_dir))

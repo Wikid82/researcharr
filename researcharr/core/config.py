@@ -57,9 +57,7 @@ class ConfigurationManager:
         else:
             self._base_config_dir = Path.cwd() / "config"
 
-        LOGGER.debug(
-            "Configuration manager initialized with base dir: %s", self._base_config_dir
-        )
+        LOGGER.debug("Configuration manager initialized with base dir: %s", self._base_config_dir)
 
     @property
     def base_config_dir(self) -> Path:
@@ -111,9 +109,7 @@ class ConfigurationManager:
         """Load configuration from all sources. Returns True if successful."""
         with self._lock:
             if not reload and self._config:
-                LOGGER.debug(
-                    "Configuration already loaded, use reload=True to force reload"
-                )
+                LOGGER.debug("Configuration already loaded, use reload=True to force reload")
                 return True
 
             old_config = deepcopy(self._config) if self._config else {}
@@ -135,9 +131,7 @@ class ConfigurationManager:
                         LOGGER.error("Required config source failed, aborting load")
                         return False
 
-                    self._validation_errors.append(
-                        ConfigValidationError(source.name, error_msg)
-                    )
+                    self._validation_errors.append(ConfigValidationError(source.name, error_msg))
 
             # Validate the merged configuration
             if not self._validate_config(new_config):
@@ -157,9 +151,7 @@ class ConfigurationManager:
             if old_config != new_config:
                 self._notify_config_changes(old_config, new_config)
 
-            LOGGER.info(
-                "Configuration loaded successfully from %d sources", len(self._sources)
-            )
+            LOGGER.info("Configuration loaded successfully from %d sources", len(self._sources))
             return True
 
     def _load_source(self, source: ConfigSource) -> Optional[Dict[str, Any]]:
@@ -185,18 +177,12 @@ class ConfigurationManager:
 
         return None
 
-    def _merge_config(
-        self, base: Dict[str, Any], override: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _merge_config(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
         """Recursively merge configuration dictionaries."""
         result = deepcopy(base)
 
         for key, value in override.items():
-            if (
-                key in result
-                and isinstance(result[key], dict)
-                and isinstance(value, dict)
-            ):
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
                 result[key] = self._merge_config(result[key], value)
             else:
                 result[key] = deepcopy(value)
@@ -213,9 +199,7 @@ class ConfigurationManager:
         for key in required_keys:
             if key not in config:
                 errors.append(
-                    ConfigValidationError(
-                        key, f"Required configuration key missing: {key}"
-                    )
+                    ConfigValidationError(key, f"Required configuration key missing: {key}")
                 )
 
         # Validate logging configuration
@@ -223,9 +207,7 @@ class ConfigurationManager:
             logging_config = config["logging"]
             if not isinstance(logging_config, dict):
                 errors.append(
-                    ConfigValidationError(
-                        "logging", "Logging configuration must be a dictionary"
-                    )
+                    ConfigValidationError("logging", "Logging configuration must be a dictionary")
                 )
             elif "level" in logging_config:
                 valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -276,9 +258,7 @@ class ConfigurationManager:
             elif old_config[key] != new_value:
                 if isinstance(old_config[key], dict) and isinstance(new_value, dict):
                     changes.extend(
-                        self._find_config_changes(
-                            old_config[key], new_value, current_path
-                        )
+                        self._find_config_changes(old_config[key], new_value, current_path)
                     )
                 else:
                     changes.append((current_path, old_config[key], new_value))

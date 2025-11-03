@@ -3,12 +3,15 @@
 import importlib.util
 import logging
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, mock_open, patch
 
 # Import the root researcharr.py module directly (not the package)
-spec = importlib.util.spec_from_file_location(
-    "researcharr_root", "/home/jeremy/Server/Projects/researcharr/researcharr.py"
-)
+# Get the project root directory (parent of tests directory)
+project_root = Path(__file__).parent.parent
+researcharr_path = project_root / "researcharr.py"
+
+spec = importlib.util.spec_from_file_location("researcharr_root", str(researcharr_path))
 researcharr_root = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(researcharr_root)
 

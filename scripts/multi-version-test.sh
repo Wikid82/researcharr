@@ -27,7 +27,7 @@ for py_cmd in "${PYTHON_VERSIONS[@]}"; do
         py_version=$($py_cmd -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "unknown")
 
         # Skip if we've already tested this version
-        if [[ " ${TESTED_INTERPRETERS[*]} " =~ " ${py_version} " ]]; then
+        if [[ " ${TESTED_INTERPRETERS[*]} " =~ $py_version ]]; then
             echo -e "  ${YELLOW}⚠ $py_cmd (Python $py_version) already tested${NC}"
             continue
         fi

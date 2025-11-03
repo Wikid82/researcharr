@@ -57,6 +57,22 @@
                 </li>
               </ul>
               <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Example-Comparison/">Coverage Gutters Example Structure</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Quick-Reference/">Coverage Gutters - Quick Reference Card</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Quick-Start/">Coverage Gutters - Visual Quick Start Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Setup/">Coverage Gutters Setup</a>
+                </li>
+              </ul>
+              <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../DEV/">DEV</a>
                 </li>
               </ul>
@@ -100,6 +116,10 @@
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../Recent-Changes/">Recent Changes</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Renovate-Configuration/">Renovate Bot Configuration Guide</a>
                 </li>
               </ul>
               <ul>
@@ -183,6 +203,7 @@ pip install -r requirements.txt
 <p>Configuration and config files</p>
 <ul>
 <li>See <code>config.example.yml</code> for configuration options. The container will auto-create <code>/config/config.yml</code> from the example if it's missing.</li>
+<li><strong>Rate Limiting</strong>: To avoid overwhelming Sonarr/Radarr APIs, you can configure <code>search_delay_seconds</code> in the <code>researcharr</code> section of <code>config.yml</code>. Default is 1.0 seconds. Increase to 3-5 seconds if you experience rate limiting (e.g., <code>search_delay_seconds: 5.0</code>).</li>
 </ul>
 <p>Important note about bind-mounting <code>/app</code></p>
 <p>If you mount a host directory onto <code>/app</code> (for example in a development compose where you mount your source tree into the container), files that were baked into the image at <code>/app</code> will be hidden by the mount. In particular, the bundled <code>config.example.yml</code> lives at the repository root and will be available at <code>/app/config.example.yml</code> inside the image — but it will be hidden if you mount another host folder over <code>/app</code> that doesn't contain the example file.</p>

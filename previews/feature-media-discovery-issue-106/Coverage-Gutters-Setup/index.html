@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="researcharr contributors" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Contributing to researcharr - researcharr</title>
+    <title>Coverage Gutters Setup - researcharr</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -13,8 +13,8 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Contributing to researcharr";
-        var mkdocs_page_input_path = "Contributing.md";
+        var mkdocs_page_name = "Coverage Gutters Setup";
+        var mkdocs_page_input_path = "Coverage-Gutters-Setup.md";
         var mkdocs_page_url = null;
       </script>
     
@@ -52,32 +52,8 @@
                 <li class="toctree-l1"><a class="reference internal" href="../Changelog/">Changelog</a>
                 </li>
               </ul>
-              <ul class="current">
-                <li class="toctree-l1 current"><a class="reference internal current" href="#">Contributing to researcharr</a>
-    <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#branching-workflow">Branching Workflow</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#getting-started">Getting Started</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#development-environment">Development Environment</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#running-tests">Running Tests</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#ci-and-docker-notes">CI and Docker notes</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#formatting-pre-commit-checklist">Formatting &amp; pre-commit checklist</a>
-    </li>
-        </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#submitting-changes">Submitting Changes</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#code-review">Code Review</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#project-roadmap-goals">Project Roadmap &amp; Goals</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#questions-or-help">Questions or Help?</a>
-    </li>
-    </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Contributing/">Contributing to researcharr</a>
                 </li>
               </ul>
               <ul>
@@ -92,8 +68,36 @@
                 <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Quick-Start/">Coverage Gutters - Visual Quick Start Guide</a>
                 </li>
               </ul>
-              <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Setup/">Coverage Gutters Setup</a>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Coverage Gutters Setup</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#quick-start">Quick Start</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#vs-code-tasks">VS Code Tasks</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#extension-features">Extension Features</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#visual-indicators">Visual Indicators</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#commands">Commands</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#status-bar">Status Bar</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#tips">Tips</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#color-customization">Color Customization</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#references">References</a>
+    </li>
+    </ul>
                 </li>
               </ul>
               <ul>
@@ -174,7 +178,7 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-      <li class="breadcrumb-item active">Contributing to researcharr</li>
+      <li class="breadcrumb-item active">Coverage Gutters Setup</li>
     <li class="wy-breadcrumbs-aside">
     </li>
   </ul>
@@ -183,98 +187,104 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="contributing-to-researcharr">Contributing to researcharr</h1>
-<p>Thank you for your interest in contributing! This project welcomes new contributors. Please read the guidelines below to get started.</p>
-<h2 id="branching-workflow">Branching Workflow</h2>
-<ul>
-<li>The <code>main</code> branch is always stable and production-ready.</li>
-<li>The <code>development</code> branch is for active development and integration.</li>
-<li>All new features and fixes should be developed in feature branches off of <code>development</code>.</li>
-</ul>
-<p><strong>Typical workflow:</strong></p>
+                <h1 id="coverage-gutters-setup">Coverage Gutters Setup</h1>
+<p>This project is configured to work with the <a href="https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters">Coverage Gutters</a> VS Code extension.</p>
+<h2 id="quick-start">Quick Start</h2>
 <ol>
-<li>Make sure you have the latest code:
-  <code>bash
-  git checkout main
-  git pull origin main
-  git checkout development
-  git pull origin development</code></li>
-<li>Create a feature branch:
-  <code>bash
-  git checkout -b feature/your-feature
-  # ...work, commit, push...
-  git push -u origin feature/your-feature</code></li>
-<li>Open a pull request (PR) to merge your feature branch into <code>development</code> (the main integration branch). Small bugfixes or docs-only changes may be opened directly against <code>development</code>.</li>
-<li>When <code>development</code> is stable and tested, it will be merged into <code>main</code> for releases.</li>
+<li><strong>Install the Extension</strong> (if not already installed):</li>
+<li>Search for "Coverage Gutters" in VS Code Extensions</li>
+<li>
+<p>Or install via CLI: <code>code --install-extension ryanluker.vscode-coverage-gutters</code></p>
+</li>
+<li>
+<p><strong>Generate Coverage</strong>:</p>
+</li>
+<li>Run tests via the test task: <code>Ctrl+Shift+P</code> → "Tasks: Run Test Task"</li>
+<li>Or manually: <code>python -m pytest tests/ --cov=. --cov-report=xml</code></li>
+<li>
+<p>This creates <code>coverage.xml</code> in the project root</p>
+</li>
+<li>
+<p><strong>View Coverage in Editor</strong>:</p>
+</li>
+<li>Click "Watch" in the VS Code status bar (bottom), or</li>
+<li>Use command palette: <code>Coverage Gutters: Display Coverage</code></li>
+<li>
+<p>Green/red indicators will appear in the gutter and on lines</p>
+</li>
+<li>
+<p><strong>Preview HTML Report</strong>:</p>
+</li>
+<li>Command: <code>Coverage Gutters: Preview Coverage Report</code></li>
+<li>Opens <code>htmlcov/index.html</code> in browser</li>
 </ol>
-<h2 id="getting-started">Getting Started</h2>
+<h2 id="configuration">Configuration</h2>
+<p>The project is pre-configured with:</p>
 <ul>
-<li>Fork the repository and clone your fork.</li>
-<li>Create a new branch for your feature or bugfix.</li>
-<li>Install dependencies with <code>pip install -r requirements.txt</code> (or use Docker for a containerized dev environment). We recommend using a virtualenv as described below.</li>
+<li><strong>Coverage file</strong>: <code>coverage.xml</code> (auto-generated by pytest)</li>
+<li><strong>HTML report</strong>: <code>htmlcov/index.html</code></li>
+<li><strong>Gutter icons</strong>: Green (covered), Red (uncovered), Yellow (partial)</li>
+<li><strong>Line highlighting</strong>: Enabled with subtle colors</li>
 </ul>
-<h2 id="development-environment">Development Environment</h2>
+<h3 id="vs-code-tasks">VS Code Tasks</h3>
+<p>Use <code>Ctrl+Shift+P</code> → "Tasks: Run Task":</p>
 <ul>
-<li>Python 3.8+ is required.</li>
-<li>Use a virtual environment (<code>python -m venv .venv &amp;&amp; source .venv/bin/activate</code>).</li>
-<li>All dependencies are listed in <code>requirements.txt</code>.</li>
+<li><strong>Run Tests with Coverage</strong> (default test task) - Full suite with coverage</li>
+<li><strong>Run Tests (Quick)</strong> - Fast run without coverage</li>
+<li><strong>Run Current Test File with Coverage</strong> - Test only the open file</li>
 </ul>
-<h2 id="running-tests">Running Tests</h2>
+<h2 id="extension-features">Extension Features</h2>
+<h3 id="visual-indicators">Visual Indicators</h3>
 <ul>
-<li>All code changes should be covered by tests.</li>
-<li>Run the full test suite with:
-  <code>bash
-  python -m pytest tests/ -v</code></li>
-<li>Tests cover config loading, error handling, database integrity, and web UI endpoints.</li>
+<li><strong>Gutter icons</strong>: Green/red/yellow bars in the left margin</li>
+<li><strong>Line highlighting</strong>: Background colors on code lines</li>
+<li><strong>Ruler marks</strong>: Small colored marks in the scrollbar</li>
 </ul>
-<p>Before opening a PR, run the auto-fixers and pre-commit hooks (see Formatting &amp; pre-commit checklist).</p>
-<h2 id="ci-and-docker-notes">CI and Docker notes</h2>
-<p>The project runs CI (lint, type checks, and tests) automatically on every push and every pull request via <code>.github/workflows/ci.yml</code>. CI uses pip caching to speed up installs. Please run tests and formatters locally before opening PRs.</p>
-<p>Docker images are built for all branches and published to GitHub Container Registry, tagged by branch name (e.g. <code>ghcr.io/wikid82/researcharr:feature-xyz</code>). If you want to avoid images from forks or PRs, open an issue or ping a maintainer — we can restrict publishes to <code>push</code> events on the main repository only.</p>
-<h3 id="formatting-pre-commit-checklist">Formatting &amp; pre-commit checklist</h3>
-<p>Run the auto-fixers locally to match CI checks before committing:</p>
-<pre><code class="language-bash">isort --profile=black .
-black .
+<h3 id="commands">Commands</h3>
+<p>Access via <code>Ctrl+Shift+P</code>:</p>
+<ul>
+<li><code>Coverage Gutters: Display Coverage</code> - Show coverage</li>
+<li><code>Coverage Gutters: Watch</code> - Auto-refresh when coverage file changes</li>
+<li><code>Coverage Gutters: Remove Coverage</code> - Hide coverage</li>
+<li><code>Coverage Gutters: Preview Coverage Report</code> - Open HTML report</li>
+</ul>
+<h3 id="status-bar">Status Bar</h3>
+<p>Click the coverage indicator in the bottom status bar to toggle coverage display.</p>
+<h2 id="tips">Tips</h2>
+<ol>
+<li><strong>Enable Watch Mode</strong>: Click "Watch" so coverage updates automatically after running tests</li>
+<li><strong>Focus on Files</strong>: The extension shows coverage for the currently open file</li>
+<li><strong>Multiple Formats</strong>: Configured to look for <code>coverage.xml</code>, <code>cov.xml</code>, and <code>lcov.info</code></li>
+<li><strong>HTML Reports</strong>: Use the preview command to see full detailed coverage tables</li>
+</ol>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<p>If coverage doesn't appear:</p>
+<ol>
+<li>Ensure <code>coverage.xml</code> exists in the project root</li>
+<li>Click "Watch" in the status bar</li>
+<li>Try <code>Coverage Gutters: Display Coverage</code> command</li>
+<li>Check the Output panel (select "Coverage Gutters" from dropdown)</li>
+</ol>
+<h2 id="color-customization">Color Customization</h2>
+<p>Edit <code>.vscode/settings.json</code> to customize highlight colors:</p>
+<pre><code class="language-json">{
+  &quot;coverage-gutters.highlightdark&quot;: &quot;rgba(20, 200, 20, 0.3)&quot;,      // Green for covered
+  &quot;coverage-gutters.noHighlightDark&quot;: &quot;rgba(200, 20, 20, 0.3)&quot;,    // Red for uncovered
+  &quot;coverage-gutters.partialHighlightDark&quot;: &quot;rgba(200, 200, 20, 0.3)&quot; // Yellow for partial
+}
 </code></pre>
-<p>Install and use pre-commit to catch issues early:</p>
-<pre><code class="language-bash">pip install pre-commit
-pre-commit install
-pre-commit run --all-files
-</code></pre>
-<p>Suggested commit message style:</p>
+<h2 id="references">References</h2>
 <ul>
-<li>Use imperative, present-tense style: "Add feature X", "Fix bug Y".</li>
-<li>Reference related issues when relevant: "Fixes #123".</li>
+<li><a href="https://github.com/ryanluker/vscode-coverage-gutters">Extension Documentation</a></li>
+<li><a href="https://github.com/ryanluker/vscode-coverage-gutters/tree/main/example/python">Python Example</a></li>
+<li><a href="./pyproject.toml">Our Coverage Config</a> - See <code>[tool.coverage.*]</code> sections</li>
 </ul>
-<h2 id="submitting-changes">Submitting Changes</h2>
-<ul>
-<li>Push your branch to your fork and open a pull request (PR) against the <code>development</code> branch.</li>
-<li>Describe your changes and reference any related issues.</li>
-<li>Ensure all tests pass and formatters are run before requesting review.</li>
-</ul>
-<h2 id="code-review">Code Review</h2>
-<ul>
-<li>PRs are reviewed for correctness, clarity, and test coverage.</li>
-<li>Address any requested changes promptly.</li>
-<li>Squash commits if requested.</li>
-</ul>
-<h2 id="project-roadmap-goals">Project Roadmap &amp; Goals</h2>
-<ul>
-<li>See the <a href="../Roadmap/">Roadmap</a> in this <code>docs/</code> folder for project direction and priorities.</li>
-</ul>
-<h2 id="questions-or-help">Questions or Help?</h2>
-<ul>
-<li>Check the documentation in this <code>docs/</code> folder (for example <code>Getting-Started.md</code>) or read the <code>FAQ.md</code> for common questions. If that doesn't help, open an issue on GitHub.</li>
-<li>For major changes, open a discussion or issue first to get feedback.</li>
-</ul>
-<hr />
-<p>Happy coding!</p>
               
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../Changelog/" class="btn btn-neutral float-left" title="Changelog"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../Coverage-Gutters-Example-Comparison/" class="btn btn-neutral float-right" title="Coverage Gutters Example Structure">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../Coverage-Gutters-Quick-Start/" class="btn btn-neutral float-left" title="Coverage Gutters - Visual Quick Start Guide"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../DEV/" class="btn btn-neutral float-right" title="DEV">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -301,10 +311,10 @@ pre-commit run --all-files
         </span>
     
     
-      <span><a href="../Changelog/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../Coverage-Gutters-Quick-Start/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../Coverage-Gutters-Example-Comparison/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../DEV/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

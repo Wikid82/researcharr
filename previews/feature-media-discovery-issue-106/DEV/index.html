@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="researcharr contributors" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>DEV - researcharr</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/css/researcharr.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "DEV";
+        var mkdocs_page_input_path = "DEV.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> researcharr
+        </a>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">researcharr documentation — Day One</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../API/">ResearchArr API (v1)</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CI-and-Development/">CI and Development</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Changelog/">Changelog</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Contributing/">Contributing to researcharr</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">DEV</a>
+    <ul class="current">
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Deployment-and-Resources/">Deployment and Resource Recommendations</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Environment-Variables/">Environment variables</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../FAQ/">FAQ</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Getting-Started/">Getting Started</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Health-and-Metrics/">Health and Metrics Endpoints</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Integrations/">Integrations</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Logs/">Logs and Live Streaming</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Packaging-and-Distribution/">Packaging and Distribution</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Plugins/">Plugins and instance configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Recent-Changes/">Recent Changes</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Roadmap/">Roadmap</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Sonarr-Search-Scopes/">Sonarr Search Scope Implementation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Status-and-Warnings/">System status warnings and how to fix them</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Versioning/">Versioning &amp; Releases</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">researcharr</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">DEV</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <p>Development helper</p>
+<p>Use the provided helper to run the development compose stack with file-watching enabled. This will rebuild/recreate containers when source files change.</p>
+<p>Quick start:</p>
+<pre><code class="language-bash"># from repository root
+./scripts/dev-up.sh
+</code></pre>
+<p>Notes:
+- The script runs <code>docker compose -f docker-compose.feat.yml up --build --watch</code>.
+- If you prefer detaching, add <code>-d</code> to the command or run the <code>docker compose</code> command directly.
+- You can change the compose file by setting the COMPOSE_FILE variable at the top of <code>scripts/dev-up.sh</code>.</p>
+<h2 id="propagating-upstream-changes-to-downstream-branches">Propagating upstream changes to downstream branches</h2>
+<p>When automated tools (for example Renovate) open or merge PRs to <code>main</code>, you may want those changes tested against downstream branches (for example <code>development</code>). A workflow has been added to create PRs from <code>main</code> into downstream branches automatically: <code>.github/workflows/propagate-main-to-downstream.yml</code>.</p>
+<p>If you need to backfill older changes (created before automation), use the GitHub CLI to create PRs from <code>main</code> into the downstream branch, e.g.:</p>
+<pre><code class="language-bash"># create a PR from `main` into `development`
+gh pr create --title &quot;chore(ci): propagate main -&gt; development&quot; --body &quot;Backfill PR to test compatibility&quot; --base development --head main
+</code></pre>
+<p>If you prefer a scripted approach to create PRs for multiple downstream branches, run:</p>
+<pre><code class="language-bash">for base in development staging; do
+    gh pr create --title &quot;chore(ci): propagate main -&gt; $base&quot; \
+        --body &quot;Automated backfill created by maintainer&quot; --base $base --head main || true
+done
+</code></pre>
+<p>Note: If a merge between <code>main</code> and a downstream branch results in conflicts, the created PR will report merge conflicts and must be resolved manually. For complex backfills you can create a temporary branch, attempt a merge locally, resolve conflicts, push the branch, and open a PR for review.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../Contributing/" class="btn btn-neutral float-left" title="Contributing to researcharr"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../Deployment-and-Resources/" class="btn btn-neutral float-right" title="Deployment and Resource Recommendations">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="None" class="fa fa-code-fork" style="color: #fcfcfc"> Wikid82/researcharr</a>
+        </span>
+    
+    
+      <span><a href="../Contributing/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../Deployment-and-Resources/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

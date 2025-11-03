@@ -1,4 +1,84 @@
 {
- "extends": ["config:base"],
- "baseBranch": "development"
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":enablePreCommit",
+    "group:monorepos",
+    "group:recommended",
+    "workarounds:all"
+  ],
+  "dependencyDashboardAutoclose": true,
+  "baseBranches": ["development"],
+  "schedule": ["before 6am on Monday"],
+  "timezone": "UTC",
+  "prConcurrentLimit": 5,
+  "prCreation": "not-pending",
+  "prHourlyLimit": 2,
+  "stabilityDays": 3,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"],
+    "stabilityDays": 0
+  },
+  "labels": ["dependencies"],
+  "assignees": ["Wikid82"],
+  "reviewers": [],
+  "packageRules": [
+    {
+      "description": "Automerge non-major updates",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash",
+      "platformAutomerge": false
+    },
+    {
+      "description": "Group Python dependencies",
+      "matchDatasources": ["pypi"],
+      "groupName": "Python dependencies"
+    },
+    {
+      "description": "Group Docker base images - matches official 'python' image only",
+      "matchDatasources": ["docker"],
+      "matchPackagePatterns": ["^python$"],
+      "groupName": "Docker Python base images",
+      "schedule": ["before 6am on the first day of the month"]
+    },
+    {
+      "description": "Group GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "automerge": true,
+      "automergeType": "pr",
+      "pinDigests": true
+    },
+    {
+      "description": "Separate major updates",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "major-update"],
+      "stabilityDays": 7
+    },
+    {
+      "description": "Pin development dependencies",
+      "matchFileNames": ["requirements-dev.txt"],
+      "rangeStrategy": "pin"
+    },
+    {
+      "description": "Update frozen requirements separately (currently disabled for manual control)",
+      "matchFileNames": ["requirements-frozen.txt"],
+      "enabled": false
+    }
+  ],
+  "ignoreDeps": [],
+  "ignoreTests": false,
+  "prBodyColumns": ["Package", "Update", "Type", "Change"],
+  "prBodyDefinitions": {
+    "Package": "{{{depNameLinked}}}",
+    "Type": "{{{updateType}}}",
+    "Update": "{{{displayFrom}}} → {{{displayTo}}}",
+    "Change": "{{#if displayPending}}{{displayPending}}{{else}}{{#if hasReleaseNotes}}[Release notes]({{releaseNotes}}){{/if}}{{/if}}"
+  }
 }

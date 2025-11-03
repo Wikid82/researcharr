@@ -69,9 +69,7 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
 
     sys.modules.pop("researcharr.researcharr", None)  # Ensure clean import
     monkeypatch.setattr("researcharr.researcharr.DB_PATH", db_path, raising=False)
-    monkeypatch.setattr(
-        "researcharr.researcharr.setup_logger", fake_setup_logger, raising=False
-    )
+    monkeypatch.setattr("researcharr.researcharr.setup_logger", fake_setup_logger, raising=False)
     monkeypatch.setattr(
         "researcharr.researcharr.main_logger",
         fake_setup_logger("main_logger", main_log),

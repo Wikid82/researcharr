@@ -81,8 +81,7 @@ if "setup_logger" not in globals():
 
 def has_valid_url_and_key(instances):
     return all(
-        not i.get("enabled")
-        or (i.get("url", "").startswith("http") and i.get("api_key"))
+        not i.get("enabled") or (i.get("url", "").startswith("http") and i.get("api_key"))
         for i in instances
     )
 
@@ -147,12 +146,12 @@ if "create_metrics_app" not in globals():
         from flask import Flask, jsonify
 
         app = Flask("metrics")
-        app.metrics = {"requests_total": 0, "errors_total": 0}
+        app.config["metrics"] = {"requests_total": 0, "errors_total": 0}
 
         # Increment request counter for every request
         @app.before_request
         def _before():
-            app.metrics["requests_total"] += 1
+            app.config["metrics"]["requests_total"] += 1
 
         @app.route("/health")
         def health():
@@ -177,9 +176,8 @@ if "create_metrics_app" not in globals():
 
         @app.route("/metrics")
         def metrics_endpoint():
-            return jsonify(app.metrics)
+            return jsonify(app.config["metrics"])
 
-        # Increment errors_total for 404 and 500
         @app.errorhandler(404)
         @app.errorhandler(500)
         def handle_error(e):
@@ -191,16 +189,17 @@ if "create_metrics_app" not in globals():
             except Exception:
                 # If logging fails for any reason, do not raise further
                 pass
-            app.metrics["errors_total"] += 1
+            app.config["metrics"]["errors_total"] += 1
             return jsonify({"error": "internal error"}), 500
 
-            return app
+        return app
 
-    if __name__ == "__main__":
-        import sys
 
-        # When executed as `python researcharr.py serve` run the server. This
-        # statement is placed after `create_metrics_app` so the `serve()`
-        # helper can call it without NameError.
-        if len(sys.argv) > 1 and sys.argv[1] == "serve":
-            serve()
+if __name__ == "__main__":
+    import sys
+
+    # When executed as `python researcharr.py serve` run the server. This
+    # statement is placed after `create_metrics_app` so the `serve()`
+    # helper can call it without NameError.
+    if len(sys.argv) > 1 and sys.argv[1] == "serve":
+        serve()

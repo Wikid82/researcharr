@@ -63,8 +63,7 @@ def load_user() -> Optional[Dict[str, Optional[str]]]:
     conn = _conn()
     try:
         row = conn.execute(
-            "SELECT username, password_hash, api_key_hash"
-            " FROM webui_users ORDER BY id LIMIT 1"
+            "SELECT username, password_hash, api_key_hash" " FROM webui_users ORDER BY id LIMIT 1"
         ).fetchone()
         if not row:
             return None

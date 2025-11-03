@@ -9,10 +9,25 @@
   // Help the language server find imports in the repository root.
   "python.analysis.extraPaths": ["${workspaceFolder}"],
   // Keep a modest level of type checking for developer feedback.
-"python.analysis.typeCheckingMode": "basic",
-"python.testing.pytestArgs": [
-    "."
-],
-"python.testing.unittestEnabled": false,
-"python.testing.pytestEnabled": true
+  "python.analysis.typeCheckingMode": "basic",
+  "python.testing.pytestArgs": [
+    "tests"
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+
+  // Coverage Gutters extension settings
+  "coverage-gutters.coverageFileNames": [
+    "coverage.xml",
+    "cov.xml",
+    "lcov.info"
+  ],
+  "coverage-gutters.coverageBaseDir": "**",
+  "coverage-gutters.coverageReportFileName": "htmlcov/index.html",
+  "coverage-gutters.showGutterCoverage": true,
+  "coverage-gutters.showLineCoverage": true,
+  "coverage-gutters.showRulerCoverage": true,
+  "coverage-gutters.highlightdark": "rgba(20, 200, 20, 0.3)",
+  "coverage-gutters.noHighlightDark": "rgba(200, 20, 20, 0.3)",
+  "coverage-gutters.partialHighlightDark": "rgba(200, 200, 20, 0.3)"
 }

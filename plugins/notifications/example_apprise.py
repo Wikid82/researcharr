@@ -121,11 +121,7 @@ class Plugin(BasePlugin):
         @bp.route("/send", methods=["POST"])
         def send():
             payload = request.get_json(force=True, silent=True) or {}
-            title = (
-                payload.get("title")
-                or self.config.get("title")
-                or "ResearchArr Notification"
-            )
+            title = payload.get("title") or self.config.get("title") or "ResearchArr Notification"
             body = payload.get("body") or self.config.get("body") or ""
             # allow overriding urls for an explicit send
             urls = payload.get("urls") or self._get_urls()

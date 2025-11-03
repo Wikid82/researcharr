@@ -44,6 +44,15 @@ repos:
       - id: yamllint
         stages: [pre-commit]
 
+  # Security linting with bandit
+  - repo: https://github.com/PyCQA/bandit
+    rev: "1.8.6"
+    hooks:
+      - id: bandit
+        args: ["-c", ".bandit.yaml", "-r", "."]
+        additional_dependencies: ["pbr"]
+        stages: [pre-commit]
+
   # Note: shellcheck integration omitted because the shellcheck mirror
   # pre-commit hook is not available in this environment. You can add
   # a shellcheck hook later (for example via a maintained pre-commit
@@ -71,6 +80,21 @@ repos:
   # Local hooks: shellcheck (system binary) and detect-secrets (Python tool)
   - repo: local
     hooks:
+      - id: multi-version-test
+        name: multi-version Python compatibility test
+        entry: scripts/multi-version-test.sh
+        language: script
+        files: '^(researcharr/|tests/|.*\.py$)'
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: tox-quick
+        name: tox quick multi-version test
+        entry: tox
+        args: ["-e", "py313-quick", "--parallel", "auto"]
+        language: python
+        files: '^(researcharr/|tests/|.*\.py$)'
+        pass_filenames: false
+        stages: [manual]
       - id: shellcheck
         name: shellcheck (local wrapper)
         entry: scripts/run-shellcheck.sh

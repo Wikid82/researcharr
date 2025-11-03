@@ -1,0 +1,30 @@
+codecov:
+  require_ci_to_pass: false
+
+coverage:
+  precision: 2
+  round: down
+  range: "0..100"
+  status:
+    project:
+      default:
+        # Show current coverage but don't fail PRs while we're stabilizing tests
+        target: auto
+        threshold: 0.5%
+    patch:
+      default:
+        # Allow small volatility on new/changed code without blocking
+        target: auto
+        threshold: 1%
+
+ignore:
+  - "tests/**"
+  - "docs/**"
+  - "site/**"
+  - ".venv/**"
+  - "venv/**"
+  - "scripts/**"
+  - "backups-scratch/**"
+  - "container_build/**"
+  - "repo-mirror.git/**"
+  - "researcharr.egg-info/**"

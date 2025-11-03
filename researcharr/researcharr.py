@@ -66,8 +66,7 @@ def setup_logger(name: str, log_file: str, level: int | None = None):
 
 def has_valid_url_and_key(instances) -> bool:
     return all(
-        not i.get("enabled")
-        or (i.get("url", "").startswith("http") and i.get("api_key"))
+        not i.get("enabled") or (i.get("url", "").startswith("http") and i.get("api_key"))
         for i in instances
     )
 
@@ -167,3 +166,14 @@ def create_metrics_app():
         return jsonify({"error": "internal error"}), 500
 
     return app
+
+
+def serve() -> None:
+    """Debug/Container entrypoint: create and run the metrics app.
+
+    Starts the Flask metrics application on host 0.0.0.0 port 2929.
+    This function provides the same entrypoint behavior as the top-level
+    researcharr.py module for container and development use.
+    """
+    app = create_metrics_app()
+    app.run(host="0.0.0.0", port=2929)

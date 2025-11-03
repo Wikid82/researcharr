@@ -1,0 +1,164 @@
+name: Sync Issues to Project
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_numbers:
+        description: 'Comma-separated list of issue numbers to sync (e.g., 80,81,82)'
+        required: false
+        default: ''
+
+env:
+  PROJECT_NUMBER: 2
+  GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+
+jobs:
+  sync_issues:
+    runs-on: ubuntu-latest
+    name: Sync Issues to Project Board
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+
+      - name: Sync Issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          cat > sync_issues.py << 'EOF'
+          import os
+          import requests
+          import sys
+
+          def get_project_id(owner, project_number, token):
+              """Get the project ID from the project number."""
+              query = """
+              query($owner: String!, $projectNumber: Int!) {
+                  user(login: $owner) {
+                      projectV2(number: $projectNumber) {
+                          id
+                      }
+                  }
+              }
+              """
+
+              headers = {
+                  "Authorization": f"Bearer {token}",
+                  "Content-Type": "application/json",
+              }
+
+              response = requests.post(
+                  "https://api.github.com/graphql",
+                  headers=headers,
+                  json={
+                      "query": query,
+                      "variables": {
+                          "owner": owner,
+                          "projectNumber": project_number
+                      }
+                  },
+                  timeout=30
+              )
+
+              if response.status_code == 200:
+                  data = response.json()
+                  if ("data" in data and
+                      data["data"]["user"] and
+                      data["data"]["user"]["projectV2"]):
+                      return data["data"]["user"]["projectV2"]["id"]
+
+              return None
+
+          def get_issue_id(owner, repo, issue_number, token):
+              """Get issue node ID for the given issue number."""
+              response = requests.get(
+                  f"https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}",
+                  headers={"Authorization": f"Bearer {token}"},
+                  timeout=30
+              )
+
+              if response.status_code == 200:
+                  return response.json()["node_id"]
+              return None
+
+          def add_issue_to_project(project_id, issue_id, token):
+              """Add an issue to the project."""
+              mutation = """
+              mutation($projectId: ID!, $contentId: ID!) {
+                  addProjectV2ItemByContentId(input: {
+                      projectId: $projectId,
+                      contentId: $contentId
+                  }) {
+                      item {
+                          id
+                      }
+                  }
+              }
+              """
+
+              headers = {
+                  "Authorization": f"Bearer {token}",
+                  "Content-Type": "application/json",
+              }
+
+              response = requests.post(
+                  "https://api.github.com/graphql",
+                  headers=headers,
+                  json={
+                      "query": mutation,
+                      "variables": {
+                          "projectId": project_id,
+                          "contentId": issue_id
+                      }
+                  },
+                  timeout=30
+              )
+
+              return response.status_code == 200
+
+          # Main execution
+          owner = "Wikid82"
+          repo = "researcharr"
+          project_number = 2
+          token = os.getenv("GITHUB_TOKEN")
+
+          # Get issue numbers from input or default range
+          issue_input = "${{ github.event.inputs.issue_numbers }}"
+          if issue_input:
+              issue_numbers = [int(x.strip()) for x in issue_input.split(',')]
+          else:
+              issue_numbers = list(range(80, 114))  # Default: all our new issues
+
+          print(f"Syncing {len(issue_numbers)} issues to project #{project_number}")
+
+          project_id = get_project_id(owner, project_number, token)
+          if not project_id:
+              print("Failed to get project ID")
+              sys.exit(1)
+
+          print(f"Project ID: {project_id}")
+
+          added_count = 0
+          for issue_number in issue_numbers:
+              issue_id = get_issue_id(owner, repo, issue_number, token)
+              if issue_id:
+                  if add_issue_to_project(project_id, issue_id, token):
+                      print(f"✅ Added issue #{issue_number}")
+                      added_count += 1
+                  else:
+                      print(f"❌ Failed to add issue #{issue_number}")
+              else:
+                  print(f"❌ Issue #{issue_number} not found")
+
+          print(f"Successfully added {added_count}/{len(issue_numbers)} issues")
+          EOF
+
+          python sync_issues.py

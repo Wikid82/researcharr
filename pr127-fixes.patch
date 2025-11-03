@@ -1,0 +1,108 @@
+diff --git a/.pre-commit-config.yaml b/.pre-commit-config.yaml
+index 11831ba..535ab7d 100644
+--- a/.pre-commit-config.yaml
++++ b/.pre-commit-config.yaml
+@@ -34,7 +34,7 @@ repos:
+           - "researcharr"
+           - "--ignore-missing-imports"
+         pass_filenames: false
+-        additional_dependencies: []
++        additional_dependencies: ["types-PyYAML", "types-requests"]
+         stages: [pre-commit]
+
+   # YAML linting for configuration files
+diff --git a/researcharr/core/__init__.py b/researcharr/core/__init__.py
+index b343589..dfe3c8a 100644
+--- a/researcharr/core/__init__.py
++++ b/researcharr/core/__init__.py
+@@ -48,7 +48,10 @@ from .services import (
+     init_db,
+ )
+ from .services import load_config as load_config_legacy
+-from .services import serve, setup_logger
++from .services import (
++    serve,
++    setup_logger,
++)
+
+ __all__ = [
+     # Service Container
+diff --git a/researcharr/core/application.py b/researcharr/core/application.py
+index 74aa9a4..55d56bb 100644
+--- a/researcharr/core/application.py
++++ b/researcharr/core/application.py
+@@ -6,7 +6,8 @@ extracted from factory.py, integrated with the new core architecture components.
+
+ import importlib.util
+ import os
+-from typing import Any, Dict
++from types import ModuleType
++from typing import Any, Dict, Optional
+
+ import yaml
+ from flask import Flask
+@@ -226,8 +227,11 @@ class CoreApplicationFactory:
+
+         try:
+             # Try to load webui module for user config
++            webui: Optional[ModuleType] = None
+             try:
+-                from researcharr import webui
++                from researcharr import webui as webui_module
++
++                webui = webui_module
+             except Exception:
+                 # Fallback to direct import
+                 spec = importlib.util.spec_from_file_location(
+@@ -237,8 +241,6 @@ class CoreApplicationFactory:
+                 if spec and spec.loader:
+                     webui = importlib.util.module_from_spec(spec)
+                     spec.loader.exec_module(webui)
+-                else:
+-                    webui = None
+
+             if webui:
+                 try:
+diff --git a/researcharr/core/services.py b/researcharr/core/services.py
+index 213ff9a..20fc786 100644
+--- a/researcharr/core/services.py
++++ b/researcharr/core/services.py
+@@ -226,7 +226,7 @@ class HealthService:
+
+     def check_system_health(self) -> Dict[str, Any]:
+         """Perform comprehensive health checks."""
+-        health_status = {"status": "ok", "components": {}}
++        health_status: Dict[str, Any] = {"status": "ok", "components": {}}
+
+         # Check database
+         try:
+diff --git a/tests/test_core_application.py b/tests/test_core_application.py
+index dfb5313..7af7490 100644
+--- a/tests/test_core_application.py
++++ b/tests/test_core_application.py
+@@ -175,7 +175,9 @@ Timezone: "UTC"
+
+         # Check default values
+         self.assertEqual(user_config["username"], "admin")
+-        self.assertEqual(user_config["password"], "password")
++        self.assertEqual(
++            user_config["password"], "password"
++        )  # pragma: allowlist secret
+
+     @patch("researcharr.core.application.importlib.util.spec_from_file_location")
+     def test_setup_user_authentication_with_webui(self, mock_spec):
+diff --git a/tests/test_core_services.py b/tests/test_core_services.py
+index a62f75c..5bf4016 100644
+--- a/tests/test_core_services.py
++++ b/tests/test_core_services.py
+@@ -175,8 +175,8 @@ class TestConnectivityService(unittest.TestCase):
+             {
+                 "enabled": True,
+                 "url": "http://localhost:7878",
+-                "api_key": "test_key",
+-            },  # pragma: allowlist secret
++                "api_key": "test_key",  # pragma: allowlist secret
++            },
+             {"enabled": False, "url": "", "api_key": ""},  # Disabled should pass
+             {
+                 "enabled": True,

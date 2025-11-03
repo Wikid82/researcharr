@@ -33,9 +33,9 @@ jobs:
       matrix:
         python-version: [3.13]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
@@ -74,13 +74,13 @@ jobs:
       # in the step `if` expression instead of referencing `secrets.*`.
       - name: Upload coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5
         with:
           token: ${{ env.CODECOV_TOKEN }}
         continue-on-error: true
       - name: Post legacy statuses for compatibility (pytest, linting)
         if: ${{ success() }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -121,7 +121,7 @@ jobs:
             echo "SKIP_DOCKER=true; skipping dev-image job."
             exit 0
           fi
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
       - name: Populate GHCR_TOKEN into environment (if set)
         run: |
           # Write secret into runtime environment so steps can use env.GHCR_TOKEN
@@ -131,7 +131,7 @@ jobs:
           fi
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
 
       - name: Build dev image (debug stage)
         run: |
@@ -151,7 +151,7 @@ jobs:
           docker save "$IMAGE_LOCAL_TAG" -o /tmp/image-artifacts/researcharr-dev-${BRANCH_SAFE}-${BUILD_NUMBER}-${SHORT_SHA}.tar
 
       - name: Upload dev image artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: researcharr-dev-image
           path: /tmp/image-artifacts/
@@ -199,7 +199,7 @@ jobs:
             echo "SKIP_DOCKER=true; skipping image-scan job."
             exit 0
           fi
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
       - name: Lint Dockerfile with hadolint (docker)
         run: |

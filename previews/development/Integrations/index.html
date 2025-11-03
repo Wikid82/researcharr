@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="researcharr contributors" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Integrations - researcharr</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/css/researcharr.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Integrations";
+        var mkdocs_page_input_path = "Integrations.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> researcharr
+        </a>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">researcharr documentation — Day One</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../API/">ResearchArr API (v1)</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CI-and-Development/">CI and Development</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Changelog/">Changelog</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Contributing/">Contributing to researcharr</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEV/">DEV</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Deployment-and-Resources/">Deployment and Resource Recommendations</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Environment-Variables/">Environment variables</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../FAQ/">FAQ</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Getting-Started/">Getting Started</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Health-and-Metrics/">Health and Metrics Endpoints</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Integrations</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#where-the-plugins-live">Where the plugins live</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#setup-notes-links">Setup notes &amp; links</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#backup-safety">Backup &amp; safety</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#contributing">Contributing</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Logs/">Logs and Live Streaming</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Packaging-and-Distribution/">Packaging and Distribution</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Plugins/">Plugins and instance configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Recent-Changes/">Recent Changes</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Roadmap/">Roadmap</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Status-and-Warnings/">System status warnings and how to fix them</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Versioning/">Versioning &amp; Releases</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">researcharr</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Integrations</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="integrations">Integrations</h1>
+<p>This page documents the example integrations (plugins) bundled with ResearchArr and provides links to upstream documentation and setup notes.</p>
+<p>Important: these are example/test plugins intended for development and experimentation. Some plugins may attempt network calls when configured. Remote actions that modify state (search, refresh) are disabled by default and gated behind the <code>allow_remote_actions</code> flag in the plugin config — set this to <code>true</code> only after you have backups and are comfortable testing against a live service.</p>
+<h2 id="where-the-plugins-live">Where the plugins live</h2>
+<p>Plugins are grouped under <code>plugins/</code> by category:</p>
+<ul>
+<li><code>plugins/media/</code> — Radarr, Sonarr, Lidarr, Readarr, Whisparr, Headphones, Sick Beard, SickRage, Mylar3, Bobarr</li>
+<li><code>plugins/clients/</code> — NZBGet, SABnzbd, qBittorrent, uTorrent, Deluge, Transmission, BitTorrent (read-only queue)</li>
+<li><code>plugins/scrapers/</code> — Prowlarr, Jackett (indexer aggregators)</li>
+<li><code>plugins/notifications/</code> — Apprise (notifications)</li>
+</ul>
+<p>Each plugin implements a small <code>Plugin</code> class and may optionally expose a Flask <code>Blueprint</code> for UI endpoints. Common endpoints:</p>
+<ul>
+<li><code>GET /plugin/&lt;name&gt;/items</code> or <code>/queue</code> — returns the instance's DB-derived items or queue.</li>
+<li><code>GET /plugin/&lt;name&gt;/info</code> — returns plugin config and metadata.</li>
+<li><code>POST /plugin/&lt;name&gt;/search</code> — triggers a search; remote actions are simulated unless <code>allow_remote_actions</code> is enabled.</li>
+</ul>
+<h2 id="setup-notes-links">Setup notes &amp; links</h2>
+<p>These are links to upstream projects and hints for configuring them:</p>
+<ul>
+<li>Radarr — https://radarr.video/ — API: <code>/api/v3/</code> (set API key and base URL in plugin config)</li>
+<li>Sonarr — https://sonarr.video/ — API: <code>/api/v3/</code> (supports series/season/episode search via <code>/api/v3/command</code> or episode-level endpoints)</li>
+<li>Lidarr — https://lidarr.audio/ — music-focused, API similar to Radarr/Sonarr</li>
+<li>Readarr — https://readarr.com/ — books-focused</li>
+<li>Whisparr — https://github.com/Whisparr/Whisparr</li>
+<li>Headphones — https://github.com/rembo10/headphones</li>
+<li>Sick Beard / SickRage — legacy TV indexers; check their APIs exposed at <code>/api</code></li>
+<li>Mylar3 — https://github.com/mylar3/mylar3 — comics handling</li>
+<li>
+<p>Bobarr — https://github.com/Bobarr/Bobarr — a small Radarr-like project</p>
+</li>
+<li>
+<p>NZBGet — https://nzbget.net/ — JSON-RPC usually at <code>/jsonrpc</code> or <code>/api</code></p>
+</li>
+<li>
+<p>SABnzbd — https://sabnzbd.org/ — API: <code>/api?mode=queue&amp;output=json&amp;apikey=&lt;key&gt;</code></p>
+</li>
+<li>
+<p>qBittorrent — https://www.qbittorrent.org/ — API v2 (login + <code>/api/v2/torrents/info</code>)</p>
+</li>
+<li>uTorrent — https://www.utorrent.com/ — web UI API varies (best-effort read-only support)</li>
+<li>Deluge — https://deluge-torrent.org/ — web API available at <code>/json</code></li>
+<li>
+<p>Transmission — https://transmissionbt.com/ — RPC endpoint via POST JSON</p>
+</li>
+<li>
+<p>Prowlarr — https://github.com/Prowlarr/Prowlarr — API v1 <code>/api/v1/indexer</code> or <code>/api/v1/status</code></p>
+</li>
+<li>
+<p>Jackett — https://github.com/Jackett/Jackett — API v2 <code>/api/v2.0/indexers</code> or <code>/api/v2/indexers</code></p>
+</li>
+<li>
+<p>Apprise — https://github.com/caronc/apprise — Python package used to send notifications; install via <code>pip install apprise</code> (we pin <code>apprise==1.9.4</code> in <code>requirements.txt</code>).</p>
+</li>
+</ul>
+<h2 id="backup-safety">Backup &amp; safety</h2>
+<p>These plugins are experimental. Before enabling remote actions against production services, ensure you have backups of the services' databases and configurations. For example:</p>
+<ul>
+<li>Back up Radarr/Sonarr: stop the service, back up the SQLite database files and config folders.</li>
+<li>Back up qBittorrent/Deluge/Transmission configs and watch folders before enabling remote writes.</li>
+</ul>
+<p>If you are testing with production services, run with <code>allow_remote_actions</code> disabled until you have validated behavior in a staging environment.</p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ul>
+<li>If a plugin returns mocked data, ensure the plugin config (<code>url</code>, <code>api_key</code>, etc.) is populated correctly.</li>
+<li>For network issues, run the app in the developer container and use curl/wget from inside to verify connectivity to the service.</li>
+</ul>
+<h2 id="contributing">Contributing</h2>
+<p>If you implement or improve an integration, please add tests under <code>tests/</code> that mock network calls and validate both the happy path and fallback behavior.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../Health-and-Metrics/" class="btn btn-neutral float-left" title="Health and Metrics Endpoints"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../Logs/" class="btn btn-neutral float-right" title="Logs and Live Streaming">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="None" class="fa fa-code-fork" style="color: #fcfcfc"> Wikid82/researcharr</a>
+        </span>
+    
+    
+      <span><a href="../Health-and-Metrics/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../Logs/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

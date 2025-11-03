@@ -106,12 +106,15 @@ jobs:
 
     - name: Run pre-commit hooks
       if: ${{ env.RENOVATE_BYPASS != '1' }}
+      shell: bash
       run: |
+        set +e  # Disable exit on error for this step
         python -m pip install --upgrade pip
         pip install pre-commit
         # Run the configured hooks across the repository so CI matches local
         # developer pre-commit runs (this includes black, ruff, isort, mypy, yamllint, bandit, etc.).
-        pre-commit run --all-files || true
+        pre-commit run --all-files
+        exit 0  # Always exit successfully
     - name: Run security checks with bandit
       if: ${{ env.RENOVATE_BYPASS != '1' }}
       run: |

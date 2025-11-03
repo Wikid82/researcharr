@@ -103,7 +103,8 @@ class TestConfigurationManager(unittest.TestCase):
 
         # Based on actual implementation: sources sorted by priority then merged left-to-right
         # So high priority (1) loads first, then low priority (100) overwrites it
-        # This means the LAST loaded source wins, which is counterintuitive but matches implementation
+        # This means the LAST loaded source wins, which is counterintuitive but matches
+        # implementation
         self.assertEqual(self.config_manager.get("setting"), "low_value")
 
         # Both unique values should be present

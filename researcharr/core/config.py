@@ -215,7 +215,8 @@ class ConfigurationManager:
                     errors.append(
                         ConfigValidationError(
                             "logging.level",
-                            f"Invalid logging level: {logging_config['level']}. Must be one of {valid_levels}",
+                            f"Invalid logging level: {logging_config['level']}. "
+                            f"Must be one of {valid_levels}",
                         )
                     )
 

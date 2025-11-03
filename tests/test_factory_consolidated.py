@@ -103,13 +103,18 @@ class TestFactoryMainRoutes(unittest.TestCase):
         with app.test_client() as client:
             with patch("factory.check_password_hash") as mock_check:
                 with patch("factory.get_user_by_username") as mock_get_user:
-                    mock_get_user.return_value = {"username": "test", "password": " // pragma: allowlist secret
-"password": "hashed"}
+                    mock_get_user.return_value = {
+                        "username": "test",  # pragma: allowlist secret
+                        "password": "hashed",  # pragma: allowlist secret
+                    }
                     mock_check.return_value = True
 
                     response = client.post(
-                        "/login", data={"username": "test", "password": " // pragma: allowlist secret
-"password": "password"}
+                        "/login",
+                        data={
+                            "username": "test",  # pragma: allowlist secret
+                            "password": "password",  # pragma: allowlist secret
+                        },
                     )
                     self.assertIn(response.status_code, [200, 302])
 
@@ -120,15 +125,20 @@ class TestFactoryMainRoutes(unittest.TestCase):
         with app.test_client() as client:
             with patch("factory.check_password_hash") as mock_check:
                 with patch("factory.get_user_by_username") as mock_get_user:
-                    mock_get_user.return_value = {"username": "test", "password": " // pragma: allowlist secret
-"password": "hashed"}
+                    mock_get_user.return_value = {
+                        "username": "test",  # pragma: allowlist secret
+                        "password": "hashed",  # pragma: allowlist secret
+                    }
                     mock_check.return_value = False
 
                     with patch("factory.render_template") as mock_render:
                         mock_render.return_value = "login_error"
                         response = client.post(
-                            "/login", data={"username": "test", "password": " // pragma: allowlist secret
-"password": "wrong"}
+                            "/login",
+                            data={
+                                "username": "test",  # pragma: allowlist secret
+                                "password": "wrong",  # pragma: allowlist secret
+                            },
                         )
                         self.assertEqual(response.status_code, 200)
 

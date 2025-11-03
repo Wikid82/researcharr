@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="researcharr contributors" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>CI and Development - researcharr</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/css/researcharr.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "CI and Development";
+        var mkdocs_page_input_path = "CI-and-Development.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> researcharr
+        </a>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">researcharr documentation — Day One</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../API/">ResearchArr API (v1)</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">CI and Development</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Changelog/">Changelog</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Contributing/">Contributing to researcharr</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEV/">DEV</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Deployment-and-Resources/">Deployment and Resource Recommendations</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Environment-Variables/">Environment variables</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../FAQ/">FAQ</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Getting-Started/">Getting Started</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Health-and-Metrics/">Health and Metrics Endpoints</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Integrations/">Integrations</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Logs/">Logs and Live Streaming</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Packaging-and-Distribution/">Packaging and Distribution</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Plugins/">Plugins and instance configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Recent-Changes/">Recent Changes</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Roadmap/">Roadmap</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Status-and-Warnings/">System status warnings and how to fix them</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Versioning/">Versioning &amp; Releases</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">researcharr</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">CI and Development</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <p>CI and Development</p>
+<p>This page outlines the development workflow, continuous integration (CI) checks, and local developer recommendations for working on researcharr.</p>
+<p>Repository CI</p>
+<ul>
+<li>CI runs on every push and every pull request. There are workflows at the repository root and inside <code>researcharr/.github/workflows/</code>.</li>
+<li>Checks performed in CI:</li>
+<li>flake8 (style and simple lint checks)</li>
+<li>black (formatting) — check-only mode in CI</li>
+<li>isort (import sorting) — check-only mode in CI, configured to use Black's profile via <code>researcharr/.isort.cfg</code></li>
+<li>mypy (type checking) where configured</li>
+<li>pytest (test suite)</li>
+<li>CI uses pip caching to speed up dependency installs. This keeps iteration fast for contributors.</li>
+</ul>
+<p>Pre-commit and local checks</p>
+<p>We strongly recommend installing and running <code>pre-commit</code> locally. The repository root contains <code>.pre-commit-config.yaml</code> with hooks for Black, isort, flake8, and other quality checks.</p>
+<p>Install and enable pre-commit:</p>
+<pre><code class="language-bash">pip install pre-commit
+pre-commit install
+pre-commit run --all-files
+</code></pre>
+<p>Preview site and link checks</p>
+<ul>
+<li>Branch previews: For non-<code>main</code> branches a preview of <code>docs/</code> will be published to:
+  <code>https://wikid82.github.io/researcharr/previews/&lt;branch&gt;/</code> (generated by CI on push).</li>
+<li>Link checks: PRs targeting <code>development</code> or <code>main</code> run a docs link-checker which validates internal/external links and reports failures on the PR.</li>
+</ul>
+<p>Formatting and ordering (local developer flow)</p>
+<p>Before committing or opening a PR, run the auto-fixers locally to match CI expectations:</p>
+<pre><code class="language-bash">isort --profile=black .
+black .
+</code></pre>
+<p>Run tests:</p>
+<pre><code class="language-bash">python -m pytest tests/
+</code></pre>
+<p>Run the supplied developer command (if present):</p>
+<p><code>researcharr/tests/commands/run_tests.yml</code> contains the recommended command used by some CI runners and contributors:</p>
+<pre><code class="language-text">isort --profile=black . &amp;&amp; black . &amp;&amp; python -m pytest tests/
+</code></pre>
+<p>Notes on failing CI</p>
+<ul>
+<li>If CI reports <code>isort</code> or <code>black</code> failures, run the auto-fixers locally, commit, and push the changes.</li>
+<li>If <code>flake8</code> reports style issues, follow the flake8 messages. Many issues are resolved by running the formatters.</li>
+</ul>
+<p>Branching and PRs</p>
+<ul>
+<li>Create feature branches for larger changes. Keep PRs small and focused where possible.</li>
+<li>CI will run on the PR; address any style/type/test failures before requesting final review.</li>
+</ul>
+<p>Docker publishing &amp; branch images</p>
+<ul>
+<li>After CI completes successfully for a push, the repository will automatically build and publish a Docker image tagged with the branch name to GitHub Container Registry. This lets contributors push branch images for QA.</li>
+<li>Example tags:</li>
+<li><code>ghcr.io/wikid82/researcharr:&lt;branch&gt;</code></li>
+<li><code>ghcr.io/wikid82/researcharr:branch-&lt;branch&gt;</code></li>
+<li>Special tags: merges to <code>development</code> and <code>main</code> will also publish <code>:development</code> and <code>:latest</code> tags respectively.</li>
+</ul>
+<p>How to pull a branch image:</p>
+<pre><code class="language-bash">docker pull ghcr.io/wikid82/researcharr:plugins
+docker run --rm -v /path/to/config:/config -p 2929:2929 ghcr.io/wikid82/researcharr:plugins
+</code></pre>
+<p>Security and housekeeping</p>
+<ul>
+<li>The publisher checks that CI passed and the upstream event was a push; PRs from forks do not publish images.</li>
+<li>Branch images can accumulate in GHCR. Consider a cleanup policy or retention strategy (we can add a scheduled cleanup job if desired).</li>
+</ul>
+<p>Contact and help</p>
+<p>If you're stuck, open an issue or ask in the PR discussion. Include the failing CI log snippets and the output of <code>pre-commit run --all-files</code> if applicable.</p>
+<p>Local developer helpers</p>
+<ul>
+<li>We include a small installer for a native git pre-push hook that runs the test suite before pushing. This prevents pushes that would fail CI and provides fast local feedback. To install the hook run:</li>
+</ul>
+<pre><code class="language-bash">./scripts/install-prepush-hook.sh
+</code></pre>
+<ul>
+<li>There's also a small local CI helper that mirrors the repository <code>build</code> job (installs deps, runs pre-commit, runs pytest and writes <code>coverage.xml</code>, with optional Docker/Trivy steps):</li>
+</ul>
+<pre><code class="language-bash"># quick: assume deps already installed
+./scripts/ci-local.sh --skip-install --no-docker --no-trivy
+
+# full: install deps, build image, run trivy
+./scripts/ci-local.sh
+</code></pre>
+<p>Caching in CI</p>
+<ul>
+<li>The CI workflow caches pip packages and pre-commit environments on the GitHub runner to reduce iteration time. This keeps subsequent CI runs (and pre-commit initializations) much faster.</li>
+</ul>
+<p>Developer note</p>
+<ul>
+<li>After cloning, run <code>pre-commit install</code> and (optionally) <code>./scripts/install-prepush-hook.sh</code> to get the same quick, guarded push behavior contributors use locally.</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../API/" class="btn btn-neutral float-left" title="ResearchArr API (v1)"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../Changelog/" class="btn btn-neutral float-right" title="Changelog">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="None" class="fa fa-code-fork" style="color: #fcfcfc"> Wikid82/researcharr</a>
+        </span>
+    
+    
+      <span><a href="../API/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../Changelog/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

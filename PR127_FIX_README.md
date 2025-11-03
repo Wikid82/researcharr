@@ -67,6 +67,14 @@ git push
 After applying these fixes, all pre-commit hooks should pass:
 - isort will not modify any files
 - mypy will not report type errors
-- detect-secrets will not find new secrets
+- detect-secrets will not find new secrets (pragma comments mark them as allowlisted)
+
+## Note on .secrets.baseline
+
+The `.secrets.baseline` file may need to be regenerated after applying these fixes to reflect the newly added pragma comments. This can be done by running:
+
+```bash
+detect-secrets scan --baseline .secrets.baseline
+```
 
 The fixes are minimal and surgical, only changing what's necessary to pass the pre-commit checks.

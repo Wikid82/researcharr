@@ -73,12 +73,12 @@ class TestResearcharrRootModule(unittest.TestCase):
             # Verify the SQL statements contain table creation
             execute_calls = mock_cursor.execute.call_args_list
             self.assertEqual(len(execute_calls), 2)  # Two CREATE TABLE statements
-            
+
             # Check that both radarr_queue and sonarr_queue tables are created
             sql_calls = [call[0][0] for call in execute_calls]
             radarr_sql = next(sql for sql in sql_calls if "radarr_queue" in sql)
             sonarr_sql = next(sql for sql in sql_calls if "sonarr_queue" in sql)
-            
+
             self.assertIn("CREATE TABLE IF NOT EXISTS", radarr_sql)
             self.assertIn("CREATE TABLE IF NOT EXISTS", sonarr_sql)
 
@@ -103,12 +103,12 @@ class TestResearcharrRootModule(unittest.TestCase):
             # Verify the SQL statements contain table creation
             execute_calls = mock_cursor.execute.call_args_list
             self.assertEqual(len(execute_calls), 2)  # Two CREATE TABLE statements
-            
+
             # Check that both radarr_queue and sonarr_queue tables are created
             sql_calls = [call[0][0] for call in execute_calls]
             radarr_sql = next(sql for sql in sql_calls if "radarr_queue" in sql)
             sonarr_sql = next(sql for sql in sql_calls if "sonarr_queue" in sql)
-            
+
             self.assertIn("CREATE TABLE IF NOT EXISTS", radarr_sql)
             self.assertIn("CREATE TABLE IF NOT EXISTS", sonarr_sql)
 
@@ -355,7 +355,9 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test load_config with default path."""
         with patch("builtins.open", mock_open(read_data="key: value")):
             with patch.object(researcharr_root.os.path, "exists", return_value=True):
-                with patch.object(researcharr_root.yaml, "safe_load", return_value={"key": "value"}):
+                with patch.object(
+                    researcharr_root.yaml, "safe_load", return_value={"key": "value"}
+                ):
                     result = researcharr_root.load_config()
 
                     self.assertEqual(result, {"key": "value"})

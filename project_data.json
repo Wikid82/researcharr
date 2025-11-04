@@ -1,0 +1,1 @@
+{"errors":[{"extensions":{"value":"YOUR_PROJECT_NUMBER","problems":[{"path":[],"explanation":"Could not coerce value \"YOUR_PROJECT_NUMBER\" to Int"}]},"locations":[{"line":2,"column":24}],"message":"Variable $number of type Int! was provided invalid value"}]}

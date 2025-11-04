@@ -65,7 +65,10 @@ class EventBus:
             return False
 
     def unsubscribe_all(self, handler: Callable[[Event], None]) -> bool:
-        """Unsubscribe from all events. Returns True if handler was found and removed."""
+        """Unsubscribe from all events.
+
+        Returns True if handler was found and removed.
+        """
         with self._lock:
             try:
                 self._wildcard_subscribers.remove(handler)

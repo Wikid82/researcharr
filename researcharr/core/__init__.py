@@ -48,7 +48,10 @@ from .services import (
     init_db,
 )
 from .services import load_config as load_config_legacy
-from .services import serve, setup_logger
+from .services import (
+    serve,
+    setup_logger,
+)
 
 __all__ = [
     # Service Container

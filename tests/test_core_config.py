@@ -101,10 +101,12 @@ class TestConfigurationManager(unittest.TestCase):
         result = self.config_manager.load_config()
         self.assertTrue(result)
 
-        # Based on actual implementation: sources sorted by priority then merged left-to-right
-        # So high priority (1) loads first, then low priority (100) overwrites it
-        # This means the LAST loaded source wins, which is counterintuitive but matches
-        # implementation
+        # Based on actual implementation: sources sorted by priority
+        # then merged left-to-right
+        # So high priority (1) loads first, then low priority (100)
+        # overwrites it
+        # This means the LAST loaded source wins, which is counterintuitive
+        # but matches implementation
         self.assertEqual(self.config_manager.get("setting"), "low_value")
 
         # Both unique values should be present
@@ -184,7 +186,8 @@ class TestConfigurationManager(unittest.TestCase):
         self.assertTrue(self.config_manager.has("app.name"))
 
         # Note: The current has() implementation has a bug where it always returns True
-        # because it uses get(key, object()) and object() creates a new instance each time
+        # because it uses get(key, object()) and object() creates a new
+        # instance each time
         # For now, let's test what it actually does rather than what it should do
 
         # The has() method currently returns True for any key due to implementation bug
@@ -245,7 +248,10 @@ class TestConfigurationManager(unittest.TestCase):
 
         # Config missing required keys should have validation errors
         invalid_config = {
-            "database": {"port": "not_a_number"}  # Invalid but won't be caught by basic validation
+            "database": {
+                "port": "not_a_number"  # Invalid but won't be caught by
+                # basic validation
+            }
         }
 
         self.config_manager.add_source("invalid", data=invalid_config)

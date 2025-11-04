@@ -1,0 +1,7 @@
+{
+  "typeCheckingMode": "basic",
+  "include": ["researcharr"],
+  "exclude": ["**/node_modules", "**/__pycache__", "tests", "home"],
+  "venvPath": ".",
+  "venv": ".venv"
+}

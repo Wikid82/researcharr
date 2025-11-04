@@ -3,7 +3,7 @@
 # for reproducible installs. See https://pre-commit.com for guidance.
 repos:
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: "refs/tags/v0.0.278"  # pinned ruff pre-commit tag (update as needed)
+    rev: "v0.14.3"  # pinned ruff pre-commit tag (update as needed)
     hooks:
       - id: ruff
         args: ["--fix"]
@@ -17,7 +17,7 @@ repos:
         stages: [pre-commit]
 
   - repo: https://github.com/PyCQA/isort
-    rev: "5.12.0"
+    rev: "7.0.0"
     hooks:
       - id: isort
         name: isort (python)
@@ -39,7 +39,7 @@ repos:
 
   # YAML linting for configuration files
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.30.0
+    rev: v1.37.1
     hooks:
       - id: yamllint
         stages: [pre-commit]

@@ -113,7 +113,7 @@ class ConfigurationManager:
                 return True
 
             old_config = deepcopy(self._config) if self._config else {}
-            new_config = {}
+            new_config: Dict[str, Any] = {}
             self._validation_errors.clear()
 
             # Load from each source in priority order
@@ -246,9 +246,9 @@ class ConfigurationManager:
 
     def _find_config_changes(
         self, old_config: Dict[str, Any], new_config: Dict[str, Any], path: str = ""
-    ) -> List[tuple]:
+    ) -> List[tuple[str, Any, Any]]:
         """Find changes between two configuration dictionaries."""
-        changes = []
+        changes: List[tuple[str, Any, Any]] = []
 
         # Check for added or changed keys
         for key, new_value in new_config.items():

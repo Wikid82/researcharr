@@ -373,7 +373,7 @@ def serve() -> None:
     Starts the Flask metrics application on host 0.0.0.0 port 2929.
     """
     app = create_metrics_app()
-    app.run(host="0.0.0.0", port=2929)
+    app.run(host="0.0.0.0", port=2929)  # nosec B104
 
 
 # Configuration loading function (moved from researcharr.py)

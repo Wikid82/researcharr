@@ -9,7 +9,7 @@ from __future__ import annotations
 import importlib.util
 import logging
 import os
-import subprocess as _stdlib_subprocess
+import subprocess as _stdlib_subprocess  # nosec B404
 import types
 from importlib import import_module
 from typing import TYPE_CHECKING, Any

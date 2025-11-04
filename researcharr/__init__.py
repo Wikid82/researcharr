@@ -158,11 +158,18 @@ for _mname in ("factory", "run", "webui", "backups", "api"):
 
 # Import missing functions that tests expect to be available at package level
 try:
-    from .db import _conn as get_connection  # type: ignore[attr-defined]  # noqa: F401
-    from .db import init_db as create_tables  # type: ignore[attr-defined]  # noqa: F401
-    from .db import load_user as get_user_by_username  # type: ignore[attr-defined]  # noqa: F401
-    from .db import save_user as create_user  # type: ignore[attr-defined]  # noqa: F401
-
+    from .db import (  # type: ignore[attr-defined]  # noqa: F401
+        _conn as get_connection,
+    )
+    from .db import (  # type: ignore[attr-defined]  # noqa: F401
+        init_db as create_tables,
+    )
+    from .db import (  # type: ignore[attr-defined]  # noqa: F401
+        load_user as get_user_by_username,
+    )
+    from .db import (  # type: ignore[attr-defined]  # noqa: F401
+        save_user as create_user,
+    )
     from .researcharr import DB_PATH  # noqa: F401
     from .researcharr import check_radarr_connection  # noqa: F401
     from .researcharr import check_sonarr_connection  # noqa: F401
@@ -171,7 +178,9 @@ try:
     from .researcharr import init_db  # noqa: F401
     from .researcharr import load_config  # noqa: F401
     from .researcharr import serve  # type: ignore[attr-defined]  # noqa: F401
-    from .researcharr import setup_logger  # type: ignore[attr-defined]  # noqa: F401
+    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
+        setup_logger,
+    )
 except ImportError:
     # Functions may not be available in all contexts
     pass

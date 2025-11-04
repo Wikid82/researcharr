@@ -170,29 +170,15 @@ try:
     from .db import (  # type: ignore[attr-defined]  # noqa: F401
         save_user as create_user,
     )
-    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
-        DB_PATH,
-    )
-    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
-        check_radarr_connection,
-    )
-    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
-        check_sonarr_connection,
-    )
-    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
-        create_metrics_app,
-    )
-    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
-        has_valid_url_and_key,
-    )
-    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
-        init_db,
-    )
-    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
-        load_config,
-    )
     from .researcharr import serve  # type: ignore[attr-defined]  # noqa: F401
-    from .researcharr import (  # type: ignore[attr-defined]; noqa: F401
+    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401; type: ignore[attr-defined]; noqa: F401
+        DB_PATH,
+        check_radarr_connection,
+        check_sonarr_connection,
+        create_metrics_app,
+        has_valid_url_and_key,
+        init_db,
+        load_config,
         setup_logger,
     )
 except ImportError:

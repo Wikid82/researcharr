@@ -28,6 +28,7 @@ except Exception:
     yaml = None
 
 DB_PATH = "researcharr.db"
+DEFAULT_TIMEOUT = 10
 
 
 def init_db(db_path: str | None = None) -> None:
@@ -79,7 +80,7 @@ def check_radarr_connection(url, api_key, logger):
         logger.warning("requests not available in this environment")
         return False
     try:
-        r = requests.get(url)
+        r = requests.get(url, timeout=DEFAULT_TIMEOUT)
         if r.status_code == 200:
             logger.info("Radarr connection successful.")
             return True
@@ -98,7 +99,7 @@ def check_sonarr_connection(url, api_key, logger):
         logger.warning("requests not available in this environment")
         return False
     try:
-        r = requests.get(url)
+        r = requests.get(url, timeout=DEFAULT_TIMEOUT)
         if r.status_code == 200:
             logger.info("Sonarr connection successful.")
             return True

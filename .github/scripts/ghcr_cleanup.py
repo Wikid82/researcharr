@@ -26,6 +26,7 @@ from urllib.parse import urlencode
 import requests
 
 GITHUB_API = "https://api.github.com"
+DEFAULT_TIMEOUT = 30
 
 
 def api_path(*parts: str) -> str:
@@ -62,7 +63,7 @@ def list_packages(owner: str, token: str) -> List[Dict[str, Any]]:
             # including query params, so build the URL explicitly.
             q = urlencode(params)
             url = base + ("&" if "?" in base else "?") + q
-            r = requests.get(url, headers=headers)
+            r = requests.get(url, headers=headers, timeout=DEFAULT_TIMEOUT)
             if r.status_code == 404:
                 break
             r.raise_for_status()
@@ -107,7 +108,7 @@ def list_package_versions(owner: str, package_name: str, token: str) -> List[Dic
             # Build URL with page params so tests that inspect the URL work
             q = urlencode(params)
             url = base + ("&" if "?" in base else "?") + q
-            r = requests.get(url, headers=headers)
+            r = requests.get(url, headers=headers, timeout=DEFAULT_TIMEOUT)
             if r.status_code == 404:
                 break
             r.raise_for_status()
@@ -155,7 +156,7 @@ def delete_version(
             str(version_id),
         ),
     ):
-        r = requests.delete(base, headers=headers)
+        r = requests.delete(base, headers=headers, timeout=DEFAULT_TIMEOUT)
         if r.status_code in (204, 202):
             return True
         # if 404 try the next base

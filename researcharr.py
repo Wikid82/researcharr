@@ -35,6 +35,7 @@ if "yaml" not in globals():
     import yaml
 
 DB_PATH = "researcharr.db"
+DEFAULT_TIMEOUT = 10
 
 
 def init_db(db_path=None):
@@ -91,7 +92,7 @@ def check_radarr_connection(url, api_key, logger):
         logger.warning("Missing Radarr URL or API key")
         return False
     try:
-        r = requests.get(url)
+        r = requests.get(url, timeout=DEFAULT_TIMEOUT)
         if r.status_code == 200:
             logger.info("Radarr connection successful.")
             return True
@@ -111,7 +112,7 @@ def check_sonarr_connection(url, api_key, logger):
         logger.warning("Missing Sonarr URL or API key")
         return False
     try:
-        r = requests.get(url)
+        r = requests.get(url, timeout=DEFAULT_TIMEOUT)
         if r.status_code == 200:
             logger.info("Sonarr connection successful.")
             return True

@@ -56,7 +56,7 @@ class TestWebUIConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
             # Test main pages
@@ -131,7 +131,7 @@ class TestWebUIConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
             # Test system pages
@@ -153,7 +153,7 @@ class TestWebUIConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
             # Test SSE endpoints
@@ -182,7 +182,7 @@ class TestWebUIConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
             # Test updates page
@@ -228,11 +228,11 @@ class TestWebUIConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
             # Test various template contexts
-            with app.app_context():
+            with app.app_context():  # type: ignore[attr-defined]
                 # Test template rendering with different contexts
                 context_pages = {
                     "/": {"user_config": {}},
@@ -271,7 +271,7 @@ class TestPluginTemplatesConsolidated(unittest.TestCase):
             app = create_app()
 
             # Test that plugin blueprints are registered
-            blueprint_names = [bp.name for bp in app.blueprints.values()]
+            blueprint_names = [bp.name for bp in app.blueprints.values()]  # type: ignore[attr-defined]
 
             # Should have some blueprints
             self.assertIsInstance(blueprint_names, list)
@@ -288,7 +288,7 @@ class TestPluginTemplatesConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
             # Test plugins page
@@ -307,7 +307,7 @@ class TestPluginTemplatesConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
             # Test plugin discovery
@@ -326,7 +326,7 @@ class TestPluginTemplatesConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
             # Test plugin actions
@@ -347,7 +347,7 @@ class TestPluginTemplatesConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
             # Test plugin instance actions

@@ -12,7 +12,11 @@ project_root = Path(__file__).parent.parent
 researcharr_path = project_root / "researcharr.py"
 
 spec = importlib.util.spec_from_file_location("researcharr_root", str(researcharr_path))
+if spec is None:
+    raise ImportError(f"Could not load spec from {researcharr_path}")
 researcharr_root = importlib.util.module_from_spec(spec)
+if spec.loader is None:
+    raise ImportError(f"Spec has no loader for {researcharr_path}")
 spec.loader.exec_module(researcharr_root)
 
 

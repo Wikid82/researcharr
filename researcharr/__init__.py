@@ -155,3 +155,29 @@ for _mname in ("factory", "run", "webui", "backups", "api"):
             # Non-fatal; this is only for editor/static analysis friendliness
             # and should not prevent runtime.
             pass
+
+# Import missing functions that tests expect to be available at package level
+try:
+    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
+        DB_PATH,  # type: ignore[attr-defined]
+        init_db,  # type: ignore[attr-defined]
+        setup_logger,  # type: ignore[attr-defined]
+        load_config,  # type: ignore[attr-defined]
+        check_radarr_connection,  # type: ignore[attr-defined]
+        check_sonarr_connection,  # type: ignore[attr-defined]
+        has_valid_url_and_key,  # type: ignore[attr-defined]
+        create_metrics_app,  # type: ignore[attr-defined]
+        serve,  # type: ignore[attr-defined]
+    )
+    from .db import (  # type: ignore[attr-defined]  # noqa: F401
+        init_db as create_tables,  # type: ignore[attr-defined]
+        _conn as get_connection,  # type: ignore[attr-defined]
+        load_user as get_user_by_username,  # type: ignore[attr-defined]
+        save_user as create_user,  # type: ignore[attr-defined]
+    )
+except ImportError:
+    # Functions may not be available in all contexts
+    pass
+
+# Add version information
+__version__ = "0.1.0"

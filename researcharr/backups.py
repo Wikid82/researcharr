@@ -24,6 +24,14 @@ def _delegate_to_top_level(name: str, *args, **kwargs):
         # the caller's sys.path includes the repository root.
         from backups import create_backup_file as _cb  # type: ignore
         from backups import prune_backups as _pb
+        from backups import get_backup_info as _gbi
+        from backups import list_backups as _lb
+        from backups import restore_backup as _rb
+        from backups import validate_backup_file as _vbf
+        from backups import get_backup_size as _gbs
+        from backups import cleanup_temp_files as _ctf
+        from backups import get_default_backup_config as _gdbc
+        from backups import merge_backup_configs as _mbc
     except Exception:
         # If a normal import fails (for example because the current working
         # directory is the configured CONFIG_DIR during tests), try to load
@@ -41,6 +49,14 @@ def _delegate_to_top_level(name: str, *args, **kwargs):
             spec.loader.exec_module(mod)  # type: ignore
             _cb = getattr(mod, "create_backup_file")
             _pb = getattr(mod, "prune_backups")
+            _gbi = getattr(mod, "get_backup_info")
+            _lb = getattr(mod, "list_backups")
+            _rb = getattr(mod, "restore_backup")
+            _vbf = getattr(mod, "validate_backup_file")
+            _gbs = getattr(mod, "get_backup_size")
+            _ctf = getattr(mod, "cleanup_temp_files")
+            _gdbc = getattr(mod, "get_default_backup_config")
+            _mbc = getattr(mod, "merge_backup_configs")
         except Exception as exc:  # pragma: no cover - defensive fallback
             raise ImportError("Could not import top-level backups module") from exc
 
@@ -48,7 +64,22 @@ def _delegate_to_top_level(name: str, *args, **kwargs):
         return _cb(*args, **kwargs)
     if name == "prune_backups":
         return _pb(*args, **kwargs)
-    raise RuntimeError("unknown delegation target")
+    if name == "get_backup_info":
+        return _gbi(*args, **kwargs)
+    if name == "list_backups":
+        return _lb(*args, **kwargs)
+    if name == "restore_backup":
+        return _rb(*args, **kwargs)
+    if name == "validate_backup_file":
+        return _vbf(*args, **kwargs)
+    if name == "get_backup_size":
+        return _gbs(*args, **kwargs)
+    if name == "cleanup_temp_files":
+        return _ctf(*args, **kwargs)
+    if name == "get_default_backup_config":
+        return _gdbc(*args, **kwargs)
+    if name == "merge_backup_configs":
+        return _mbc(*args, **kwargs)
 
 
 def create_backup_file(*args, **kwargs):
@@ -57,3 +88,35 @@ def create_backup_file(*args, **kwargs):
 
 def prune_backups(*args, **kwargs):
     return _delegate_to_top_level("prune_backups", *args, **kwargs)
+
+
+def get_backup_info(*args, **kwargs):
+    return _delegate_to_top_level("get_backup_info", *args, **kwargs)
+
+
+def list_backups(*args, **kwargs):
+    return _delegate_to_top_level("list_backups", *args, **kwargs)
+
+
+def restore_backup(*args, **kwargs):
+    return _delegate_to_top_level("restore_backup", *args, **kwargs)
+
+
+def validate_backup_file(*args, **kwargs):
+    return _delegate_to_top_level("validate_backup_file", *args, **kwargs)
+
+
+def get_backup_size(*args, **kwargs):
+    return _delegate_to_top_level("get_backup_size", *args, **kwargs)
+
+
+def cleanup_temp_files(*args, **kwargs):
+    return _delegate_to_top_level("cleanup_temp_files", *args, **kwargs)
+
+
+def get_default_backup_config(*args, **kwargs):
+    return _delegate_to_top_level("get_default_backup_config", *args, **kwargs)
+
+
+def merge_backup_configs(*args, **kwargs):
+    return _delegate_to_top_level("merge_backup_configs", *args, **kwargs)

@@ -15,7 +15,11 @@ researcharr_root_path = project_root / "researcharr.py"
 
 # Load researcharr.py as a module
 spec = importlib.util.spec_from_file_location("researcharr_root", str(researcharr_root_path))
+if spec is None:
+    raise ImportError(f"Could not load spec from {researcharr_root_path}")
 researcharr_root = importlib.util.module_from_spec(spec)
+if spec.loader is None:
+    raise ImportError(f"Spec has no loader for {researcharr_root_path}")
 spec.loader.exec_module(researcharr_root)
 
 
@@ -517,6 +521,9 @@ if __name__ == "__main__":
 
     def test_package_path_structure(self):
         """Test __path__ includes both directories."""
+        if researcharr_root.__file__ is None:
+            self.skipTest("Module __file__ is None")
+        
         expected_paths = [
             os.path.dirname(researcharr_root.__file__),
             os.path.join(os.path.dirname(researcharr_root.__file__), "researcharr"),

@@ -169,7 +169,7 @@ class TestFactoryRoutes:
 
     def test_logout_route(self, client):
         """Test logout route."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/logout")
@@ -196,7 +196,7 @@ class TestFactoryRoutes:
 
     def test_reset_password_route_post(self, app, client):
         """Test reset password POST route."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         with (
@@ -263,7 +263,7 @@ class TestFactoryAPIRoutes:
 
     def test_api_status_route_authorized(self, app, client):
         """Test API status endpoint with login."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/api/status")
@@ -280,7 +280,7 @@ class TestFactoryAPIRoutes:
 
     def test_api_storage_route_authorized(self, client):
         """Test API storage endpoint with login."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/api/storage")
@@ -307,7 +307,7 @@ class TestFactoryBackupRoutes:
 
     def test_backups_route(self, client):
         """Test backups page route."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/backups")
@@ -320,7 +320,7 @@ class TestFactoryBackupRoutes:
 
     def test_api_backups_list_authorized(self, client):
         """Test backups list API with login."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/api/backups")
@@ -335,7 +335,7 @@ class TestFactoryBackupRoutes:
 
     def test_api_backups_create_authorized(self, client):
         """Test backup creation API with login."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         with (
@@ -353,7 +353,7 @@ class TestFactoryBackupRoutes:
 
     def test_api_backups_settings_get(self, client):
         """Test backup settings GET API."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/api/backups/settings")
@@ -363,7 +363,7 @@ class TestFactoryBackupRoutes:
 
     def test_api_backups_settings_post(self, app, client):
         """Test backup settings POST API."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         settings_data = {"retain_count": 5, "retain_days": 30, "pre_restore": True}
@@ -406,7 +406,7 @@ class TestFactoryTaskRoutes:
 
     def test_tasks_route(self, client):
         """Test tasks page route."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/tasks")
@@ -419,7 +419,7 @@ class TestFactoryTaskRoutes:
 
     def test_api_tasks_trigger_authorized(self, client):
         """Test task trigger API with login."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.post(
@@ -431,7 +431,7 @@ class TestFactoryTaskRoutes:
 
     def test_api_tasks_settings_get(self, client):
         """Test task settings GET API."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/api/tasks/settings")
@@ -441,7 +441,7 @@ class TestFactoryTaskRoutes:
 
     def test_api_tasks_settings_post(self, client):
         """Test task settings POST API."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         settings_data = {"enabled": True, "schedule": "0 */6 * * *"}
@@ -474,7 +474,7 @@ class TestFactoryPluginRoutes:
 
     def test_plugins_settings_route(self, client):
         """Test plugins settings page."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/settings/plugins")
@@ -482,7 +482,7 @@ class TestFactoryPluginRoutes:
 
     def test_plugins_settings_with_category(self, client):
         """Test plugins settings page with category filter."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/settings/plugins?category=media")
@@ -534,7 +534,7 @@ class TestFactoryHelperFunctions:
         """Test the _parse_instances helper function."""
         app = create_app()
 
-        with app.app_context():
+        with app.app_context():  # type: ignore[attr-defined]
             # Mock form data
             form_data = {
                 "radarr0_enabled": "on",
@@ -575,11 +575,11 @@ class TestFactorySessionManagement:
 
     def test_login_session_management(self, client):
         """Test login creates proper session."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         # Test that session persists
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             assert sess.get("logged_in") is True
 
 

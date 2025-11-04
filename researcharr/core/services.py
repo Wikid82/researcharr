@@ -219,7 +219,7 @@ class HealthService:
 
     def check_system_health(self) -> Dict[str, Any]:
         """Perform comprehensive health checks."""
-        health_status = {"status": "ok", "components": {}}
+        health_status: Dict[str, Any] = {"status": "ok", "components": {}}
 
         # Check database
         try:

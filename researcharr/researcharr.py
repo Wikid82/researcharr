@@ -126,6 +126,9 @@ def create_metrics_app():
         class Dummy:
             def test_client(self):
                 raise RuntimeError("flask not available")
+            
+            def run(self, *args, **kwargs):
+                raise RuntimeError("flask not available")
 
         return Dummy()  # tests that require Flask will have it available
 

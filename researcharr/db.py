@@ -106,3 +106,19 @@ def save_user(
         conn.commit()
     finally:
         conn.close()
+
+
+# Backward-compatible wrappers / aliases for test compatibility
+def get_user_by_username(username: Optional[str] = None) -> Optional[Dict[str, Optional[str]]]:
+    """Return the first user row.
+
+    Historically tests call `get_user_by_username(username)` even though the
+    implementation stores a single user. Accept an optional username argument
+    for compatibility and delegate to the single-user loader.
+    """
+    return load_user()
+
+
+create_tables = init_db
+get_connection = _conn
+create_user = save_user

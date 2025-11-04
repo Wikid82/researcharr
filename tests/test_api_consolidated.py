@@ -65,7 +65,7 @@ class TestAPIConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore  # type: ignore
                 sess["logged_in"] = True
 
             # Test logs API
@@ -88,7 +88,7 @@ class TestAPIConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore  # type: ignore
                 sess["logged_in"] = True
 
             # Test tasks API
@@ -137,7 +137,7 @@ class TestAPIConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore
                 sess["logged_in"] = True
 
             # Test plugins list API
@@ -168,7 +168,7 @@ class TestAPIConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore
                 sess["logged_in"] = True
 
             # Test plugin instances API
@@ -219,7 +219,7 @@ class TestAPIConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore
                 sess["logged_in"] = True
 
             # Test invalid JSON
@@ -244,7 +244,7 @@ class TestAPIConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Test OPTIONS request
-            response = client.options("/api/")
+            response = client.options("/api/")  # type: ignore
 
             if response.status_code == 200:
                 # Check for CORS headers
@@ -266,7 +266,7 @@ class TestAPIConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore
                 sess["logged_in"] = True
 
             # Make multiple rapid requests
@@ -292,7 +292,7 @@ class TestAPIConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore
                 sess["logged_in"] = True
 
             # Test pagination parameters
@@ -322,7 +322,7 @@ class TestAPIConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore
                 sess["logged_in"] = True
 
             # Test with invalid data

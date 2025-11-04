@@ -243,3 +243,97 @@ def prune_backups(backups_dir: str | Path, cfg: Optional[dict] = None) -> None:
                         continue
     except Exception:
         return
+
+
+# Stub functions for planned features - to be implemented later
+def get_backup_info(backup_path: str | Path) -> Optional[dict]:
+    """Get information about a backup file.
+
+    Args:
+        backup_path: Path to the backup file
+
+    Returns:
+        Dictionary with backup information or None if invalid
+    """
+    raise NotImplementedError("get_backup_info function not yet implemented")
+
+
+def list_backups(backups_dir: str | Path) -> list[dict]:
+    """List all backup files in a directory.
+
+    Args:
+        backups_dir: Directory containing backup files
+
+    Returns:
+        List of dictionaries with backup information
+    """
+    raise NotImplementedError("list_backups function not yet implemented")
+
+
+def restore_backup(backup_path: str | Path, restore_dir: str | Path) -> bool:
+    """Restore a backup to a directory.
+
+    Args:
+        backup_path: Path to the backup file
+        restore_dir: Directory to restore to
+
+    Returns:
+        True if successful, False otherwise
+    """
+    raise NotImplementedError("restore_backup function not yet implemented")
+
+
+def validate_backup_file(backup_path: str | Path) -> bool:
+    """Validate that a backup file is valid.
+
+    Args:
+        backup_path: Path to the backup file
+
+    Returns:
+        True if valid, False otherwise
+    """
+    raise NotImplementedError("validate_backup_file function not yet implemented")
+
+
+def get_backup_size(backup_path: str | Path) -> int:
+    """Get the size of a backup file.
+
+    Args:
+        backup_path: Path to the backup file
+
+    Returns:
+        Size in bytes
+    """
+    raise NotImplementedError("get_backup_size function not yet implemented")
+
+
+def cleanup_temp_files(path: str | Path | None = None) -> None:
+    """Clean up temporary files created during backup operations.
+
+    Args:
+        path: Optional path to the temp directory to clean. If None, use
+              default temp location.
+    """
+    raise NotImplementedError("cleanup_temp_files function not yet implemented")
+
+
+def get_default_backup_config() -> dict:
+    """Get default backup configuration.
+
+    Returns:
+        Dictionary with default backup settings
+    """
+    raise NotImplementedError("get_default_backup_config function not yet implemented")
+
+
+def merge_backup_configs(default_config: dict, user_config: dict) -> dict:
+    """Merge user configuration with defaults.
+
+    Args:
+        default_config: Default configuration
+        user_config: User-provided configuration
+
+    Returns:
+        Merged configuration dictionary
+    """
+    raise NotImplementedError("merge_backup_configs function not yet implemented")

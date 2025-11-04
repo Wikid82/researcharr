@@ -1,15 +1,35 @@
 {
+  // Note: do not set "python.analysis.extraPaths" in workspace settings when
+  // a pyrightconfig.json or pyproject.toml is present; instead put extra paths
+  // into pyrightconfig.json ("extraPaths") or pyproject.toml (tool.pyright).
   "yaml.schemas": {
     "https://json.schemastore.org/github-workflow.json": "./.github/workflows/*"
   },
+
+  // Enable YAML validation and use the GitHub Actions schema mapping so
+  // workflow files are visible in the editor with proper syntax highlighting
+  // and schema-aware validation. If noisy diagnostics appear from an
+  // extension that tries to resolve remote actions, we'll tune that
+  // extension's settings (preferred) rather than hiding the files.
+  "yaml.validate": true,
+
   // Recommended workspace settings for development
   // Use the repo-local virtualenv if present so Pylance and the Python
   // extension resolve installed packages like 'yaml'.
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+
+  // Make Pylance/pyright analysis mode align with pyrightconfig.json
+  // (managed in pyrightconfig.json for this workspace)
+  // Ensure the language server analyzes the workspace (similar to CLI pyright)
+  "python.analysis.diagnosticMode": "workspace",
+  // Silence optional member/call/subscript/operand warnings which are
+  // common in this codebase where runtime shims and optional context are
+  // used extensively.
+  // Diagnostic severity overrides are managed in pyrightconfig.json or
+  // pyproject.toml (tool.pyright); remove workspace override to avoid
+  // conflict with project configuration.
+  
   // Help the language server find imports in the repository root.
-  "python.analysis.extraPaths": ["${workspaceFolder}"],
-  // Keep a modest level of type checking for developer feedback.
-  "python.analysis.typeCheckingMode": "basic",
   "python.testing.pytestArgs": [
     "tests"
   ],

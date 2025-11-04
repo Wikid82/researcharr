@@ -167,6 +167,12 @@ class TestBackupsIntegrationScenarios(unittest.TestCase):
 
                 # Create backup
                 backup_path = backups.create_backup_file(config_dir, self.test_dir)
+                # Guard against a None return so static checkers don't warn when
+                # the test later passes the path into os.path.exists / ZipFile.
+                self.assertIsNotNone(backup_path)
+                # Convert to concrete str now that we've asserted it's not None
+                # so static checkers see a non-optional type for subsequent calls.
+                backup_path = str(backup_path)
                 self.assertTrue(os.path.exists(backup_path))
 
                 # Verify backup contains expected files

@@ -6,6 +6,7 @@ extracted from factory.py, integrated with the new core architecture components.
 
 import importlib.util
 import os
+from types import ModuleType
 from typing import Any, Dict
 
 import yaml
@@ -222,6 +223,7 @@ class CoreApplicationFactory:
 
         try:
             # Try to load webui module for user config
+            webui: ModuleType | None = None
             try:
                 from researcharr import webui
             except Exception:
@@ -236,9 +238,11 @@ class CoreApplicationFactory:
                 else:
                     webui = None
 
-            if webui:
+            webui_module: ModuleType | None = webui
+
+            if webui_module:
                 try:
-                    ucfg = webui.load_user_config()
+                    ucfg = webui_module.load_user_config()
                     if isinstance(ucfg, dict):
                         if "password_hash" in ucfg:
                             password_hash = ucfg.get("password_hash")
@@ -255,7 +259,7 @@ class CoreApplicationFactory:
                             api_key_val = ucfg.get("api_key")  # pragma: allowlist secret
                             if api_key_val:
                                 hashed = generate_password_hash(str(api_key_val))
-                                webui.save_user_config(
+                                webui_module.save_user_config(
                                     ucfg.get("username", user_config["username"]),
                                     ucfg.get("password_hash"),
                                     api_key_hash=hashed,

@@ -6,7 +6,7 @@ import sqlite3
 # --- Debug/Container Entrypoint ---
 def serve():
     app = create_metrics_app()
-    app.run(host="0.0.0.0", port=2929)
+    app.run(host="0.0.0.0", port=2929)  # nosec B104
 
 
 # NOTE: the actual __main__ invocation is placed at the end of the

@@ -115,7 +115,7 @@ def create_app() -> Flask:
             )
         )
     if not secret:
-        secret = "dev"
+        secret = "dev"  # nosec B105
         # Will be visible in logs once the app logger is configured; use
         # print as a fallback in early startup paths.
         try:

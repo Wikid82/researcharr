@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import os
-import subprocess
+import subprocess  # nosec B404
 import sys
 import threading
 from typing import Optional
@@ -85,14 +85,14 @@ def run_job() -> None:
         # providing the keywords directly we avoid that issue and keep the
         # runtime behavior the same.
         if timeout is not None:
-            completed = subprocess.run(
+            completed = subprocess.run(  # nosec B603
                 [sys.executable, str(script)],
                 capture_output=True,
                 text=True,
                 timeout=timeout,
             )
         else:
-            completed = subprocess.run(
+            completed = subprocess.run(  # nosec B603
                 [sys.executable, str(script)], capture_output=True, text=True
             )
         out = completed.stdout

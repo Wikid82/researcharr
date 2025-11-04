@@ -158,30 +158,42 @@ for _mname in ("factory", "run", "webui", "backups", "api"):
 
 # Import missing functions that tests expect to be available at package level
 try:
-    from .db import _conn as get_connection  # type: ignore[attr-defined]  # noqa: F401
-    from .db import (  # type: ignore[attr-defined]
-        init_db as create_tables,  # noqa: F401
+    from .db import (  # type: ignore[attr-defined]  # noqa: F401
+        _conn as get_connection,
     )
-    from .db import (
-        load_user as get_user_by_username,  # type: ignore[attr-defined]  # noqa: F401
+    from .db import (  # type: ignore[attr-defined]; noqa: F401
+        init_db as create_tables,
     )
-    from .db import save_user as create_user  # type: ignore[attr-defined]  # noqa: F401
-    from .researcharr import DB_PATH  # type: ignore[attr-defined]  # noqa: F401
-    from .researcharr import (
-        check_radarr_connection,  # type: ignore[attr-defined]  # noqa: F401
+    from .db import (  # type: ignore[attr-defined]  # noqa: F401
+        load_user as get_user_by_username,
     )
-    from .researcharr import (
-        check_sonarr_connection,  # type: ignore[attr-defined]  # noqa: F401
+    from .db import (  # type: ignore[attr-defined]  # noqa: F401
+        save_user as create_user,
     )
-    from .researcharr import create_metrics_app  # type: ignore[attr-defined]  # noqa: F401
-    from .researcharr import (
-        has_valid_url_and_key,  # type: ignore[attr-defined]  # noqa: F401
+    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
+        DB_PATH,
     )
-    from .researcharr import init_db  # type: ignore[attr-defined]  # noqa: F401
-    from .researcharr import load_config  # type: ignore[attr-defined]  # noqa: F401
+    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
+        check_radarr_connection,
+    )
+    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
+        check_sonarr_connection,
+    )
+    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
+        create_metrics_app,
+    )
+    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
+        has_valid_url_and_key,
+    )
+    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
+        init_db,
+    )
+    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
+        load_config,
+    )
     from .researcharr import serve  # type: ignore[attr-defined]  # noqa: F401
-    from .researcharr import (  # type: ignore[attr-defined]
-        setup_logger,  # noqa: F401
+    from .researcharr import (  # type: ignore[attr-defined]; noqa: F401
+        setup_logger,
     )
 except ImportError:
     # Functions may not be available in all contexts

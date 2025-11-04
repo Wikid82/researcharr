@@ -41,7 +41,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.9", "3.10", "3.11", "3.12", "3.13" ]
+        # Drop EOL Python 3.9 and add Python 3.14 (stable)
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
     steps:
     - name: Cache pip
       uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
@@ -72,7 +73,7 @@ jobs:
           pip install -r requirements-dev.txt
         else
           # Fallback if the dev file is not present
-          pip install black==25.9.0 isort==5.12.0 flake8 mypy pytest pytest-cov bandit pre-commit || true
+          pip install black==25.9.0 isort==7.0.0 flake8 mypy pytest pytest-cov bandit pre-commit || true
         fi
         # Ensure setuptools_scm is available so package versions are derived
         # automatically from git metadata.

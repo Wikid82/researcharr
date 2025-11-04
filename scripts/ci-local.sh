@@ -36,7 +36,7 @@ if [ "$SKIP_INSTALL" -eq 0 ]; then
   python -m pip install --upgrade pip
   pip install -r requirements.txt
   pip install setuptools_scm
-  pip install black==23.9.1 isort==5.12.0 flake8 mypy pytest pytest-cov pre-commit || true
+  pip install black==23.9.1 isort==7.0.0 flake8 mypy pytest pytest-cov pre-commit || true
   pip install types-requests types-PyYAML || true
   pip install -e .
 fi

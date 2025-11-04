@@ -523,7 +523,7 @@ if __name__ == "__main__":
         """Test __path__ includes both directories."""
         if researcharr_root.__file__ is None:
             self.skipTest("Module __file__ is None")
-        
+
         expected_paths = [
             os.path.dirname(researcharr_root.__file__),
             os.path.join(os.path.dirname(researcharr_root.__file__), "researcharr"),

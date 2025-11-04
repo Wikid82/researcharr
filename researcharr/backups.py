@@ -22,16 +22,16 @@ def _delegate_to_top_level(name: str, *args, **kwargs):
     try:
         # import inside function to pick up top-level `backups.py` when
         # the caller's sys.path includes the repository root.
+        from backups import cleanup_temp_files as _ctf
         from backups import create_backup_file as _cb  # type: ignore
-        from backups import prune_backups as _pb
         from backups import get_backup_info as _gbi
+        from backups import get_backup_size as _gbs
+        from backups import get_default_backup_config as _gdbc
         from backups import list_backups as _lb
+        from backups import merge_backup_configs as _mbc
+        from backups import prune_backups as _pb
         from backups import restore_backup as _rb
         from backups import validate_backup_file as _vbf
-        from backups import get_backup_size as _gbs
-        from backups import cleanup_temp_files as _ctf
-        from backups import get_default_backup_config as _gdbc
-        from backups import merge_backup_configs as _mbc
     except Exception:
         # If a normal import fails (for example because the current working
         # directory is the configured CONFIG_DIR during tests), try to load

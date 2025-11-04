@@ -9,7 +9,6 @@ import time
 import zipfile
 from typing import TYPE_CHECKING, Any
 
-
 if TYPE_CHECKING:  # Provide lightweight stubs for symbols accessed by tests and
     # by Pylance so attribute access checks succeed even when symbols are
     # attached dynamically at runtime.
@@ -18,6 +17,7 @@ if TYPE_CHECKING:  # Provide lightweight stubs for symbols accessed by tests and
     def save_user_config(*args: Any, **kwargs: Any) -> None: ...
 
     def get_user_by_username(username: str) -> Any: ...
+
 
 import yaml
 from flask import (

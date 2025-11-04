@@ -28,7 +28,7 @@
   // Diagnostic severity overrides are managed in pyrightconfig.json or
   // pyproject.toml (tool.pyright); remove workspace override to avoid
   // conflict with project configuration.
-  
+
   // Help the language server find imports in the repository root.
   "python.testing.pytestArgs": [
     "tests"

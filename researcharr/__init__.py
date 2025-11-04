@@ -158,27 +158,27 @@ for _mname in ("factory", "run", "webui", "backups", "api"):
 
 # Import missing functions that tests expect to be available at package level
 try:
-    from .db import (  # type: ignore[attr-defined]  # noqa: F401
+    from .db import (  # type: ignore[attr-defined]; noqa: F401
         _conn as get_connection,
     )
     from .db import (  # type: ignore[attr-defined]; noqa: F401
         init_db as create_tables,
     )
-    from .db import (  # type: ignore[attr-defined]  # noqa: F401
+    from .db import (  # type: ignore[attr-defined]; noqa: F401
         load_user as get_user_by_username,
     )
-    from .db import (  # type: ignore[attr-defined]  # noqa: F401
+    from .db import (  # type: ignore[attr-defined]; noqa: F401
         save_user as create_user,
     )
+    from .researcharr import DB_PATH  # noqa: F401
+    from .researcharr import check_radarr_connection  # noqa: F401
+    from .researcharr import check_sonarr_connection  # noqa: F401
+    from .researcharr import create_metrics_app  # noqa: F401
+    from .researcharr import has_valid_url_and_key  # noqa: F401
+    from .researcharr import init_db  # noqa: F401
+    from .researcharr import load_config  # noqa: F401
     from .researcharr import serve  # type: ignore[attr-defined]  # noqa: F401
-    from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401; type: ignore[attr-defined]; noqa: F401
-        DB_PATH,
-        check_radarr_connection,
-        check_sonarr_connection,
-        create_metrics_app,
-        has_valid_url_and_key,
-        init_db,
-        load_config,
+    from .researcharr import (  # type: ignore[attr-defined]; noqa: F401
         setup_logger,
     )
 except ImportError:

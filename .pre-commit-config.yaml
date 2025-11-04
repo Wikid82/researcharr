@@ -34,7 +34,12 @@ repos:
           - "researcharr"
           - "--ignore-missing-imports"
         pass_filenames: false
-        additional_dependencies: []
+        # Include types packages so the isolated mypy hook environment can
+        # resolve common third-party types (requests, PyYAML) used in the
+        # project and avoid missing-imports errors.
+        additional_dependencies:
+          - types-requests
+          - types-PyYAML
         stages: [pre-commit]
 
   # YAML linting for configuration files

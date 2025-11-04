@@ -3,17 +3,25 @@ the project and tests. This exists to reduce editor/pyright noise about
 dynamic attributes and commonly used Flask symbols. It's for static
 analysis only; at runtime the real `flask` package is used when installed.
 """
+
 from typing import Any, Dict, Optional
 
-
 class Response:
-    def __init__(self, response: Any = ..., status: Any = ..., headers: Any = ..., mimetype: Any = ..., content_type: Any = ..., direct_passthrough: Any = ...) -> None: ...
-
+    def __init__(
+        self,
+        response: Any = ...,
+        status: Any = ...,
+        headers: Any = ...,
+        mimetype: Any = ...,
+        content_type: Any = ...,
+        direct_passthrough: Any = ...,
+    ) -> None: ...
 
 class Blueprint:
-    def __init__(self, name: str = ..., import_name: str = ..., *args: Any, **kwargs: Any) -> None: ...
+    def __init__(
+        self, name: str = ..., import_name: str = ..., *args: Any, **kwargs: Any
+    ) -> None: ...
     def route(self, *args: Any, **kwargs: Any) -> Any: ...
-
 
 class Flask:
     name: str
@@ -32,18 +40,15 @@ class Flask:
     def test_client(self) -> Any: ...
     def test_request_context(self, *args: Any, **kwargs: Any) -> Any: ...
     def app_context(self, *args: Any, **kwargs: Any) -> Any: ...
-
     def before_request(self, func: Any = ...) -> Any: ...
     def route(self, *args: Any, **kwargs: Any) -> Any: ...
     def errorhandler(self, *args: Any, **kwargs: Any) -> Any: ...
     def run(self, *args: Any, **kwargs: Any) -> Any: ...
-
     def register_blueprint(self, bp: Any, *args: Any, **kwargs: Any) -> None: ...
     def add_url_rule(self, *args: Any, **kwargs: Any) -> Any: ...
 
     # logger is used in several places; mark as Any
     logger: Any
-
 
 # Common module-level symbols the code imports from flask
 current_app: Any

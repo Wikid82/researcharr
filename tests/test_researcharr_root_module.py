@@ -8,12 +8,12 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, mock_open, patch
 
-# Import the root researcharr_root.py module directly (not the package)
+# Import the root researcharr.py module directly (not the package)
 # Get the project root directory (parent of tests directory)
 project_root = Path(__file__).parent.parent
-researcharr_root_path = project_root / "researcharr_root.py"
+researcharr_root_path = project_root / "researcharr.py"
 
-# Load researcharr_root.py as a module
+# Load researcharr.py as a module
 spec = importlib.util.spec_from_file_location("researcharr_root", str(researcharr_root_path))
 researcharr_root = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(researcharr_root)
@@ -37,7 +37,7 @@ class TestResearcharrRootModule(unittest.TestCase):
 
     def test_module_constants(self):
         """Test module-level constants and attributes."""
-        self.assertEqual(researcharr_root.DB_PATH, "researcharr_root.db")
+        self.assertEqual(researcharr_root.DB_PATH, "researcharr.db")
 
         # Check that __path__ is defined as expected for package-like behavior
         self.assertTrue(hasattr(researcharr_root, "__path__"))
@@ -66,14 +66,21 @@ class TestResearcharrRootModule(unittest.TestCase):
 
             researcharr_root.init_db()
 
-            mock_connect.assert_called_once_with("researcharr_root.db")
+            mock_connect.assert_called_once_with("researcharr.db")
             mock_conn.cursor.assert_called_once()
             mock_cursor.execute.assert_called()
 
-            # Verify the SQL statement contains table creation
-            sql_call = mock_cursor.execute.call_args[0][0]
-            self.assertIn("CREATE TABLE IF NOT EXISTS", sql_call)
-            self.assertIn("radarr_queue", sql_call)
+            # Verify the SQL statements contain table creation
+            execute_calls = mock_cursor.execute.call_args_list
+            self.assertEqual(len(execute_calls), 2)  # Two CREATE TABLE statements
+            
+            # Check that both radarr_queue and sonarr_queue tables are created
+            sql_calls = [call[0][0] for call in execute_calls]
+            radarr_sql = next(sql for sql in sql_calls if "radarr_queue" in sql)
+            sonarr_sql = next(sql for sql in sql_calls if "sonarr_queue" in sql)
+            
+            self.assertIn("CREATE TABLE IF NOT EXISTS", radarr_sql)
+            self.assertIn("CREATE TABLE IF NOT EXISTS", sonarr_sql)
 
             mock_conn.commit.assert_called_once()
             mock_conn.close.assert_called_once()
@@ -93,10 +100,17 @@ class TestResearcharrRootModule(unittest.TestCase):
             mock_conn.cursor.assert_called_once()
             mock_cursor.execute.assert_called()
 
-            # Verify the SQL statement contains table creation
-            sql_call = mock_cursor.execute.call_args[0][0]
-            self.assertIn("CREATE TABLE IF NOT EXISTS", sql_call)
-            self.assertIn("radarr_queue", sql_call)
+            # Verify the SQL statements contain table creation
+            execute_calls = mock_cursor.execute.call_args_list
+            self.assertEqual(len(execute_calls), 2)  # Two CREATE TABLE statements
+            
+            # Check that both radarr_queue and sonarr_queue tables are created
+            sql_calls = [call[0][0] for call in execute_calls]
+            radarr_sql = next(sql for sql in sql_calls if "radarr_queue" in sql)
+            sonarr_sql = next(sql for sql in sql_calls if "sonarr_queue" in sql)
+            
+            self.assertIn("CREATE TABLE IF NOT EXISTS", radarr_sql)
+            self.assertIn("CREATE TABLE IF NOT EXISTS", sonarr_sql)
 
             mock_conn.commit.assert_called_once()
             mock_conn.close.assert_called_once()
@@ -181,7 +195,7 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test successful Radarr connection."""
         mock_logger = Mock()
 
-        with patch("researcharr_root.requests.get") as mock_get:
+        with patch.object(researcharr_root.requests, "get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_get.return_value = mock_response
@@ -216,7 +230,7 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test Radarr connection with non-200 status."""
         mock_logger = Mock()
 
-        with patch("researcharr_root.requests.get") as mock_get:
+        with patch.object(researcharr_root.requests, "get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 404
             mock_get.return_value = mock_response
@@ -234,7 +248,7 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test Radarr connection with exception."""
         mock_logger = Mock()
 
-        with patch("researcharr_root.requests.get") as mock_get:
+        with patch.object(researcharr_root.requests, "get") as mock_get:
             mock_get.side_effect = Exception("Connection failed")
 
             result = researcharr_root.check_radarr_connection(
@@ -248,7 +262,7 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test successful Sonarr connection."""
         mock_logger = Mock()
 
-        with patch("researcharr_root.requests.get") as mock_get:
+        with patch.object(researcharr_root.requests, "get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_get.return_value = mock_response
@@ -283,7 +297,7 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test Sonarr connection with non-200 status."""
         mock_logger = Mock()
 
-        with patch("researcharr_root.requests.get") as mock_get:
+        with patch.object(researcharr_root.requests, "get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 500
             mock_get.return_value = mock_response
@@ -301,7 +315,7 @@ class TestResearcharrRootModule(unittest.TestCase):
         """Test Sonarr connection with exception."""
         mock_logger = Mock()
 
-        with patch("researcharr_root.requests.get") as mock_get:
+        with patch.object(researcharr_root.requests, "get") as mock_get:
             mock_get.side_effect = Exception("Connection failed")
 
             result = researcharr_root.check_sonarr_connection(
@@ -316,23 +330,23 @@ class TestResearcharrRootModule(unittest.TestCase):
         config_data = {"test": "value", "nested": {"key": "val"}}
 
         with patch("builtins.open", mock_open(read_data="test: value\nnested:\n  key: val")):
-            with patch("researcharr_root.os.path.exists", return_value=True):
-                with patch("researcharr_root.yaml.safe_load", return_value=config_data):
+            with patch.object(researcharr_root.os.path, "exists", return_value=True):
+                with patch.object(researcharr_root.yaml, "safe_load", return_value=config_data):
                     result = researcharr_root.load_config("test.yml")
 
                     self.assertEqual(result, config_data)
 
     def test_load_config_missing_file(self):
         """Test load_config with missing file."""
-        with patch("researcharr_root.os.path.exists", return_value=False):
+        with patch.object(researcharr_root.os.path, "exists", return_value=False):
             with self.assertRaises(FileNotFoundError):
                 researcharr_root.load_config("missing.yml")
 
     def test_load_config_empty_file(self):
         """Test load_config with empty file."""
         with patch("builtins.open", mock_open(read_data="")):
-            with patch("researcharr_root.os.path.exists", return_value=True):
-                with patch("researcharr_root.yaml.safe_load", return_value=None):
+            with patch.object(researcharr_root.os.path, "exists", return_value=True):
+                with patch.object(researcharr_root.yaml, "safe_load", return_value=None):
                     result = researcharr_root.load_config("empty.yml")
 
                     self.assertEqual(result, {})
@@ -340,8 +354,8 @@ class TestResearcharrRootModule(unittest.TestCase):
     def test_load_config_default_path(self):
         """Test load_config with default path."""
         with patch("builtins.open", mock_open(read_data="key: value")):
-            with patch("researcharr_root.os.path.exists", return_value=True):
-                with patch("researcharr_root.yaml.safe_load", return_value={"key": "value"}):
+            with patch.object(researcharr_root.os.path, "exists", return_value=True):
+                with patch.object(researcharr_root.yaml, "safe_load", return_value={"key": "value"}):
                     result = researcharr_root.load_config()
 
                     self.assertEqual(result, {"key": "value"})
@@ -351,10 +365,10 @@ class TestResearcharrRootModule(unittest.TestCase):
         app = researcharr_root.create_metrics_app()
 
         self.assertEqual(app.name, "metrics")
-        self.assertIn("requests_total", app.metrics)
-        self.assertIn("errors_total", app.metrics)
-        self.assertEqual(app.metrics["requests_total"], 0)
-        self.assertEqual(app.metrics["errors_total"], 0)
+        self.assertIn("requests_total", app.config["metrics"])
+        self.assertIn("errors_total", app.config["metrics"])
+        self.assertEqual(app.config["metrics"]["requests_total"], 0)
+        self.assertEqual(app.config["metrics"]["errors_total"], 0)
 
     def test_create_metrics_app_routes(self):
         """Test create_metrics_app has expected routes."""
@@ -428,7 +442,7 @@ class TestResearcharrRootModule(unittest.TestCase):
         app = researcharr_root.create_metrics_app()
 
         # Mock DB_PATH to non-existent file
-        with patch("researcharr_root.DB_PATH", "/invalid/path/db.sqlite"):
+        with patch.object(researcharr_root, "DB_PATH", "/invalid/path/db.sqlite"):
             with app.test_client() as client:
                 response = client.get("/health")
                 data = response.get_json()
@@ -453,15 +467,13 @@ class TestResearcharrRootModule(unittest.TestCase):
 
     def test_conditional_imports(self):
         """Test that conditional imports work."""
-        import researcharr
-
-        # These should be available if not already imported
-        self.assertTrue(hasattr(researcharr, "requests"))
-        self.assertTrue(hasattr(researcharr, "yaml"))
+        # These should be available in the loaded module
+        self.assertTrue(hasattr(researcharr_root, "requests"))
+        self.assertTrue(hasattr(researcharr_root, "yaml"))
 
     def test_main_execution_with_serve_argument(self):
         """Test __main__ execution with serve argument."""
-        with patch("researcharr_root.serve") as mock_serve:
+        with patch.object(researcharr_root, "serve") as mock_serve:
             with patch("sys.argv", ["researcharr_root.py", "serve"]):
                 # Simulate the __main__ execution
                 exec(
@@ -471,14 +483,14 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "serve":
         serve()
 """,
-                    researcharr_root.__dict__,
+                    dict(researcharr_root.__dict__, __name__="__main__"),
                 )
 
                 mock_serve.assert_called_once()
 
     def test_main_execution_without_serve_argument(self):
         """Test __main__ execution without serve argument."""
-        with patch("researcharr_root.serve") as mock_serve:
+        with patch.object(researcharr_root, "serve") as mock_serve:
             with patch("sys.argv", ["researcharr_root.py"]):
                 # Simulate the __main__ execution
                 exec(
@@ -488,7 +500,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "serve":
         serve()
 """,
-                    researcharr_root.__dict__,
+                    dict(researcharr_root.__dict__, __name__="__main__"),
                 )
 
                 mock_serve.assert_not_called()

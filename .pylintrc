@@ -1,0 +1,41 @@
+[MASTER]
+# Use multiple processes to speed up Pylint
+jobs=0
+
+# Allow loading of arbitrary C extensions
+unsafe-load-any-extension=no
+
+[MESSAGES CONTROL]
+# Disable specific messages that conflict with other tools or are too strict
+disable=
+    C0111,  # missing-docstring
+    C0103,  # invalid-name (conflicts with common patterns)
+    R0913,  # too-many-arguments
+    R0914,  # too-many-locals
+    R0915,  # too-many-statements
+    W0511,  # fixme (TODO comments)
+    C0330,  # bad-continuation (conflicts with black)
+    C0326,  # bad-whitespace (conflicts with black)
+
+[FORMAT]
+# Let black handle formatting
+max-line-length=120
+
+[DESIGN]
+# Limits for complexity
+max-args=10
+max-locals=20
+max-returns=8
+max-branches=15
+
+[SIMILARITIES]
+# Minimum lines number of a similarity
+min-similarity-lines=4
+
+[BASIC]
+# Good variable names regexes
+good-names=i,j,k,ex,Run,_,id,db,app,e
+
+[IMPORTS]
+# Allow wildcard imports in __init__.py
+allow-wildcard-with-all=yes

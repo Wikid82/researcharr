@@ -37,11 +37,18 @@ _impl = None
 if TYPE_CHECKING:  # Provide lightweight stubs for symbols accessed by tests and
     # by Pylance so attribute access checks succeed even when symbols are
     # attached dynamically at runtime.
-    def load_user_config() -> dict[str, Any]: ...
+    # Define a lightweight Protocol for the `webui` module rather than
+    # declaring top-level function names which would be redeclared later
+    # in this module. This avoids redeclaration diagnostics while still
+    # providing static typing information for attribute access.
+    from typing import Protocol
 
-    def save_user_config(*args: Any, **kwargs: Any) -> None: ...
+    class _WebUIProto(Protocol):
+        def load_user_config(self) -> dict[str, Any]: ...
 
-    def get_user_by_username(username: str) -> Any: ...
+        def save_user_config(self, *args: Any, **kwargs: Any) -> None: ...
+
+        def get_user_by_username(self, username: str) -> Any: ...
 
 
 # Provide harmless fallbacks if `webui` isn't available at import time.
@@ -127,7 +134,7 @@ def init_db(*a, **k):
 # persisted DB at test-collection time. We provide fallback implementations
 # for `load_user_config` and `save_user_config` above so callers can be
 # patched or overridden during tests.
-webui = None
+webui: Any = None
 
 
 def create_app() -> Flask:

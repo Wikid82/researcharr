@@ -38,4 +38,4 @@ Next steps
 
 Notes
 -----
-This is a sketch — we should iterate on API shape. I'll commit this file on a new branch so we can iterate. 
+This is a sketch — we should iterate on API shape. I'll commit this file on a new branch so we can iterate.

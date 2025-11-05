@@ -174,6 +174,16 @@ try:
 except Exception:
     pass
 
+# Ensure a `schedule` symbol is available for tests that patch it on the
+# `researcharr.run` module. Prefer a local `schedule` stub if present in the
+# repository, otherwise ignore and allow tests to patch the attribute.
+try:
+    import schedule as _schedule
+
+    globals()["schedule"] = _schedule
+except Exception:
+    pass
+
 # Ensure CONFIG_PATH exists for tests that set it via monkeypatch; default to
 # None when a concrete value isn't available from mirrored modules.
 if "CONFIG_PATH" not in globals():
@@ -190,7 +200,19 @@ def setup_logger():
     logger.setLevel(logging.INFO)
 
     def _add_file_handler():
-        fh = logging.FileHandler(LOG_PATH)
+        try:
+            fh = logging.FileHandler(LOG_PATH)
+        except Exception:
+            # If the file cannot be opened (tests often patch open or
+            # provide non-existent /config paths), fall back to a
+            # StreamHandler so logging still works without writing files.
+            sh = logging.StreamHandler()
+            fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+            sh.setFormatter(fmt)
+            logger.addHandler(sh)
+            logger.propagate = False
+            return
+
         fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
         fh.setFormatter(fmt)
         logger.addHandler(fh)
@@ -212,6 +234,18 @@ def setup_logger():
                     pass
             _add_file_handler()
     return logger
+
+
+# Ensure a minimal `load_config` symbol exists so tests that patch
+# `researcharr.run.load_config` can safely apply their mocks regardless of
+# import order. When the concrete implementation is available it will be
+# mirrored into this shim above; provide a deterministic fallback to keep
+# test behavior stable when the implementation hasn't been loaded yet.
+if "load_config" not in globals():
+    def load_config(path: str = "config.yml") -> dict:
+        # Return an empty mapping by default; tests typically patch this
+        # function, so the exact behavior here is not relied upon.
+        return {}
 
 
 # Mirror convenient helpers from the repository-level `scripts/run.py` when

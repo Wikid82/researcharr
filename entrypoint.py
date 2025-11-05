@@ -17,8 +17,8 @@ from typing import Any, cast
 # the module directory and the nested `researcharr/` package directory so
 # submodule imports resolve.
 __path__ = [
-    os.path.dirname(__file__),
-    os.path.join(os.path.dirname(__file__), "researcharr"),
+    os.path.abspath(os.path.dirname(__file__)),
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "researcharr")),
 ]
 
 if "requests" not in globals():

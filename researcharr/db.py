@@ -39,9 +39,10 @@ def _conn():
 
 
 def init_db() -> None:
-    conn = _conn()
+    conn = get_connection()
     try:
-        conn.execute(
+        cur = conn.cursor()
+        cur.execute(
             """
             CREATE TABLE IF NOT EXISTS webui_users (
                 id INTEGER PRIMARY KEY,
@@ -60,11 +61,13 @@ def init_db() -> None:
 def load_user() -> Optional[Dict[str, Optional[str]]]:
     """Return the first user row as a dict or None if no user exists."""
     init_db()
-    conn = _conn()
+    conn = get_connection()
     try:
-        row = conn.execute(
+        cur = conn.cursor()
+        cur.execute(
             "SELECT username, password_hash, api_key_hash" " FROM webui_users ORDER BY id LIMIT 1"
-        ).fetchone()
+        )
+        row = cur.fetchone()
         if not row:
             return None
         return {
@@ -87,7 +90,7 @@ def save_user(
     deterministic for single-user usage.
     """
     init_db()
-    conn = _conn()
+    conn = get_connection()
     try:
         now = int(time.time())
         cur = conn.cursor()

@@ -15,6 +15,12 @@ try:
 except Exception:
     _impl = None  # type: ignore[assignment]
 
+# Always expose the `_impl` symbol on the shim module so tests that
+# reload the module and patch importlib.import_module can assert the
+# attribute exists. When the top-level import fails `_impl` will be
+# None but still present as an attribute.
+globals()["_impl"] = _impl
+
 if _impl is not None:
     globals().update(
         {name: getattr(_impl, name) for name in dir(_impl) if not name.startswith("__")}

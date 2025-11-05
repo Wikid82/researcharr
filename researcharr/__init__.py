@@ -13,6 +13,7 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import os
+import sqlite3 as _sqlite
 import sys
 from types import ModuleType
 
@@ -116,9 +117,50 @@ if impl is not None:
     except Exception:
         pass
     try:
+        # If the implementation bundles a sqlite3 shim (rare), expose it
+        # under the nested module path so import-style lookups succeed.
+        if getattr(impl, "sqlite3", None) is not None:
+            name = "researcharr.researcharr.sqlite3"
+            sys.modules.setdefault(name, getattr(impl, "sqlite3"))
+    except Exception:
+        pass
+    try:
         globals()["researcharr"] = impl
     except Exception:
         pass
+
+    # Expose convenience attributes on the package module itself so
+    # import-style patching (e.g. @patch("researcharr.requests.get"))
+    # resolves deterministically regardless of whether the importer
+    # selected the top-level module file or the nested package.
+    try:
+        # If the implementation exposes `requests`/`yaml`, attach them
+        # directly to the package namespace. If not available, expose
+        # a None placeholder so tests using patch() can replace them.
+        globals().setdefault("requests", getattr(impl, "requests", None))
+    except Exception:
+        try:
+            globals().setdefault("requests", None)
+        except Exception:
+            pass
+    try:
+        globals().setdefault("yaml", getattr(impl, "yaml", None))
+    except Exception:
+        try:
+            globals().setdefault("yaml", None)
+        except Exception:
+            pass
+
+    try:
+        # Expose sqlite3 on the package so tests that patch
+        # `researcharr.sqlite3.connect` can find the attribute.
+        globals().setdefault("sqlite3", getattr(impl, "sqlite3", _sqlite))
+        sys.modules.setdefault("researcharr.sqlite3", getattr(impl, "sqlite3", _sqlite))
+    except Exception:
+        try:
+            globals().setdefault("sqlite3", _sqlite)
+        except Exception:
+            pass
 
     # Ensure create_metrics_app calls go through a centralized dispatcher
     # so tests that patch either the package-level symbol or the

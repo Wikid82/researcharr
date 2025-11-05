@@ -313,10 +313,19 @@ except Exception:
 # avoid re-importing or re-defining so the test-patched object survives
 # importlib.reload.
 if "requests" not in globals():
-    pass
+    try:
+        import requests as requests  # type: ignore
+    except Exception:
+        # Expose the name so tests can patch it even when the real
+        # dependency is not installed in the test environment.
+        requests = None  # type: ignore
 
 if "yaml" not in globals():
-    pass
+    try:
+        import yaml as yaml  # type: ignore
+    except Exception:
+        # Expose the name so tests can patch it when PyYAML is missing.
+        yaml = None  # type: ignore
 
 DB_PATH = "researcharr.db"
 DEFAULT_TIMEOUT = 10

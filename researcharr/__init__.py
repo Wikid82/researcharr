@@ -253,7 +253,7 @@ if impl is not None:
 # imports like `from researcharr import factory` or `import researcharr.factory`.
 _here = os.path.abspath(os.path.dirname(__file__))
 _repo_root = os.path.abspath(os.path.join(_here, os.pardir))
-for _mname in ("factory", "run", "webui", "backups", "api"):
+for _mname in ("factory", "run", "webui", "backups", "api", "entrypoint"):
     _path = os.path.join(_repo_root, f"{_mname}.py")
     if os.path.isfile(_path):
         try:

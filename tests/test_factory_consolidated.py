@@ -5,9 +5,10 @@ import tempfile
 import unittest
 from unittest.mock import mock_open, patch
 
+import researcharr.factory as factory_module
+
 # Import the module under test (package imports to avoid CWD issues in CI)
 from researcharr import factory
-import researcharr.factory as factory_module
 
 
 class TestFactoryEnvironmentConfiguration(unittest.TestCase):

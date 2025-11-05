@@ -327,7 +327,9 @@ try:
             else:
                 if _top_run is not None and getattr(_top_run, "schedule", None) is not None:
                     setattr(_pkg_run, "schedule", getattr(_top_run, "schedule"))
-                    sys.modules.setdefault("researcharr.run.schedule", getattr(_top_run, "schedule"))
+                    sys.modules.setdefault(
+                        "researcharr.run.schedule", getattr(_top_run, "schedule")
+                    )
                 else:
                     _sched2 = types.ModuleType("researcharr.run.schedule")
                     try:

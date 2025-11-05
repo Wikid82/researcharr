@@ -9,8 +9,8 @@ from unittest.mock import Mock, mock_open, patch
 
 from flask import Flask
 
-# Import the module under test
-import entrypoint
+# Import the module under test (package import to avoid CWD issues in CI)
+from researcharr import entrypoint
 
 
 class TestEntrypointModule(unittest.TestCase):

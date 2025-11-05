@@ -41,7 +41,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.9", "3.10", "3.11", "3.12", "3.13" ]
+        # Drop EOL Python 3.9 and add Python 3.14 (stable)
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
     steps:
     - name: Cache pip
       uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
@@ -72,7 +73,7 @@ jobs:
           pip install -r requirements-dev.txt
         else
           # Fallback if the dev file is not present
-          pip install black==25.9.0 isort==5.12.0 flake8 mypy pytest pytest-cov bandit pre-commit || true
+          pip install black==25.9.0 isort==7.0.0 flake8 mypy pytest pytest-cov bandit pre-commit || true
         fi
         # Ensure setuptools_scm is available so package versions are derived
         # automatically from git metadata.
@@ -144,20 +145,13 @@ jobs:
         pytest tests/ \
           --maxfail=3 --disable-warnings -v \
           --cov=researcharr --cov-report=xml:coverage.xml
-    - name: Ensure coverage.xml exists (even if tests failed)
-      if: ${{ always() && env.RENOVATE_BYPASS != '1' }}
-      run: |
-        if [ ! -f coverage.xml ]; then
-          echo "coverage.xml not found; creating placeholder file so upload can proceed."
-          echo "<?xml version=\"1.0\" ?><coverage line-rate=\"0.0\"></coverage>" > coverage.xml
-        fi
     - name: Show coverage file
-      if: ${{ always() && env.RENOVATE_BYPASS != '1' }}
+      if: ${{ env.RENOVATE_BYPASS != '1' }}
       run: |
         echo "Coverage report files (in repo root):" && ls -l coverage.xml || true
         echo "Coverage report files (in researcharr/):" && ls -l researcharr/coverage.xml || true
     - name: Print coverage.xml head (debug)
-      if: ${{ always() && env.RENOVATE_BYPASS != '1' }}
+      if: ${{ env.RENOVATE_BYPASS != '1' }}
       run: |
         echo "---- coverage.xml (first 80 lines) ----"
         head -n 80 coverage.xml || true
@@ -170,13 +164,13 @@ jobs:
         path: coverage.xml
     - name: Upload bandit security report
       if: ${{ env.RENOVATE_BYPASS != '1' }}
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+      uses: actions/upload-artifact@v5
       with:
         name: bandit-report-python-${{ matrix.python-version }}
         path: bandit-report.json
     - name: Upload coverage to Codecov
       if: ${{ always() && env.RENOVATE_BYPASS != '1' && env.CODECOV_TOKEN != '' }}
-      uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
       continue-on-error: true

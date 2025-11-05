@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 from flask import Blueprint, jsonify, request
 
-from researcharr.plugins.base import BasePlugin
+from plugins.base import BasePlugin
 
 PLUGIN_NAME = "sonarr"
 
@@ -126,3 +126,7 @@ class Plugin(BasePlugin):
                 return jsonify({"success": False, "msg": str(exc)}), 500
 
         return bp
+
+
+# Alias for test compatibility
+ExampleSonarrPlugin = Plugin

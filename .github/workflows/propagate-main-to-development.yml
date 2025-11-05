@@ -1,0 +1,49 @@
+name: Propagate main to development
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      head:
+        description: 'Branch to propagate from (defaults to pushed branch or "main")'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  create-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create PRs from main into development
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Determine head: prefer manual input, otherwise the pushed ref
+            let head = (context.eventName === 'workflow_dispatch' && context.payload && context.payload.inputs && context.payload.inputs.head) ? context.payload.inputs.head : context.ref.replace('refs/heads/', '');
+            if (!head) head = 'main';
+
+            const base = 'development';
+
+            core.info(`Propagating from ${head} to ${base}`);
+
+            // Check for existing open PRs
+            const { data: prs } = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${head}`, base });
+            if (prs.length > 0) {
+              core.info(`Open PR already exists for ${head} -> ${base}: ${prs[0].html_url}`);
+              return;
+            }
+
+            const title = `chore(ci): propagate ${head} -> ${base}`;
+            const body = `Automated PR to propagate changes from **${head}** into **${base}** for compatibility testing. Trigger commit: ${context.sha}`;
+            try {
+              const { data: pr } = await github.rest.pulls.create({ owner, repo, title, head, base, body });
+              core.info(`Created PR: ${pr.html_url}`);
+            } catch (err) {
+              core.warning(`Failed to create PR ${head} -> ${base}: ${err}`);
+            }

@@ -26,6 +26,7 @@ from urllib.parse import urlencode
 import requests
 
 GITHUB_API = "https://api.github.com"
+DEFAULT_TIMEOUT = 30
 
 
 def api_path(*parts: str) -> str:
@@ -62,7 +63,7 @@ def list_packages(owner: str, token: str) -> List[Dict[str, Any]]:
             # including query params, so build the URL explicitly.
             q = urlencode(params)
             url = base + ("&" if "?" in base else "?") + q
-            r = requests.get(url, headers=headers)
+            r = requests.get(url, headers=headers, timeout=DEFAULT_TIMEOUT)
             if r.status_code == 404:
                 break
             r.raise_for_status()
@@ -107,7 +108,7 @@ def list_package_versions(owner: str, package_name: str, token: str) -> List[Dic
             # Build URL with page params so tests that inspect the URL work
             q = urlencode(params)
             url = base + ("&" if "?" in base else "?") + q
-            r = requests.get(url, headers=headers)
+            r = requests.get(url, headers=headers, timeout=DEFAULT_TIMEOUT)
             if r.status_code == 404:
                 break
             r.raise_for_status()
@@ -155,7 +156,7 @@ def delete_version(
             str(version_id),
         ),
     ):
-        r = requests.delete(base, headers=headers)
+        r = requests.delete(base, headers=headers, timeout=DEFAULT_TIMEOUT)
         if r.status_code in (204, 202):
             return True
         # if 404 try the next base
@@ -303,19 +304,23 @@ def main() -> None:
             matched = sorted(list(tag_set & protected_tags))
             reason = "protected tags: %s" % (matched,)
         else:
-            try:
-                created_at_fixed = created_at.replace("Z", "+00:00")
-                created_dt = datetime.fromisoformat(created_at_fixed)
-            except Exception:
+            if created_at is None:
                 decision = "SKIP_BAD_DATE"
-                reason = f"could not parse created_at: {created_at}"
+                reason = "created_at is None"
             else:
-                if created_dt < keep_since:
-                    decision = "DELETE"
-                    reason = "older than retention"
+                try:
+                    created_at_fixed = created_at.replace("Z", "+00:00")
+                    created_dt = datetime.fromisoformat(created_at_fixed)
+                except Exception:
+                    decision = "SKIP_BAD_DATE"
+                    reason = f"could not parse created_at: {created_at}"
                 else:
-                    decision = "KEEP"
-                    reason = "newer than retention"
+                    if created_dt < keep_since:
+                        decision = "DELETE"
+                        reason = "older than retention"
+                    else:
+                        decision = "KEEP"
+                        reason = "newer than retention"
 
         report["candidates"].append(
             {

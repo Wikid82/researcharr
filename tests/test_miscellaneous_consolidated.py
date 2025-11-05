@@ -52,8 +52,8 @@ class TestMiscellaneousConsolidated(unittest.TestCase):
                     "radarr": {"url": "http://test.com", "api_key": "test"},
                 }
 
-                sonarr_result = check_sonarr_connection(config)
-                radarr_result = check_radarr_connection(config)
+                sonarr_result = check_sonarr_connection(config)  # type: ignore[call-arg]
+                radarr_result = check_radarr_connection(config)  # type: ignore[call-arg]
 
                 self.assertIsNotNone(sonarr_result)
                 self.assertIsNotNone(radarr_result)
@@ -69,7 +69,7 @@ class TestMiscellaneousConsolidated(unittest.TestCase):
 
             app = create_app()
 
-            with app.app_context():
+            with app.app_context():  # type: ignore[attr-defined]
                 # Test helper functions if they exist
                 if hasattr(app, "config_data"):
                     self.assertIsInstance(app.config_data, dict)
@@ -86,7 +86,7 @@ class TestMiscellaneousConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
             # Test logs functionality
@@ -109,7 +109,7 @@ class TestMiscellaneousConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
             # Test tasks functionality
@@ -169,7 +169,7 @@ class TestMiscellaneousConsolidated(unittest.TestCase):
             client = app.test_client()
 
             # Mock login
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
             # Test plugins page
@@ -217,7 +217,7 @@ class TestMiscellaneousConsolidated(unittest.TestCase):
             app = create_app()
 
             # Test various app configurations
-            with app.app_context():
+            with app.app_context():  # type: ignore[attr-defined]
                 # Test configuration scenarios
                 if hasattr(app, "config_data"):
 
@@ -255,7 +255,7 @@ class TestMiscellaneousConsolidated(unittest.TestCase):
     def test_prune_backups_functionality(self):
         """Test prune backups functionality."""
         try:
-            import backups
+            from researcharr import backups
 
             # Test backup pruning
             with patch("os.listdir") as mock_listdir:

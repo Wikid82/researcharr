@@ -3,12 +3,14 @@
 import json
 import os
 import tempfile
+from typing import cast
 from unittest.mock import mock_open, patch
 
 import pytest
 from flask import Flask
+from flask.testing import FlaskClient
 
-from factory import create_app
+from researcharr.factory import create_app
 
 
 class TestFactoryCreateApp:
@@ -54,30 +56,34 @@ class TestFactoryRoutes:
     """Test individual routes in the factory app."""
 
     @pytest.fixture
-    def app(self):
+    def app(self) -> Flask:
         """Create a test app."""
         app = create_app()
         app.config["TESTING"] = True
         return app
 
     @pytest.fixture
-    def client(self, app):
+    def client(self, app: Flask) -> FlaskClient:
         """Create a test client."""
-        return app.test_client()
+        client: FlaskClient = app.test_client()
+        return client
 
     def test_index_route_no_user_config(self, client):
         """Test index route when no user config exists."""
+        client = cast(FlaskClient, client)
         response = client.get("/")
         assert response.status_code == 302  # Redirect to setup
 
     def test_index_route_with_user_config(self, app, client):
         """Test index route when user config exists."""
         app.config["USER_CONFIG_EXISTS"] = True
+        client = cast(FlaskClient, client)
         response = client.get("/")
         assert response.status_code == 302  # Redirect to login
 
     def test_setup_route_get(self, client):
         """Test setup route GET request."""
+        client = cast(FlaskClient, client)
         response = client.get("/setup")
         assert response.status_code == 200
         assert b"setup" in response.data.lower()
@@ -85,12 +91,14 @@ class TestFactoryRoutes:
     def test_setup_route_post_valid(self, app, client):
         """Test setup route POST with valid data."""
         with (
-            patch("factory.generate_password_hash") as mock_hash,
-            patch("factory.webui.save_user_config") as mock_save,
+            patch("researcharr.factory.generate_password_hash") as mock_hash,
+            patch("researcharr.factory.webui.save_user_config") as mock_save,
         ):
 
             mock_hash.return_value = "hashed_password"
             mock_save.return_value = True
+
+            client = cast(FlaskClient, client)
 
             response = client.post(
                 "/setup",
@@ -105,6 +113,7 @@ class TestFactoryRoutes:
 
     def test_setup_route_post_password_mismatch(self, client):
         """Test setup route POST with password mismatch."""
+        client = cast(FlaskClient, client)
         response = client.post(
             "/setup",
             data={
@@ -118,6 +127,7 @@ class TestFactoryRoutes:
 
     def test_setup_route_post_short_password(self, client):
         """Test setup route POST with short password."""
+        client = cast(FlaskClient, client)
         response = client.post(
             "/setup",
             data={
@@ -145,7 +155,9 @@ class TestFactoryRoutes:
         app.config_data["general"]["username"] = "testuser"
         app.config_data["general"]["password_hash"] = "hashed_password"
 
-        with patch("factory.check_password_hash") as mock_check:
+        client = cast(FlaskClient, client)
+
+        with patch("researcharr.factory.check_password_hash") as mock_check:
             mock_check.return_value = True
 
             response = client.post(
@@ -158,7 +170,9 @@ class TestFactoryRoutes:
         app.config_data["general"]["username"] = "testuser"
         app.config_data["general"]["password_hash"] = "hashed_password"
 
-        with patch("factory.check_password_hash") as mock_check:
+        client = cast(FlaskClient, client)
+
+        with patch("researcharr.factory.check_password_hash") as mock_check:
             mock_check.return_value = False
 
             response = client.post(
@@ -169,7 +183,7 @@ class TestFactoryRoutes:
 
     def test_logout_route(self, client):
         """Test logout route."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/logout")
@@ -196,12 +210,12 @@ class TestFactoryRoutes:
 
     def test_reset_password_route_post(self, app, client):
         """Test reset password POST route."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         with (
-            patch("factory.generate_password_hash") as mock_hash,
-            patch("factory.webui.save_user_config") as mock_save,
+            patch("researcharr.factory.generate_password_hash") as mock_hash,
+            patch("researcharr.factory.webui.save_user_config") as mock_save,
         ):
 
             mock_hash.return_value = "new_hashed_password"
@@ -225,9 +239,10 @@ class TestFactoryAPIRoutes:
         return app
 
     @pytest.fixture
-    def client(self, app):
+    def client(self, app) -> FlaskClient:
         """Create a test client."""
-        return app.test_client()
+        client: FlaskClient = app.test_client()
+        return client
 
     def test_api_version_route(self, client):
         """Test API version endpoint."""
@@ -263,7 +278,7 @@ class TestFactoryAPIRoutes:
 
     def test_api_status_route_authorized(self, app, client):
         """Test API status endpoint with login."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/api/status")
@@ -280,7 +295,7 @@ class TestFactoryAPIRoutes:
 
     def test_api_storage_route_authorized(self, client):
         """Test API storage endpoint with login."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/api/storage")
@@ -301,13 +316,14 @@ class TestFactoryBackupRoutes:
         return app
 
     @pytest.fixture
-    def client(self, app):
+    def client(self, app) -> FlaskClient:
         """Create a test client."""
-        return app.test_client()
+        client: FlaskClient = app.test_client()
+        return client
 
     def test_backups_route(self, client):
         """Test backups page route."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/backups")
@@ -320,7 +336,7 @@ class TestFactoryBackupRoutes:
 
     def test_api_backups_list_authorized(self, client):
         """Test backups list API with login."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/api/backups")
@@ -335,7 +351,7 @@ class TestFactoryBackupRoutes:
 
     def test_api_backups_create_authorized(self, client):
         """Test backup creation API with login."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         with (
@@ -353,7 +369,7 @@ class TestFactoryBackupRoutes:
 
     def test_api_backups_settings_get(self, client):
         """Test backup settings GET API."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/api/backups/settings")
@@ -363,7 +379,7 @@ class TestFactoryBackupRoutes:
 
     def test_api_backups_settings_post(self, app, client):
         """Test backup settings POST API."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         settings_data = {"retain_count": 5, "retain_days": 30, "pre_restore": True}
@@ -400,13 +416,14 @@ class TestFactoryTaskRoutes:
         return app
 
     @pytest.fixture
-    def client(self, app):
+    def client(self, app) -> FlaskClient:
         """Create a test client."""
-        return app.test_client()
+        client: FlaskClient = app.test_client()
+        return client
 
     def test_tasks_route(self, client):
         """Test tasks page route."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/tasks")
@@ -419,7 +436,7 @@ class TestFactoryTaskRoutes:
 
     def test_api_tasks_trigger_authorized(self, client):
         """Test task trigger API with login."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.post(
@@ -431,7 +448,7 @@ class TestFactoryTaskRoutes:
 
     def test_api_tasks_settings_get(self, client):
         """Test task settings GET API."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/api/tasks/settings")
@@ -441,7 +458,7 @@ class TestFactoryTaskRoutes:
 
     def test_api_tasks_settings_post(self, client):
         """Test task settings POST API."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         settings_data = {"enabled": True, "schedule": "0 */6 * * *"}
@@ -468,13 +485,14 @@ class TestFactoryPluginRoutes:
         return app
 
     @pytest.fixture
-    def client(self, app):
+    def client(self, app) -> FlaskClient:
         """Create a test client."""
-        return app.test_client()
+        client: FlaskClient = app.test_client()
+        return client
 
     def test_plugins_settings_route(self, client):
         """Test plugins settings page."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/settings/plugins")
@@ -482,7 +500,7 @@ class TestFactoryPluginRoutes:
 
     def test_plugins_settings_with_category(self, client):
         """Test plugins settings page with category filter."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         response = client.get("/settings/plugins?category=media")
@@ -507,9 +525,10 @@ class TestFactoryErrorHandlers:
         return app
 
     @pytest.fixture
-    def client(self, app):
+    def client(self, app) -> FlaskClient:
         """Create a test client."""
-        return app.test_client()
+        client: FlaskClient = app.test_client()
+        return client
 
     def test_404_error_handler(self, client):
         """Test 404 error handler."""
@@ -534,7 +553,7 @@ class TestFactoryHelperFunctions:
         """Test the _parse_instances helper function."""
         app = create_app()
 
-        with app.app_context():
+        with app.app_context():  # type: ignore[attr-defined]
             # Mock form data
             form_data = {
                 "radarr0_enabled": "on",
@@ -563,9 +582,10 @@ class TestFactorySessionManagement:
         return app
 
     @pytest.fixture
-    def client(self, app):
+    def client(self, app) -> FlaskClient:
         """Create a test client."""
-        return app.test_client()
+        client: FlaskClient = app.test_client()
+        return client
 
     def test_session_cookie_configuration(self, app):
         """Test session cookie configuration."""
@@ -575,11 +595,11 @@ class TestFactorySessionManagement:
 
     def test_login_session_management(self, client):
         """Test login creates proper session."""
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
 
         # Test that session persists
-        with client.session_transaction() as sess:
+        with client.session_transaction() as sess:  # type: ignore[attr-defined]
             assert sess.get("logged_in") is True
 
 

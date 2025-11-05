@@ -12,8 +12,14 @@ class BasePlugin:
 
     name: str = "base"
 
-    def __init__(self, instance_config: Dict[str, Any]):
-        self.config = instance_config
+    def __init__(self, instance_config: Dict[str, Any] | None = None):
+        """Initialize plugin instance.
+
+        Tests often instantiate example plugins without passing a config. To
+        be permissive for tests and IDE analysis, accept None and normalize to
+        an empty dict.
+        """
+        self.config = instance_config or {}
 
     def validate(self) -> Dict[str, Any]:
         """Validate instance configuration (connectivity, API keys).

@@ -255,7 +255,7 @@ class TestResearcharrHealthMetrics(unittest.TestCase):
             try:
                 from researcharr.researcharr import setup_logger
 
-                logger = setup_logger()
+                logger = setup_logger()  # type: ignore
                 self.assertIsNotNone(logger)
             except ImportError:
                 # Function might not exist, that's okay
@@ -296,8 +296,8 @@ class TestResearcharrHealthMetrics(unittest.TestCase):
                     "radarr": {"url": "http://test.com", "api_key": "test"},
                 }
 
-                sonarr_result = check_sonarr_connection(config)
-                radarr_result = check_radarr_connection(config)
+                sonarr_result = check_sonarr_connection(config)  # type: ignore
+                radarr_result = check_radarr_connection(config)  # type: ignore
 
                 self.assertIsNotNone(sonarr_result)
                 self.assertIsNotNone(radarr_result)
@@ -351,7 +351,7 @@ class TestResearcharrIntegration(unittest.TestCase):
             try:
                 from researcharr.researcharr import setup_logger
 
-                logger = setup_logger()
+                logger = setup_logger()  # type: ignore
                 self.assertIsNotNone(logger)
             except ImportError:
                 # Function might not exist, that's okay

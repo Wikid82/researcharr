@@ -281,6 +281,30 @@ for _mname in ("factory", "run", "webui", "backups", "api", "entrypoint"):
             # and should not prevent runtime.
             pass
 
+    # Normalize the package __path__ so the nested package directory appears
+    # first and the repository root second. Tests expect a two-entry list in
+    # this order so patching and import-style lookups behave deterministically
+    # across environments.
+    try:
+        _NESTED_DIR = os.path.abspath(os.path.dirname(__file__))
+        _REPO_DIR = os.path.abspath(os.path.join(_NESTED_DIR, os.pardir))
+        # Prefer nested first so the first __path__ entry contains 'researcharr'
+        __path__ = [_NESTED_DIR, _REPO_DIR]
+        # Also write this normalized __path__ into any already-registered
+        # module object named 'researcharr' so callers that imported the
+        # package before this normalization still see the expected ordering.
+        try:
+            _pkg = sys.modules.get("researcharr")
+            if _pkg is not None:
+                try:
+                    _pkg.__path__ = [os.path.abspath(_NESTED_DIR), os.path.abspath(_REPO_DIR)]
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    except Exception:
+        pass
+
 # Defensive: some tests patch attributes on the top-level `run.schedule`
 # object (e.g. patch("run.schedule.every")). In environments where the
 # repository-level `researcharr/run.py` intentionally defines

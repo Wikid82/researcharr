@@ -262,6 +262,16 @@ for _mname in ("factory", "run", "webui", "backups", "api", "entrypoint"):
                 mod = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(mod)  # type: ignore[arg-type]
                 sys.modules.setdefault(f"researcharr.{_mname}", mod)
+                # Also register the repo-level module under its top-level
+                # name (e.g. `entrypoint`) so tests that do bare
+                # `import entrypoint` or `patch("entrypoint.foo")` succeed
+                # in CI environments where the working directory / sys.path
+                # differs. Only set the name if it's not already present to
+                # avoid clobbering unrelated modules.
+                try:
+                    sys.modules.setdefault(_mname, mod)
+                except Exception:
+                    pass
                 try:
                     globals()[_mname] = mod
                 except Exception:

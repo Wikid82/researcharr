@@ -23,6 +23,19 @@ SCRIPT = os.environ.get("SCRIPT", "/app/scripts/researcharr.py")
 _run_job_lock: Optional[threading.Lock] = None
 
 
+def load_config(path: str = "config.yml") -> dict:
+    """Lightweight fallback loader used by tests.
+
+    Tests patch this symbol (monkeypatch/patch) when exercising the
+    top-level run behaviours. Provide a deterministic, side-effect free
+    implementation so the symbol exists during test-time imports.
+    """
+    # Keep this intentionally minimal — real implementations live in the
+    # project's entrypoint modules. Returning an empty dict is sufficient
+    # for tests that only need the symbol to exist or to be patched.
+    return {}
+
+
 def _get_job_timeout() -> Optional[float]:
     v = os.getenv("JOB_TIMEOUT", "")
     try:

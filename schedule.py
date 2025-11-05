@@ -5,6 +5,7 @@ This minimal implementation provides the names tests patch (`every`,
 in the environment. The functions do nothing by default; tests typically
 mock them.
 """
+
 from __future__ import annotations
 
 from typing import Any, Callable

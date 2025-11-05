@@ -242,6 +242,7 @@ def setup_logger():
 # mirrored into this shim above; provide a deterministic fallback to keep
 # test behavior stable when the implementation hasn't been loaded yet.
 if "load_config" not in globals():
+
     def load_config(path: str = "config.yml") -> dict:
         # Return an empty mapping by default; tests typically patch this
         # function, so the exact behavior here is not relied upon.

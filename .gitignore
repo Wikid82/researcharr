@@ -26,7 +26,6 @@ venv/
 env/
 
 # Editor/IDE
-.vscode/
 .idea/
 
 # Coverage and test reports

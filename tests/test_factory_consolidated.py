@@ -5,9 +5,10 @@ import tempfile
 import unittest
 from unittest.mock import mock_open, patch
 
-# Import the module under test
-import factory
 import researcharr.factory as factory_module
+
+# Import the module under test (package imports to avoid CWD issues in CI)
+from researcharr import factory
 
 
 class TestFactoryEnvironmentConfiguration(unittest.TestCase):
@@ -78,10 +79,10 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "dashboard"
                 response = client.get("/")
                 self.assertEqual(response.status_code, 200)
@@ -91,7 +92,7 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "login_page"
                 response = client.get("/login")
                 self.assertEqual(response.status_code, 200)
@@ -101,8 +102,8 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with patch("factory.check_password_hash") as mock_check:
-                with patch("factory.get_user_by_username") as mock_get_user:
+            with patch("researcharr.factory.check_password_hash") as mock_check:
+                with patch("researcharr.factory.get_user_by_username") as mock_get_user:
                     mock_get_user.return_value = {
                         "username": "test",  # pragma: allowlist secret
                         "password": "hashed",  # pragma: allowlist secret
@@ -123,15 +124,15 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with patch("factory.check_password_hash") as mock_check:
-                with patch("factory.get_user_by_username") as mock_get_user:
+            with patch("researcharr.factory.check_password_hash") as mock_check:
+                with patch("researcharr.factory.get_user_by_username") as mock_get_user:
                     mock_get_user.return_value = {
                         "username": "test",  # pragma: allowlist secret
                         "password": "hashed",  # pragma: allowlist secret
                     }
                     mock_check.return_value = False
 
-                    with patch("factory.render_template") as mock_render:
+                    with patch("researcharr.factory.render_template") as mock_render:
                         mock_render.return_value = "login_error"
                         response = client.post(
                             "/login",
@@ -147,7 +148,7 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
             response = client.get("/logout")
@@ -158,10 +159,10 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "status_page"
                 response = client.get("/status")
                 self.assertEqual(response.status_code, 200)
@@ -171,10 +172,10 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "logs_page"
                 response = client.get("/logs")
                 self.assertEqual(response.status_code, 200)
@@ -184,10 +185,10 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "tasks_page"
                 response = client.get("/tasks")
                 self.assertEqual(response.status_code, 200)
@@ -197,10 +198,10 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "plugins_page"
                 response = client.get("/plugins")
                 self.assertEqual(response.status_code, 200)
@@ -210,10 +211,10 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "account_page"
                 response = client.get("/account")
                 self.assertEqual(response.status_code, 200)
@@ -223,10 +224,10 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "backups_page"
                 response = client.get("/backups")
                 self.assertEqual(response.status_code, 200)
@@ -236,7 +237,7 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
             with patch("factory.render_template") as mock_render:
@@ -249,11 +250,11 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.load_user_config") as mock_load:
-                with patch("factory.save_user_config"):
+            with patch("researcharr.factory.load_user_config") as mock_load:
+                with patch("researcharr.factory.save_user_config"):
                     mock_load.return_value = {"schedule": {}}
 
                     response = client.post(
@@ -266,10 +267,10 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "general_page"
                 response = client.get("/general")
                 self.assertEqual(response.status_code, 200)
@@ -279,11 +280,11 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.load_user_config") as mock_load:
-                with patch("factory.save_user_config"):
+            with patch("researcharr.factory.load_user_config") as mock_load:
+                with patch("researcharr.factory.save_user_config"):
                     mock_load.return_value = {"sonarr": {}, "radarr": {}}
 
                     response = client.post(
@@ -318,8 +319,7 @@ class TestFactoryHelperFunctions(unittest.TestCase):
     def test_parse_instances_helper_function(self):
         """Test the _parse_instances helper function."""
         app = factory.create_app()
-
-        with app.app_context():
+        with app.app_context():  # type: ignore[attr-defined]
             with app.test_request_context():
                 # Create mock form data
                 form_data = {
@@ -352,8 +352,7 @@ class TestFactoryHelperFunctions(unittest.TestCase):
     def test_load_user_config_function(self):
         """Test loading user configuration."""
         app = factory.create_app()
-
-        with app.app_context():
+        with app.app_context():  # type: ignore[attr-defined]
             with patch("os.path.exists") as mock_exists:
                 with patch("builtins.open", mock_open(read_data='{"test": "data"}')):
                     mock_exists.return_value = True
@@ -369,8 +368,7 @@ class TestFactoryHelperFunctions(unittest.TestCase):
     def test_save_user_config_function(self):
         """Test saving user configuration."""
         app = factory.create_app()
-
-        with app.app_context():
+        with app.app_context():  # type: ignore[attr-defined]
             with patch("builtins.open", mock_open()) as mock_file:
                 with patch("json.dump"):
                     test_config = {"test": "data"}
@@ -386,8 +384,7 @@ class TestFactoryHelperFunctions(unittest.TestCase):
     def test_password_hashing_functions(self):
         """Test password hashing utilities."""
         app = factory.create_app()
-
-        with app.app_context():
+        with app.app_context():  # type: ignore[attr-defined]
             # Test password hashing functionality
             try:
                 # These might be werkzeug functions
@@ -408,8 +405,7 @@ class TestFactoryHelperFunctions(unittest.TestCase):
     def test_database_utility_functions(self):
         """Test database utility functions."""
         app = factory.create_app()
-
-        with app.app_context():
+        with app.app_context():  # type: ignore[attr-defined]
             # Test database functions exist
             try:
                 # Test that get_user_by_username can be called
@@ -465,7 +461,7 @@ class TestFactoryErrorHandling(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with client.session_transaction() as sess:
+            with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
             # Test with large form data

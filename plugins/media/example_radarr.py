@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 from flask import Blueprint, jsonify, request
 
-from researcharr.plugins.base import BasePlugin
+from plugins.base import BasePlugin
 
 PLUGIN_NAME = "radarr"
 

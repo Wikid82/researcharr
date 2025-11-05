@@ -1,0 +1,147 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Docker Compose Pull (feat)",
+            "type": "shell",
+            "command": "docker compose -f docker-compose.feat.yml pull",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "Pulls the latest images for all services (feature compose)."
+        },
+        {
+            "label": "Docker Compose Up (feat)",
+            "type": "shell",
+            "command": "docker compose -f docker-compose.feat.yml up -d",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "Starts all services in detached mode (feature compose)."
+        },
+        {
+            "label": "Docker Compose Up & Build (feat)",
+            "type": "shell",
+            "command": "docker compose -f docker-compose.feat.yml up -d --build",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "Forces a rebuild and starts all services (feature compose)."
+        },
+        {
+            "label": "Docker Compose Down (feat)",
+            "type": "shell",
+            "command": "docker compose -f docker-compose.feat.yml down",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "Stops and removes all services (feature compose)."
+        },
+        {
+            "label": "Docker Compose Restart (feat)",
+            "type": "shell",
+            "command": "docker compose -f docker-compose.feat.yml restart",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "Restarts all services (feature compose)."
+        },
+        {
+            "label": "Docker Compose Start (feat)",
+            "type": "shell",
+            "command": "docker compose -f docker-compose.feat.yml start",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "Starts existing containers for all services (feature compose)."
+        },
+        {
+            "label": "Docker Compose Stop (feat)",
+            "type": "shell",
+            "command": "docker compose -f docker-compose.feat.yml stop",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "Stops running containers without removing them (feature compose)."
+        },
+        {
+            "label": "Run Tests with Coverage",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "-m",
+                "pytest",
+                "tests/",
+                "--cov=researcharr",
+                "--cov-report=term-missing",
+                "--cov-report=html",
+                "--cov-report=xml"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [],
+            "detail": "Runs pytest with coverage and generates coverage.xml for Coverage Gutters."
+        },
+        {
+            "label": "Run Tests (Quick)",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "-m",
+                "pytest",
+                "tests/",
+                "-v"
+            ],
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [],
+            "detail": "Quick test run without coverage."
+        },
+        {
+            "label": "Run Current Test File with Coverage",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "-m",
+                "pytest",
+                "${file}",
+                "--cov=.",
+                "--cov-report=term-missing",
+                "--cov-report=html",
+                "--cov-report=xml"
+            ],
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [],
+            "detail": "Runs only the currently open test file with coverage."
+        }
+
+
+    ]
+}

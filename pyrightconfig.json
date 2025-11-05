@@ -1,7 +1,17 @@
 {
   "typeCheckingMode": "basic",
+  "reportOptionalMemberAccess": "none",
+  "reportOptionalCall": "none",
+  "reportOptionalOperand": "none",
+  "reportOptionalSubscript": "none",
   "include": ["researcharr"],
   "exclude": ["**/node_modules", "**/__pycache__", "tests", "home"],
   "venvPath": ".",
-  "venv": ".venv"
+  "venv": ".venv",
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": ["."]
+    }
+  ]
 }

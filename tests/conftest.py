@@ -93,8 +93,27 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
     )
     # Now import researcharr (all patches in place)
     importlib.import_module("researcharr.researcharr")
+    # Ensure `researcharr.__path__` is deterministic for the test run.
+    try:
+        import researcharr as _ra
+
+        _first = os.path.abspath(os.path.dirname(getattr(_ra, "__file__", "")))
+        _second = os.path.abspath(os.path.join(_first, "researcharr"))
+        if not os.path.isdir(_second):
+            _second = _first
+        try:
+            _ra.__path__ = [_first, _second]
+        except Exception:
+            pass
+    except Exception:
+        pass
     yield
     # Cleanup handled by tmp_path_factory
+
+
+def pytest_runtest_setup(item):
+    # Debug hook removed; no-op to keep pytest hook signature available.
+    return
 
 
 @pytest.fixture

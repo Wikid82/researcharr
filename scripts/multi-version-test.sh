@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 echo -e "${YELLOW}Running multi-version Python compatibility checks...${NC}"
 
 # Available Python versions to test (only test what's available)
-PYTHON_VERSIONS=("python3.9" "python3.10" "python3.11" "python3.12" "python3.13" "python3" "python")
+PYTHON_VERSIONS=("python3.10" "python3.11" "python3.12" "python3.13" "python3.14" "python3" "python")
 TESTED_VERSIONS=()
 FAILED_VERSIONS=()
 

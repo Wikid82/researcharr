@@ -136,7 +136,9 @@ class TestRunModuleConsolidated(unittest.TestCase):
     def test_run_module_job_execution(self):
         """Test job execution functionality."""
         with patch("time.sleep"):
-            with patch("schedule.run_pending"):
+            # Patch the schedule object on the `run` shim so tests don't
+            # require the external `schedule` package to be installed.
+            with patch("run.schedule.run_pending"):
                 try:
                     import run
 
@@ -244,7 +246,9 @@ class TestRunModuleConsolidated(unittest.TestCase):
 
     def test_run_module_comprehensive_flow(self):
         """Test comprehensive run module flow."""
-        with patch("schedule.every") as mock_every:
+        # Patch the schedule object on the `run` shim (if present) so the
+        # test can run without the external `schedule` dependency.
+        with patch("run.schedule.every") as mock_every:
             with patch("time.sleep"):
                 with patch("signal.signal"):
                     mock_job = MagicMock()

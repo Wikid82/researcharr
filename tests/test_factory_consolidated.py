@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from unittest.mock import mock_open, patch
 
-# Import the module under test
-import factory
+# Import the module under test (package imports to avoid CWD issues in CI)
+from researcharr import factory
 import researcharr.factory as factory_module
 
 
@@ -81,7 +81,7 @@ class TestFactoryMainRoutes(unittest.TestCase):
             with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "dashboard"
                 response = client.get("/")
                 self.assertEqual(response.status_code, 200)
@@ -91,7 +91,7 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "login_page"
                 response = client.get("/login")
                 self.assertEqual(response.status_code, 200)
@@ -101,8 +101,8 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with patch("factory.check_password_hash") as mock_check:
-                with patch("factory.get_user_by_username") as mock_get_user:
+            with patch("researcharr.factory.check_password_hash") as mock_check:
+                with patch("researcharr.factory.get_user_by_username") as mock_get_user:
                     mock_get_user.return_value = {
                         "username": "test",  # pragma: allowlist secret
                         "password": "hashed",  # pragma: allowlist secret
@@ -123,15 +123,15 @@ class TestFactoryMainRoutes(unittest.TestCase):
         app = factory.create_app()
 
         with app.test_client() as client:
-            with patch("factory.check_password_hash") as mock_check:
-                with patch("factory.get_user_by_username") as mock_get_user:
+            with patch("researcharr.factory.check_password_hash") as mock_check:
+                with patch("researcharr.factory.get_user_by_username") as mock_get_user:
                     mock_get_user.return_value = {
                         "username": "test",  # pragma: allowlist secret
                         "password": "hashed",  # pragma: allowlist secret
                     }
                     mock_check.return_value = False
 
-                    with patch("factory.render_template") as mock_render:
+                    with patch("researcharr.factory.render_template") as mock_render:
                         mock_render.return_value = "login_error"
                         response = client.post(
                             "/login",
@@ -161,7 +161,7 @@ class TestFactoryMainRoutes(unittest.TestCase):
             with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "status_page"
                 response = client.get("/status")
                 self.assertEqual(response.status_code, 200)
@@ -174,7 +174,7 @@ class TestFactoryMainRoutes(unittest.TestCase):
             with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "logs_page"
                 response = client.get("/logs")
                 self.assertEqual(response.status_code, 200)
@@ -187,7 +187,7 @@ class TestFactoryMainRoutes(unittest.TestCase):
             with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "tasks_page"
                 response = client.get("/tasks")
                 self.assertEqual(response.status_code, 200)
@@ -200,7 +200,7 @@ class TestFactoryMainRoutes(unittest.TestCase):
             with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "plugins_page"
                 response = client.get("/plugins")
                 self.assertEqual(response.status_code, 200)
@@ -213,7 +213,7 @@ class TestFactoryMainRoutes(unittest.TestCase):
             with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "account_page"
                 response = client.get("/account")
                 self.assertEqual(response.status_code, 200)
@@ -226,7 +226,7 @@ class TestFactoryMainRoutes(unittest.TestCase):
             with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "backups_page"
                 response = client.get("/backups")
                 self.assertEqual(response.status_code, 200)
@@ -252,8 +252,8 @@ class TestFactoryMainRoutes(unittest.TestCase):
             with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.load_user_config") as mock_load:
-                with patch("factory.save_user_config"):
+            with patch("researcharr.factory.load_user_config") as mock_load:
+                with patch("researcharr.factory.save_user_config"):
                     mock_load.return_value = {"schedule": {}}
 
                     response = client.post(
@@ -269,7 +269,7 @@ class TestFactoryMainRoutes(unittest.TestCase):
             with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.render_template") as mock_render:
+            with patch("researcharr.factory.render_template") as mock_render:
                 mock_render.return_value = "general_page"
                 response = client.get("/general")
                 self.assertEqual(response.status_code, 200)
@@ -282,8 +282,8 @@ class TestFactoryMainRoutes(unittest.TestCase):
             with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("factory.load_user_config") as mock_load:
-                with patch("factory.save_user_config"):
+            with patch("researcharr.factory.load_user_config") as mock_load:
+                with patch("researcharr.factory.save_user_config"):
                     mock_load.return_value = {"sonarr": {}, "radarr": {}}
 
                     response = client.post(

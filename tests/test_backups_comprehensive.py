@@ -6,7 +6,7 @@ import zipfile
 
 import pytest
 
-import backups
+from researcharr import backups
 
 
 class TestBackupsModule:

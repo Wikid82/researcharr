@@ -163,7 +163,7 @@ class TestBackupsIntegrationScenarios(unittest.TestCase):
 
         with patch.dict(os.environ, {"CONFIG_DIR": config_dir}):
             try:
-                import backups
+                from researcharr import backups
 
                 # Create backup
                 backup_path = backups.create_backup_file(config_dir, self.test_dir)
@@ -200,7 +200,7 @@ class TestBackupsIntegrationScenarios(unittest.TestCase):
             backup_files.append(backup_file)
 
         try:
-            import backups
+            from researcharr import backups
 
             # Test retention by count
             retention_config = {"retention_count": 5}
@@ -224,7 +224,7 @@ class TestBackupsIntegrationScenarios(unittest.TestCase):
             zf.writestr("database.db", "mock database")
 
         try:
-            import backups
+            from researcharr import backups
 
             # Test backup validation
             is_valid = backups.validate_backup_file(backup_path)
@@ -256,7 +256,7 @@ class TestBackupsIntegrationScenarios(unittest.TestCase):
                 zf.writestr(filename, content)
 
         try:
-            import backups
+            from researcharr import backups
 
             # Test restore functionality
             success = backups.restore_backup(backup_path, restore_dir)
@@ -274,7 +274,7 @@ class TestBackupsIntegrationScenarios(unittest.TestCase):
     def test_backup_error_handling(self):
         """Test backup error handling for various failure scenarios."""
         try:
-            import backups
+            from researcharr import backups
 
             # Test with invalid source directory
             with self.assertRaises(Exception):
@@ -305,7 +305,7 @@ class TestBackupsIntegrationScenarios(unittest.TestCase):
             import threading
             import time  # noqa: F401
 
-            import backups
+            from researcharr import backups
 
             def create_backup(index):
                 """Create a backup with a unique name."""

@@ -255,7 +255,7 @@ class TestMiscellaneousConsolidated(unittest.TestCase):
     def test_prune_backups_functionality(self):
         """Test prune backups functionality."""
         try:
-            import backups
+            from researcharr import backups
 
             # Test backup pruning
             with patch("os.listdir") as mock_listdir:

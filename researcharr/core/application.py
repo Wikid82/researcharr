@@ -121,6 +121,9 @@ class CoreApplicationFactory:
         if success:
             # Create legacy config_data structure for backwards compatibility
             config_data = {
+                "app": self.config_manager.get_section("app"),
+                "logging": self.config_manager.get_section("logging"),
+                "database": self.config_manager.get_section("database"),
                 "general": self.config_manager.get_section("general"),
                 "radarr": [],
                 "sonarr": [],

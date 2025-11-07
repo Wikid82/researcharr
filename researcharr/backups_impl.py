@@ -24,8 +24,16 @@ def create_backup_file(
     static checks. It copies the file tree into a timestamped zip stored in
     ``backups_dir``. On error returns ``None``.
     """
+    # Normalize inputs
     config_root = Path(config_root)
     backups_dir = Path(backups_dir)
+
+    # Preserve legacy / shim behavior: if the config root does not exist and
+    # no prefix was supplied, raise an exception rather than silently
+    # returning None. Several tests exercise this branch explicitly against
+    # the implementation module (not just the package shim).
+    if not config_root.exists() and not prefix:
+        raise Exception("config_root does not exist and no prefix provided")
 
     try:
         backups_dir.mkdir(parents=True, exist_ok=True)
@@ -74,11 +82,13 @@ def create_backup_file(
         # string value but exposes a logical basename for startswith checks
         # (historical behavior expected by tests).
         try:
-            from ._backups_impl import BackupPath
-
-            return BackupPath(str(out_path), out_path.name)
+            from ._backups_impl import BackupPath  # type: ignore
+            # Some tests patch BackupPath to None; only call if callable.
+            if callable(BackupPath):  # type: ignore[arg-type]
+                return BackupPath(str(out_path), out_path.name)  # type: ignore[call-arg]
         except Exception:
-            return out_path
+            pass
+        return out_path
     except Exception:
         return None
 
@@ -93,11 +103,19 @@ def prune_backups(backups_dir: str | Path, cfg: Optional[dict] = None) -> None:
         if not cfg:
             return None
         # Accept both 'retain_count' and legacy 'retention_count' keys used in
-        # some tests.
+        # some tests. Distinguish between an explicit retain_count=0 (delete all)
+        # and a missing key (no count-based pruning). Tests expect that when
+        # only age-based keys are provided we do NOT delete every file first.
+        has_count_key = False
+        if isinstance(cfg, dict):
+            for k in ("retain_count", "retention_count"):
+                if k in cfg:
+                    has_count_key = True
+                    break
         retain_count = (
             int(cfg.get("retain_count", cfg.get("retention_count", 0)))
-            if isinstance(cfg, dict)
-            else 0
+            if isinstance(cfg, dict) and has_count_key
+            else None
         )
         retain_days = int(cfg.get("retain_days", 0)) if isinstance(cfg, dict) else 0
         pre_restore_keep_days = (
@@ -117,13 +135,23 @@ def prune_backups(backups_dir: str | Path, cfg: Optional[dict] = None) -> None:
         reverse=True,
     )
 
-    # Enforce retain_count
-    if retain_count > 0 and len(files) > retain_count:
-        for old in files[retain_count:]:
-            try:
-                old.unlink()
-            except Exception:
-                pass
+    # Enforce retain_count only when explicitly provided
+    if retain_count is not None:
+        if retain_count == 0:
+            # Explicit retain_count=0 => remove all zip files
+            for old in files:
+                try:
+                    old.unlink()
+                except Exception:
+                    pass
+            # After deleting all there's nothing left to age-prune
+            files = []
+        elif retain_count > 0 and len(files) > retain_count:
+            for old in files[retain_count:]:
+                try:
+                    old.unlink()
+                except Exception:
+                    pass
 
     # Enforce retain_days (age-based pruning) for non-pre- files
     if retain_days > 0:
@@ -151,14 +179,19 @@ def prune_backups(backups_dir: str | Path, cfg: Optional[dict] = None) -> None:
 
 def list_backups(backups_dir: str | Path, *, pattern: str | None = None) -> list[Dict[str, object]]:
     d = Path(backups_dir)
-    if not d.exists() or not d.is_dir():
+    try:
+        # Wrap existence/dir checks to tolerate patched stat raising.
+        if not d.exists() or not d.is_dir():
+            return []
+    except Exception:
         return []
     res: list[Dict[str, object]] = []
-    for p in sorted(
-        [p for p in d.iterdir() if p.is_file() and p.suffix == ".zip"],
-        key=lambda p: p.name,
-        reverse=True,
-    ):
+    # Safely iterate directory; if iteration itself raises return what we have.
+    try:
+        candidates = [p for p in d.iterdir() if p.is_file() and p.suffix == ".zip"]
+    except Exception:
+        candidates = []
+    for p in sorted(candidates, key=lambda p: p.name, reverse=True):
         try:
             st = p.stat()
             info = {

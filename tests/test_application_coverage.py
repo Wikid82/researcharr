@@ -108,16 +108,23 @@ def test_setup_configuration_invalid_yaml():
 
 def test_setup_configuration_environment_overrides():
     """Test environment variables override config."""
+    import tempfile
+
     from researcharr.core.application import CoreApplicationFactory
+    from researcharr.core.config import reset_config_manager
+
+    # Reset config manager to ensure clean state
+    reset_config_manager()
 
     factory = CoreApplicationFactory()
 
-    with patch.dict(os.environ, {"PUID": "1001", "PGID": "1001", "TIMEZONE": "UTC"}):
-        config = factory.setup_configuration()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with patch.dict(os.environ, {"PUID": "1001", "PGID": "1001", "TIMEZONE": "UTC"}):
+            config = factory.setup_configuration(config_dir=tmpdir)
 
-        assert config["general"]["PUID"] == "1001"
-        assert config["general"]["PGID"] == "1001"
-        assert config["general"]["Timezone"] == "UTC"
+            assert config["general"]["PUID"] == "1001"
+            assert config["general"]["PGID"] == "1001"
+            assert config["general"]["Timezone"] == "UTC"
 
 
 def test_setup_logging_service():
@@ -293,20 +300,27 @@ def test_config_manager_source_addition():
 
 def test_configuration_with_env_loglevel():
     """Test LOGLEVEL environment variable."""
-    from researcharr.core.application import CoreApplicationFactory
+    import tempfile
 
+    from researcharr.core.application import CoreApplicationFactory
+    from researcharr.core.config import reset_config_manager
+
+    reset_config_manager()
     factory = CoreApplicationFactory()
 
-    with patch.dict(os.environ, {"LOGLEVEL": "DEBUG"}):
-        config = factory.setup_configuration()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with patch.dict(os.environ, {"LOGLEVEL": "DEBUG"}):
+            config = factory.setup_configuration(config_dir=tmpdir)
 
-        assert config["general"]["LogLevel"] == "DEBUG"
+            assert config["general"]["LogLevel"] == "DEBUG"
 
 
 def test_configuration_file_path_building():
     """Test configuration file paths are built correctly."""
     from researcharr.core.application import CoreApplicationFactory
+    from researcharr.core.config import reset_config_manager
 
+    reset_config_manager()
     factory = CoreApplicationFactory()
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -379,19 +393,24 @@ def test_yaml_config_loading():
 
 def test_configuration_merge_with_env():
     """Test configuration merges with environment variables."""
-    from researcharr.core.application import CoreApplicationFactory
+    import tempfile
 
+    from researcharr.core.application import CoreApplicationFactory
+    from researcharr.core.config import reset_config_manager
+
+    reset_config_manager()
     factory = CoreApplicationFactory()
 
     env_vars = {"PUID": "2000", "PGID": "2000", "TIMEZONE": "Europe/London", "LOGLEVEL": "WARNING"}
 
-    with patch.dict(os.environ, env_vars):
-        config = factory.setup_configuration()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with patch.dict(os.environ, env_vars):
+            config = factory.setup_configuration(config_dir=tmpdir)
 
-        assert config["general"]["PUID"] == "2000"
-        assert config["general"]["PGID"] == "2000"
-        assert config["general"]["Timezone"] == "Europe/London"
-        assert config["general"]["LogLevel"] == "WARNING"
+            assert config["general"]["PUID"] == "2000"
+            assert config["general"]["PGID"] == "2000"
+            assert config["general"]["Timezone"] == "Europe/London"
+            assert config["general"]["LogLevel"] == "WARNING"
 
 
 def test_service_registration_order():

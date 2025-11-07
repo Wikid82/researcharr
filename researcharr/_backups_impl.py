@@ -115,10 +115,18 @@ def get_backup_info(backup_path: str | Path) -> Optional[dict]:
 
 def list_backups(backups_dir: str | Path) -> list[dict]:
     bd = Path(backups_dir)
-    if not bd.exists() or not bd.is_dir():
+    try:
+        if not bd.exists() or not bd.is_dir():
+            return []
+    except Exception:
+        # Path.stat may be patched to raise; treat as empty listing.
         return []
     out = []
-    for entry in sorted(bd.iterdir(), key=lambda p: p.name, reverse=True):
+    try:
+        entries = sorted(bd.iterdir(), key=lambda p: p.name, reverse=True)
+    except Exception:
+        entries = []
+    for entry in entries:
         if entry.is_file() and entry.name.endswith(".zip"):
             try:
                 st = entry.stat()

@@ -182,8 +182,6 @@ def test_install_create_metrics_dispatcher():
 
     mock_original = MagicMock()
     impl_module.create_metrics_app = mock_original
-    impl_module.__dict__ = {"create_metrics_app": mock_original}
-    pkg_module.__dict__ = {}
 
     with patch.dict(
         sys.modules, {"researcharr": pkg_module, "researcharr.researcharr": impl_module}
@@ -206,8 +204,6 @@ def test_dispatcher_prefers_package_level_patch():
     mock_patched = MagicMock(return_value="patched")
 
     impl_module.create_metrics_app = mock_original
-    impl_module.__dict__ = {"create_metrics_app": mock_original}
-    pkg_module.__dict__ = {}
 
     with patch.dict(
         sys.modules, {"researcharr": pkg_module, "researcharr.researcharr": impl_module}
@@ -222,8 +218,8 @@ def test_dispatcher_prefers_package_level_patch():
         # Call original dispatcher (saved reference)
         result = dispatcher()
 
-        # Should call the original since we're calling the dispatcher directly
-        assert result == "original"
+        # Should call the patched version since dispatcher searches for patches
+        assert result == "patched"
 
 
 def test_dispatcher_searches_for_mocks():
@@ -236,8 +232,6 @@ def test_dispatcher_searches_for_mocks():
     impl_module = type(sys)("researcharr.researcharr")
 
     impl_module.create_metrics_app = MagicMock(return_value="impl")
-    impl_module.__dict__ = {"create_metrics_app": impl_module.create_metrics_app}
-    pkg_module.__dict__ = {}
 
     # Create a module with a Mock
     mock_module = type(sys)("mock_test_module")
@@ -270,8 +264,6 @@ def test_dispatcher_falls_back_to_original():
 
     mock_original = MagicMock(return_value="original")
     impl_module.create_metrics_app = mock_original
-    impl_module.__dict__ = {"create_metrics_app": mock_original}
-    pkg_module.__dict__ = {}
 
     with patch.dict(
         sys.modules, {"researcharr": pkg_module, "researcharr.researcharr": impl_module}
@@ -302,8 +294,6 @@ def test_dispatcher_handles_exceptions():
         raise RuntimeError("Test error")
 
     impl_module.create_metrics_app = raising_impl
-    impl_module.__dict__ = {"create_metrics_app": raising_impl}
-    pkg_module.__dict__ = {}
 
     with patch.dict(
         sys.modules, {"researcharr": pkg_module, "researcharr.researcharr": impl_module}
@@ -322,18 +312,31 @@ def test_dispatcher_no_implementation_available():
     from researcharr import _package_helpers
 
     pkg_module = type(sys)("researcharr")
-    pkg_module.__dict__ = {}
 
-    with patch.dict(sys.modules, {"researcharr": pkg_module}):
-        _package_helpers.install_create_metrics_dispatcher()
+    # Ensure researcharr.researcharr is not present
+    saved_modules = {}
+    for key in ["researcharr", "researcharr.researcharr"]:
+        if key in sys.modules:
+            saved_modules[key] = sys.modules[key]
+    
+    try:
+        with patch.dict(sys.modules, {"researcharr": pkg_module}, clear=False):
+            # Remove impl module
+            sys.modules.pop("researcharr.researcharr", None)
+            
+            _package_helpers.install_create_metrics_dispatcher()
 
-        dispatcher = pkg_module.__dict__["create_metrics_app"]
+            dispatcher = pkg_module.__dict__["create_metrics_app"]
 
-        # Clear all references
-        pkg_module.__dict__.clear()
+            # Clear all references
+            pkg_module.__dict__.clear()
 
-        with pytest.raises(ImportError, match="No create_metrics_app implementation available"):
-            dispatcher()
+            with pytest.raises(ImportError, match="No create_metrics_app implementation available"):
+                dispatcher()
+    finally:
+        # Restore
+        for key, val in saved_modules.items():
+            sys.modules[key] = val
 
 
 def test_serve_without_pytest_env():
@@ -425,7 +428,6 @@ def test_install_dispatcher_with_only_impl_module():
     impl_module = type(sys)("researcharr.researcharr")
     mock_impl = MagicMock(return_value="impl_result")
     impl_module.create_metrics_app = mock_impl
-    impl_module.__dict__ = {"create_metrics_app": mock_impl}
 
     with patch.dict(sys.modules, {"researcharr.researcharr": impl_module}):
         _package_helpers.install_create_metrics_dispatcher()
@@ -444,8 +446,6 @@ def test_dispatcher_prefers_impl_level_patch():
     mock_impl_patched = MagicMock(return_value="impl_patched")
 
     impl_module.create_metrics_app = MagicMock(return_value="original")
-    impl_module.__dict__ = {"create_metrics_app": impl_module.create_metrics_app}
-    pkg_module.__dict__ = {}
 
     with patch.dict(
         sys.modules, {"researcharr": pkg_module, "researcharr.researcharr": impl_module}

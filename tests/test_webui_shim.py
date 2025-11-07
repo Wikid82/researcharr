@@ -5,6 +5,8 @@ repository-level webui module.
 """
 
 import sys
+import importlib
+from importlib import util as importlib_util
 from unittest.mock import MagicMock, patch
 
 
@@ -81,12 +83,18 @@ def test_webui_with_mock_impl():
 
 def test_webui_import_failure_fallback():
     """Test webui shim falls back to file location on import failure."""
-    with patch("importlib.import_module", side_effect=ImportError("No webui")):
-        with patch("importlib.util.spec_from_file_location") as mock_spec:
+    real_import_module = importlib.import_module
+
+    def import_module_side_effect(name, *args, **kwargs):
+        if name == "webui":
+            raise ImportError("No webui")
+        return real_import_module(name, *args, **kwargs)
+
+    with patch("importlib.import_module", side_effect=import_module_side_effect):
+        # Patch via object to avoid resolve/import of importlib during patching
+        with patch.object(importlib_util, "spec_from_file_location") as mock_spec:
             mock_loader = MagicMock()
             mock_spec.return_value = MagicMock(loader=mock_loader)
-
-            import importlib
 
             if "researcharr.webui" in sys.modules:
                 del sys.modules["researcharr.webui"]
@@ -102,10 +110,16 @@ def test_webui_import_failure_fallback():
 
 def test_webui_fallback_no_spec():
     """Test webui shim handles None spec in fallback."""
-    with patch("importlib.import_module", side_effect=ImportError("No webui")):
-        with patch("importlib.util.spec_from_file_location", return_value=None):
-            import importlib
+    real_import_module = importlib.import_module
 
+    def import_module_side_effect(name, *args, **kwargs):
+        if name == "webui":
+            raise ImportError("No webui")
+        return real_import_module(name, *args, **kwargs)
+
+    with patch("importlib.import_module", side_effect=import_module_side_effect):
+        # Patch via object to avoid resolve/import of importlib during patching
+        with patch.object(importlib_util, "spec_from_file_location", return_value=None):
             if "researcharr.webui" in sys.modules:
                 del sys.modules["researcharr.webui"]
 
@@ -118,13 +132,19 @@ def test_webui_fallback_no_spec():
 
 def test_webui_fallback_no_loader():
     """Test webui shim handles spec with no loader."""
-    with patch("importlib.import_module", side_effect=ImportError("No webui")):
+    real_import_module = importlib.import_module
+
+    def import_module_side_effect(name, *args, **kwargs):
+        if name == "webui":
+            raise ImportError("No webui")
+        return real_import_module(name, *args, **kwargs)
+
+    with patch("importlib.import_module", side_effect=import_module_side_effect):
         mock_spec = MagicMock()
         mock_spec.loader = None
 
-        with patch("importlib.util.spec_from_file_location", return_value=mock_spec):
-            import importlib
-
+        # Patch via object to avoid resolve/import of importlib during patching
+        with patch.object(importlib_util, "spec_from_file_location", return_value=mock_spec):
             if "researcharr.webui" in sys.modules:
                 del sys.modules["researcharr.webui"]
 
@@ -140,15 +160,21 @@ def test_webui_partial_exports():
     mock_webui._env_bool = MagicMock()
     # Missing: load_user_config, save_user_config
 
-    def side_effect(attr, default=None):
-        if attr in ("load_user_config", "save_user_config"):
+    # Replace only attribute fetches on the mock with selective failures.
+    def limited_getattr(obj, attr, default=None):
+        if obj is mock_webui and attr in ("load_user_config", "save_user_config"):
             raise AttributeError(f"No {attr}")
-        return getattr(mock_webui, attr, default)
+        return object.__getattribute__(obj, attr) if hasattr(obj, attr) else default
 
-    with patch("importlib.import_module", return_value=mock_webui):
-        with patch("builtins.getattr", side_effect=side_effect):
-            import importlib
+    real_import_module = importlib.import_module
 
+    def import_module_side_effect(name, *args, **kwargs):
+        if name == "webui":
+            return mock_webui
+        return real_import_module(name, *args, **kwargs)
+
+    with patch("importlib.import_module", side_effect=import_module_side_effect):
+        # Monkeypatch attributes directly instead of global getattr to avoid recursion
             if "researcharr.webui" in sys.modules:
                 del sys.modules["researcharr.webui"]
 
@@ -203,10 +229,16 @@ def test_webui_save_user_config_function():
 
 def test_webui_fallback_exception():
     """Test webui shim handles exception in fallback path."""
-    with patch("importlib.import_module", side_effect=ImportError("No webui")):
-        with patch("importlib.util.spec_from_file_location", side_effect=Exception("Spec error")):
-            import importlib
+    real_import_module = importlib.import_module
 
+    def import_module_side_effect(name, *args, **kwargs):
+        if name == "webui":
+            raise ImportError("No webui")
+        return real_import_module(name, *args, **kwargs)
+
+    with patch("importlib.import_module", side_effect=import_module_side_effect):
+        # Patch via object to avoid resolve/import of importlib during patching
+        with patch.object(importlib_util, "spec_from_file_location", side_effect=Exception("Spec error")):
             if "researcharr.webui" in sys.modules:
                 del sys.modules["researcharr.webui"]
 
@@ -232,16 +264,20 @@ def test_webui_repo_root_calculation():
 
 def test_webui_getattr_exception_handling():
     """Test webui shim handles getattr exceptions."""
-    mock_webui = MagicMock()
+    class Raising:
+        def __getattr__(self, name):  # noqa: D401 - simple helper
+            raise RuntimeError("Test error")
 
-    def raising_getattr(name):
-        raise RuntimeError("Test error")
+    raising_impl = Raising()
 
-    mock_webui.configure_mock(**{"__getattr__": raising_getattr})
+    real_import_module = importlib.import_module
 
-    with patch("importlib.import_module", return_value=mock_webui):
-        import importlib
+    def import_module_side_effect(name, *args, **kwargs):
+        if name == "webui":
+            return raising_impl
+        return real_import_module(name, *args, **kwargs)
 
+    with patch("importlib.import_module", side_effect=import_module_side_effect):
         if "researcharr.webui" in sys.modules:
             del sys.modules["researcharr.webui"]
 

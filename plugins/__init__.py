@@ -5,4 +5,7 @@ and example plugin modules. Plugins should subclass BasePlugin and
 implement the required methods.
 """
 
-__all__ = ["base", "registry", "example_sonarr"]
+# Import submodules to make them accessible as package attributes
+from . import base, clients, media, notifications, registry, scrapers
+
+__all__ = ["base", "registry", "clients", "media", "notifications", "scrapers"]

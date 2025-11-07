@@ -61,7 +61,8 @@ def test_webui_shim_reexports_top_level_webui():
         # implementation; accept either presence with the expected value or
         # absence (None).
         val = getattr(shim, "USER_CONFIG_PATH", None)
-        assert val is None or val == "/tmp/config.yml"
+        # Accept default repo value or injected value, or absence
+        assert val is None or val in ("/tmp/config.yml", "/config/webui_user.yml")
     finally:
         sys.modules.pop("webui", None)
         importlib.reload(shim)

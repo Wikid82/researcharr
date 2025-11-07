@@ -2,7 +2,8 @@ import types
 
 import pytest
 
-from researcharr import webui
+# Import from researcharr package to ensure consistent module identity
+import researcharr.webui as webui
 
 
 def test_env_bool_truthy_and_falsey(monkeypatch):

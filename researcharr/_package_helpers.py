@@ -133,7 +133,16 @@ def serve():
     except Exception:
         _fl = None
 
-    if _fl is not None and isinstance(app, _fl.Flask):
+    # Check if we have a Flask app - handle cases where Flask might not be importable
+    # or where isinstance check might fail due to mock/proxy objects
+    is_flask_app = False
+    try:
+        if _fl is not None and hasattr(_fl, 'Flask'):
+            is_flask_app = isinstance(app, _fl.Flask)
+    except Exception:
+        pass
+    
+    if is_flask_app:
         if os.environ.get("PYTEST_CURRENT_TEST"):
             return
         try:

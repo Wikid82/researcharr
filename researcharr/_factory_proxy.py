@@ -139,11 +139,9 @@ def create_proxies(repo_root: str | None = None) -> None:
                     raise ImportError("create_app implementation not available yet")
 
                 _proxy.__dict__.setdefault("create_app", _create_app_placeholder)
-                # Provide safe stubs for backups helpers expected by imports
-                # in tests when the real target isn't loaded yet.
-                if _short == "backups":
-                    _proxy.__dict__.setdefault("prune_backups", lambda *a, **kw: None)
-                    _proxy.__dict__.setdefault("create_backup_file", lambda *a, **kw: "")
+                # Do NOT provide stubs for backups helpers - the proxy's __getattr__
+                # will load the real module when those attributes are accessed.
+                # Stubs that return empty string or None break return value types.
             except Exception:
                 pass
             try:

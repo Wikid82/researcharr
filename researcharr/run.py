@@ -49,11 +49,20 @@ def setup_scheduler() -> None:
     function will wire a simple periodic job. In tests the `schedule`
     symbol is patched so calling this will exercise the expected calls.
     """
-    if schedule is None:
+    # Look up schedule from both globals and the module's namespace
+    # to support test patches that set run.schedule = mock
+    import sys
+    sched = globals().get("schedule")
+    # Also check if the containing module has schedule set by tests
+    if sched is None:
+        mod = sys.modules.get(__name__)
+        if mod is not None:
+            sched = getattr(mod, "schedule", None)
+    if sched is None:
         return
     try:
         # Typical usage in the real project: schedule.every().minutes.do(...)
-        schedule.every().minutes.do(run_job)
+        sched.every().minutes.do(run_job)
     except Exception:
         # Swallow errors — tests only care that this function exists and
         # that it calls into schedule if present.
@@ -91,16 +100,29 @@ def run_job() -> None:
     except Exception:
         mod_script = None
     script = env_script or mod_script or SCRIPT
-    logger.debug("globals SCRIPT=%r", mod_script)
-    logger.debug("env SCRIPT=%r", env_script)
+    import logging as _lg
+    try:
+        _lg.info("globals SCRIPT=%r", mod_script)
+    except Exception:
+        pass
+    try:
+        _lg.info("env SCRIPT=%r", env_script)
+    except Exception:
+        pass
     try:
         top_run = sys.modules.get("run")
-        logger.debug(
-            "top-level run.SCRIPT=%r",
-            None if top_run is None else getattr(top_run, "SCRIPT", None),
-        )
+        try:
+            _lg.info(
+                "top-level run.SCRIPT=%r",
+                None if top_run is None else getattr(top_run, "SCRIPT", None),
+            )
+        except Exception:
+            pass
     except Exception:
-        logger.debug("top-level run.SCRIPT=<unavailable>")
+        try:
+            _lg.info("top-level run.SCRIPT=<unavailable>")
+        except Exception:
+            pass
     timeout = _get_job_timeout()
 
     # Ensure there is something to execute

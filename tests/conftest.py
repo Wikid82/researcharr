@@ -40,6 +40,8 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
     # Patch /config paths to temp_dir
     db_path = str(temp_dir / "researcharr.db")
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    # Ensure database is created in temp directory
+    monkeypatch.setenv("RESEARCHARR_DB", db_path)
     log_dir = temp_dir / "logs"
     log_dir.mkdir(exist_ok=True)
     main_log = str(log_dir / "researcharr.log")
@@ -73,6 +75,9 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
         return logger
 
     sys.modules.pop("researcharr.researcharr", None)  # Ensure clean import
+    sys.modules.pop("researcharr.db", None)  # Ensure clean db module import
+    sys.modules.pop("webui", None)  # Ensure clean webui module import  
+    sys.modules.pop("researcharr.webui", None)  # Ensure clean webui package import
     monkeypatch.setattr("researcharr.researcharr.DB_PATH", db_path, raising=False)
     monkeypatch.setattr("researcharr.researcharr.setup_logger", fake_setup_logger, raising=False)
     monkeypatch.setattr(

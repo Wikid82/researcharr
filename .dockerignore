@@ -55,3 +55,6 @@ coverage.*
 .venv/
 venv/
 env/
+
+# File Types
+*.xcf

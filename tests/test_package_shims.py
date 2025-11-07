@@ -10,7 +10,7 @@ def test_factory_shim_reexports_top_level_factory():
     def create_app_marker():
         return "created"
 
-    mod.create_app = create_app_marker
+    setattr(mod, "create_app", create_app_marker)
     sys.modules["factory"] = mod
 
     # Load the package shim deterministically from the source file so
@@ -39,12 +39,12 @@ def test_factory_shim_reexports_top_level_factory():
 
 def test_webui_shim_reexports_top_level_webui():
     mod = types.ModuleType("webui")
-    mod.USER_CONFIG_PATH = "/tmp/config.yml"
+    setattr(mod, "USER_CONFIG_PATH", "/tmp/config.yml")
 
     def _load():
         return {"user": "x"}
 
-    mod.load_user_config = _load
+    setattr(mod, "load_user_config", _load)
     sys.modules["webui"] = mod
 
     import researcharr.webui as shim
@@ -74,7 +74,7 @@ def test_backups_shim_delegates_to_top_level_backups():
     def create_backup_file_marker(*args, **kwargs):
         return {"ok": True}
 
-    mod.create_backup_file = create_backup_file_marker
+    setattr(mod, "create_backup_file", create_backup_file_marker)
     sys.modules["backups"] = mod
 
     import researcharr.backups as shim

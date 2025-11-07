@@ -19,4 +19,7 @@ for venv_name in ".venv-3.13" ".venv" "venv"; do
 done
 
 # default args: -q --maxfail=1, enable CLI logging at DEBUG and show extra
-python -m pytest -q --maxfail=1 -o log_cli=true -o log_cli_level=DEBUG -rA
+# Use --full-trace in pre-commit to produce complete tracebacks for easier
+# debugging of import-time shims and hook-invoked failures. This mirrors CI
+# verbosity and helps triage failures earlier in the pre-commit pipeline.
+python -m pytest -q --maxfail=1 -o log_cli=true -o log_cli_level=DEBUG -rA --full-trace

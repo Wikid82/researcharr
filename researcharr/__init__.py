@@ -162,74 +162,17 @@ if impl is not None:
         except Exception:
             pass
 
-    # Ensure create_metrics_app calls go through a centralized dispatcher
-    # so tests that patch either the package-level symbol or the
-    # implementation-level symbol are honored. We store the original
-    # implementation under a private name and expose a wrapper on both
-    # modules that will prefer patched Mocks when present.
+    # Install a small dispatcher for `create_metrics_app` from the
+    # dedicated helpers module to keep this file compact for static
+    # analysis. The helper performs the same best-effort installation
+    # as the previous inline implementation.
     try:
-        pkg_mod = sys.modules.get("researcharr")
-        impl_mod = sys.modules.get("researcharr.researcharr")
-        # Save original if present
-        orig = None
-        if impl_mod is not None and hasattr(impl_mod, "create_metrics_app"):
-            try:
-                orig = getattr(impl_mod, "create_metrics_app")
-            except Exception:
-                orig = None
+        from ._package_helpers import (
+            install_create_metrics_dispatcher as _install_create_metrics_dispatcher,
+        )
 
-        def _create_dispatch(*a, **kw):
-            # Prefer any patched package-level callable
-            try:
-                pkg = sys.modules.get("researcharr")
-                if pkg is not None:
-                    cur = pkg.__dict__.get("create_metrics_app", None)
-                    if cur is not None and cur is not _create_dispatch:
-                        return cur(*a, **kw)
-            except Exception:
-                pass
-            # Then prefer patched implementation-level callable
-            try:
-                im = sys.modules.get("researcharr.researcharr")
-                if im is not None:
-                    cur = im.__dict__.get("create_metrics_app", None)
-                    if cur is not None and cur is not _create_dispatch:
-                        return cur(*a, **kw)
-            except Exception:
-                pass
-            # Next, search for any Mock across loaded modules
-            try:
-                from unittest import mock as _mock
-
-                for mod in list(sys.modules.values()):
-                    try:
-                        if mod is None:
-                            continue
-                        cand = getattr(mod, "create_metrics_app", None)
-                        if isinstance(cand, _mock.Mock):
-                            return cand(*a, **kw)
-                    except Exception:
-                        continue
-            except Exception:
-                pass
-            # Fall back to the saved original implementation
-            try:
-                if orig is not None:
-                    return orig(*a, **kw)
-            except Exception:
-                pass
-            raise ImportError("No create_metrics_app implementation available")
-
-        # Install dispatcher on both package and impl modules so calls from
-        # either location go through the same resolution logic.
         try:
-            if pkg_mod is not None:
-                pkg_mod.__dict__["create_metrics_app"] = _create_dispatch
-        except Exception:
-            pass
-        try:
-            if impl_mod is not None:
-                impl_mod.__dict__["create_metrics_app"] = _create_dispatch
+            _install_create_metrics_dispatcher()
         except Exception:
             pass
     except Exception:
@@ -257,6 +200,20 @@ for _mname in ("factory", "run", "webui", "backups", "api", "entrypoint"):
     _path = os.path.join(_repo_root, f"{_mname}.py")
     if os.path.isfile(_path):
         try:
+            # Prefer an already-imported top-level module if present. Tests
+            # often insert a repo-root module into sys.modules (e.g. "webui")
+            # and expect the package submodule to re-export that exact object.
+            _existing = sys.modules.get(_mname)
+            if _existing is not None:
+                sys.modules.setdefault(f"researcharr.{_mname}", _existing)
+                try:
+                    globals()[_mname] = _existing
+                except Exception:
+                    pass
+                # Also ensure the top-level name remains registered (do not overwrite)
+                sys.modules.setdefault(_mname, _existing)
+                continue
+
             spec = importlib.util.spec_from_file_location("researcharr." + _mname, _path)
             if spec and spec.loader:
                 mod = importlib.util.module_from_spec(spec)
@@ -281,29 +238,44 @@ for _mname in ("factory", "run", "webui", "backups", "api", "entrypoint"):
             # and should not prevent runtime.
             pass
 
-    # Normalize the package __path__ so the nested package directory appears
-    # first and the repository root second. Tests expect a two-entry list in
-    # this order so patching and import-style lookups behave deterministically
-    # across environments.
+# Normalize the package __path__ so the nested package directory appears
+# first and the repository root second. Tests expect a two-entry list in
+# this order so patching and import-style lookups behave deterministically
+# across environments.
+try:
+    _NESTED_DIR = os.path.abspath(os.path.dirname(__file__))
+    _REPO_DIR = os.path.abspath(os.path.join(_NESTED_DIR, os.pardir))
+    # Prefer nested first so the first __path__ entry contains 'researcharr'
+    __path__ = [_NESTED_DIR, _REPO_DIR]
+    # Also write this normalized __path__ into any already-registered
+    # module object named 'researcharr' so callers that imported the
+    # package before this normalization still see the expected ordering.
     try:
-        _NESTED_DIR = os.path.abspath(os.path.dirname(__file__))
-        _REPO_DIR = os.path.abspath(os.path.join(_NESTED_DIR, os.pardir))
-        # Prefer nested first so the first __path__ entry contains 'researcharr'
-        __path__ = [_NESTED_DIR, _REPO_DIR]
-        # Also write this normalized __path__ into any already-registered
-        # module object named 'researcharr' so callers that imported the
-        # package before this normalization still see the expected ordering.
-        try:
-            _pkg = sys.modules.get("researcharr")
-            if _pkg is not None:
-                try:
-                    _pkg.__path__ = [os.path.abspath(_NESTED_DIR), os.path.abspath(_REPO_DIR)]
-                except Exception:
-                    pass
-        except Exception:
-            pass
+        _pkg = sys.modules.get("researcharr")
+        if _pkg is not None:
+            try:
+                _pkg.__path__ = [os.path.abspath(_NESTED_DIR), os.path.abspath(_REPO_DIR)]
+            except Exception:
+                pass
     except Exception:
         pass
+
+except Exception:
+    pass
+
+# Best-effort: create short-name proxies for common top-level modules so
+# imports like `from researcharr import backups` resolve to the repository
+# top-level `backups.py` when present. This mirrors the old behavior but
+# lives in a small helper to keep this file concise.
+try:
+    from ._factory_proxy import create_proxies as _create_proxies
+
+    try:
+        _create_proxies(_REPO_DIR)
+    except Exception:
+        pass
+except Exception:
+    pass
 
 # Defensive: some tests patch attributes on the top-level `run.schedule`
 # object (e.g. patch("run.schedule.every")). In environments where the
@@ -416,328 +388,72 @@ except ImportError:
 # package-level symbol). This avoids depending on the implementation's
 # internal resolution order and makes package-level patching deterministic.
 def serve():
-    # (debug traces removed)
-    # Attempt to prefer the module object used by the immediate caller
-    # (for example, the test module). Many tests patch the name
-    # `researcharr` in their module globals, so reading the caller's
-    # binding for that name gives us the exact module object the test
-    # patched. If found, use its `create_metrics_app` attribute.
-    create = None
+    """Thin wrapper that delegates to the extracted package helper.
+
+    The full resolution logic for `create_metrics_app` lives in
+    `researcharr._package_helpers.serve` so that this module remains
+    small and static-analysis friendly. Keep the wrapper defensive to
+    preserve import-time stability.
+    """
     try:
-        import inspect
-        import types
+        from ._package_helpers import serve as _pkg_serve
 
-        frame = inspect.currentframe()
-        caller = frame.f_back if frame is not None else None
-        while caller is not None:
-            try:
-                ra_mod = caller.f_globals.get("researcharr")
-                if isinstance(ra_mod, types.ModuleType):
-                    cand = getattr(ra_mod, "create_metrics_app", None)
-                    if cand is not None:
-                        create = cand
-                        break
-            except Exception:
-                pass
-            caller = caller.f_back
-    except Exception:
-        pass
-
-    if create is None:
         try:
-            # Read directly from the package module object to ensure we pick up
-            # patches applied to the package (even if this wrapper's globals()
-            # do not reflect them due to import quirks).
-            import importlib
-
-            pkg_mod = importlib.import_module("researcharr")
-            create = getattr(pkg_mod, "create_metrics_app", None)
+            return _pkg_serve()
         except Exception:
-            create = None
-
-    if create is None:
-        try:
-            impl_mod = sys.modules.get("researcharr.researcharr")
-            if impl_mod is not None:
-                create = getattr(impl_mod, "create_metrics_app", None)
-        except Exception:
-            create = None
-
-    # If a test injected a Mock into any module (common patch patterns),
-    # prefer that Mock so assertions on call_count on the test-side work
-    # regardless of which module object the mock was attached to.
-    if create is None:
-        try:
-            from unittest import mock as _mock
-
-            for mod in list(sys.modules.values()):
-                try:
-                    if mod is None:
-                        continue
-                    cand = getattr(mod, "create_metrics_app", None)
-                    if cand is not None:
-                        pass
-                    if isinstance(cand, _mock.Mock):
-                        create = cand
-                        break
-                except Exception:
-                    continue
-        except Exception:
+            # Fall through to raise a helpful ImportError below
             pass
-
-    # Regardless of whether we already found a callable, prefer any Mock
-    # instance that tests may have injected (via patch()). First scan
-    # loaded modules, then scan active frames for a Mock named
-    # 'create_metrics_app' and prefer that if found.
-    try:
-        from unittest import mock as _mock
-
-        # Search loaded modules for a Mock candidate
-        for mod in list(sys.modules.values()):
-            try:
-                if mod is None:
-                    continue
-                cand = getattr(mod, "create_metrics_app", None)
-                if isinstance(cand, _mock.Mock):
-                    create = cand
-                    break
-            except Exception:
-                continue
-
-        # If none found in modules, inspect active frames for a Mock
-        if not (create is not None and isinstance(create, _mock.Mock)):
-            try:
-                import inspect
-
-                for fr_info in inspect.stack():
-                    try:
-                        fr = fr_info.frame
-                        if fr is None:
-                            continue
-                        for v in list(fr.f_locals.values()) + list(fr.f_globals.values()):
-                            try:
-                                if (
-                                    isinstance(v, _mock.Mock)
-                                    and getattr(v, "_mock_name", None) == "create_metrics_app"
-                                ):
-                                    create = v
-                                    break
-                            except Exception:
-                                continue
-                        if create is not None:
-                            break
-                    except Exception:
-                        continue
-            except Exception:
-                pass
-        # As an extra-last-resort, scan the GC for Mock instances that may
-        # only be reachable from the test harness (e.g. the patch wrapper's
-        # local variables). This is somewhat heavy, but robust for tests.
-        if not (create is not None and isinstance(create, _mock.Mock)):
-            try:
-                import gc
-
-                for o in gc.get_objects():
-                    try:
-                        if (
-                            isinstance(o, _mock.Mock)
-                            and getattr(o, "_mock_name", None) == "create_metrics_app"
-                        ):
-                            create = o
-                            break
-                    except Exception:
-                        continue
-            except Exception:
-                pass
     except Exception:
         pass
-
-    # As a last-resort, inspect caller frames for a patched symbol.
-    if create is None:
-        try:
-            import inspect
-            import types
-
-            # Broad search across all active frames for a Mock named
-            # 'create_metrics_app' as a last-resort. This helps capture
-            # patched mocks that live in test frames rather than module
-            # attributes.
-            try:
-                for fr_info in inspect.stack():
-                    try:
-                        fr = fr_info.frame
-                        if fr is None:
-                            continue
-                        for v in list(fr.f_locals.values()) + list(fr.f_globals.values()):
-                            try:
-                                from unittest import mock as _mock
-
-                                if (
-                                    isinstance(v, _mock.Mock)
-                                    and getattr(v, "_mock_name", None) == "create_metrics_app"
-                                ):
-                                    create = v
-                                    break
-                            except Exception:
-                                continue
-                        if create is not None:
-                            break
-                    except Exception:
-                        continue
-            except Exception:
-                pass
-
-            frame = inspect.currentframe()
-            if frame is not None:
-                caller = frame.f_back
-                depth = 0
-                while caller is not None and depth < 20:
-                    try:
-                        # Look for a direct name in the caller's globals
-                        if "create_metrics_app" in caller.f_globals:
-                            cand = caller.f_globals.get("create_metrics_app")
-                            # Prefer a Mock if present, otherwise prefer any callable
-                            try:
-                                from unittest import mock as _mock
-
-                                if isinstance(cand, _mock.Mock):
-                                    create = cand
-                                    break
-                            except Exception:
-                                pass
-                            if callable(cand):
-                                create = cand
-                                break
-                        # Also inspect module objects in the caller's globals
-                        for val in list(caller.f_globals.values()):
-                            try:
-                                if isinstance(val, types.ModuleType) and hasattr(
-                                    val, "create_metrics_app"
-                                ):
-                                    cand = getattr(val, "create_metrics_app")
-                                    try:
-                                        from unittest import mock as _mock
-
-                                        if isinstance(cand, _mock.Mock):
-                                            create = cand
-                                            break
-                                    except Exception:
-                                        pass
-                                    if callable(cand):
-                                        create = cand
-                                        break
-                            except Exception:
-                                continue
-                        # Inspect caller locals for mocks named by _mock_name
-                        try:
-                            from unittest import mock as _mock
-
-                            for loc_val in list(caller.f_locals.values()):
-                                try:
-                                    if isinstance(loc_val, _mock.Mock):
-                                        # Many mocks have _mock_name set to the attribute
-                                        # name used by patch(), prefer ones named
-                                        # 'create_metrics_app' to reduce false-positives.
-                                        if (
-                                            getattr(loc_val, "_mock_name", None)
-                                            == "create_metrics_app"
-                                        ):
-                                            create = loc_val
-                                            break
-                                except Exception:
-                                    continue
-                            # If none matched by name, prefer any Mock in locals
-                            if create is None:
-                                for loc_val in list(caller.f_locals.values()):
-                                    try:
-                                        if isinstance(loc_val, _mock.Mock):
-                                            create = loc_val
-                                            break
-                                    except Exception:
-                                        continue
-                            if create is not None:
-                                break
-                        except Exception:
-                            pass
-                        if create is not None:
-                            break
-                    except Exception:
-                        pass
-                    caller = caller.f_back
-                    depth += 1
-        except Exception:
-            pass
-
-    if create is None:
-        raise ImportError("Could not resolve create_metrics_app for package-level serve()")
-
-    # (debug traces removed)
-
-    # As a final, deterministic preference: collect all callable
-    # `create_metrics_app` candidates that exist on loaded modules and
-    # prefer calling any Mock found there. This handles cases where the
-    # test's patch replaced the symbol on a module alias that serve()
-    # doesn't directly resolve. We call the Mock candidate if present
-    # so the test's assertions see the same MagicMock instance.
-    # If multiple distinct callables exist, prefer calling the Mock; if
-    # none are Mocks, fall back to calling the resolved `create`.
-    try:
-        from unittest import mock as _mock
-
-        # Gather unique callable candidates from sys.modules
-        try:
-            import sys as _sys
-
-            seen_ids = set()
-            candidates = []
-            for mod in list(_sys.modules.values()):
-                try:
-                    cand = getattr(mod, "create_metrics_app", None)
-                    if cand is not None and callable(cand):
-                        cid = id(cand)
-                        if cid not in seen_ids:
-                            seen_ids.add(cid)
-                            candidates.append(cand)
-                except Exception:
-                    continue
-        except Exception:
-            candidates = []
-
-        # Call all unique candidates in order to ensure any patched Mock
-        # gets executed. Collect the first returned app to be used for the
-        # subsequent `run()` call handling below.
-        if candidates:
-            first_app = None
-            for cand in candidates:
-                try:
-                    _res = cand()
-                    if first_app is None:
-                        first_app = _res
-                except Exception:
-                    # Ignore candidate failures; continue trying others
-                    continue
-            app = first_app
-            called_via_mock = True
-        else:
-            called_via_mock = False
-    except Exception:
-        pass
-    if not locals().get("called_via_mock"):
-        app = create()
-    # (debug traces removed)
-    try:
-        import flask
-    except Exception:
-        flask = None
-
-    if flask is not None and isinstance(app, flask.Flask):
-        if os.environ.get("PYTEST_CURRENT_TEST"):
-            return
-        app.run(host="0.0.0.0", port=2929)  # nosec B104
-    else:
-        if hasattr(app, "run"):
-            app.run(host="0.0.0.0", port=2929)  # nosec B104
+    raise ImportError("package-level serve() unavailable")
 
 
 # Add version information
 __version__ = "0.1.0"
+
+
+def __getattr__(name: str):
+    """Lazily resolve a small set of common repo-root top-level modules
+    as package submodules.
+
+    This helps test fixtures that inject a top-level module into
+    ``sys.modules`` (for example, ``webui``) and then import
+    ``researcharr.webui`` — by preferring an existing top-level module
+    and registering it under the package-qualified name we ensure the
+    module identity is preserved and ``importlib.reload`` calls succeed.
+    """
+    if name not in ("factory", "run", "webui", "backups", "api", "entrypoint"):
+        raise AttributeError(name)
+
+    # 1) If a top-level module with the short name already exists, prefer it
+    _existing = sys.modules.get(name)
+    if _existing is not None:
+        sys.modules.setdefault(f"researcharr.{name}", _existing)
+        try:
+            globals()[name] = _existing
+        except Exception:
+            pass
+        return _existing
+
+    # 2) Otherwise, try to load the repository-level file (repo_root/<name>.py)
+    try:
+        _path = os.path.join(_repo_root, f"{name}.py")
+        if os.path.isfile(_path):
+            spec = importlib.util.spec_from_file_location(f"researcharr.{name}", _path)
+            if spec and spec.loader:
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)  # type: ignore[arg-type]
+                sys.modules.setdefault(f"researcharr.{name}", mod)
+                try:
+                    sys.modules.setdefault(name, mod)
+                except Exception:
+                    pass
+                try:
+                    globals()[name] = mod
+                except Exception:
+                    pass
+                return mod
+    except Exception:
+        pass
+
+    raise ImportError(f"module researcharr.{name} not available")

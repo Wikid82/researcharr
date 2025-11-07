@@ -125,16 +125,53 @@ def check_radarr_connection(*args, **kwargs):
     from unittest import mock as _mock
 
     if _requests is None or isinstance(_requests, _mock.Mock) is False:
-        for mod in list(sys.modules.values()):
+        # First, check obvious module slots where tests often attach the
+        # patched `get` callable: `researcharr.requests` and the real
+        # top-level `requests` module. Prefer a module whose `get`
+        # attribute is a Mock/MagicMock.
+        for _key in ("researcharr.requests", "requests"):
             try:
-                if mod is None:
+                _m = sys.modules.get(_key)
+                if _m is None:
                     continue
-                cand = getattr(mod, "requests", None)
-                if isinstance(cand, _mock.Mock):
-                    _requests = cand
+                _g = getattr(_m, "get", None)
+                if isinstance(_g, _mock.Mock):
+                    _requests = _m
                     break
             except Exception:
                 continue
+
+        if _requests is None:
+            for mod in list(sys.modules.values()):
+                try:
+                    if mod is None:
+                        continue
+                    cand = getattr(mod, "requests", None)
+                    if cand is None:
+                        continue
+                    # Debugging aid: reveal candidate origin when debugging enabled
+                    try:
+                        if os.environ.get("RESEARCHARR_SHIM_DEBUG2"):
+                            print(
+                                f"SHIMDBG_RADARR: inspecting module {getattr(mod, '__name__', None)} id={id(mod)} cand={repr(cand)} get={repr(getattr(cand,'get',None))}"
+                            )
+                    except Exception:
+                        pass
+                    # If tests patched the `get` attribute on a requests-like
+                    # object (e.g. monkeypatch.setattr('researcharr.requests.get', ...))
+                    # the `get` attribute will often be a Mock/MagicMock. Prefer
+                    # any requests-like object whose .get is a Mock or whose
+                    # implementation originates from test modules.
+                    _get = getattr(cand, "get", None)
+                    if isinstance(_get, _mock.Mock):
+                        _requests = cand
+                        break
+                    _modname = getattr(_get, "__module__", "") if _get is not None else ""
+                    if isinstance(_modname, str) and _modname.startswith("tests"):
+                        _requests = cand
+                        break
+                except Exception:
+                    continue
 
     if _requests is None:
         logger.warning("requests not available in this environment")

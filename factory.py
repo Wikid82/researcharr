@@ -2247,7 +2247,17 @@ def create_app() -> Flask:
             # test-scoped candidate (for rare import-order cases).
             name = None
             try:
-                name = _create_backup_file(config_root, backups_dir)
+                # Prefer the module-level delegator to avoid any accidental
+                # shadowing by inner helpers and to fully honor pytest
+                # monkeypatching semantics.
+                import sys as _sys
+
+                _mod = _sys.modules.get("researcharr.factory") or _sys.modules.get(__name__)
+                _fn = getattr(_mod, "_create_backup_file", None)
+                if callable(_fn):
+                    name = _fn(config_root, backups_dir)
+                else:
+                    name = _create_backup_file(config_root, backups_dir)
             except Exception:
                 name = None
             # Heuristic: if the test has monkeypatched a test-local function,

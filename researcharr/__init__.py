@@ -205,32 +205,61 @@ for _mname in ("factory", "run", "webui", "backups", "api", "entrypoint"):
             # and expect the package submodule to re-export that exact object.
             _existing = sys.modules.get(_mname)
             if _existing is not None:
-                sys.modules.setdefault(f"researcharr.{_mname}", _existing)
+                # Canonicalize the package-qualified name to point at the
+                # already-imported top-level module object. Use direct
+                # assignment so we do not end up with two distinct module
+                # objects under short and package-qualified names which
+                # breaks importlib.reload(). Also ensure the module has a
+                # minimal __spec__ with the package-qualified name so
+                # reload() accepts it.
+                try:
+                    sys.modules[f"researcharr.{_mname}"] = _existing
+                except Exception:
+                    pass
                 try:
                     globals()[_mname] = _existing
                 except Exception:
                     pass
-                # Also ensure the top-level name remains registered (do not overwrite)
-                sys.modules.setdefault(_mname, _existing)
+                # Also ensure the short name maps to the same object.
+                try:
+                    sys.modules[_mname] = _existing
+                except Exception:
+                    pass
+                # Ensure a minimal __spec__ with the package-qualified name
+                # so importlib.reload() will reference the correct name.
+                try:
+                    if getattr(_existing, "__spec__", None) is None:
+                        _existing.__spec__ = importlib.util.spec_from_loader(
+                            f"researcharr.{_mname}", loader=None
+                        )
+                except Exception:
+                    pass
                 continue
 
             spec = importlib.util.spec_from_file_location("researcharr." + _mname, _path)
             if spec and spec.loader:
                 mod = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(mod)  # type: ignore[arg-type]
-                sys.modules.setdefault(f"researcharr.{_mname}", mod)
-                # Also register the repo-level module under its top-level
-                # name (e.g. `entrypoint`) so tests that do bare
-                # `import entrypoint` or `patch("entrypoint.foo")` succeed
-                # in CI environments where the working directory / sys.path
-                # differs. Only set the name if it's not already present to
-                # avoid clobbering unrelated modules.
+                # Canonicalize both short and package-qualified names to the
+                # same module object so imports and reloads are deterministic.
                 try:
-                    sys.modules.setdefault(_mname, mod)
+                    sys.modules[f"researcharr.{_mname}"] = mod
+                except Exception:
+                    pass
+                try:
+                    sys.modules[_mname] = mod
                 except Exception:
                     pass
                 try:
                     globals()[_mname] = mod
+                except Exception:
+                    pass
+                # Ensure the loaded module advertises a proper spec name.
+                try:
+                    if getattr(mod, "__spec__", None) is None:
+                        mod.__spec__ = importlib.util.spec_from_loader(
+                            f"researcharr.{_mname}", loader=None
+                        )
                 except Exception:
                     pass
         except Exception:
@@ -566,13 +595,23 @@ def __getattr__(name: str):
             if spec and spec.loader:
                 mod = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(mod)  # type: ignore[arg-type]
-                sys.modules.setdefault(f"researcharr.{name}", mod)
                 try:
-                    sys.modules.setdefault(name, mod)
+                    sys.modules[f"researcharr.{name}"] = mod
+                except Exception:
+                    pass
+                try:
+                    sys.modules[name] = mod
                 except Exception:
                     pass
                 try:
                     globals()[name] = mod
+                except Exception:
+                    pass
+                try:
+                    if getattr(mod, "__spec__", None) is None:
+                        mod.__spec__ = importlib.util.spec_from_loader(
+                            f"researcharr.{name}", loader=None
+                        )
                 except Exception:
                     pass
                 return mod

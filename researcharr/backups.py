@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import backups_impl
+from . import _backups_impl as backups_impl
 
 # Re-export the stable, minimal helpers from the internal implementation
 # module. We import specifically to keep the public surface explicit.

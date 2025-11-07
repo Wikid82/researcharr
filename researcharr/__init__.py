@@ -277,6 +277,68 @@ try:
 except Exception:
     pass
 
+    # Reconcile module objects for common repo-root top-level modules so that
+    # `sys.modules['name']` and `sys.modules['researcharr.name']` refer to a
+    # single, merged module object. This reduces import-order flakiness when
+    # tests inject a top-level module (e.g. `webui`) before importing
+    # `researcharr.webui` and ensures `importlib.reload()` works reliably.
+    try:
+        for _mname in ("factory", "run", "webui", "backups", "api", "entrypoint"):
+            _top = sys.modules.get(_mname)
+            _pkg = sys.modules.get(f"researcharr.{_mname}")
+
+            # Nothing to do if neither exists
+            if _top is None and _pkg is None:
+                continue
+
+            # If only a top-level module exists, synthesize a package-qualified
+            # alias by registering the same object under the package name and
+            # ensuring it has a minimal spec so importlib.reload() will accept it.
+            if _pkg is None and _top is not None:
+                try:
+                    sys.modules.setdefault(f"researcharr.{_mname}", _top)
+                    globals().setdefault(_mname, _top)
+                    # Give the top-level module a minimal package-qualified spec
+                    try:
+                        if getattr(_top, "__spec__", None) is None:
+                            _top.__spec__ = importlib.util.spec_from_loader(
+                                f"researcharr.{_mname}", loader=None
+                            )
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+                continue
+
+            # If both exist but are different objects, prefer the package-level
+            # module (it typically has a proper spec/loader), and overlay any
+            # public attributes from the top-level module so test-injected names
+            # remain accessible.
+            if _pkg is not None and _top is not None and _pkg is not _top:
+                try:
+                    for _attr in dir(_top):
+                        if _attr.startswith("__"):
+                            continue
+                        if not hasattr(_pkg, _attr):
+                            try:
+                                setattr(_pkg, _attr, getattr(_top, _attr))
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+
+                try:
+                    sys.modules.setdefault(f"researcharr.{_mname}", _pkg)
+                    sys.modules.setdefault(_mname, _pkg)
+                    try:
+                        globals().setdefault(_mname, _pkg)
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
 # Defensive: some tests patch attributes on the top-level `run.schedule`
 # object (e.g. patch("run.schedule.every")). In environments where the
 # repository-level `researcharr/run.py` intentionally defines

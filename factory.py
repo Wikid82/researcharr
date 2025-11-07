@@ -2199,7 +2199,9 @@ def create_app() -> Flask:
 
             # 3) Fall back to resolving via the shared resolver
             try:
-                from .factory import _resolve_module_attr as _res  # type: ignore
+                from .factory import (
+                    _resolve_module_attr as _res,  # type: ignore
+                )
 
                 fn = _res("create_backup_file")
                 if callable(fn):

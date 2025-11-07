@@ -101,6 +101,18 @@ impl = _load_impl()
 if impl is not None:
     # Register under the expected name and attach to the package namespace
     sys.modules["researcharr.researcharr"] = impl
+    # Ensure the implementation module has a __path__ attribute so that
+    # importlib.reload() will treat it as a package when reloading submodules
+    # like 'researcharr.researcharr.webui'. Use the parent directory of the
+    # implementation file as the package path.
+    try:
+        if not hasattr(impl, "__path__"):
+            impl_file = getattr(impl, "__file__", None)
+            if impl_file:
+                impl_dir = os.path.dirname(os.path.abspath(impl_file))
+                impl.__path__ = [impl_dir]
+    except Exception:
+        pass
     # Expose requests/yaml submodule names so import-style lookups (used by
     # monkeypatch.setattr with dotted strings) succeed when they attempt
     # to import 'researcharr.researcharr.requests' or '...yaml'.
@@ -667,14 +679,20 @@ def __getattr__(name: str):
     try:
         _path = os.path.join(_repo_root, f"{name}.py")
         if os.path.isfile(_path):
-            spec = importlib.util.spec_from_file_location(f"researcharr.{name}", _path)
+            # Compute the package-qualified name. Use __name__ from the
+            # current package module to ensure the spec name matches the
+            # actual import path regardless of whether this init file was
+            # loaded as 'researcharr' (top-level) or nested.
+            pkg_name = __name__
+            spec = importlib.util.spec_from_file_location(f"{pkg_name}.{name}", _path)
             if spec and spec.loader:
                 mod = importlib.util.module_from_spec(spec)
                 # Register prior to execution to make the module
                 # identity canonical and prevent the loader from
-                # creating/replacing a different object.
+                # creating/replacing a different object. Use the computed
+                # package name consistently.
                 try:
-                    sys.modules[f"researcharr.{name}"] = mod
+                    sys.modules[f"{pkg_name}.{name}"] = mod
                 except Exception:
                     pass
                 try:
@@ -689,7 +707,7 @@ def __getattr__(name: str):
                 try:
                     if getattr(mod, "__spec__", None) is None:
                         mod.__spec__ = importlib.util.spec_from_loader(
-                            f"researcharr.{name}", loader=None
+                            f"{pkg_name}.{name}", loader=None
                         )
                 except Exception:
                     pass
@@ -697,4 +715,4 @@ def __getattr__(name: str):
     except Exception:
         pass
 
-    raise ImportError(f"module researcharr.{name} not available")
+    raise ImportError(f"module {__name__}.{name} not available")

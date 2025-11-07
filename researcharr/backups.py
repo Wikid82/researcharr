@@ -1,6 +1,6 @@
 """Package-level re-export shim for backups.
 
-The implementation lives in ``researcharr._backups_impl``. Importing
+The implementation lives in ``researcharr.backups_impl``. Importing
 ``researcharr.backups`` will provide the same public API by re-exporting
 symbols from the implementation module.
 """
@@ -9,18 +9,21 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import _backups_impl as backups_impl
+from . import backups_impl
 
 # Re-export the stable, minimal helpers from the internal implementation
 # module. We import specifically to keep the public surface explicit.
-from ._backups_impl import BackupPath as _BackupPath
+try:
+    from ._backups_impl import BackupPath as _BackupPath
+except ImportError:
+    _BackupPath = None  # type: ignore
 
 # Provide a stable public BackupPath for callers that expect the lightweight
 # wrapper used in tests; prefer the internal _BackupPath if present but fall
 # back to a simple Path-compatible alias.
-try:
+if _BackupPath is not None:
     BackupPath = _BackupPath  # type: ignore
-except Exception:
+else:
 
     class BackupPath(str):
         def __new__(cls, fullpath: str, name: str):

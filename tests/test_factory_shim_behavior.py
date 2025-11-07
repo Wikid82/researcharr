@@ -52,8 +52,8 @@ def test_shim_reexports_public_names_from_top_level_module(monkeypatch):
     # Load the package shim file directly so import order and package __path__ do
     # not cause Python to bind the wrong module name (we want to execute the
     # shim source under our controlled import hooks).
-    from importlib import util
     import os
+    from importlib import util
 
     shim_path = os.path.join(os.path.dirname(__file__), "..", "researcharr", "factory.py")
     shim_path = os.path.abspath(shim_path)

@@ -54,8 +54,8 @@ def test_factory_shim_reexports_top_level_factory(monkeypatch):
     # Load the package shim source as an isolated module so we can control
     # how it resolves the top-level `factory` import without relying on
     # import caching performed by the test runner.
-    from importlib import util
     import os
+    from importlib import util
 
     shim_path = os.path.join(os.path.dirname(__file__), "..", "researcharr", "factory.py")
     shim_path = os.path.abspath(shim_path)
@@ -91,8 +91,8 @@ def test_factory_shim_absent_top_level(monkeypatch):
     # fake flask is seen when the shim re-evaluates importlib.import_module.
     monkeypatch.delitem(sys.modules, "researcharr.factory", raising=False)
 
-    from importlib import util
     import os
+    from importlib import util
 
     shim_path = os.path.join(os.path.dirname(__file__), "..", "researcharr", "factory.py")
     shim_path = os.path.abspath(shim_path)

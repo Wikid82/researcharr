@@ -101,18 +101,6 @@ impl = _load_impl()
 if impl is not None:
     # Register under the expected name and attach to the package namespace
     sys.modules["researcharr.researcharr"] = impl
-    # Ensure the implementation module has a __path__ attribute so that
-    # importlib.reload() will treat it as a package when reloading submodules
-    # like 'researcharr.researcharr.webui'. Use the parent directory of the
-    # implementation file as the package path.
-    try:
-        if not hasattr(impl, "__path__"):
-            impl_file = getattr(impl, "__file__", None)
-            if impl_file:
-                impl_dir = os.path.dirname(os.path.abspath(impl_file))
-                impl.__path__ = [impl_dir]
-    except Exception:
-        pass
     # Expose requests/yaml submodule names so import-style lookups (used by
     # monkeypatch.setattr with dotted strings) succeed when they attempt
     # to import 'researcharr.researcharr.requests' or '...yaml'.
@@ -305,6 +293,123 @@ try:
     except Exception:
         pass
 
+except Exception:
+    pass
+
+# Canonicalize short and package-qualified module mappings: ensure both
+# `sys.modules['name']` and `sys.modules['researcharr.name']` point to the
+# same module object where possible. Prefer an existing package-qualified
+# mapping, then the short name, then the attribute on the package.
+try:
+    import sys as _sys
+
+    for _n in ("factory", "run", "webui", "backups", "api", "entrypoint"):
+        try:
+            _pkg_key = f"researcharr.{_n}"
+            _obj = _sys.modules.get(_pkg_key) or _sys.modules.get(_n) or globals().get(_n)
+            if _obj is None:
+                continue
+            try:
+                _sys.modules[_pkg_key] = _obj
+            except Exception:
+                pass
+            try:
+                _sys.modules.setdefault(_n, _obj)
+            except Exception:
+                pass
+            try:
+                globals().setdefault(_n, _obj)
+            except Exception:
+                pass
+        except Exception:
+            pass
+except Exception:
+    pass
+
+# If someone accidentally injected a module under 'researcharr.researcharr'
+# that isn't a package, give it a benign __path__ so importlib.reload and
+# package-relative imports looking for its __path__ do not fail. Use the
+# canonical package __path__ where available.
+try:
+    import sys as _sys
+
+    if _sys.modules.get("researcharr.researcharr") is not None:
+        try:
+            _parent = _sys.modules.get("researcharr.researcharr")
+            if getattr(_parent, "__path__", None) is None:
+                _pkg = _sys.modules.get("researcharr")
+                if getattr(_pkg, "__path__", None) is not None:
+                    try:
+                        _parent.__path__ = list(_pkg.__path__)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+except Exception:
+    pass
+
+# Final normalization pass: some import orders can produce module objects
+# whose `__spec__.name` contains an extra `researcharr.researcharr.`
+# segment (for example `researcharr.researcharr.webui`) which breaks
+# importlib.reload() and other importlib based operations because the
+# parent package `researcharr.researcharr` is not a package with a
+# `__path__`. Detect and normalize those names to the canonical
+# `researcharr.<name>` form and ensure `sys.modules` contains the
+# corrected mapping. Do this as a best-effort, non-fatal step.
+try:
+    import sys as _sys
+
+    _to_fix = []
+    for _k, _m in list(_sys.modules.items()):
+        try:
+            if not _m:
+                continue
+            _spec = getattr(_m, "__spec__", None)
+            if _spec is None:
+                continue
+            _name = getattr(_spec, "name", None) or getattr(_m, "__name__", None)
+            if not _name:
+                continue
+            # Look for the doubled prefix and rewrite it
+            if _name.startswith("researcharr.researcharr."):
+                _correct = _name.replace("researcharr.researcharr.", "researcharr.", 1)
+                _to_fix.append((_k, _name, _correct, _m))
+        except Exception:
+            # never fail import
+            pass
+
+    for _k, _orig_name, _correct_name, _m in _to_fix:
+        try:
+            # Update module attributes (name and spec.name) where possible
+            try:
+                _m.__name__ = _correct_name
+            except Exception:
+                pass
+            try:
+                if getattr(_m, "__spec__", None) is not None:
+                    _m.__spec__.name = _correct_name
+            except Exception:
+                pass
+
+            # Register corrected mapping in sys.modules so importlib.reload
+            # and importlib lookups resolve the expected canonical name.
+            try:
+                _sys.modules.setdefault(_correct_name, _m)
+            except Exception:
+                pass
+
+            # If the old key differs from the canonical one, and it points
+            # at the same module object, remove it to avoid confusion.
+            try:
+                if _sys.modules.get(_k) is _m and _k != _correct_name:
+                    try:
+                        del _sys.modules[_k]
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        except Exception:
+            pass
 except Exception:
     pass
 
@@ -623,9 +728,7 @@ def __getattr__(name: str):
         # If a package-qualified module is already registered, prefer and
         # return that object (overlaying any public attributes from the
         # top-level module so test-injected symbols remain accessible).
-        # Use __name__ to compute the package-qualified name so it matches
-        # the actual import path (handles nested 'researcharr.researcharr').
-        pkg_name = f"{__name__}.{name}"
+        pkg_name = f"researcharr.{name}"
         _pkg_mod = sys.modules.get(pkg_name)
 
         if _pkg_mod is not None:
@@ -669,14 +772,10 @@ def __getattr__(name: str):
 
         # No package mapping yet: register the existing top-level module
         # under the package-qualified name so identity is preserved and
-        # importlib.reload() will operate on the same object. Ensure the
-        # module has a proper __spec__ with the package-qualified name.
+        # importlib.reload() will operate on the same object.
         try:
             sys.modules[pkg_name] = _existing
             globals()[name] = _existing
-            # Ensure the module has a __spec__ with the correct name for reload
-            if not getattr(_existing, "__spec__", None) or getattr(_existing.__spec__, "name", None) != pkg_name:
-                _existing.__spec__ = importlib.util.spec_from_loader(pkg_name, loader=None)
         except Exception:
             pass
         return _existing
@@ -685,20 +784,14 @@ def __getattr__(name: str):
     try:
         _path = os.path.join(_repo_root, f"{name}.py")
         if os.path.isfile(_path):
-            # Compute the package-qualified name. Use __name__ from the
-            # current package module to ensure the spec name matches the
-            # actual import path regardless of whether this init file was
-            # loaded as 'researcharr' (top-level) or nested.
-            pkg_name = __name__
-            spec = importlib.util.spec_from_file_location(f"{pkg_name}.{name}", _path)
+            spec = importlib.util.spec_from_file_location(f"researcharr.{name}", _path)
             if spec and spec.loader:
                 mod = importlib.util.module_from_spec(spec)
                 # Register prior to execution to make the module
                 # identity canonical and prevent the loader from
-                # creating/replacing a different object. Use the computed
-                # package name consistently.
+                # creating/replacing a different object.
                 try:
-                    sys.modules[f"{pkg_name}.{name}"] = mod
+                    sys.modules[f"researcharr.{name}"] = mod
                 except Exception:
                     pass
                 try:
@@ -713,12 +806,45 @@ def __getattr__(name: str):
                 try:
                     if getattr(mod, "__spec__", None) is None:
                         mod.__spec__ = importlib.util.spec_from_loader(
-                            f"{pkg_name}.{name}", loader=None
+                            f"researcharr.{name}", loader=None
                         )
+                except Exception:
+                    pass
+                # Defensive normalization: ensure spec and module name do not
+                # include an accidental duplicated prefix like
+                # 'researcharr.researcharr.<name>'. Some import orders can
+                # produce such names which break importlib.reload(). Fix the
+                # module in-place and register canonical sys.modules keys.
+                try:
+                    _spec_name = getattr(getattr(mod, "__spec__", None), "name", None)
+                    if isinstance(_spec_name, str) and _spec_name.startswith("researcharr.researcharr."):
+                        _fixed = _spec_name.replace("researcharr.researcharr.", "researcharr.", 1)
+                        try:
+                            mod.__name__ = _fixed
+                        except Exception:
+                            pass
+                        try:
+                            mod.__spec__.name = _fixed
+                        except Exception:
+                            pass
+                        try:
+                            import sys as _sys
+
+                            _sys.modules.setdefault(_fixed, mod)
+                            # If an old mapping exists under the incorrect
+                            # name and points to this object, remove it to
+                            # avoid confusion during reload.
+                            if _sys.modules.get(_spec_name) is mod:
+                                try:
+                                    del _sys.modules[_spec_name]
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
                 except Exception:
                     pass
                 return mod
     except Exception:
         pass
 
-    raise ImportError(f"module {__name__}.{name} not available")
+    raise ImportError(f"module researcharr.{name} not available")

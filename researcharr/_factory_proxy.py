@@ -389,22 +389,68 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                             try:
                                 # Ensure the canonical module actually exposes
                                 # the delegate.
-                                canonical.__dict__.setdefault("create_app", delegate)
-                            except Exception:
                                 try:
-                                    setattr(canonical, "create_app", delegate)
+                                    canonical.__dict__.setdefault("create_app", delegate)
+                                except Exception:
+                                    try:
+                                        setattr(canonical, "create_app", delegate)
+                                    except Exception:
+                                        pass
+                            except Exception:
+                                pass
+
+                        # Create a deterministic module-like object that will be
+                        # exposed as `researcharr.factory` on the package. We
+                        # copy public attributes from the canonical module (if
+                        # available) into a fresh ModuleType so its identity and
+                        # attributes do not change later due to import-order
+                        # races. Always ensure `create_app` on this object is
+                        # the stable delegate.
+                        try:
+                            from types import ModuleType as _MT
+
+                            _wrapper = _MT("researcharr.factory")
+                            # Copy public attributes from canonical if present
+                            if canonical is not None:
+                                try:
+                                    for _a in dir(canonical):
+                                        if _a.startswith("__"):
+                                            continue
+                                        if _a == "create_app":
+                                            continue
+                                        try:
+                                            _wrapper.__dict__[_a] = getattr(canonical, _a)
+                                        except Exception:
+                                            pass
                                 except Exception:
                                     pass
+                            # Ensure delegate is the create_app exposed here
                             try:
-                                # Overwrite the package attribute so that
-                                # `researcharr.factory` references the canonical
-                                # module object (deterministic for tests).
-                                pkg_mod.__dict__["factory"] = canonical
+                                _wrapper.__dict__.setdefault("create_app", delegate)
                             except Exception:
                                 try:
-                                    setattr(pkg_mod, "factory", canonical)
+                                    setattr(_wrapper, "create_app", delegate)
                                 except Exception:
                                     pass
+
+                            # Register wrapper in sys.modules and on the package
+                            try:
+                                sys.modules.setdefault("researcharr.factory", _wrapper)
+                            except Exception:
+                                pass
+                            try:
+                                sys.modules.setdefault("factory", _wrapper)
+                            except Exception:
+                                pass
+                            try:
+                                pkg_mod.__dict__["factory"] = _wrapper
+                            except Exception:
+                                try:
+                                    setattr(pkg_mod, "factory", _wrapper)
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
                 except Exception:
                     pass
         except Exception:

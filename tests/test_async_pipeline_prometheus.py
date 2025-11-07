@@ -2,13 +2,16 @@ import asyncio
 
 import pytest
 
-prom = pytest.importorskip("prometheus_client")
-from prometheus_client import CollectorRegistry, generate_latest
-
 from researcharr.async_pipeline import Pipeline, get_prometheus_exporter
+
+prom = pytest.importorskip("prometheus_client")
 
 
 def test_prometheus_exporter_records_metrics():
+    # Import at runtime to satisfy E402 (imports at top) while still allowing
+    # importorskip to gate the test based on environment.
+    from prometheus_client import CollectorRegistry, generate_latest
+
     registry = CollectorRegistry()
     exporter = get_prometheus_exporter(pipeline_name="p1", registry=registry)
 

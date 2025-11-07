@@ -37,8 +37,8 @@ def test_api_backups_import_success_and_prune(monkeypatch, client, login, app):
     # there), not the package shim `researcharr.factory`.
     import importlib
 
-    top = importlib.import_module("factory")
-    pkg = importlib.import_module("researcharr.factory")
+    importlib.import_module("factory")
+    importlib.import_module("researcharr.factory")
     # Patch any loaded module that exposes _prune_backups so the route
     # handler (whichever module object it references) will call our stub.
     import sys
@@ -57,7 +57,8 @@ def test_api_backups_import_success_and_prune(monkeypatch, client, login, app):
     assert js.get("result") == "ok"
     name = js.get("name")
     # file should be present in CONFIG_DIR/backups
-    backups_dir = os.path.join(os.getenv("CONFIG_DIR"), "backups")
+    cfg_dir = os.environ["CONFIG_DIR"]
+    backups_dir = os.path.join(cfg_dir, "backups")
     assert os.path.exists(os.path.join(backups_dir, name))
 
 
@@ -68,17 +69,16 @@ def test_api_backups_restore_invalid_name(client, login):
     assert rv.get_json().get("error") == "invalid_name"
 
 
-def test_api_backups_restore_not_found(client, login):
+def test_api_backups_restore_not_found(client, login, app):
     login()
     rv = client.post("/api/backups/restore/nonexistent.zip")
     assert rv.status_code == 404
     assert rv.get_json().get("error") == "not_found"
 
-
-def test_api_backups_restore_success_with_pre_restore(monkeypatch, client, login, app):
     login()
-    cfg_dir = os.getenv("CONFIG_DIR")
+    cfg_dir = os.environ["CONFIG_DIR"]
     backups_dir = os.path.join(cfg_dir, "backups")
+    os.makedirs(backups_dir, exist_ok=True)
     os.makedirs(backups_dir, exist_ok=True)
 
     # create a backup zip that contains config/config.yml

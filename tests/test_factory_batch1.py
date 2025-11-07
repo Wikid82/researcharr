@@ -3,7 +3,7 @@ from researcharr import factory
 
 def make_client():
     app = factory.create_app()
-    app.testing = True
+    app.config["TESTING"] = True
     return app.test_client(), app
 
 
@@ -39,7 +39,7 @@ def test_api_tasks_post_json_created():
     login(client)
     rv = client.post("/api/tasks", json={"name": "t1"})
     assert rv.status_code == 201
-    data = rv.get_json()
+    rv.get_json()
 
     def test_index_redirects_to_setup(client):
         rv = client.get("/")

@@ -112,7 +112,20 @@ def create_proxies(repo_root: str | None = None) -> None:
         for _short, _fp in _shorts.items():
             _pkg_name = f"researcharr.{_short}"
             existing = sys.modules.get(_pkg_name) or sys.modules.get(_short)
-            if isinstance(existing, _ModuleProxy):
+            # Never override an existing real module mapping. Proxies are only
+            # created when neither the package-qualified nor short name is
+            # present, or when the existing mapping is already a proxy. This
+            # avoids replacing a loaded module object and prevents
+            # importlib.reload identity mismatches in tests.
+            if existing is not None and not isinstance(existing, _ModuleProxy):
+                try:
+                    # Also ensure the package attribute points to the real
+                    # module so attribute access is consistent.
+                    pkg_mod = sys.modules.get("researcharr")
+                    if pkg_mod is not None:
+                        pkg_mod.__dict__.setdefault(_short, existing)
+                except Exception:
+                    pass
                 continue
             _proxy = _ModuleProxy(_pkg_name, _short, _fp if os.path.isfile(_fp) else None)
             # Provide a safe, callable placeholder for `create_app` so that
@@ -125,6 +138,13 @@ def create_proxies(repo_root: str | None = None) -> None:
                     raise ImportError("create_app implementation not available yet")
 
                 _proxy.__dict__.setdefault("create_app", _create_app_placeholder)
+                # Provide safe stubs for backups helpers expected by imports
+                # in tests when the real target isn't loaded yet.
+                if _short == "backups":
+                    _proxy.__dict__.setdefault("prune_backups", lambda *a, **kw: None)
+                    _proxy.__dict__.setdefault(
+                        "create_backup_file", lambda *a, **kw: ""
+                    )
             except Exception:
                 pass
             try:
@@ -156,8 +176,12 @@ def create_proxies(repo_root: str | None = None) -> None:
             elif _real_short is not None and _real_short is not _proxy:
                 object.__setattr__(_proxy, "_target", _real_short)
 
-            sys.modules[_pkg_name] = _proxy
-            sys.modules.setdefault(_short, _proxy)
+            # Only register proxies when names are still free or point to a
+            # proxy; guard against races with other initialization code.
+            if sys.modules.get(_pkg_name) is None or isinstance(sys.modules.get(_pkg_name), _ModuleProxy):
+                sys.modules[_pkg_name] = _proxy
+            if sys.modules.get(_short) is None or isinstance(sys.modules.get(_short), _ModuleProxy):
+                sys.modules.setdefault(_short, _proxy)
             try:
                 pkg_mod = sys.modules.get("researcharr")
                 if pkg_mod is not None:

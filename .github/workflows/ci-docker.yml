@@ -1,20 +1,10 @@
-name: CI — Docker
+name: CI — Docker (disabled; consolidated)
 
 on:
-  push: {}
+  workflow_dispatch: {}
 
 jobs:
-  docker:
-    # NOTE: corrected invalid runner label (typo) -> using 'ubuntu-latest'.
-    # If you need a Debian-specific runner, set up a self-hosted runner and
-    # update the workflow to use its label (e.g., 'self-hosted, debian-slim').
+  disabled:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' }}
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-      - name: Build placeholder
-        run: echo "Docker build/push steps go here"
+      - run: echo "Disabled; use release workflow when needed."

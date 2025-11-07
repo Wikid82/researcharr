@@ -440,7 +440,20 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                         if _a == "create_app":
                                             continue
                                         try:
-                                            _wrapper.__dict__[_a] = getattr(canonical, _a)
+                                            val = getattr(canonical, _a)
+                                            # If the attribute is None, prefer resolving
+                                            # a corresponding module from sys.modules
+                                            # (e.g. 'webui' -> 'researcharr.webui' or 'webui').
+                                            if val is None:
+                                                val = (
+                                                    sys.modules.get(f"researcharr.{_a}")
+                                                    or sys.modules.get(_a)
+                                                )
+                                            # Skip copying if still None - avoid exposing
+                                            # None-valued placeholders that break mock.patch
+                                            if val is None:
+                                                continue
+                                            _wrapper.__dict__[_a] = val
                                         except Exception:
                                             pass
                                 except Exception:

@@ -1,3 +1,4 @@
+#
 services:
   researcharr:
     image: ghcr.io/wikid82/researcharr:latest

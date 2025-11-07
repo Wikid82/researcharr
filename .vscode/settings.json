@@ -49,5 +49,9 @@
   "coverage-gutters.showRulerCoverage": true,
   "coverage-gutters.highlightdark": "rgba(20, 200, 20, 0.3)",
   "coverage-gutters.noHighlightDark": "rgba(200, 20, 20, 0.3)",
-  "coverage-gutters.partialHighlightDark": "rgba(200, 200, 20, 0.3)"
+  "coverage-gutters.partialHighlightDark": "rgba(200, 200, 20, 0.3)",
+
+  // .vscode/settings.json
+  "coverage-gutters.coverageFile": "coverage.xml",
+  "coverage-gutters.showGutterCoverage": true
 }

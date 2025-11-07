@@ -5,6 +5,7 @@ and ensure reliability of the backup system.
 """
 
 import os
+import sqlite3
 import shutil
 import tempfile
 import time
@@ -13,6 +14,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import researcharr.backups_impl as backups
 
 
 @pytest.fixture
@@ -711,12 +713,7 @@ def test_list_backups_stat_exception(temp_dirs):
         assert isinstance(result, list)
 
 
-import os
-import sqlite3
-import time
-import zipfile
-
-import pytest
+ 
 
 
 def test_create_backup_nonexistent_no_prefix_raises(tmp_path):
@@ -845,9 +842,6 @@ def test_default_and_merge_configs():
 
 
 """Additional tests to push coverage over 65%."""
-
-import tempfile
-from pathlib import Path
 
 
 def test_backups_impl_list_backups_empty():

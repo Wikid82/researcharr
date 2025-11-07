@@ -7,8 +7,6 @@ repository-level webui module.
 import sys
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 
 def test_webui_import():
     """Test that webui module can be imported."""
@@ -94,7 +92,7 @@ def test_webui_import_failure_fallback():
                 del sys.modules["researcharr.webui"]
 
             try:
-                webui = importlib.import_module("researcharr.webui")
+                _ = importlib.import_module("researcharr.webui")
                 # Should have attempted fallback
                 assert mock_spec.called or True
             except Exception:

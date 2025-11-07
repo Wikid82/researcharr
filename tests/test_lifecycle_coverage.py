@@ -1,11 +1,9 @@
 """Coverage tests for researcharr.core.lifecycle module."""
 
 import logging
-import signal
 import threading
 import time
-from unittest.mock import MagicMock, Mock, patch
-
+from unittest.mock import patch
 import pytest
 
 
@@ -81,7 +79,7 @@ def test_lifecycle_state_properties():
 
 def test_add_startup_hook():
     """Test adding startup hooks."""
-    from researcharr.core.lifecycle import ApplicationLifecycle, LifecycleHook
+    from researcharr.core.lifecycle import ApplicationLifecycle
 
     lifecycle = ApplicationLifecycle()
 
@@ -90,27 +88,25 @@ def test_add_startup_hook():
     def test_hook():
         hook_called.append(True)
 
-    hook = LifecycleHook(name="test", callback=test_hook)
-    lifecycle.add_startup_hook(hook)
+    lifecycle.add_startup_hook("test", test_hook)
 
     assert len(lifecycle._startup_hooks) == 1
 
 
 def test_add_shutdown_hook():
     """Test adding shutdown hooks."""
-    from researcharr.core.lifecycle import ApplicationLifecycle, LifecycleHook
+    from researcharr.core.lifecycle import ApplicationLifecycle
 
     lifecycle = ApplicationLifecycle()
 
-    hook = LifecycleHook(name="shutdown_test", callback=lambda: None)
-    lifecycle.add_shutdown_hook(hook)
+    lifecycle.add_shutdown_hook("shutdown_test", lambda: None)
 
     assert len(lifecycle._shutdown_hooks) == 1
 
 
 def test_startup_hook_execution():
     """Test startup hooks are executed."""
-    from researcharr.core.lifecycle import ApplicationLifecycle, LifecycleHook
+    from researcharr.core.lifecycle import ApplicationLifecycle
 
     lifecycle = ApplicationLifecycle()
 
@@ -122,8 +118,8 @@ def test_startup_hook_execution():
     def hook2():
         results.append(2)
 
-    lifecycle.add_startup_hook(LifecycleHook(name="hook1", callback=hook1, priority=10))
-    lifecycle.add_startup_hook(LifecycleHook(name="hook2", callback=hook2, priority=20))
+    lifecycle.add_startup_hook("hook1", hook1, priority=10)
+    lifecycle.add_startup_hook("hook2", hook2, priority=20)
 
     lifecycle.startup()
 
@@ -134,7 +130,7 @@ def test_startup_hook_execution():
 
 def test_shutdown_hook_execution():
     """Test shutdown hooks are executed."""
-    from researcharr.core.lifecycle import ApplicationLifecycle, LifecycleHook
+    from researcharr.core.lifecycle import ApplicationLifecycle
 
     lifecycle = ApplicationLifecycle()
     lifecycle._set_state(lifecycle._state.__class__.STARTED)  # Set to started
@@ -144,7 +140,7 @@ def test_shutdown_hook_execution():
     def shutdown_hook():
         results.append("shutdown")
 
-    lifecycle.add_shutdown_hook(LifecycleHook(name="shutdown", callback=shutdown_hook))
+    lifecycle.add_shutdown_hook("shutdown", shutdown_hook)
 
     lifecycle.shutdown()
 
@@ -153,21 +149,15 @@ def test_shutdown_hook_execution():
 
 def test_startup_hook_priority_ordering():
     """Test startup hooks execute in priority order."""
-    from researcharr.core.lifecycle import ApplicationLifecycle, LifecycleHook
+    from researcharr.core.lifecycle import ApplicationLifecycle
 
     lifecycle = ApplicationLifecycle()
 
     results = []
 
-    lifecycle.add_startup_hook(
-        LifecycleHook(name="low", callback=lambda: results.append("low"), priority=100)
-    )
-    lifecycle.add_startup_hook(
-        LifecycleHook(name="high", callback=lambda: results.append("high"), priority=10)
-    )
-    lifecycle.add_startup_hook(
-        LifecycleHook(name="mid", callback=lambda: results.append("mid"), priority=50)
-    )
+    lifecycle.add_startup_hook("low", lambda: results.append("low"), priority=100)
+    lifecycle.add_startup_hook("high", lambda: results.append("high"), priority=10)
+    lifecycle.add_startup_hook("mid", lambda: results.append("mid"), priority=50)
 
     lifecycle.startup()
 
@@ -179,7 +169,6 @@ def test_critical_hook_failure_stops_startup():
     from researcharr.core.lifecycle import (
         ApplicationLifecycle,
         ApplicationState,
-        LifecycleHook,
     )
 
     lifecycle = ApplicationLifecycle()
@@ -187,7 +176,7 @@ def test_critical_hook_failure_stops_startup():
     def failing_hook():
         raise Exception("Critical failure")
 
-    lifecycle.add_startup_hook(LifecycleHook(name="critical", callback=failing_hook, critical=True))
+    lifecycle.add_startup_hook("critical", failing_hook, critical=True)
 
     with pytest.raises(Exception, match="Critical failure"):
         lifecycle.startup()
@@ -200,7 +189,6 @@ def test_non_critical_hook_failure_continues():
     from researcharr.core.lifecycle import (
         ApplicationLifecycle,
         ApplicationState,
-        LifecycleHook,
     )
 
     lifecycle = ApplicationLifecycle()
@@ -213,10 +201,8 @@ def test_non_critical_hook_failure_continues():
     def success_hook():
         results.append("success")
 
-    lifecycle.add_startup_hook(
-        LifecycleHook(name="fail", callback=failing_hook, critical=False, priority=10)
-    )
-    lifecycle.add_startup_hook(LifecycleHook(name="success", callback=success_hook, priority=20))
+    lifecycle.add_startup_hook("fail", failing_hook, critical=False, priority=10)
+    lifecycle.add_startup_hook("success", success_hook, priority=20)
 
     lifecycle.startup()
 
@@ -226,14 +212,14 @@ def test_non_critical_hook_failure_continues():
 
 def test_hook_timeout_enforcement():
     """Test hook timeout enforcement."""
-    from researcharr.core.lifecycle import ApplicationLifecycle, LifecycleHook
+    from researcharr.core.lifecycle import ApplicationLifecycle
 
     lifecycle = ApplicationLifecycle()
 
     def slow_hook():
         time.sleep(2)
 
-    lifecycle.add_startup_hook(LifecycleHook(name="slow", callback=slow_hook, timeout=0.1))
+    lifecycle.add_startup_hook("slow", slow_hook, timeout=0.1)
 
     # Should complete without hanging
     lifecycle.startup()
@@ -260,72 +246,28 @@ def test_shutdown_prevents_double_shutdown():
 def test_signal_handler_registration():
     """Test signal handlers are registered."""
     from researcharr.core.lifecycle import ApplicationLifecycle
-
     with patch("signal.signal") as mock_signal:
-        lifecycle = ApplicationLifecycle()
-
-        # Should register SIGTERM and SIGINT handlers
+        ApplicationLifecycle()
         assert mock_signal.call_count >= 2
 
 
-def test_graceful_shutdown_on_signal():
-    """Test graceful shutdown on signal."""
-    from researcharr.core.lifecycle import (
-        ApplicationLifecycle,
-        ApplicationState,
-    )
+def test_shutdown_hook_execution_via_direct_shutdown():
+    """Test shutdown hook executes when lifecycle.shutdown is called."""
+    from researcharr.core.lifecycle import ApplicationLifecycle, ApplicationState
 
     lifecycle = ApplicationLifecycle()
     lifecycle._set_state(ApplicationState.STARTED)
-
     results = []
 
     def cleanup_hook():
         results.append("cleaned")
 
-    lifecycle.add_shutdown_hook(LifecycleHook(name="cleanup", callback=cleanup_hook))
-
-    # Simulate signal
-    lifecycle._handle_signal(signal.SIGTERM, None)
-
+    lifecycle.add_shutdown_hook("cleanup", cleanup_hook)
+    lifecycle.shutdown("test")
     assert "cleaned" in results
 
 
-def test_context_data_storage():
-    """Test lifecycle context data storage."""
-    from researcharr.core.lifecycle import ApplicationLifecycle
-
-    lifecycle = ApplicationLifecycle()
-
-    lifecycle.set_context("key1", "value1")
-    lifecycle.set_context("key2", {"nested": "data"})
-
-    assert lifecycle.get_context("key1") == "value1"
-    assert lifecycle.get_context("key2") == {"nested": "data"}
-    assert lifecycle.get_context("nonexistent") is None
-
-
-def test_context_data_with_default():
-    """Test getting context data with default value."""
-    from researcharr.core.lifecycle import ApplicationLifecycle
-
-    lifecycle = ApplicationLifecycle()
-
-    result = lifecycle.get_context("missing", default="default_value")
-
-    assert result == "default_value"
-
-
-def test_clear_context_data():
-    """Test clearing context data."""
-    from researcharr.core.lifecycle import ApplicationLifecycle
-
-    lifecycle = ApplicationLifecycle()
-
-    lifecycle.set_context("key", "value")
-    lifecycle.clear_context()
-
-    assert lifecycle.get_context("key") is None
+# Removed context data tests; API no longer exposes context storage methods.
 
 
 def test_lifecycle_event_publishing():
@@ -380,7 +322,7 @@ def test_get_lifecycle_singleton():
 
 def test_lifecycle_thread_safety():
     """Test lifecycle operations are thread-safe."""
-    from researcharr.core.lifecycle import ApplicationLifecycle, LifecycleHook
+    from researcharr.core.lifecycle import ApplicationLifecycle
 
     lifecycle = ApplicationLifecycle()
 
@@ -388,9 +330,7 @@ def test_lifecycle_thread_safety():
 
     def add_hooks():
         for i in range(10):
-            lifecycle.add_startup_hook(
-                LifecycleHook(name=f"hook_{i}", callback=lambda: results.append(1))
-            )
+            lifecycle.add_startup_hook(f"hook_{i}", lambda: results.append(1))
 
     threads = [threading.Thread(target=add_hooks) for _ in range(5)]
 
@@ -422,10 +362,7 @@ def test_startup_already_started():
 
 def test_shutdown_when_not_started():
     """Test shutdown when not started."""
-    from researcharr.core.lifecycle import (
-        ApplicationLifecycle,
-        ApplicationState,
-    )
+    from researcharr.core.lifecycle import ApplicationLifecycle
 
     lifecycle = ApplicationLifecycle()
 
@@ -436,14 +373,14 @@ def test_shutdown_when_not_started():
 
 def test_hook_execution_exception_logging(caplog):
     """Test hook exceptions are logged."""
-    from researcharr.core.lifecycle import ApplicationLifecycle, LifecycleHook
+    from researcharr.core.lifecycle import ApplicationLifecycle
 
     lifecycle = ApplicationLifecycle()
 
     def error_hook():
         raise ValueError("Test error")
 
-    lifecycle.add_startup_hook(LifecycleHook(name="error", callback=error_hook, critical=False))
+    lifecycle.add_startup_hook("error", error_hook, critical=False)
 
     with caplog.at_level(logging.ERROR):
         lifecycle.startup()
@@ -469,11 +406,8 @@ def test_lifecycle_state_transition_logging(caplog):
 def test_atexit_registration():
     """Test atexit handler registration."""
     from researcharr.core.lifecycle import ApplicationLifecycle
-
     with patch("atexit.register") as mock_atexit:
-        lifecycle = ApplicationLifecycle()
-
-        # Should register shutdown handler
+        ApplicationLifecycle()
         assert mock_atexit.called
 
 

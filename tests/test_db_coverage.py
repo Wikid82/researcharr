@@ -5,8 +5,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 
 def test_get_db_path_from_database_url():
     """Test _get_db_path uses DATABASE_URL."""

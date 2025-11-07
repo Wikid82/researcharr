@@ -4,14 +4,10 @@ This module targets researcharr/_backups_impl.py (10% coverage) and
 researcharr/__init__.py (8% coverage) to maximize coverage gains.
 """
 
-import os
 import sys
-import tempfile
 import zipfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
+ 
 
 
 class TestBackupsImplModule:
@@ -321,7 +317,7 @@ class TestBackupsImplModule:
 
         # Should not crash, might return empty list
         backups = list_backups(backups_dir)
-        # Result depends on timing, just verify no exception
+        assert isinstance(backups, list)
 
     def test_restore_backup_success(self, tmp_path):
         """Test restore_backup returns True for existing file."""
@@ -578,7 +574,8 @@ class TestTopLevelInitPy:
         # The top-level __init__.py might be minimal or empty
         # Just verify it doesn't crash on import
         try:
-            import __init__
+            import importlib
+            importlib.util.find_spec("__init__")
         except ImportError:
             # May not be on path, that's ok
             pass

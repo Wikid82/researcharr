@@ -3,9 +3,9 @@
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
-import pytest
+
 
 
 def test_core_application_factory_initialization():
@@ -70,7 +70,7 @@ def test_setup_configuration_with_yaml_file():
         config_file.write_text("app:\n  name: test_app\n  version: 2.0.0\n")
 
         with patch.object(factory.config_manager, "add_source") as mock_add:
-            config = factory.setup_configuration(config_dir=tmpdir)
+            factory.setup_configuration(config_dir=tmpdir)
 
             # Should add config source
             assert mock_add.called

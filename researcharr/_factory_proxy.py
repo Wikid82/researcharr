@@ -291,19 +291,33 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
         except Exception:
             pass
 
-        # Install into package module namespace when available
+        # Install into package module namespace when available. Do a
+        # defensive direct insertion into module __dict__ objects so that
+        # ModuleProxy wrappers or other custom module types cannot prevent
+        # the attribute from being visible to callers using hasattr()/getattr().
         try:
             if pkg_mod is not None:
                 pkg_mod.__dict__.setdefault("_runtime_create_app", _runtime_create_app)
                 pkg_mod.__dict__.setdefault("_create_app_delegate", delegate)
-                # Ensure researcharr.factory also gets the delegate when present
+                # Ensure researcharr.factory and top-level factory also get the
+                # delegate when present. Write directly into __dict__ to avoid
+                # proxy __setattr__ semantics causing attributes to be hidden.
                 try:
-                    pf = sys.modules.get("researcharr.factory")
-                    if pf is not None and getattr(pf, "create_app", None) is None:
+                    for _key in ("researcharr.factory", "factory"):
+                        pf = sys.modules.get(_key)
+                        if pf is None:
+                            continue
                         try:
-                            setattr(pf, "create_app", _runtime_create_app)
+                            # Prefer the stable delegate instance as the
+                            # callable exposed on the module so reprs/logging
+                            # are consistent across environments.
+                            pf.__dict__.setdefault("create_app", delegate)
                         except Exception:
-                            pass
+                            try:
+                                # Fallback to setattr if direct dict access fails.
+                                setattr(pf, "create_app", delegate)
+                            except Exception:
+                                pass
                 except Exception:
                     pass
         except Exception:

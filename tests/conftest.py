@@ -7,11 +7,11 @@ of shared fixtures used across the factory tests (app, client, login) and
 an autouse patch that configures temporary paths and loggers.
 """
 
-import importlib
 import os
 import sys
-from typing import Generator
+import importlib
 from unittest import mock
+from flask import Flask
 
 import pytest
 
@@ -120,16 +120,17 @@ def pytest_runtest_setup(item):
     # Debug hook removed; no-op to keep pytest hook signature available.
     return
 
-
 @pytest.fixture
-def app(monkeypatch, tmp_path) -> Generator:
+def app(monkeypatch, tmp_path) -> Flask:
     # Ensure CONFIG_DIR is isolated for tests
     cfg = tmp_path / "config"
     cfg.mkdir()
     monkeypatch.setenv("CONFIG_DIR", str(cfg))
     # Create the app under test
     app = factory.create_app()
-    app.testing = True
+    # Use the Flask config key to avoid assigning an unknown attribute on the Flask class
+    app.config["TESTING"] = True
+    return app
     return app
 
 

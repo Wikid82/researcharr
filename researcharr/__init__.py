@@ -378,6 +378,39 @@ except Exception:
                     pass
     except Exception:
         pass
+# Deterministic final reconciliation: prefer an existing top-level module
+# object when present and ensure it is also registered under the
+# package-qualified name with a minimal __spec__. This guarantees that
+# importlib.reload() will find the same object under
+# 'researcharr.<name>' and avoids races when tests insert a short-name
+# module into sys.modules before importing the package submodule.
+try:
+    for _mname in ("factory", "run", "webui", "backups", "api", "entrypoint"):
+        _top = sys.modules.get(_mname)
+        _pkg_name = f"{__name__}.{_mname}"
+        _pkg = sys.modules.get(_pkg_name)
+
+        # If a top-level module exists and is not already the package
+        # module, prefer the top-level module as the canonical object by
+        # registering it under the package-qualified name and giving it
+        # a minimal __spec__ with that name so importlib.reload() will
+        # succeed.
+        if _top is not None and _pkg is not _top:
+            try:
+                if getattr(_top, "__spec__", None) is None or getattr(_top, "__spec__").name != _pkg_name:
+                    _top.__spec__ = importlib.util.spec_from_loader(_pkg_name, loader=None)
+            except Exception:
+                pass
+            try:
+                sys.modules[_pkg_name] = _top
+            except Exception:
+                pass
+            try:
+                globals()[_mname] = _top
+            except Exception:
+                pass
+except Exception:
+    pass
 
 # Defensive: some tests patch attributes on the top-level `run.schedule`
 # object (e.g. patch("run.schedule.every")). In environments where the

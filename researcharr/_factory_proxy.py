@@ -115,6 +115,18 @@ def create_proxies(repo_root: str | None = None) -> None:
             if isinstance(existing, _ModuleProxy):
                 continue
             _proxy = _ModuleProxy(_pkg_name, _short, _fp if os.path.isfile(_fp) else None)
+            # Provide a safe, callable placeholder for `create_app` so that
+            # consumers that import the proxy module and assert the symbol
+            # exists see a callable immediately. The real delegate will be
+            # installed later by install_create_app_helpers; this placeholder
+            # simply raises if invoked before the delegate is available.
+            try:
+                def _create_app_placeholder(*a, **kw):
+                    raise ImportError("create_app implementation not available yet")
+
+                _proxy.__dict__.setdefault("create_app", _create_app_placeholder)
+            except Exception:
+                pass
             try:
                 _spec = None
                 if os.path.isfile(_fp):

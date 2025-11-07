@@ -847,6 +847,48 @@ try:
 except Exception:
     pass
 
+# Final pass: rewrite any module whose spec.name contains the doubled
+# prefix 'researcharr.researcharr.' to the canonical 'researcharr.' form
+# and register the corrected mapping. Run as a last-resort normalization
+# to catch modules created after earlier passes.
+try:
+    for _k, _m in list(sys.modules.items()):
+        try:
+            if not _m:
+                continue
+            _spec = getattr(_m, "__spec__", None)
+            if _spec is None:
+                continue
+            _name = getattr(_spec, "name", None) or getattr(_m, "__name__", None)
+            if not _name:
+                continue
+            if _name.startswith("researcharr.researcharr."):
+                _correct = _name.replace("researcharr.researcharr.", "researcharr.", 1)
+                try:
+                    _m.__name__ = _correct
+                except Exception:
+                    pass
+                try:
+                    _m.__spec__.name = _correct
+                except Exception:
+                    pass
+                try:
+                    sys.modules[_correct] = _m
+                except Exception:
+                    pass
+                try:
+                    if sys.modules.get(_name) is _m and _name != _correct:
+                        try:
+                            del sys.modules[_name]
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+        except Exception:
+            pass
+except Exception:
+    pass
+
 def __getattr__(name: str):
     """Lazily resolve a small set of common repo-root top-level modules
     as package submodules.

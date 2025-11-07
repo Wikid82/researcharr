@@ -126,7 +126,6 @@ def list_backups(backups_dir: str | Path) -> list[dict]:
             except Exception:
                 continue
     return out
-    
 
 
 def restore_backup(backup_path: str | Path, restore_dir: str | Path) -> bool:

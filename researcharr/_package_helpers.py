@@ -2,11 +2,10 @@
 from `researcharr.__init__` to reduce its complexity for static
 analysis.
 """
+
 from __future__ import annotations
 
-import gc
 import importlib
-import inspect
 import os
 import sys
 from unittest import mock as _mock

@@ -94,9 +94,15 @@ def prune_backups(backups_dir: str | Path, cfg: Optional[dict] = None) -> None:
             return None
         # Accept both 'retain_count' and legacy 'retention_count' keys used in
         # some tests.
-        retain_count = int(cfg.get("retain_count", cfg.get("retention_count", 0))) if isinstance(cfg, dict) else 0
+        retain_count = (
+            int(cfg.get("retain_count", cfg.get("retention_count", 0)))
+            if isinstance(cfg, dict)
+            else 0
+        )
         retain_days = int(cfg.get("retain_days", 0)) if isinstance(cfg, dict) else 0
-        pre_restore_keep_days = int(cfg.get("pre_restore_keep_days", 0)) if isinstance(cfg, dict) else 0
+        pre_restore_keep_days = (
+            int(cfg.get("pre_restore_keep_days", 0)) if isinstance(cfg, dict) else 0
+        )
     except Exception:
         return None
 
@@ -105,7 +111,11 @@ def prune_backups(backups_dir: str | Path, cfg: Optional[dict] = None) -> None:
         return None
 
     # Sort files newest first
-    files = sorted([p for p in d.iterdir() if p.is_file() and p.suffix == ".zip"], key=lambda p: p.stat().st_mtime, reverse=True)
+    files = sorted(
+        [p for p in d.iterdir() if p.is_file() and p.suffix == ".zip"],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
 
     # Enforce retain_count
     if retain_count > 0 and len(files) > retain_count:
@@ -125,7 +135,11 @@ def prune_backups(backups_dir: str | Path, cfg: Optional[dict] = None) -> None:
                 age_days = (now - p.stat().st_mtime) / 86400.0
                 if age_days > retain_days:
                     # Keep pre- prefixed files for pre_restore_keep_days
-                    if p.name.startswith("pre-") and pre_restore_keep_days > 0 and age_days <= pre_restore_keep_days:
+                    if (
+                        p.name.startswith("pre-")
+                        and pre_restore_keep_days > 0
+                        and age_days <= pre_restore_keep_days
+                    ):
                         continue
                     try:
                         p.unlink()
@@ -140,10 +154,19 @@ def list_backups(backups_dir: str | Path, *, pattern: str | None = None) -> list
     if not d.exists() or not d.is_dir():
         return []
     res: list[Dict[str, object]] = []
-    for p in sorted([p for p in d.iterdir() if p.is_file() and p.suffix == ".zip"], key=lambda p: p.name, reverse=True):
+    for p in sorted(
+        [p for p in d.iterdir() if p.is_file() and p.suffix == ".zip"],
+        key=lambda p: p.name,
+        reverse=True,
+    ):
         try:
             st = p.stat()
-            info = {"name": p.name, "path": str(p), "size": int(st.st_size), "mtime": float(st.st_mtime)}
+            info = {
+                "name": p.name,
+                "path": str(p),
+                "size": int(st.st_size),
+                "mtime": float(st.st_mtime),
+            }
             try:
                 if zipfile.is_zipfile(str(p)):
                     with zipfile.ZipFile(str(p), "r") as zf:
@@ -234,7 +257,12 @@ def get_backup_info(backup_path: str | Path) -> Optional[Dict[str, object]]:
         p = Path(backup_path)
         if not p.exists():
             return None
-        info = {"name": p.name, "path": str(p), "size": p.stat().st_size, "mtime": p.stat().st_mtime}
+        info = {
+            "name": p.name,
+            "path": str(p),
+            "size": p.stat().st_size,
+            "mtime": p.stat().st_mtime,
+        }
         try:
             if zipfile.is_zipfile(str(p)):
                 with zipfile.ZipFile(str(p), "r") as zf:

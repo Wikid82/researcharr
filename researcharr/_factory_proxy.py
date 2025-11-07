@@ -5,6 +5,7 @@ lives in a small dedicated module so the package init stays easy to
 analyze by static tools. It is defensive and best-effort: failures
 during proxy creation are swallowed to preserve import-time stability.
 """
+
 from __future__ import annotations
 
 import importlib.util as importlib_util
@@ -58,7 +59,9 @@ class _ModuleProxy(ModuleType):
         tgt = self._ensure_target()
         if tgt is not None:
             return getattr(tgt, name)
-        raise AttributeError(f"module {object.__getattribute__(self, '_pkg_name')} has no attribute {name}")
+        raise AttributeError(
+            f"module {object.__getattribute__(self, '_pkg_name')} has no attribute {name}"
+        )
 
     def __setattr__(self, name: str, value):
         if name in ("_pkg_name", "_short_name", "_repo_fp", "_target"):

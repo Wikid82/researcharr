@@ -623,7 +623,9 @@ def __getattr__(name: str):
         # If a package-qualified module is already registered, prefer and
         # return that object (overlaying any public attributes from the
         # top-level module so test-injected symbols remain accessible).
-        pkg_name = f"researcharr.{name}"
+        # Use __name__ to compute the package-qualified name so it matches
+        # the actual import path (handles nested 'researcharr.researcharr').
+        pkg_name = f"{__name__}.{name}"
         _pkg_mod = sys.modules.get(pkg_name)
 
         if _pkg_mod is not None:
@@ -667,10 +669,14 @@ def __getattr__(name: str):
 
         # No package mapping yet: register the existing top-level module
         # under the package-qualified name so identity is preserved and
-        # importlib.reload() will operate on the same object.
+        # importlib.reload() will operate on the same object. Ensure the
+        # module has a proper __spec__ with the package-qualified name.
         try:
             sys.modules[pkg_name] = _existing
             globals()[name] = _existing
+            # Ensure the module has a __spec__ with the correct name for reload
+            if not getattr(_existing, "__spec__", None) or getattr(_existing.__spec__, "name", None) != pkg_name:
+                _existing.__spec__ = importlib.util.spec_from_loader(pkg_name, loader=None)
         except Exception:
             pass
         return _existing

@@ -436,21 +436,30 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                             # be observing a module that lacks the delegated
                             # attribute at assertion time.
                             class _LoggedModule(_MT):
-                                def __getattr__(self, name: str):
-                                    # Emit a tiny snapshot when callers probe
-                                    # `create_app` so we can correlate the
-                                    # lookup with previously-emitted
-                                    # [factory-helper-snapshot] diagnostics.
+                                def __getattribute__(self, name: str):
+                                    # Log accesses to `create_app` at attribute
+                                    # lookup time. Overriding __getattribute__
+                                    # ensures hasattr()/getattr() trigger our
+                                    # diagnostic so we can correlate access
+                                    # timing with the earlier snapshot.
                                     if name == "create_app":
                                         try:
+                                            # Keep imports local and split to satisfy
+                                            # linters and avoid multi-import lines.
                                             import sys as _sys
                                             import json as _json
+
+                                            try:
+                                                d = object.__getattribute__(self, "__dict__")
+                                                has_create = bool(d.get("create_app") is not None)
+                                            except Exception:
+                                                has_create = False
 
                                             _snap = {
                                                 "event": "access",
                                                 "attr": name,
                                                 "module_id": id(self),
-                                                "has_create_app": bool(self.__dict__.get("create_app") is not None),
+                                                "has_create_app": has_create,
                                                 "type": type(self).__name__,
                                             }
                                             try:
@@ -461,7 +470,7 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                                 pass
                                         except Exception:
                                             pass
-                                    return super().__getattr__(name)
+                                    return object.__getattribute__(self, name)
 
                             _wrapper = _LoggedModule("researcharr.factory")
                             # Copy public attributes from canonical if present

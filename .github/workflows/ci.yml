@@ -141,10 +141,11 @@ jobs:
         echo "Using site-packages: $SITE_PACKAGES"
         export PYTHONPATH="$SITE_PACKAGES:$PYTHONPATH"
 
-        # Run tests and produce an XML coverage report for Codecov
+        # Run tests and produce an XML coverage report for Codecov and JUnit XML for test results
         pytest tests/ \
           --maxfail=3 --disable-warnings -v \
-          --cov=researcharr --cov-report=xml:coverage.xml
+          --cov=researcharr --cov-report=xml:coverage.xml \
+          --junitxml=junit.xml -o junit_family=legacy
     - name: Show coverage file
       if: ${{ env.RENOVATE_BYPASS != '1' }}
       run: |
@@ -174,6 +175,11 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
       continue-on-error: true
+    - name: Upload test results to Codecov
+      if: ${{ !cancelled() && env.RENOVATE_BYPASS != '1' && env.CODECOV_TOKEN != '' }}
+      uses: codecov/test-results-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   docker:
     needs: build

@@ -310,6 +310,19 @@ try:
 except Exception:
     pass
 
+# Ensure the runtime create_app helpers are installed so `researcharr.factory`
+# exposes a stable `create_app` symbol even when proxies or import-order
+# variations occur. This is best-effort and must not raise during import.
+try:
+    from ._factory_proxy import install_create_app_helpers as _install_create_app_helpers
+
+    try:
+        _install_create_app_helpers(_REPO_DIR)
+    except Exception:
+        pass
+except Exception:
+    pass
+
     # Reconcile module objects for common repo-root top-level modules so that
     # `sys.modules['name']` and `sys.modules['researcharr.name']` refer to a
     # single, merged module object. This reduces import-order flakiness when

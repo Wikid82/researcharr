@@ -889,6 +889,40 @@ try:
 except Exception:
     pass
 
+# Defensive: ensure the package submodule `researcharr.backups` resolves to a
+# real module object with the expected public API even in constrained import
+# scenarios (e.g. when importlib.import_module is patched by tests). If the
+# current mapping is missing or looks like a lightweight proxy without the
+# required symbols, load the nested package module directly from its source
+# file and register it under the canonical package-qualified name. This avoids
+# ImportError when modules perform `from researcharr.backups import ...` during
+# spec-executed imports.
+try:
+    _bk = sys.modules.get("researcharr.backups")
+    _needs_load = (
+        _bk is None
+        or not hasattr(_bk, "prune_backups")
+        or type(_bk).__name__ in ("_ModuleProxy", "_LoggedModule")
+    )
+    if _needs_load:
+        _backups_fp = os.path.join(os.path.abspath(os.path.dirname(__file__)), "backups.py")
+        if os.path.isfile(_backups_fp):
+            _spec = importlib.util.spec_from_file_location("researcharr.backups", _backups_fp)
+            if _spec and _spec.loader:
+                _mod = importlib.util.module_from_spec(_spec)
+                try:
+                    sys.modules["researcharr.backups"] = _mod
+                except Exception:
+                    pass
+                _spec.loader.exec_module(_mod)  # type: ignore[arg-type]
+                try:
+                    if getattr(_mod, "__spec__", None) is None or getattr(getattr(_mod, "__spec__", None), "name", None) != "researcharr.backups":
+                        _mod.__spec__ = importlib.util.spec_from_loader("researcharr.backups", loader=None)
+                except Exception:
+                    pass
+except Exception:
+    pass
+
 def __getattr__(name: str):
     """Lazily resolve a small set of common repo-root top-level modules
     as package submodules.

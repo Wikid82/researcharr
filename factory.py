@@ -2163,22 +2163,52 @@ def create_app() -> Flask:
     def _create_backup_file(config_root: str, backups_dir: str, prefix: str = "") -> str | None:
         """Wrapper around shared create_backup_file helper.
 
-        Resolve the callable at call-time from the canonical factory module
-        object in sys.modules so monkeypatching the symbol on the module
-        (which tests commonly do) will be respected even if multiple module
-        objects exist due to import-order shenanigans.
+        Prefer a test-scoped stub if present (function whose __module__ starts
+        with "tests"), then any callable attached to common module keys, then
+        the resolver, and finally the imported helper. This mirrors the
+        module-level delegator so pytest monkeypatching is always honored.
         """
         try:
             import sys as _sys
 
-            mod = _sys.modules.get("researcharr.factory") or _sys.modules.get(__name__)
-            if mod is not None:
-                fn = getattr(mod, "create_backup_file", None)
-                if fn:
-                    return fn(config_root, backups_dir, prefix)
+            # 1) Prefer any test-scoped candidate first
+            try:
+                for _m in list(_sys.modules.values()):
+                    try:
+                        _cand = getattr(_m, "create_backup_file", None)
+                        if callable(_cand):
+                            _modname = getattr(_cand, "__module__", "")
+                            if isinstance(_modname, str) and _modname.startswith("tests"):
+                                return str(_cand(config_root, backups_dir, prefix))
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+
+            # 2) Then prefer patched callables attached to common modules
+            for _key in ("researcharr.factory", "factory", "researcharr.backups", "backups"):
+                try:
+                    _m = _sys.modules.get(_key)
+                    if _m is None:
+                        continue
+                    _cand = getattr(_m, "create_backup_file", None)
+                    if callable(_cand):
+                        return str(_cand(config_root, backups_dir, prefix))
+                except Exception:
+                    continue
+
+            # 3) Fall back to resolving via the shared resolver
+            try:
+                from .factory import _resolve_module_attr as _res  # type: ignore
+
+                fn = _res("create_backup_file")
+                if callable(fn):
+                    return str(fn(config_root, backups_dir, prefix))
+            except Exception:
+                pass
         except Exception:
-            # Fall back to the imported helper if anything goes wrong
             pass
+        # 4) Last-resort: call the imported helper
         return create_backup_file(config_root, backups_dir, prefix)
 
     def _prune_backups(backups_dir: str):

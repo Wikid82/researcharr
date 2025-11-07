@@ -27,7 +27,7 @@ import sys
 _HERE = os.path.abspath(os.path.dirname(__file__))
 _REPO_ROOT = _HERE
 _NESTED = os.path.abspath(os.path.join(_REPO_ROOT, "researcharr"))
-__path__: list[str] = []
+__path__ = []
 # First entry: repository root (directory containing this __init__.py)
 __path__.append(_REPO_ROOT)
 # Second entry: nested package directory if it exists, else repo root

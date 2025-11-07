@@ -370,6 +370,75 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                             pass
                 except Exception:
                     pass
+                # Ensure the package attribute `researcharr.factory` points at
+                # a module-like object that exposes `create_app`. Some import
+                # orders create the package attribute earlier without the
+                # delegate installed; force it to the canonical module (or
+                # our synthesized module) so callers using the attribute see
+                # the expected callable immediately.
+                try:
+                    if pkg_mod is not None:
+                        # Prefer the package-qualified mapping, then the short
+                        # name, then the synthesized module we created above.
+                        canonical = (
+                            sys.modules.get("researcharr.factory")
+                            or sys.modules.get("factory")
+                            or (locals().get("_m") if "_m" in locals() else None)
+                        )
+                        if canonical is not None:
+                            try:
+                                # Ensure the canonical module actually exposes
+                                # the delegate.
+                                canonical.__dict__.setdefault("create_app", delegate)
+                            except Exception:
+                                try:
+                                    setattr(canonical, "create_app", delegate)
+                                except Exception:
+                                    pass
+                            try:
+                                # Overwrite the package attribute so that
+                                # `researcharr.factory` references the canonical
+                                # module object (deterministic for tests).
+                                pkg_mod.__dict__["factory"] = canonical
+                            except Exception:
+                                try:
+                                    setattr(pkg_mod, "factory", canonical)
+                                except Exception:
+                                    pass
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+    # Diagnostic: emit a compact snapshot to stderr to aid debugging of
+    # intermittent import-order failures. This is intentionally terse and
+    # wrapped in try/except so it never raises during import.
+    try:
+        import sys as _sys, json as _json
+
+        _keys = [k for k in _sys.modules.keys() if k in ("factory", "researcharr.factory")]
+        _snap = {
+            "pkg_present": bool(sys.modules.get("researcharr")),
+            "researcharr_id": id(sys.modules.get("researcharr")) if sys.modules.get("researcharr") else None,
+            "modules": {},
+        }
+        for _k in _keys:
+            try:
+                _m = _sys.modules.get(_k)
+                _snap["modules"][_k] = {
+                    "id": id(_m) if _m is not None else None,
+                    "has_create_app": bool(getattr(_m, "create_app", None) is not None),
+                    "type": type(_m).__name__ if _m is not None else None,
+                }
+            except Exception:
+                _snap["modules"][_k] = {"error": True}
+        try:
+            # Print to stderr so test runner captures it with -s or live logs.
+            import sys as _sys2
+
+            _sys2.stderr.write("[factory-helper-snapshot] " + _json.dumps(_snap) + "\n")
         except Exception:
             pass
     except Exception:

@@ -496,60 +496,60 @@ def __getattr__(name: str):
     # exposing any symbols tests injected into the top-level module.
     _existing = sys.modules.get(name)
     if _existing is not None:
-        try:
-            # Try to load a package-qualified module from the repo file so
-            # the resulting module has a proper spec/loader and behaves
-            # like a normal importlib module.
-            _path = os.path.join(_repo_root, f"{name}.py")
-            if os.path.isfile(_path):
-                spec = importlib.util.spec_from_file_location(f"researcharr.{name}", _path)
-                if spec and spec.loader:
-                    mod = importlib.util.module_from_spec(spec)
-                    # Execute the repo-level module into our package-qualified
-                    # module object so it receives a correct __spec__/__loader__.
-                    spec.loader.exec_module(mod)  # type: ignore[arg-type]
-            else:
-                # No repo-level file: synthesize a lightweight module
-                # object named `researcharr.<name>` so importlib.reload can
-                # operate on it. Use module_from_spec with a dummy loader
-                # to create a spec entry that importlib.reload accepts.
-                mod = ModuleType(f"researcharr.{name}")
-                # Attach a minimal spec so reload() won't immediately fail
-                mod.__spec__ = importlib.util.spec_from_loader(f"researcharr.{name}", loader=None)
+        # If a package-qualified module is already registered, prefer and
+        # return that object (overlaying any public attributes from the
+        # top-level module so test-injected symbols remain accessible).
+        pkg_name = f"researcharr.{name}"
+        _pkg_mod = sys.modules.get(pkg_name)
 
-            # Overlay attributes from the top-level module for any public
-            # names that the test injected (prefer existing ones on the
-            # repo-level module when present).
+        if _pkg_mod is not None:
+            # If the package mapping already points at the same object,
+            # just expose and return it.
+            if _pkg_mod is _existing:
+                try:
+                    globals()[name] = _pkg_mod
+                except Exception:
+                    pass
+                return _pkg_mod
+
+            # Different objects: prefer the package-level module (it
+            # typically has a proper spec/loader). Overlay public attrs
+            # from the top-level module so tests that injected symbols
+            # remain accessible, then ensure the short name maps to the
+            # package-level object so importlib.reload() sees a single
+            # canonical module object.
             try:
                 for attr in dir(_existing):
                     if attr.startswith("__"):
                         continue
-                    if not hasattr(mod, attr):
+                    if not hasattr(_pkg_mod, attr):
                         try:
-                            setattr(mod, attr, getattr(_existing, attr))
+                            setattr(_pkg_mod, attr, getattr(_existing, attr))
                         except Exception:
                             pass
             except Exception:
                 pass
 
-            # Register and expose the package-qualified module object
-            sys.modules.setdefault(f"researcharr.{name}", mod)
             try:
-                globals()[name] = mod
+                sys.modules[pkg_name] = _pkg_mod
+                sys.modules[name] = _pkg_mod
             except Exception:
                 pass
-            # Also ensure the short top-level name remains available so
-            # bare imports continue to work (do not overwrite existing)
-            sys.modules.setdefault(name, _existing)
-            return mod
+            try:
+                globals()[name] = _pkg_mod
+            except Exception:
+                pass
+            return _pkg_mod
+
+        # No package mapping yet: register the existing top-level module
+        # under the package-qualified name so identity is preserved and
+        # importlib.reload() will operate on the same object.
+        try:
+            sys.modules[pkg_name] = _existing
+            globals()[name] = _existing
         except Exception:
-            # Fall back to the original existing object in worst case
-            try:
-                sys.modules.setdefault(f"researcharr.{name}", _existing)
-                globals().setdefault(name, _existing)
-            except Exception:
-                pass
-            return _existing
+            pass
+        return _existing
 
     # 2) Otherwise, try to load the repository-level file (repo_root/<name>.py)
     try:

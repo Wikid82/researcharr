@@ -100,16 +100,15 @@ repos:
         files: ''
         stages: [pre-commit]
 
-      - id: mypy-system
-        name: mypy (system)
-        entry: mypy
+      - id: pyright-system
+        name: pyright (system)
+        # Use a small local wrapper that prefers a local based-pyright/pyright
+        # binary when available. Falls back to npx-based invocation.
+        entry: ./scripts/run-pyright-precommit.sh
         args:
-          - "--config-file"
-          - "mypy.ini"
-          - "--package"
-          - "researcharr"
-          - "--ignore-missing-imports"
-        language: system
+          - "--project"
+          - "pyrightconfig.json"
+        language: script
         pass_filenames: false
         stages: [pre-commit]
 

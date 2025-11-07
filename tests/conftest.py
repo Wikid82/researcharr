@@ -2,15 +2,20 @@
 
 Provide compatibility shim modules under the `researcharr.plugins.*` names
 so older-style imports used by the test-suite resolve to the canonical
-`plugins.*` implementations located at the repo root.
+`plugins.*` implementations located at the repo root. Also provide a set
+of shared fixtures used across the factory tests (app, client, login) and
+an autouse patch that configures temporary paths and loggers.
 """
 
 import importlib
 import os
 import sys
+from typing import Generator
 from unittest import mock
 
 import pytest
+
+from researcharr import factory
 
 _mappings = [
     ("plugins.media.example_sonarr", "researcharr.plugins.example_sonarr"),
@@ -31,7 +36,6 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
     temp_dir = tmp_path_factory.mktemp("config")
     # Patch environment and paths before any import of researcharr.researcharr
     monkeypatch.setenv("TZ", "America/New_York")
-    # Patch os.environ for tzset
     os.environ["TZ"] = "America/New_York"
     # Patch /config paths to temp_dir
     db_path = str(temp_dir / "researcharr.db")
@@ -47,6 +51,7 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
             "researcharr:\n  timezone: America/New_York\n  puid: 1000\n  pgid: 1000\n"
             "  cron_schedule: '0 * * * *'\nradarr: []\nsonarr: []\n"
         )
+
     # Patch open for /config/config.yml
     import builtins
 
@@ -117,14 +122,25 @@ def pytest_runtest_setup(item):
 
 
 @pytest.fixture
-def app():
-    """Provide a Flask app instance for tests that request an `app` fixture.
-
-    Use the project's application factory so tests get the same app instance
-    as those that call `create_app()` directly.
-    """
-    from researcharr.factory import create_app
-
-    app = create_app()
-    app.config["TESTING"] = True
+def app(monkeypatch, tmp_path) -> Generator:
+    # Ensure CONFIG_DIR is isolated for tests
+    cfg = tmp_path / "config"
+    cfg.mkdir()
+    monkeypatch.setenv("CONFIG_DIR", str(cfg))
+    # Create the app under test
+    app = factory.create_app()
+    app.testing = True
     return app
+
+
+@pytest.fixture
+def client(app):
+    return app.test_client()
+
+
+@pytest.fixture
+def login(client):
+    def _login(username: str = "admin", password: str = "password"):
+        return client.post("/login", data={"username": username, "password": password})
+
+    return _login

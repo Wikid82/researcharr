@@ -296,7 +296,10 @@ except Exception:
             # ensuring it has a minimal spec so importlib.reload() will accept it.
             if _pkg is None and _top is not None:
                 try:
-                    sys.modules.setdefault(f"researcharr.{_mname}", _top)
+                    # Ensure the package-qualified name points to the top-level
+                    # module object so imports like `import researcharr.webui`
+                    # return the same object that tests may have injected.
+                    sys.modules[f"researcharr.{_mname}"] = _top
                     globals().setdefault(_mname, _top)
                     # Give the top-level module a minimal package-qualified spec
                     try:
@@ -328,8 +331,12 @@ except Exception:
                     pass
 
                 try:
-                    sys.modules.setdefault(f"researcharr.{_mname}", _pkg)
-                    sys.modules.setdefault(_mname, _pkg)
+                    # Canonicalize both the short and package-qualified module
+                    # names to point to the package-level module object. Use
+                    # assignment so we override any prior injected module and
+                    # make reload()/importlib behavior deterministic.
+                    sys.modules[f"researcharr.{_mname}"] = _pkg
+                    sys.modules[_mname] = _pkg
                     try:
                         globals().setdefault(_mname, _pkg)
                     except Exception:

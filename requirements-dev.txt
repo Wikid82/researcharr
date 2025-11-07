@@ -1,7 +1,5 @@
-black==25.9.0
 isort==7.0.0
-flake8
-mypy
+ruff
 bandit
 pre-commit
 pytest==8.4.2
@@ -9,6 +7,11 @@ pytest-cov
 types-requests
 types-PyYAML
 types-Markdown
+
+# Optional packages used by pipeline features (convenience for local dev)
+PyYAML>=6.0
+jsonschema>=4.0
+prometheus-client>=0.16.0
 
 # Optional tooling (development-only)
 setuptools_scm

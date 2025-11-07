@@ -134,6 +134,7 @@ def create_proxies(repo_root: str | None = None) -> None:
             # installed later by install_create_app_helpers; this placeholder
             # simply raises if invoked before the delegate is available.
             try:
+
                 def _create_app_placeholder(*a, **kw):
                     raise ImportError("create_app implementation not available yet")
 
@@ -142,9 +143,7 @@ def create_proxies(repo_root: str | None = None) -> None:
                 # in tests when the real target isn't loaded yet.
                 if _short == "backups":
                     _proxy.__dict__.setdefault("prune_backups", lambda *a, **kw: None)
-                    _proxy.__dict__.setdefault(
-                        "create_backup_file", lambda *a, **kw: ""
-                    )
+                    _proxy.__dict__.setdefault("create_backup_file", lambda *a, **kw: "")
             except Exception:
                 pass
             try:
@@ -178,7 +177,9 @@ def create_proxies(repo_root: str | None = None) -> None:
 
             # Only register proxies when names are still free or point to a
             # proxy; guard against races with other initialization code.
-            if sys.modules.get(_pkg_name) is None or isinstance(sys.modules.get(_pkg_name), _ModuleProxy):
+            if sys.modules.get(_pkg_name) is None or isinstance(
+                sys.modules.get(_pkg_name), _ModuleProxy
+            ):
                 sys.modules[_pkg_name] = _proxy
             if sys.modules.get(_short) is None or isinstance(sys.modules.get(_short), _ModuleProxy):
                 sys.modules.setdefault(_short, _proxy)
@@ -482,8 +483,8 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                         try:
                                             # Keep imports local and split to satisfy
                                             # linters and avoid multi-import lines.
-                                            import sys as _sys
                                             import json as _json
+                                            import sys as _sys
 
                                             try:
                                                 d = object.__getattribute__(self, "__dict__")
@@ -500,7 +501,9 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                             }
                                             try:
                                                 _sys.stderr.write(
-                                                    "[factory-helper-access] " + _json.dumps(_snap) + "\n"
+                                                    "[factory-helper-access] "
+                                                    + _json.dumps(_snap)
+                                                    + "\n"
                                                 )
                                             except Exception:
                                                 pass
@@ -523,10 +526,9 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                             # a corresponding module from sys.modules
                                             # (e.g. 'webui' -> 'researcharr.webui' or 'webui').
                                             if val is None:
-                                                val = (
-                                                    sys.modules.get(f"researcharr.{_a}")
-                                                    or sys.modules.get(_a)
-                                                )
+                                                val = sys.modules.get(
+                                                    f"researcharr.{_a}"
+                                                ) or sys.modules.get(_a)
                                             # Skip copying if still None - avoid exposing
                                             # None-valued placeholders that break mock.patch
                                             if val is None:
@@ -579,13 +581,15 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
     # intermittent import-order failures. This is intentionally terse and
     # wrapped in try/except so it never raises during import.
     try:
-        import sys as _sys
         import json as _json
+        import sys as _sys
 
         _keys = [k for k in _sys.modules.keys() if k in ("factory", "researcharr.factory")]
         _snap = {
             "pkg_present": bool(sys.modules.get("researcharr")),
-            "researcharr_id": id(sys.modules.get("researcharr")) if sys.modules.get("researcharr") else None,
+            "researcharr_id": (
+                id(sys.modules.get("researcharr")) if sys.modules.get("researcharr") else None
+            ),
             "modules": {},
         }
         for _k in _keys:

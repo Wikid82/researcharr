@@ -239,9 +239,12 @@ for _mname in ("factory", "run", "webui", "backups", "api", "entrypoint"):
             spec = importlib.util.spec_from_file_location("researcharr." + _mname, _path)
             if spec and spec.loader:
                 mod = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(mod)  # type: ignore[arg-type]
-                # Canonicalize both short and package-qualified names to the
-                # same module object so imports and reloads are deterministic.
+                # Register the module object in sys.modules *before*
+                # executing its code. This ensures the import system and
+                # importlib.reload() see a single canonical module object
+                # for both the short and package-qualified names and avoids
+                # races where a subsequent loader would replace the
+                # mapping.
                 try:
                     sys.modules[f"researcharr.{_mname}"] = mod
                 except Exception:
@@ -254,6 +257,7 @@ for _mname in ("factory", "run", "webui", "backups", "api", "entrypoint"):
                     globals()[_mname] = mod
                 except Exception:
                     pass
+                spec.loader.exec_module(mod)  # type: ignore[arg-type]
                 # Ensure the loaded module advertises a proper spec name.
                 try:
                     if getattr(mod, "__spec__", None) is None:
@@ -594,7 +598,9 @@ def __getattr__(name: str):
             spec = importlib.util.spec_from_file_location(f"researcharr.{name}", _path)
             if spec and spec.loader:
                 mod = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(mod)  # type: ignore[arg-type]
+                # Register prior to execution to make the module
+                # identity canonical and prevent the loader from
+                # creating/replacing a different object.
                 try:
                     sys.modules[f"researcharr.{name}"] = mod
                 except Exception:
@@ -607,6 +613,7 @@ def __getattr__(name: str):
                     globals()[name] = mod
                 except Exception:
                     pass
+                spec.loader.exec_module(mod)  # type: ignore[arg-type]
                 try:
                     if getattr(mod, "__spec__", None) is None:
                         mod.__spec__ = importlib.util.spec_from_loader(

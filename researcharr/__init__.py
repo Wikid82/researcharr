@@ -17,7 +17,6 @@ import sqlite3 as _sqlite
 import sys
 from types import ModuleType
 
-
 # Defensive: make attribute access on the package reconcile short-name
 # top-level modules with their package-qualified counterparts. Some
 # import orders used by the tests insert a short-name module into
@@ -29,6 +28,7 @@ from types import ModuleType
 # set the package object's class to a small ModuleType subclass that
 # normalizes access for a handful of known names.
 try:
+
     class _ResearcharrModule(ModuleType):
         def __getattribute__(self, name: str):
             # Only handle a small, well-known set of repo-root modules.
@@ -78,8 +78,14 @@ try:
                         except Exception:
                             pass
                         try:
-                            if getattr(_top, "__spec__", None) is None or getattr(getattr(_top, "__spec__", None), "name", None) != _pkg_name:
-                                _top.__spec__ = importlib.util.spec_from_loader(_pkg_name, loader=None)
+                            if (
+                                getattr(_top, "__spec__", None) is None
+                                or getattr(getattr(_top, "__spec__", None), "name", None)
+                                != _pkg_name
+                            ):
+                                _top.__spec__ = importlib.util.spec_from_loader(
+                                    _pkg_name, loader=None
+                                )
                         except Exception:
                             pass
                         return _top
@@ -87,7 +93,7 @@ try:
                     # Fall through to default behavior on any error
                     pass
             return super().__getattribute__(name)
-        
+
         def __setattr__(self, name: str, value):
             # When importlib assigns a submodule onto the package object
             # (e.g. during `import researcharr.webui`), ensure the
@@ -107,8 +113,14 @@ try:
                         except Exception:
                             pass
                         try:
-                            if getattr(value, "__spec__", None) is None or getattr(getattr(value, "__spec__", None), "name", None) != _pkg_name:
-                                value.__spec__ = importlib.util.spec_from_loader(_pkg_name, loader=None)
+                            if (
+                                getattr(value, "__spec__", None) is None
+                                or getattr(getattr(value, "__spec__", None), "name", None)
+                                != _pkg_name
+                            ):
+                                value.__spec__ = importlib.util.spec_from_loader(
+                                    _pkg_name, loader=None
+                                )
                         except Exception:
                             pass
                 except Exception:
@@ -520,20 +532,20 @@ try:
 except Exception:
     pass
 
-# Ensure the runtime create_app helpers are installed so `researcharr.factory`
-# exposes a stable `create_app` symbol even when proxies or import-order
-# variations occur. This is best-effort and must not raise during import.
-# Import the installer now but defer calling it until after the
-# repository-level reconciliation below. Calling it too early can be
-# stomped by later module canonicalization logic, which in some
-# import orders caused the package-level attribute to be replaced
-# with a module missing the delegated `create_app`. We'll invoke the
-# installer at the very end of module initialization so its writes
-# are the last step and become stable for callers.
-# Best-effort import only; we'll attempt to import again later if
-# necessary.
-# Note: the explicit import was removed here to avoid an unused-import
-# warning; the installer will be imported and invoked later when needed.
+    # Ensure the runtime create_app helpers are installed so `researcharr.factory`
+    # exposes a stable `create_app` symbol even when proxies or import-order
+    # variations occur. This is best-effort and must not raise during import.
+    # Import the installer now but defer calling it until after the
+    # repository-level reconciliation below. Calling it too early can be
+    # stomped by later module canonicalization logic, which in some
+    # import orders caused the package-level attribute to be replaced
+    # with a module missing the delegated `create_app`. We'll invoke the
+    # installer at the very end of module initialization so its writes
+    # are the last step and become stable for callers.
+    # Best-effort import only; we'll attempt to import again later if
+    # necessary.
+    # Note: the explicit import was removed here to avoid an unused-import
+    # warning; the installer will be imported and invoked later when needed.
 
     # Reconcile module objects for common repo-root top-level modules so that
     # `sys.modules['name']` and `sys.modules['researcharr.name']` refer to a
@@ -622,7 +634,10 @@ try:
         # succeed.
         if _top is not None and _pkg is not _top:
             try:
-                if getattr(_top, "__spec__", None) is None or getattr(_top, "__spec__").name != _pkg_name:
+                if (
+                    getattr(_top, "__spec__", None) is None
+                    or getattr(_top, "__spec__").name != _pkg_name
+                ):
                     _top.__spec__ = importlib.util.spec_from_loader(_pkg_name, loader=None)
             except Exception:
                 pass
@@ -779,7 +794,9 @@ try:
     try:
         # Ensure the installer symbol exists (attempt import but never raise)
         try:
-            from ._factory_proxy import install_create_app_helpers as _install_create_app_helpers
+            from ._factory_proxy import (
+                install_create_app_helpers as _install_create_app_helpers,
+            )
         except Exception:
             _install_create_app_helpers = None
 
@@ -926,8 +943,14 @@ try:
                     pass
                 _spec.loader.exec_module(_mod)  # type: ignore[arg-type]
                 try:
-                    if getattr(_mod, "__spec__", None) is None or getattr(getattr(_mod, "__spec__", None), "name", None) != "researcharr.backups":
-                        _mod.__spec__ = importlib.util.spec_from_loader("researcharr.backups", loader=None)
+                    if (
+                        getattr(_mod, "__spec__", None) is None
+                        or getattr(getattr(_mod, "__spec__", None), "name", None)
+                        != "researcharr.backups"
+                    ):
+                        _mod.__spec__ = importlib.util.spec_from_loader(
+                            "researcharr.backups", loader=None
+                        )
                 except Exception:
                     pass
 except Exception:
@@ -944,9 +967,11 @@ try:
     _orig_reload = getattr(_il, "reload", None)
 
     if callable(_orig_reload):
+
         def _patched_reload(module):
             try:
                 import sys as _sys
+
                 _spec = getattr(module, "__spec__", None)
                 _name = getattr(_spec, "name", None) or getattr(module, "__name__", None)
                 if _name and _sys.modules.get(_name) is not module:
@@ -961,6 +986,7 @@ try:
             pass
 except Exception:
     pass
+
 
 def __getattr__(name: str):
     """Lazily resolve a small set of common repo-root top-level modules
@@ -1081,7 +1107,9 @@ def __getattr__(name: str):
                 # module in-place and register canonical sys.modules keys.
                 try:
                     _spec_name = getattr(getattr(mod, "__spec__", None), "name", None)
-                    if isinstance(_spec_name, str) and _spec_name.startswith("researcharr.researcharr."):
+                    if isinstance(_spec_name, str) and _spec_name.startswith(
+                        "researcharr.researcharr."
+                    ):
                         _fixed = _spec_name.replace("researcharr.researcharr.", "researcharr.", 1)
                         try:
                             mod.__name__ = _fixed

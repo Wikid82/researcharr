@@ -320,6 +320,56 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                 pass
                 except Exception:
                     pass
+
+                # Extra defensive: ensure the package-level `researcharr.factory`
+                # attribute points at a module-like object that exposes
+                # `create_app`. Some import-orders replace or delay the
+                # creation of the package submodule; synthesize a lightweight
+                # ModuleType and register it if needed so callers doing
+                # `import researcharr.factory` immediately see a module
+                # object with the delegate installed.
+                try:
+                    # Prefer the package-qualified mapping, then the short name
+                    pf = sys.modules.get("researcharr.factory") or sys.modules.get("factory")
+                    if pf is None:
+                        from types import ModuleType as _MT
+
+                        _m = _MT("researcharr.factory")
+                        try:
+                            _m.__dict__.setdefault("create_app", delegate)
+                        except Exception:
+                            try:
+                                setattr(_m, "create_app", delegate)
+                            except Exception:
+                                pass
+                        try:
+                            sys.modules.setdefault("researcharr.factory", _m)
+                        except Exception:
+                            pass
+                        try:
+                            sys.modules.setdefault("factory", _m)
+                        except Exception:
+                            pass
+                        try:
+                            if pkg_mod is not None:
+                                pkg_mod.__dict__.setdefault("factory", _m)
+                        except Exception:
+                            pass
+                    else:
+                        try:
+                            # Ensure existing module-like object exposes create_app
+                            if not hasattr(pf, "create_app"):
+                                try:
+                                    pf.__dict__.setdefault("create_app", delegate)
+                                except Exception:
+                                    try:
+                                        setattr(pf, "create_app", delegate)
+                                    except Exception:
+                                        pass
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
         except Exception:
             pass
     except Exception:

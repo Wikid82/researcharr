@@ -84,3 +84,19 @@ def create_backup_file(config_root, backups_dir, prefix=""):
         raise Exception("config_root does not exist and no prefix provided")
     # Delegate to the implementation module
     return _IMPL.create_backup_file(config_root, backups_dir, prefix=prefix)
+
+# Ensure a stable sys.modules mapping for reload friendliness when this
+# module is imported under a package-qualified name (e.g.
+# 'researcharr.backups'). Some import orders load this file via a
+# spec with the package-qualified name; make sure that name points to
+# this module object so importlib.reload() can find it.
+try:
+    import sys as _sys
+
+    _sp = globals().get("__spec__", None)
+    _nm = getattr(_sp, "name", None) or __name__
+    _mod = _sys.modules.get(__name__)
+    if _mod is not None and _nm:
+        _sys.modules[_nm] = _mod
+except Exception:
+    pass

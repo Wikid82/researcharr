@@ -1,0 +1,27 @@
+{
+  "name": "researcharr",
+  "version": "1.0.0",
+  "description": "<div align=\"center\">   <img src=\"static/logo.webp\" alt=\"researcharr logo\" height=\"120\" />",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Wikid82/researcharr.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Wikid82/researcharr/issues"
+  },
+  "homepage": "https://github.com/Wikid82/researcharr#readme",
+  "devDependencies": {
+    "pyright": "^1.1.407"
+  }
+}

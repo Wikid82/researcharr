@@ -19,6 +19,8 @@ coverage:
 
 ignore:
   - "tests/**"
+  - "unit_tests/**"
+  - "researcharr/tests/**"
   - "docs/**"
   - "site/**"
   - ".venv/**"
@@ -28,3 +30,6 @@ ignore:
   - "container_build/**"
   - "repo-mirror.git/**"
   - "researcharr.egg-info/**"
+  - "home/**"
+  - "**/*.pyi"
+  - "htmlcov/**"

@@ -18,6 +18,79 @@ import sys
 from types import ModuleType
 
 
+# Defensive: make attribute access on the package reconcile short-name
+# top-level modules with their package-qualified counterparts. Some
+# import orders used by the tests insert a short-name module into
+# ``sys.modules`` (for example, ``backups``) and then import the
+# package submodule ``researcharr.backups``. The import machinery may
+# read the package attribute directly which can bypass our
+# ``__getattr__`` reconciliation. To ensure we always return a single
+# canonical module object and that ``importlib.reload()`` will work,
+# set the package object's class to a small ModuleType subclass that
+# normalizes access for a handful of known names.
+try:
+    class _ResearcharrModule(ModuleType):
+        def __getattribute__(self, name: str):
+            # Only handle a small, well-known set of repo-root modules.
+            if name in ("factory", "run", "webui", "backups", "api", "entrypoint"):
+                try:
+                    _top = sys.modules.get(name)
+                    _pkg_name = f"{__name__}.{name}"
+                    _pkg = sys.modules.get(_pkg_name)
+
+                    # If a top-level module has been injected and it is the
+                    # rightful canonical object for the package submodule,
+                    # register it under the package-qualified name and
+                    # return it. This ensures attribute access (and
+                    # subsequent importlib.reload()) sees a single module
+                    # object rather than two distinct objects.
+                    if _top is not None and _pkg is not _top:
+                        try:
+                            sys.modules[_pkg_name] = _top
+                        except Exception:
+                            pass
+                        try:
+                            sys.modules.setdefault(name, _top)
+                        except Exception:
+                            pass
+                        try:
+                            # Update the package attribute to refer to the
+                            # canonical module object.
+                            object.__setattr__(sys.modules.get(__name__), name, _top)
+                        except Exception:
+                            pass
+                        try:
+                            if getattr(_top, "__spec__", None) is None or getattr(getattr(_top, "__spec__", None), "name", None) != _pkg_name:
+                                _top.__spec__ = importlib.util.spec_from_loader(_pkg_name, loader=None)
+                        except Exception:
+                            pass
+                        return _top
+                except Exception:
+                    # Fall through to default behavior on any error
+                    pass
+            return super().__getattribute__(name)
+
+except Exception:
+    pass
+
+try:
+    # Swap the runtime class of the package module so our
+    # reconciliation logic runs on attribute access. This is best
+    # effort and must not raise during import.
+    try:
+        # Use an explicit ModuleType fallback so setdefault never
+        # receives None (satisfies static type checkers).
+        sys.modules.setdefault(__name__, sys.modules.get(__name__) or ModuleType(__name__))
+    except Exception:
+        pass
+    try:
+        sys.modules[__name__].__class__ = _ResearcharrModule
+    except Exception:
+        pass
+except Exception:
+    pass
+
+
 def _load_impl() -> ModuleType | None:
     """Load an implementation module from several candidate locations.
 

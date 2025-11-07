@@ -95,6 +95,10 @@ jobs:
 
         # Install the package (setuptools_scm will write researcharr/_version.py)
         pip install -e .
+        # Install optional pipeline extras so pipeline-related tests that
+        # require PyYAML/jsonschema/prometheus-client run in CI. This is
+        # safe if extras are not needed locally and keeps CI hermetic.
+        pip install -e ".[pipeline]" || true
 
     - name: Cache pre-commit environments
       uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4

@@ -313,15 +313,17 @@ except Exception:
 # Ensure the runtime create_app helpers are installed so `researcharr.factory`
 # exposes a stable `create_app` symbol even when proxies or import-order
 # variations occur. This is best-effort and must not raise during import.
-try:
-    from ._factory_proxy import install_create_app_helpers as _install_create_app_helpers
-
-    try:
-        _install_create_app_helpers(_REPO_DIR)
-    except Exception:
-        pass
-except Exception:
-    pass
+# Import the installer now but defer calling it until after the
+# repository-level reconciliation below. Calling it too early can be
+# stomped by later module canonicalization logic, which in some
+# import orders caused the package-level attribute to be replaced
+# with a module missing the delegated `create_app`. We'll invoke the
+# installer at the very end of module initialization so its writes
+# are the last step and become stable for callers.
+# Best-effort import only; we'll attempt to import again later if
+# necessary.
+# Note: the explicit import was removed here to avoid an unused-import
+# warning; the installer will be imported and invoked later when needed.
 
     # Reconcile module objects for common repo-root top-level modules so that
     # `sys.modules['name']` and `sys.modules['researcharr.name']` refer to a
@@ -558,6 +560,30 @@ def serve():
 
 # Add version information
 __version__ = "0.1.0"
+
+# Deferred: install create_app helpers after reconciliation to avoid being
+# overwritten by later module canonicalization. Run this as the last step
+# of package initialization so the package-level `factory` attribute is
+# stable for callers and test fixtures that inspect it.
+try:
+    try:
+        # Ensure the installer symbol exists (attempt import but never raise)
+        try:
+            from ._factory_proxy import install_create_app_helpers as _install_create_app_helpers
+        except Exception:
+            _install_create_app_helpers = None
+
+        # Only call if we have a callable installer
+        if callable(globals().get("_install_create_app_helpers", None)):
+            try:
+                _install_create_app_helpers(_REPO_DIR)
+            except Exception:
+                pass
+    except Exception:
+        # Must never raise during import
+        pass
+except Exception:
+    pass
 
 
 def __getattr__(name: str):

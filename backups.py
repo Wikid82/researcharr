@@ -85,6 +85,7 @@ def create_backup_file(config_root, backups_dir, prefix=""):
     # Delegate to the implementation module
     return _IMPL.create_backup_file(config_root, backups_dir, prefix=prefix)
 
+
 # Ensure a stable sys.modules mapping for reload friendliness when this
 # module is imported under a package-qualified name (e.g.
 # 'researcharr.backups'). Some import orders load this file via a

@@ -26,14 +26,18 @@ def test_connectivity_service_has_valid_url_and_key():
     from researcharr.core.services import ConnectivityService
 
     svc = ConnectivityService()
-    ok = svc.has_valid_url_and_key([
-        {"enabled": True, "url": "http://example", "api_key": "k"},
-        {"enabled": False},
-    ])
+    ok = svc.has_valid_url_and_key(
+        [
+            {"enabled": True, "url": "http://example", "api_key": "k"},
+            {"enabled": False},
+        ]
+    )
     assert ok is True
-    bad = svc.has_valid_url_and_key([
-        {"enabled": True, "url": "ftp://bad", "api_key": ""},
-    ])
+    bad = svc.has_valid_url_and_key(
+        [
+            {"enabled": True, "url": "ftp://bad", "api_key": ""},
+        ]
+    )
     assert bad is False
 
 
@@ -41,16 +45,19 @@ def _fake_requests(status_code=200, raise_exc=False):
     class R:
         def __init__(self, status):
             self.status_code = status
+
     class Req:
         def get(self, *a, **kw):
             if raise_exc:
                 raise RuntimeError("boom")
             return R(status_code)
+
     return Req()
 
 
 def test_connectivity_service_radarr_success(monkeypatch):
     from researcharr.core.services import ConnectivityService
+
     svc = ConnectivityService()
     svc.requests = _fake_requests(200)
     logger = logging.getLogger("svc.test")
@@ -100,10 +107,13 @@ def test_health_service_with_stubs(monkeypatch):
 
     class _DB:
         db_path = "db"
+
         def check_connection(self):
             return True
+
     class _ConfigMgr:
         validation_errors = []
+
     class _Container:
         def resolve(self, name):
             if name == "database_service":
@@ -135,8 +145,10 @@ def test_health_service_config_error_branch(monkeypatch):
 
     class _DB:
         db_path = "db"
+
         def check_connection(self):
             return True
+
     class _Container:
         def resolve(self, name):
             if name == "database_service":
@@ -144,7 +156,9 @@ def test_health_service_config_error_branch(monkeypatch):
             raise KeyError(name)
 
     monkeypatch.setattr(services, "get_container", lambda: _Container())
-    monkeypatch.setattr(services, "get_config_manager", lambda: (_ for _ in ()).throw(RuntimeError("cfg err")))
+    monkeypatch.setattr(
+        services, "get_config_manager", lambda: (_ for _ in ()).throw(RuntimeError("cfg err"))
+    )
 
     hs = HealthService()
     status = hs.check_system_health()

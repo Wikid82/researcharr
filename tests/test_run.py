@@ -11,9 +11,9 @@ import pytest
 def test_load_config_returns_empty_dict():
     """Test load_config returns empty dict by default."""
     from researcharr.run import load_config
-    
+
     result = load_config()
-    
+
     assert result == {}
     assert isinstance(result, dict)
 
@@ -21,19 +21,19 @@ def test_load_config_returns_empty_dict():
 def test_load_config_with_custom_path():
     """Test load_config accepts path parameter."""
     from researcharr.run import load_config
-    
+
     result = load_config("/custom/config.yml")
-    
+
     assert result == {}
 
 
 def test_setup_scheduler_no_schedule_module():
     """Test setup_scheduler handles missing schedule module."""
     from researcharr import run
-    
+
     # Ensure schedule is None
     run.schedule = None
-    
+
     # Should not raise
     run.setup_scheduler()
 
@@ -41,19 +41,19 @@ def test_setup_scheduler_no_schedule_module():
 def test_setup_scheduler_with_schedule_module():
     """Test setup_scheduler wires schedule when available."""
     from researcharr import run
-    
+
     mock_schedule = Mock()
     mock_every = Mock()
     mock_minutes = Mock()
-    
+
     mock_schedule.every.return_value = mock_every
     mock_every.minutes = mock_minutes
-    
+
     run.schedule = mock_schedule
-    
+
     try:
         run.setup_scheduler()
-        
+
         mock_schedule.every.assert_called_once()
         mock_minutes.do.assert_called_once()
     finally:
@@ -63,12 +63,12 @@ def test_setup_scheduler_with_schedule_module():
 def test_setup_scheduler_handles_exception():
     """Test setup_scheduler handles exceptions gracefully."""
     from researcharr import run
-    
+
     mock_schedule = Mock()
     mock_schedule.every.side_effect = Exception("Schedule error")
-    
+
     run.schedule = mock_schedule
-    
+
     try:
         # Should not raise
         run.setup_scheduler()
@@ -79,61 +79,61 @@ def test_setup_scheduler_handles_exception():
 def test_get_job_timeout_none():
     """Test _get_job_timeout returns None when not set."""
     from researcharr.run import _get_job_timeout
-    
+
     with patch.dict(os.environ, {"JOB_TIMEOUT": ""}, clear=False):
         result = _get_job_timeout()
-        
+
         assert result is None
 
 
 def test_get_job_timeout_valid():
     """Test _get_job_timeout returns float when set."""
     from researcharr.run import _get_job_timeout
-    
+
     with patch.dict(os.environ, {"JOB_TIMEOUT": "30.5"}, clear=False):
         result = _get_job_timeout()
-        
+
         assert result == 30.5
 
 
 def test_get_job_timeout_invalid():
     """Test _get_job_timeout returns None for invalid value."""
     from researcharr.run import _get_job_timeout
-    
+
     with patch.dict(os.environ, {"JOB_TIMEOUT": "invalid"}, clear=False):
         result = _get_job_timeout()
-        
+
         assert result is None
 
 
 def test_run_job_no_script_configured(caplog):
     """Test run_job logs error when no script configured."""
     from researcharr import run
-    
+
     # Clear SCRIPT
     run.SCRIPT = ""
-    
+
     with patch.dict(os.environ, {"SCRIPT": ""}, clear=False):
         with caplog.at_level(logging.ERROR):
             run.run_job()
-            
+
             assert "No SCRIPT configured" in caplog.text
 
 
 def test_run_job_uses_env_script(caplog):
     """Test run_job uses SCRIPT from environment."""
     from researcharr import run
-    
+
     mock_completed = Mock()
     mock_completed.returncode = 0
     mock_completed.stdout = "test output"
     mock_completed.stderr = ""
-    
+
     with patch.dict(os.environ, {"SCRIPT": "/test/script.py"}, clear=False):
         with patch("subprocess.run", return_value=mock_completed) as mock_run:
             with caplog.at_level(logging.DEBUG):
                 run.run_job()
-                
+
                 assert "env SCRIPT=" in caplog.text
                 assert "/test/script.py" in caplog.text
                 mock_run.assert_called_once()
@@ -142,17 +142,17 @@ def test_run_job_uses_env_script(caplog):
 def test_run_job_with_timeout(caplog):
     """Test run_job enforces timeout."""
     from researcharr import run
-    
+
     mock_completed = Mock()
     mock_completed.returncode = 0
     mock_completed.stdout = ""
     mock_completed.stderr = ""
-    
+
     with patch.dict(os.environ, {"SCRIPT": "/test/script.py", "JOB_TIMEOUT": "10"}, clear=False):
         with patch("subprocess.run", return_value=mock_completed) as mock_run:
             with caplog.at_level(logging.INFO):
                 run.run_job()
-                
+
                 # Should call subprocess.run with timeout
                 assert mock_run.called
                 call_args = mock_run.call_args
@@ -163,130 +163,132 @@ def test_run_job_with_timeout(caplog):
 def test_run_job_timeout_expired(caplog):
     """Test run_job handles TimeoutExpired."""
     from researcharr import run
-    
+
     with patch.dict(os.environ, {"SCRIPT": "/test/script.py", "JOB_TIMEOUT": "1"}, clear=False):
         with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("cmd", 1)):
             with caplog.at_level(logging.ERROR):
                 run.run_job()
-                
+
                 assert "exceeded timeout" in caplog.text
 
 
 def test_run_job_subprocess_exception(caplog):
     """Test run_job handles subprocess exception."""
     from researcharr import run
-    
+
     with patch.dict(os.environ, {"SCRIPT": "/test/script.py"}, clear=False):
         with patch("subprocess.run", side_effect=Exception("Subprocess error")):
             with caplog.at_level(logging.ERROR):
                 run.run_job()
-                
+
                 assert "run_job encountered an error" in caplog.text
 
 
 def test_run_job_logs_stdout(caplog):
     """Test run_job logs subprocess stdout."""
     from researcharr import run
-    
+
     mock_completed = Mock()
     mock_completed.returncode = 0
     mock_completed.stdout = "Job output"
     mock_completed.stderr = ""
-    
+
     with patch.dict(os.environ, {"SCRIPT": "/test/script.py"}, clear=False):
         with patch("subprocess.run", return_value=mock_completed):
             with caplog.at_level(logging.INFO):
                 run.run_job()
-                
+
                 assert "Job stdout: Job output" in caplog.text
 
 
 def test_run_job_logs_stderr(caplog):
     """Test run_job logs subprocess stderr."""
     from researcharr import run
-    
+
     mock_completed = Mock()
     mock_completed.returncode = 1
     mock_completed.stdout = ""
     mock_completed.stderr = "Error output"
-    
+
     with patch.dict(os.environ, {"SCRIPT": "/test/script.py"}, clear=False):
         with patch("subprocess.run", return_value=mock_completed):
             with caplog.at_level(logging.INFO):
                 run.run_job()
-                
+
                 assert "Job stderr: Error output" in caplog.text
 
 
 def test_run_job_logs_returncode(caplog):
     """Test run_job logs returncode."""
     from researcharr import run
-    
+
     mock_completed = Mock()
     mock_completed.returncode = 42
     mock_completed.stdout = ""
     mock_completed.stderr = ""
-    
+
     with patch.dict(os.environ, {"SCRIPT": "/test/script.py"}, clear=False):
         with patch("subprocess.run", return_value=mock_completed):
             with caplog.at_level(logging.INFO):
                 run.run_job()
-                
+
                 assert "returncode 42" in caplog.text
 
 
 def test_run_job_handles_top_level_run_module(caplog):
     """Test run_job checks for top-level run module."""
-    from researcharr import run
     import sys
-    
+
+    from researcharr import run
+
     mock_completed = Mock()
     mock_completed.returncode = 0
     mock_completed.stdout = ""
     mock_completed.stderr = ""
-    
+
     # Mock top-level run module
     mock_run_module = Mock()
     mock_run_module.SCRIPT = "/top/level/script.py"
-    
+
     with patch.dict(sys.modules, {"run": mock_run_module}):
         with patch.dict(os.environ, {"SCRIPT": "/test/script.py"}, clear=False):
             with patch("subprocess.run", return_value=mock_completed):
                 with caplog.at_level(logging.DEBUG):
                     run.run_job()
-                    
+
                     assert "top-level run.SCRIPT=" in caplog.text
 
 
 def test_run_job_handles_top_level_run_exception(caplog):
     """Test run_job handles exception when checking top-level run."""
-    from researcharr import run
     import sys
-    
+
+    from researcharr import run
+
     mock_completed = Mock()
     mock_completed.returncode = 0
     mock_completed.stdout = ""
     mock_completed.stderr = ""
-    
+
     with patch.dict(sys.modules, {"run": None}):
         with patch("sys.modules.get", side_effect=Exception("Module error")):
             with patch.dict(os.environ, {"SCRIPT": "/test/script.py"}, clear=False):
                 with patch("subprocess.run", return_value=mock_completed):
                     with caplog.at_level(logging.DEBUG):
                         run.run_job()
-                        
+
                         assert "top-level run.SCRIPT=<unavailable>" in caplog.text
 
 
 def test_run_job_logging_exception_handling(caplog):
     """Test run_job handles logging exceptions."""
     from researcharr import run
-    
+
     mock_completed = Mock()
     mock_completed.returncode = 0
     mock_completed.stdout = "output"
     mock_completed.stderr = "error"
-    
+
     with patch.dict(os.environ, {"SCRIPT": "/test/script.py"}, clear=False):
         with patch("subprocess.run", return_value=mock_completed):
             # Mock logger.debug to raise
@@ -298,20 +300,20 @@ def test_run_job_logging_exception_handling(caplog):
 def test_main_once_true():
     """Test main with once=True."""
     from researcharr import run
-    
+
     with patch.object(run, "run_job") as mock_run_job:
         run.main(once=True)
-        
+
         mock_run_job.assert_called_once()
 
 
 def test_main_once_false():
     """Test main with once=False."""
     from researcharr import run
-    
+
     with patch.object(run, "run_job") as mock_run_job:
         run.main(once=False)
-        
+
         # Should call run_job once and break
         mock_run_job.assert_called_once()
 
@@ -319,46 +321,45 @@ def test_main_once_false():
 def test_run_job_globals_script_resolution(caplog):
     """Test run_job resolves SCRIPT from globals."""
     from researcharr import run
-    
+
     mock_completed = Mock()
     mock_completed.returncode = 0
     mock_completed.stdout = ""
     mock_completed.stderr = ""
-    
+
     # Set module-level SCRIPT
     run.SCRIPT = "/module/script.py"
-    
+
     with patch.dict(os.environ, {}, clear=True):
         with patch("subprocess.run", return_value=mock_completed):
             with caplog.at_level(logging.DEBUG):
                 run.run_job()
-                
+
                 assert "globals SCRIPT=" in caplog.text
 
 
 def test_run_job_no_timeout_branch():
     """Test run_job subprocess.run without timeout."""
     from researcharr import run
-    
+
     mock_completed = Mock()
     mock_completed.returncode = 0
     mock_completed.stdout = ""
     mock_completed.stderr = ""
-    
+
     with patch.dict(os.environ, {"SCRIPT": "/test/script.py"}, clear=False):
         # Ensure no JOB_TIMEOUT
         if "JOB_TIMEOUT" in os.environ:
             del os.environ["JOB_TIMEOUT"]
-        
+
         with patch("subprocess.run", return_value=mock_completed) as mock_run:
             run.run_job()
-            
+
             # Should call subprocess.run without timeout
             call_args = mock_run.call_args
             assert "timeout" not in call_args[1] or call_args[1].get("timeout") is None
 
-
-# === Additional Run Tests ===
+    # === Additional Run Tests ===
 
     def tearDown(self):
         """Clean up test environment."""

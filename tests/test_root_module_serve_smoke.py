@@ -7,6 +7,7 @@ def test_root_serve_with_dummy_app(monkeypatch):
     class Dummy:
         def run(self, *a, **kw):
             return None
+
     monkeypatch.setattr(root, "create_metrics_app", lambda: Dummy())
     # Should not raise; will call Dummy.run
     root.serve()

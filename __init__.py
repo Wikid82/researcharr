@@ -118,7 +118,8 @@ if os.path.exists(_impl_path):
     globals()["researcharr"] = _impl
     sys.modules["researcharr.researcharr"] = _impl
 
-__all__ = [k for k in globals().keys() if not k.startswith("_")]
+# Explicitly define __all__ for static analysis tools
+__all__ = []
 
 # Also try to prefer the nested file-backed implementation if present
 # (researcharr/researcharr.py). Some import orders (editable installs,
@@ -166,11 +167,13 @@ if os.path.exists(_nested_impl):
 # package is imported.
 try:
     try:
-        from ._factory_proxy import create_proxies as _create_proxies
         from ._factory_proxy import (
-            install_create_app_helpers as _install_create_app_helpers,
+            create_proxies as _create_proxies,  # type: ignore[import]
         )
-    except Exception:
+        from ._factory_proxy import (
+            install_create_app_helpers as _install_create_app_helpers,  # type: ignore[import]
+        )
+    except (ImportError, ModuleNotFoundError, Exception):
         _create_proxies = None
         _install_create_app_helpers = None
 
@@ -269,7 +272,7 @@ def __getattr__(name: str):
             if delegate is None:
                 try:
                     from ._factory_proxy import (
-                        install_create_app_helpers as _install_create_app_helpers,
+                        install_create_app_helpers as _install_create_app_helpers,  # type: ignore[import]
                     )
 
                     try:
@@ -277,7 +280,7 @@ def __getattr__(name: str):
                     except Exception:
                         pass
                     delegate = globals().get("_create_app_delegate", None)
-                except Exception:
+                except (ImportError, ModuleNotFoundError, Exception):
                     delegate = None
             if delegate is not None:
                 try:

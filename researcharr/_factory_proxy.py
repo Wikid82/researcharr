@@ -181,8 +181,15 @@ def create_proxies(repo_root: str | None = None) -> None:
                 sys.modules.get(_pkg_name), _ModuleProxy
             ):
                 sys.modules[_pkg_name] = _proxy
-            if sys.modules.get(_short) is None or isinstance(sys.modules.get(_short), _ModuleProxy):
-                sys.modules.setdefault(_short, _proxy)
+            # Do not pre-populate the short-name 'backups' mapping with a proxy;
+            # tests import the top-level 'backups' module and expect its legacy
+            # semantics. Leaving the short name free ensures the real top-level
+            # module is imported when requested.
+            if _short != "backups":
+                if sys.modules.get(_short) is None or isinstance(
+                    sys.modules.get(_short), _ModuleProxy
+                ):
+                    sys.modules.setdefault(_short, _proxy)
             try:
                 pkg_mod = sys.modules.get("researcharr")
                 if pkg_mod is not None:
@@ -488,7 +495,8 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
 
                                             try:
                                                 d = object.__getattribute__(self, "__dict__")
-                                                has_create = bool(d.get("create_app") is not None)
+                                                _cur = d.get("create_app")
+                                                has_create = bool(_cur is not None)
                                             except Exception:
                                                 has_create = False
 
@@ -507,6 +515,51 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                                 )
                                             except Exception:
                                                 pass
+                                        except Exception:
+                                            pass
+                                        # Self-heal: if the delegate isn't present,
+                                        # attach the stable delegate from the package
+                                        # so hasattr()/getattr() callers always see a
+                                        # callable here even after import-order races
+                                        # or test mutations.
+                                        try:
+                                            d = object.__getattribute__(self, "__dict__")
+                                            _cur = d.get("create_app")
+                                            # Heal if missing OR not callable (e.g. None or a sentinel)
+                                            if _cur is None or not callable(_cur):
+                                                try:
+                                                    import sys as _sys2
+
+                                                    _pkg = _sys2.modules.get("researcharr")
+                                                    _delegate = None
+                                                    if _pkg is not None:
+                                                        _delegate = getattr(
+                                                            _pkg, "_create_app_delegate", None
+                                                        )
+                                                    if _delegate is None:
+                                                        # Best-effort: install helpers now
+                                                        try:
+                                                            from ._factory_proxy import (
+                                                                install_create_app_helpers as _inst,
+                                                            )
+
+                                                            try:
+                                                                _inst()
+                                                            except Exception:
+                                                                pass
+                                                            _pkg = _sys2.modules.get("researcharr")
+                                                            if _pkg is not None:
+                                                                _delegate = getattr(
+                                                                    _pkg,
+                                                                    "_create_app_delegate",
+                                                                    None,
+                                                                )
+                                                        except Exception:
+                                                            pass
+                                                    if _delegate is not None:
+                                                        d["create_app"] = _delegate
+                                                except Exception:
+                                                    pass
                                         except Exception:
                                             pass
                                     return object.__getattribute__(self, name)

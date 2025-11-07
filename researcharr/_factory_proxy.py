@@ -430,7 +430,40 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                         try:
                             from types import ModuleType as _MT
 
-                            _wrapper = _MT("researcharr.factory")
+                            # Small diagnostic subclass to observe attribute
+                            # access to `create_app` on the wrapper module. This
+                            # helps detect cases where hasattr()/getattr() may
+                            # be observing a module that lacks the delegated
+                            # attribute at assertion time.
+                            class _LoggedModule(_MT):
+                                def __getattr__(self, name: str):
+                                    # Emit a tiny snapshot when callers probe
+                                    # `create_app` so we can correlate the
+                                    # lookup with previously-emitted
+                                    # [factory-helper-snapshot] diagnostics.
+                                    if name == "create_app":
+                                        try:
+                                            import sys as _sys
+                                            import json as _json
+
+                                            _snap = {
+                                                "event": "access",
+                                                "attr": name,
+                                                "module_id": id(self),
+                                                "has_create_app": bool(self.__dict__.get("create_app") is not None),
+                                                "type": type(self).__name__,
+                                            }
+                                            try:
+                                                _sys.stderr.write(
+                                                    "[factory-helper-access] " + _json.dumps(_snap) + "\n"
+                                                )
+                                            except Exception:
+                                                pass
+                                        except Exception:
+                                            pass
+                                    return super().__getattr__(name)
+
+                            _wrapper = _LoggedModule("researcharr.factory")
                             # Copy public attributes from canonical if present
                             if canonical is not None:
                                 try:
@@ -501,7 +534,8 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
     # intermittent import-order failures. This is intentionally terse and
     # wrapped in try/except so it never raises during import.
     try:
-        import sys as _sys, json as _json
+        import sys as _sys
+        import json as _json
 
         _keys = [k for k in _sys.modules.keys() if k in ("factory", "researcharr.factory")]
         _snap = {

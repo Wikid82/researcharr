@@ -34,6 +34,14 @@ try:
             # Only handle a small, well-known set of repo-root modules.
             if name in ("factory", "run", "webui", "backups", "api", "entrypoint"):
                 try:
+                    # DEBUG: trace attribute access for reconciliation
+                    # (left intentionally lightweight for local diagnostics)
+                    try:
+                        import sys as _sys
+
+                        _sys.stderr.write(f"[pkg-attr-access] {name}\n")
+                    except Exception:
+                        pass
                     _top = sys.modules.get(name)
                     _pkg_name = f"{__name__}.{name}"
                     _pkg = sys.modules.get(_pkg_name)
@@ -69,22 +77,48 @@ try:
                     # Fall through to default behavior on any error
                     pass
             return super().__getattribute__(name)
+        
+        def __setattr__(self, name: str, value):
+            # When importlib assigns a submodule onto the package object
+            # (e.g. during `import researcharr.webui`), ensure the
+            # canonical sys.modules entries are updated so that
+            # importlib.reload() will find the module under its
+            # package-qualified name.
+            if name in ("factory", "run", "webui", "backups", "api", "entrypoint"):
+                try:
+                    if isinstance(value, ModuleType):
+                        _pkg_name = f"{__name__}.{name}"
+                        try:
+                            sys.modules[_pkg_name] = value
+                        except Exception:
+                            pass
+                        try:
+                            sys.modules.setdefault(name, value)
+                        except Exception:
+                            pass
+                        try:
+                            if getattr(value, "__spec__", None) is None or getattr(getattr(value, "__spec__", None), "name", None) != _pkg_name:
+                                value.__spec__ = importlib.util.spec_from_loader(_pkg_name, loader=None)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+            return super().__setattr__(name, value)
 
-except Exception:
-    pass
-
-try:
-    # Swap the runtime class of the package module so our
-    # reconciliation logic runs on attribute access. This is best
-    # effort and must not raise during import.
     try:
-        # Use an explicit ModuleType fallback so setdefault never
-        # receives None (satisfies static type checkers).
-        sys.modules.setdefault(__name__, sys.modules.get(__name__) or ModuleType(__name__))
-    except Exception:
-        pass
-    try:
-        sys.modules[__name__].__class__ = _ResearcharrModule
+        # Swap the runtime class of the package module so our
+        # reconciliation logic runs on attribute access. This is best
+        # effort and must not raise during import.
+        try:
+            # Use an explicit ModuleType fallback so setdefault never
+            # receives None (satisfies static type checkers).
+            sys.modules.setdefault(__name__, sys.modules.get(__name__) or ModuleType(__name__))
+        except Exception:
+            pass
+        try:
+            sys.modules[__name__].__class__ = _ResearcharrModule
+        except Exception:
+            pass
     except Exception:
         pass
 except Exception:
@@ -308,37 +342,13 @@ for _mname in ("factory", "run", "webui", "backups", "api", "entrypoint"):
                 except Exception:
                     pass
                 continue
-
-            spec = importlib.util.spec_from_file_location("researcharr." + _mname, _path)
-            if spec and spec.loader:
-                mod = importlib.util.module_from_spec(spec)
-                # Register the module object in sys.modules *before*
-                # executing its code. This ensures the import system and
-                # importlib.reload() see a single canonical module object
-                # for both the short and package-qualified names and avoids
-                # races where a subsequent loader would replace the
-                # mapping.
-                try:
-                    sys.modules[f"researcharr.{_mname}"] = mod
-                except Exception:
-                    pass
-                try:
-                    sys.modules[_mname] = mod
-                except Exception:
-                    pass
-                try:
-                    globals()[_mname] = mod
-                except Exception:
-                    pass
-                spec.loader.exec_module(mod)  # type: ignore[arg-type]
-                # Ensure the loaded module advertises a proper spec name.
-                try:
-                    if getattr(mod, "__spec__", None) is None:
-                        mod.__spec__ = importlib.util.spec_from_loader(
-                            f"researcharr.{_mname}", loader=None
-                        )
-                except Exception:
-                    pass
+            # Do NOT eagerly load the repo-level file here. Eagerly
+            # executing repository files during package import created
+            # distinct module objects in earlier designs which led to
+            # import-order races and importlib.reload() failures when
+            # tests injected short-name modules into sys.modules. Instead
+            # prefer an existing top-level module (handled above) and
+            # otherwise defer loading until the submodule is imported.
         except Exception:
             # Non-fatal; this is only for editor/static analysis friendliness
             # and should not prevent runtime.
@@ -775,6 +785,67 @@ try:
 except Exception:
     pass
 
+# Aggressive final mapping: ensure any module's spec.name is present in
+# sys.modules and maps to the module object. This helps avoid importlib.reload
+# raising ImportError when a module's __spec__.name was set to a different
+# dotted form (for example due to nested-package loader quirks) and no
+# corresponding sys.modules entry exists for that name. This is intentionally
+# a best-effort, non-fatal step performed after the package's reconciliation
+# logic.
+try:
+    for _k, _m in list(sys.modules.items()):
+        try:
+            if not _m:
+                continue
+            _spec = getattr(_m, "__spec__", None)
+            if _spec is None:
+                continue
+            _spec_name = getattr(_spec, "name", None)
+            if not _spec_name:
+                continue
+            try:
+                if sys.modules.get(_spec_name) is not _m:
+                    sys.modules[_spec_name] = _m
+            except Exception:
+                pass
+        except Exception:
+            pass
+except Exception:
+    pass
+
+# Also ensure common doubled-names from older loader behaviors are
+# registered. Some import orders produce module.__spec__.name values like
+# 'researcharr.researcharr.backups'. Map those doubled forms to the same
+# canonical module object used for 'researcharr.backups' so importlib.reload
+# and dotted lookups succeed.
+try:
+    for _n in ("factory", "run", "webui", "backups", "api", "entrypoint"):
+        try:
+            _pkg_key = f"researcharr.{_n}"
+            _doubled = f"researcharr.researcharr.{_n}"
+            _obj = sys.modules.get(_pkg_key)
+            if _obj is not None and sys.modules.get(_doubled) is not _obj:
+                try:
+                    sys.modules[_doubled] = _obj
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    # Ensure a benign 'researcharr.researcharr' package mapping exists
+    if sys.modules.get("researcharr.researcharr") is None:
+        try:
+            _pkg = sys.modules.get("researcharr")
+            if _pkg is not None:
+                sys.modules["researcharr.researcharr"] = _pkg
+                try:
+                    if getattr(_pkg, "__path__", None) is not None:
+                        sys.modules["researcharr.researcharr"].__path__ = list(_pkg.__path__)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+except Exception:
+    pass
 
 def __getattr__(name: str):
     """Lazily resolve a small set of common repo-root top-level modules

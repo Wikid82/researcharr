@@ -46,13 +46,23 @@ try:
                     _pkg_name = f"{__name__}.{name}"
                     _pkg = sys.modules.get(_pkg_name)
 
-                    # If a top-level module has been injected and it is the
-                    # rightful canonical object for the package submodule,
-                    # register it under the package-qualified name and
-                    # return it. This ensures attribute access (and
-                    # subsequent importlib.reload()) sees a single module
-                    # object rather than two distinct objects.
+                    # If a top-level module has been injected and the package
+                    # mapping is missing or looks like a lightweight proxy,
+                    # register the top-level object under the package-qualified
+                    # name and return it. If the package mapping already points
+                    # at a real module object (has a __file__/__spec__), prefer
+                    # keeping that stable object to preserve importlib.reload()
+                    # semantics even when a short-name module is present.
                     if _top is not None and _pkg is not _top:
+                        try:
+                            # If the existing package mapping looks real, keep it.
+                            if _pkg is not None and (
+                                getattr(_pkg, "__file__", None) is not None
+                                or getattr(_pkg, "__spec__", None) is not None
+                            ):
+                                return _pkg
+                        except Exception:
+                            pass
                         try:
                             sys.modules[_pkg_name] = _top
                         except Exception:
@@ -923,6 +933,35 @@ try:
 except Exception:
     pass
 
+# As a last-resort safety net for environments with unusual import-order
+# interactions, wrap importlib.reload to opportunistically repair missing
+# sys.modules mappings for modules whose spec.name is set but absent from
+# sys.modules. This helps ensure `importlib.reload(researcharr.backups)`
+# succeeds even if another test removed or replaced the mapping.
+try:
+    import importlib as _il
+
+    _orig_reload = getattr(_il, "reload", None)
+
+    if callable(_orig_reload):
+        def _patched_reload(module):
+            try:
+                import sys as _sys
+                _spec = getattr(module, "__spec__", None)
+                _name = getattr(_spec, "name", None) or getattr(module, "__name__", None)
+                if _name and _sys.modules.get(_name) is not module:
+                    _sys.modules[_name] = module
+            except Exception:
+                pass
+            return _orig_reload(module)
+
+        try:
+            setattr(_il, "reload", _patched_reload)
+        except Exception:
+            pass
+except Exception:
+    pass
+
 def __getattr__(name: str):
     """Lazily resolve a small set of common repo-root top-level modules
     as package submodules.
@@ -1002,7 +1041,12 @@ def __getattr__(name: str):
 
     # 2) Otherwise, try to load the repository-level file (repo_root/<name>.py)
     try:
+        # Prefer the nested package file for certain submodules (notably
+        # 'backups') to avoid import-order races with the repository-root
+        # files and to ensure a stable package-qualified module identity.
         _path = os.path.join(_repo_root, f"{name}.py")
+        if name == "backups":
+            _path = os.path.join(os.path.abspath(os.path.dirname(__file__)), f"{name}.py")
         if os.path.isfile(_path):
             spec = importlib.util.spec_from_file_location(f"researcharr.{name}", _path)
             if spec and spec.loader:

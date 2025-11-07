@@ -308,16 +308,37 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                         if pf is None:
                             continue
                         try:
-                            # Prefer the stable delegate instance as the
-                            # callable exposed on the module so reprs/logging
-                            # are consistent across environments.
-                            pf.__dict__.setdefault("create_app", delegate)
+                            # Aggressively ensure the stable delegate is
+                            # visible on the module object by writing
+                            # directly into its __dict__. Use assignment
+                            # (not setdefault) so we override placeholder
+                            # or proxy-mapped values that lack the symbol.
+                            pf.__dict__["create_app"] = delegate
                         except Exception:
                             try:
                                 # Fallback to setattr if direct dict access fails.
                                 setattr(pf, "create_app", delegate)
                             except Exception:
                                 pass
+                        # If the module object is a ModuleProxy instance,
+                        # also ensure its own instance dict exposes the
+                        # attribute so hasattr() checks on the proxy
+                        # succeed even when the proxy has no resolved
+                        # target yet.
+                        try:
+                            from ._factory_proxy import _ModuleProxy as _MP
+
+                            if isinstance(pf, _MP):
+                                try:
+                                    pf.__dict__["create_app"] = delegate
+                                except Exception:
+                                    try:
+                                        setattr(pf, "create_app", delegate)
+                                    except Exception:
+                                        pass
+                        except Exception:
+                            # ignore import or isinstance errors
+                            pass
                 except Exception:
                     pass
 
@@ -435,11 +456,16 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
 
                             # Register wrapper in sys.modules and on the package
                             try:
-                                sys.modules.setdefault("researcharr.factory", _wrapper)
+                                # Register wrapper unconditionally to make the
+                                # package-level attribute deterministic. Use
+                                # direct assignment so we replace placeholder
+                                # or proxy entries that may have been created
+                                # earlier during import races.
+                                sys.modules["researcharr.factory"] = _wrapper
                             except Exception:
                                 pass
                             try:
-                                sys.modules.setdefault("factory", _wrapper)
+                                sys.modules["factory"] = _wrapper
                             except Exception:
                                 pass
                             try:

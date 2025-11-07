@@ -762,10 +762,10 @@ def test_run_job_exception_in_globals_get():
     """Test run_job handles exception in globals().get."""
     import sys
 
-    if sys.version_info >= (3, 13):
+    if sys.version_info >= (3, 12):
         import pytest
 
-        pytest.skip("Cannot patch module __dict__ in Python 3.13+")
+        pytest.skip("Cannot patch module __dict__ in Python 3.12+")
     from unittest.mock import patch
 
     import run

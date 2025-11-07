@@ -77,7 +77,7 @@ ignore_errors = true
 # TEMPORARY: lower the coverage gate so CI/tests can proceed while we
 # add more tests and stabilize the suite. Raise this back to 85.0
 # (or your target) after improving coverage and fixing brittle tests.
-fail_under = 60.0
+fail_under = 65.0
 
 [tool.coverage.html]
 directory = "htmlcov"

@@ -4,8 +4,8 @@ This module tests the webui package shim that re-exports the
 repository-level webui module.
 """
 
-import sys
 import importlib
+import sys
 from importlib import util as importlib_util
 from unittest.mock import MagicMock, patch
 
@@ -175,14 +175,14 @@ def test_webui_partial_exports():
 
     with patch("importlib.import_module", side_effect=import_module_side_effect):
         # Monkeypatch attributes directly instead of global getattr to avoid recursion
-            if "researcharr.webui" in sys.modules:
-                del sys.modules["researcharr.webui"]
+        if "researcharr.webui" in sys.modules:
+            del sys.modules["researcharr.webui"]
 
-            webui = importlib.import_module("researcharr.webui")
+        webui = importlib.import_module("researcharr.webui")
 
-            # All attributes should exist in __all__
-            assert "USER_CONFIG_PATH" in webui.__all__
-            assert "load_user_config" in webui.__all__
+        # All attributes should exist in __all__
+        assert "USER_CONFIG_PATH" in webui.__all__
+        assert "load_user_config" in webui.__all__
 
 
 def test_webui_user_config_path():
@@ -238,7 +238,9 @@ def test_webui_fallback_exception():
 
     with patch("importlib.import_module", side_effect=import_module_side_effect):
         # Patch via object to avoid resolve/import of importlib during patching
-        with patch.object(importlib_util, "spec_from_file_location", side_effect=Exception("Spec error")):
+        with patch.object(
+            importlib_util, "spec_from_file_location", side_effect=Exception("Spec error")
+        ):
             if "researcharr.webui" in sys.modules:
                 del sys.modules["researcharr.webui"]
 
@@ -264,6 +266,7 @@ def test_webui_repo_root_calculation():
 
 def test_webui_getattr_exception_handling():
     """Test webui shim handles getattr exceptions."""
+
     class Raising:
         def __getattr__(self, name):  # noqa: D401 - simple helper
             raise RuntimeError("Test error")

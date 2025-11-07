@@ -5,8 +5,8 @@ and ensure reliability of the backup system.
 """
 
 import os
-import sqlite3
 import shutil
+import sqlite3
 import tempfile
 import time
 import zipfile
@@ -14,6 +14,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+
 import researcharr.backups_impl as backups
 
 
@@ -711,9 +712,6 @@ def test_list_backups_stat_exception(temp_dirs):
 
         # May return empty list or partial results
         assert isinstance(result, list)
-
-
- 
 
 
 def test_create_backup_nonexistent_no_prefix_raises(tmp_path):

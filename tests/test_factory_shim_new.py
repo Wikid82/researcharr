@@ -74,14 +74,14 @@ def test_factory_impl_none():
 
     # Import factory normally first
     factory = importlib.import_module("researcharr.factory")
-    
+
     # Save original _impl
     orig_impl = factory._impl
-    
+
     try:
         # Set _impl to None to simulate import failure scenario
         factory._impl = None
-        
+
         # Verify _impl is None
         assert factory._impl is None
     finally:
@@ -233,7 +233,7 @@ def test_factory_setattr_fallback():
     # This test verifies that factory can handle edge cases during attribute setting
     # Skip detailed __dict__ manipulation as it's testing fragile internals
     from researcharr import factory
-    
+
     # Simply verify factory module is functional
     assert factory is not None
     assert hasattr(factory, "create_app") or True
@@ -296,17 +296,17 @@ def test_factory_getattr_exception_in_reinstall():
 def test_factory_repo_root_calculation():
     """Test factory calculates repo root correctly."""
     import sys
-    
+
     # Get the actual factory module from sys.modules
     factory_mod = sys.modules.get("factory")
     if factory_mod is None:
         pytest.skip("No factory module")
-    
+
     # The factory module should have a __file__ attribute
     factory_file = getattr(factory_mod, "__file__", None)
     if factory_file is None:
         pytest.skip("No __file__ on factory module")
-    
+
     import os
 
     pkg_dir = os.path.dirname(factory_file)

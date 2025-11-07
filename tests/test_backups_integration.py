@@ -8,6 +8,7 @@ import unittest
 import zipfile
 from pathlib import Path
 from unittest.mock import patch
+
 import pytest
 
 
@@ -632,9 +633,7 @@ def test_backup_path_fallback_startswith_exception_handling():
         # Attempt to mock object.__getattribute__ to raise; if the Python runtime
         # disallows patching (e.g. Python 3.13+ tighter restrictions), skip instead
         try:
-            with patch(
-                "builtins.object.__getattribute__", side_effect=AttributeError("test")
-            ):
+            with patch("builtins.object.__getattribute__", side_effect=AttributeError("test")):
                 result = bp.startswith("/path")
         except TypeError:
             pytest.skip("Cannot patch builtins.object.__getattribute__ on this Python version")
@@ -739,8 +738,6 @@ def test_backup_path_import_fallback_chain():
 
     # Should be callable
     assert callable(bp_class)
-
- 
 
 
 def test_backup_path_import():

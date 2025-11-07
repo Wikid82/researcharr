@@ -212,4 +212,3 @@ jobs:
         gem install html-proofer jekyll bundler || true
         jekyll build --source docs --destination site || { mkdir -p site; cp -a docs/. site/; }
         htmlproofer site --no-check-external-hash --allow-hash-href || true
-

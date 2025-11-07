@@ -26,8 +26,8 @@ if _BackupPath is not None:
 else:
     # Fallback implementation: keep logical name mapping out-of-band since
     # str instances are immutable and cannot have attributes assigned.
-    from typing import Dict
     import weakref
+    from typing import Dict
 
     _name_map: Dict[int, str] = {}
     _finalizer_map: Dict[int, weakref.finalize] = {}
@@ -45,6 +45,7 @@ else:
         def startswith(self, prefix: str) -> bool:  # type: ignore[override]
             try:
                 import os as _os
+
                 if prefix is None:
                     return False
                 name = _name_map.get(id(self), str(self))
@@ -83,6 +84,7 @@ def create_backup_file(config_root, backups_dir, prefix: str = ""):
     if result is None:
         return None
     import os
+
     # Coerce result to absolute string path; handle proxied/shimmed returns.
     # Always convert to plain string first to avoid any proxy/wrapper issues.
     try:
@@ -96,11 +98,11 @@ def create_backup_file(config_root, backups_dir, prefix: str = ""):
                 full = result.__str__()
             except Exception:
                 return None
-    
+
     # Ensure we have a non-empty path
     if not full:
         return None
-        
+
     # Extract the filename for the BackupPath name field. Use the basename
     # if we have a path-like result, otherwise use the result as-is (for
     # tests that mock with simple filenames).
@@ -108,7 +110,7 @@ def create_backup_file(config_root, backups_dir, prefix: str = ""):
         name = Path(full).name
     except Exception:
         name = full
-        
+
     # Always return our shim's BackupPath to ensure consistent behavior
     return BackupPath(full, name)  # type: ignore[name-defined]
 

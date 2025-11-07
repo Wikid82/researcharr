@@ -3,8 +3,8 @@
 import logging
 import os
 import subprocess
-from unittest.mock import MagicMock, Mock, patch, mock_open
 import unittest
+from unittest.mock import MagicMock, Mock, mock_open, patch
 
 
 def test_load_config_returns_empty_dict():

@@ -6,8 +6,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 
-
-
 def test_core_application_factory_initialization():
     """Test CoreApplicationFactory initialization."""
     from researcharr.core.application import CoreApplicationFactory

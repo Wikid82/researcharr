@@ -171,7 +171,7 @@ def test_plugins_exception_in_getattr():
 
     # Should handle missing attributes gracefully
     assert hasattr(plugins, "registry")
-    
+
     # Try to access a non-existent attribute (should not crash)
     try:
         _ = getattr(plugins, "nonexistent_attr_test_12345", None)

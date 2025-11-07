@@ -4,6 +4,7 @@ import logging
 import threading
 import time
 from unittest.mock import patch
+
 import pytest
 
 
@@ -246,6 +247,7 @@ def test_shutdown_prevents_double_shutdown():
 def test_signal_handler_registration():
     """Test signal handlers are registered."""
     from researcharr.core.lifecycle import ApplicationLifecycle
+
     with patch("signal.signal") as mock_signal:
         ApplicationLifecycle()
         assert mock_signal.call_count >= 2
@@ -253,7 +255,10 @@ def test_signal_handler_registration():
 
 def test_shutdown_hook_execution_via_direct_shutdown():
     """Test shutdown hook executes when lifecycle.shutdown is called."""
-    from researcharr.core.lifecycle import ApplicationLifecycle, ApplicationState
+    from researcharr.core.lifecycle import (
+        ApplicationLifecycle,
+        ApplicationState,
+    )
 
     lifecycle = ApplicationLifecycle()
     lifecycle._set_state(ApplicationState.STARTED)
@@ -406,6 +411,7 @@ def test_lifecycle_state_transition_logging(caplog):
 def test_atexit_registration():
     """Test atexit handler registration."""
     from researcharr.core.lifecycle import ApplicationLifecycle
+
     with patch("atexit.register") as mock_atexit:
         ApplicationLifecycle()
         assert mock_atexit.called

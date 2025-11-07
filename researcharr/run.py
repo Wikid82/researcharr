@@ -52,6 +52,7 @@ def setup_scheduler() -> None:
     # Look up schedule from both globals and the module's namespace
     # to support test patches that set run.schedule = mock
     import sys
+
     sched = globals().get("schedule")
     # Also check if the containing module has schedule set by tests
     if sched is None:
@@ -101,6 +102,7 @@ def run_job() -> None:
         mod_script = None
     script = env_script or mod_script or SCRIPT
     import logging as _lg
+
     try:
         _lg.info("globals SCRIPT=%r", mod_script)
     except Exception:

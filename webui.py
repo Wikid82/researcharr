@@ -56,4 +56,5 @@ def save_user_config(username, password_hash, api_key=None, api_key_hash=None):
     rdb.save_user(username, password_hash, api_hash)
     return {"username": username, "password_hash": password_hash, "api_key_hash": api_hash}
 
+
 __all__ = ["USER_CONFIG_PATH", "_env_bool", "load_user_config", "save_user_config"]

@@ -83,6 +83,7 @@ def create_backup_file(
         # (historical behavior expected by tests).
         try:
             from ._backups_impl import BackupPath  # type: ignore
+
             # Some tests patch BackupPath to None; only call if callable.
             if callable(BackupPath):  # type: ignore[arg-type]
                 return BackupPath(str(out_path), out_path.name)  # type: ignore[call-arg]

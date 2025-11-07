@@ -7,7 +7,6 @@ researcharr/__init__.py (8% coverage) to maximize coverage gains.
 import sys
 import zipfile
 from pathlib import Path
- 
 
 
 class TestBackupsImplModule:
@@ -575,6 +574,7 @@ class TestTopLevelInitPy:
         # Just verify it doesn't crash on import
         try:
             import importlib
+
             importlib.util.find_spec("__init__")
         except ImportError:
             # May not be on path, that's ok

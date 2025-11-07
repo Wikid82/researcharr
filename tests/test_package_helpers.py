@@ -318,12 +318,12 @@ def test_dispatcher_no_implementation_available():
     for key in ["researcharr", "researcharr.researcharr"]:
         if key in sys.modules:
             saved_modules[key] = sys.modules[key]
-    
+
     try:
         with patch.dict(sys.modules, {"researcharr": pkg_module}, clear=False):
             # Remove impl module
             sys.modules.pop("researcharr.researcharr", None)
-            
+
             _package_helpers.install_create_metrics_dispatcher()
 
             dispatcher = pkg_module.__dict__["create_metrics_app"]

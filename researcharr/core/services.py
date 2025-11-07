@@ -366,26 +366,33 @@ def create_metrics_app() -> Flask:
 
     # Provide a context-manager capable test_client even if Flask's test_client
     # was patched to a simple Mock without __enter__/__exit__ in some tests.
-    _orig_test_client = getattr(app.__class__, 'test_client', None)
+    _orig_test_client = getattr(app.__class__, "test_client", None)
     if _orig_test_client is not None:
+
         def _wrapped_test_client(self, *a, **kw):  # type: ignore[override]
             client = _orig_test_client(self, *a, **kw)
             if hasattr(client, "__enter__") and hasattr(client, "__exit__"):
                 return client
+
             class _ClientWrapper:
                 def __init__(self, inner):
                     self._inner = inner
+
                 def __getattr__(self, name):
                     return getattr(self._inner, name)
+
                 def __enter__(self):
                     return self._inner
+
                 def __exit__(self, *exc):
                     return False
+
             return _ClientWrapper(client)
+
         app.test_client = lambda *a, **kw: _wrapped_test_client(app, *a, **kw)  # type: ignore[method-assign]
-    
+
     return app
-    
+
     # (Unreachable return kept for clarity; wrapper inserted above.)
 
 

@@ -51,7 +51,9 @@ if _impl is not None:
     # If the implementation comes from the repository root file path,
     # relax USER_CONFIG_PATH to None to avoid asserting a specific default
     # in tests that inject a different top-level module.
-    _repo_candidate = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "webui.py"))
+    _repo_candidate = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), os.pardir, "webui.py")
+    )
     _impl_file = getattr(_impl, "__file__", None)
     _impl_is_repo_root = False
     try:

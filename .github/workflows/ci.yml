@@ -175,10 +175,18 @@ jobs:
         name: bandit-report-python-${{ matrix.python-version }}
         path: bandit-report.json
     - name: Upload coverage to Codecov
-      if: ${{ always() && env.RENOVATE_BYPASS != '1' && env.CODECOV_TOKEN != '' }}
+      # Always attempt upload (unless short-circuited by Renovate bypass).
+      # For public repositories Codecov does not require a token; for private
+      # repositories make sure `CODECOV_TOKEN` is set in repository secrets.
+      if: ${{ always() && env.RENOVATE_BYPASS != '1' }}
       uses: codecov/codecov-action@v5
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+        # Point explicitly at the XML file pytest writes
+        files: coverage.xml
+        # Tag this upload so it is easy to find in Codecov UI
+        flags: python
+        # Don't fail CI if the upload step has an error here
+        fail_ci_if_error: false
       continue-on-error: true
     - name: Upload test results to Codecov
       if: ${{ !cancelled() && env.RENOVATE_BYPASS != '1' && env.CODECOV_TOKEN != '' }}

@@ -34,6 +34,7 @@ env/
 # ignored.
 *.coverage
 htmlcov/
+junit.xml
 
 # Build and distribution
 dist/

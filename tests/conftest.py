@@ -76,7 +76,7 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
 
     sys.modules.pop("researcharr.researcharr", None)  # Ensure clean import
     sys.modules.pop("researcharr.db", None)  # Ensure clean db module import
-    sys.modules.pop("webui", None)  # Ensure clean webui module import  
+    sys.modules.pop("webui", None)  # Ensure clean webui module import
     sys.modules.pop("researcharr.webui", None)  # Ensure clean webui package import
     monkeypatch.setattr("researcharr.researcharr.DB_PATH", db_path, raising=False)
     monkeypatch.setattr("researcharr.researcharr.setup_logger", fake_setup_logger, raising=False)

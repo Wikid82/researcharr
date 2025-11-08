@@ -18,12 +18,13 @@ def test_env_bool_truthy_and_falsey(monkeypatch):
 def test_load_user_config_no_db(monkeypatch):
     # Ensure rdb is None - patch all module references
     import sys
+
     # Patch the function's module
     func_module = sys.modules[webui.load_user_config.__module__]
     monkeypatch.setattr(func_module, "rdb", None)
     # Also patch sys.modules['webui'] if it exists and is different
-    if 'webui' in sys.modules and sys.modules['webui'] is not func_module:
-        monkeypatch.setattr(sys.modules['webui'], "rdb", None)
+    if "webui" in sys.modules and sys.modules["webui"] is not func_module:
+        monkeypatch.setattr(sys.modules["webui"], "rdb", None)
     # And patch the webui we imported
     monkeypatch.setattr(webui, "rdb", None)
     assert webui.load_user_config() is None
@@ -40,11 +41,12 @@ def test_load_user_config_with_db(monkeypatch):
 
 def test_save_user_config_raises_without_db(monkeypatch):
     import sys
+
     # Patch all module references
     func_module = sys.modules[webui.save_user_config.__module__]
     monkeypatch.setattr(func_module, "rdb", None)
-    if 'webui' in sys.modules and sys.modules['webui'] is not func_module:
-        monkeypatch.setattr(sys.modules['webui'], "rdb", None)
+    if "webui" in sys.modules and sys.modules["webui"] is not func_module:
+        monkeypatch.setattr(sys.modules["webui"], "rdb", None)
     monkeypatch.setattr(webui, "rdb", None)
     with pytest.raises(RuntimeError):
         webui.save_user_config("u", "phash")
@@ -61,11 +63,12 @@ def test_save_user_config_hashing_and_delegate(monkeypatch):
     fake_db = types.SimpleNamespace()
     fake_db.save_user = fake_save_user
     import sys
+
     # Patch all module references
     func_module = sys.modules[webui.save_user_config.__module__]
     monkeypatch.setattr(func_module, "rdb", fake_db)
-    if 'webui' in sys.modules and sys.modules['webui'] is not func_module:
-        monkeypatch.setattr(sys.modules['webui'], "rdb", fake_db)
+    if "webui" in sys.modules and sys.modules["webui"] is not func_module:
+        monkeypatch.setattr(sys.modules["webui"], "rdb", fake_db)
     monkeypatch.setattr(webui, "rdb", fake_db)
 
     # provide api_key which should be hashed by save_user_config

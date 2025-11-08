@@ -1,12 +1,12 @@
-name: Propagate development to downstream
+name: Propagate main to downstream
 
 on:
   push:
-    branches: [ development ]
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       head:
-        description: 'Branch to propagate from (defaults to the pushed branch or "development")'
+        description: 'Branch to propagate from (defaults to the pushed branch or "main")'
         required: false
       downstreams:
         description: 'Comma-separated list of downstream branches to open PRs into (defaults: staging,release)'
@@ -28,7 +28,7 @@ jobs:
             const repo = context.repo.repo;
             // Determine head branch: prefer workflow_dispatch input 'head', otherwise the pushed branch
             let head = (context.eventName === 'workflow_dispatch' && context.payload && context.payload.inputs && context.payload.inputs.head) ? context.payload.inputs.head : context.ref.replace('refs/heads/', '');
-            if (!head) head = 'development';
+            if (!head) head = 'main';
 
             // Determine downstreams: allow passing comma-separated list via workflow_dispatch; default to these branches
             let downstreams = ['staging', 'release'];

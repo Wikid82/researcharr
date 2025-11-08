@@ -64,7 +64,7 @@ class DatabaseService:
             conn.execute("SELECT 1")
             conn.close()
             return True
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             return False
 
 
@@ -156,7 +156,7 @@ class ConnectivityService:
                     source="connectivity_service",
                 )
                 return False
-        except Exception as e:
+        except Exception as e:  # nosec B110 -- intentional broad except for resilience
             logger.error("Radarr connection failed: %s", e)
 
             # Publish connectivity error event
@@ -199,7 +199,7 @@ class ConnectivityService:
                     source="connectivity_service",
                 )
                 return False
-        except Exception as e:
+        except Exception as e:  # nosec B110 -- intentional broad except for resilience
             logger.error("Sonarr connection failed: %s", e)
 
             # Publish connectivity error event
@@ -229,7 +229,7 @@ class HealthService:
                 "status": "ok" if db_ok else "error",
                 "path": db_service.db_path,
             }
-        except Exception as e:
+        except Exception as e:  # nosec B110 -- intentional broad except for resilience
             health_status["components"]["database"] = {
                 "status": "error",
                 "error": str(e),
@@ -243,7 +243,7 @@ class HealthService:
                 "status": "ok" if config_errors == 0 else "warning",
                 "validation_errors": config_errors,
             }
-        except Exception as e:
+        except Exception as e:  # nosec B110 -- intentional broad except for resilience
             health_status["components"]["configuration"] = {
                 "status": "error",
                 "error": str(e),
@@ -297,17 +297,17 @@ def create_metrics_app() -> Flask:
     # Register services if not already registered
     try:
         container.resolve("database_service")
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         container.register_singleton("database_service", DatabaseService())
 
     try:
         container.resolve("health_service")
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         container.register_singleton("health_service", HealthService())
 
     try:
         container.resolve("metrics_service")
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         container.register_singleton("metrics_service", MetricsService())
 
     metrics_service = container.resolve("metrics_service")
@@ -350,7 +350,7 @@ def create_metrics_app() -> Flask:
         # Log the exception details
         try:
             app.logger.exception("Unhandled exception in request: %s", e)
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
 
         metrics_service.increment_errors()

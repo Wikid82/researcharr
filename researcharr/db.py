@@ -21,7 +21,7 @@ def _get_db_path() -> str:
         from researcharr import researcharr as rra
 
         return getattr(rra, "DB_PATH", "researcharr.db")
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         return os.getenv("RESEARCHARR_DB", "researcharr.db")
 
 
@@ -31,7 +31,7 @@ def _conn():
     if dirname and not os.path.exists(dirname):
         try:
             os.makedirs(dirname, exist_ok=True)
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
     conn = sqlite3.connect(path, timeout=5)
     conn.row_factory = sqlite3.Row

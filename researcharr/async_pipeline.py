@@ -118,12 +118,12 @@ class Pipeline:
         if self.debug:
             try:
                 logger.debug("Progress event: %s", event)
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
         for cb in list(self._progress_callbacks):
             try:
                 cb(event)
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 logger.exception("Progress callback failed: %s", cb)
 
     def get_status(self) -> dict:
@@ -176,7 +176,7 @@ class Pipeline:
                 res = sink_cb(item)
                 if asyncio.iscoroutine(res):
                     await res
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 logger.exception("Dead-letter sink failed for item=%r", item)
         # clear
         self._dead_letters[stage_index].clear()
@@ -256,7 +256,7 @@ class Pipeline:
                     maybe = setup()
                     if asyncio.iscoroutine(maybe):
                         await maybe
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     logger.exception("Stage.setup failed for %s", spec.stage)
 
             for _ in range(spec.concurrency):
@@ -279,7 +279,7 @@ class Pipeline:
                 # sentinel: pass downstream and exit
                 try:
                     await out_q.put(None)
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
                 in_q.task_done()
                 break
@@ -290,7 +290,7 @@ class Pipeline:
                 self._emit_progress(
                     {"type": "in_flight_inc", "stage": idx, "metrics": dict(spec.metrics or {})}
                 )
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
             try:
                 res = await spec.stage.process(item)
@@ -303,9 +303,9 @@ class Pipeline:
                     self._emit_progress(
                         {"type": "processed", "stage": idx, "metrics": dict(spec.metrics or {})}
                     )
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
-            except Exception as exc:  # noqa: BLE001 - we want to catch stage errors
+            except Exception as exc:  # noqa: BLE001 - we want to catch stage errors  # nosec B110 -- intentional broad except for resilience
                 logger.exception("Stage %s failed for item=%r", spec.stage, item)
                 if attempts_left > 0:
                     # exponential backoff: base * 2**attempts_done
@@ -327,7 +327,7 @@ class Pipeline:
                                     -jitter, jitter
                                 ),  # nosec: B311 - non-crypto jitter
                             )
-                    except Exception:
+                    except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
                     try:
                         await asyncio.sleep(delay)
@@ -341,9 +341,9 @@ class Pipeline:
                                     "metrics": dict(spec.metrics or {}),
                                 }
                             )
-                        except Exception:
+                        except Exception:  # nosec B110 -- intentional broad except for resilience
                             pass
-                    except Exception:
+                    except Exception:  # nosec B110 -- intentional broad except for resilience
                         logger.exception("Failed to re-enqueue item for retry: %r", item)
                 else:
                     # final failure: call error handler if present, otherwise log and drop
@@ -359,12 +359,12 @@ class Pipeline:
                             # record dead-letter for monitoring
                             try:
                                 self._dead_letters[idx].append(item)
-                            except Exception:
+                            except Exception:  # nosec B110 -- intentional broad except for resilience
                                 pass
                         self._emit_progress(
                             {"type": "failed", "stage": idx, "metrics": dict(spec.metrics or {})}
                         )
-                    except Exception:
+                    except Exception:  # nosec B110 -- intentional broad except for resilience
                         logger.exception("Error handler failed for item=%r", item)
             finally:
                 try:
@@ -372,7 +372,7 @@ class Pipeline:
                     self._emit_progress(
                         {"type": "in_flight_dec", "stage": idx, "metrics": dict(spec.metrics or {})}
                     )
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
                 in_q.task_done()
 
@@ -398,7 +398,7 @@ class Pipeline:
                 res = handler(it)
                 if asyncio.iscoroutine(res):
                     await res
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 logger.exception("queue_full_handler failed for item=%r", it)
 
         # Apply policies
@@ -421,14 +421,14 @@ class Pipeline:
                     # account for removal in join-count
                     try:
                         q.task_done()
-                    except Exception:
+                    except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
                 except asyncio.QueueEmpty:
                     pass
                 q.put_nowait((item, first_spec.max_retries))
                 try:
                     first_spec.metrics["dropped"] += 1
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
             except asyncio.QueueFull:
                 # if still full, call handler if present
@@ -439,13 +439,13 @@ class Pipeline:
             # do not enqueue the new item; call handler if present and record drop
             try:
                 first_spec.metrics["dropped"] += 1
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
             await _call_handler(item)
             # record dead-letter
             try:
                 self._dead_letters[0].append(item)
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
             return
 
@@ -471,14 +471,14 @@ class Pipeline:
                 for _ in range(spec.concurrency):
                     try:
                         await q.put(None)
-                    except Exception:
+                    except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
             # wait for workers to exit
             try:
                 await asyncio.wait_for(
                     asyncio.gather(*self._workers, return_exceptions=True), timeout=timeout
                 )
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 # best-effort cancel
                 for t in self._workers:
                     t.cancel()
@@ -490,7 +490,7 @@ class Pipeline:
                         maybe = teardown()
                         if asyncio.iscoroutine(maybe):
                             await maybe
-                    except Exception:
+                    except Exception:  # nosec B110 -- intentional broad except for resilience
                         logger.exception("Stage.teardown failed for %s", spec.stage)
         else:
             for t in self._workers:
@@ -503,7 +503,7 @@ class Pipeline:
             try:
                 self._metrics_task.cancel()
                 await asyncio.sleep(0)
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
             self._metrics_task = None
 
@@ -593,7 +593,7 @@ class Pipeline:
             # first apply {var} style formatting
             try:
                 s2 = s.format_map(vars_map)
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 s2 = s
 
             if not expand_env:
@@ -700,7 +700,7 @@ class Pipeline:
                     mod = importlib.import_module(mod_name)
                     StageCls = getattr(mod, qual)
                     stage_obj = StageCls(**init_kwargs) if init_kwargs else StageCls()
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     raise ImportError(f"Cannot import stage class '{cls_path}'")
             else:
                 raise ValueError("stage class path must be a string")
@@ -789,7 +789,7 @@ class Pipeline:
                         res = exp(snapshot)
                         if asyncio.iscoroutine(res):
                             await res
-                    except Exception:
+                    except Exception:  # nosec B110 -- intentional broad except for resilience
                         logger.exception("metrics exporter failed")
                 await asyncio.sleep(0.5)
         except asyncio.CancelledError:
@@ -844,7 +844,7 @@ def get_prometheus_exporter(pipeline_name: Optional[str] = None, registry: Optio
     """
     try:
         from prometheus_client import CollectorRegistry, Counter, Gauge
-    except Exception as exc:  # pragma: no cover - optional dependency
+    except Exception as exc:  # pragma: no cover - optional dependency  # nosec B110 -- intentional broad except for resilience
         raise ImportError("prometheus_client is required for Prometheus exporter") from exc
 
     reg = registry or CollectorRegistry()

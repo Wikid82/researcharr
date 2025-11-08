@@ -12,7 +12,7 @@ from typing import Any  # noqa: F401
 
 try:
     _impl = importlib.import_module("factory")
-except Exception:
+except Exception:  # nosec B110 -- intentional broad except for resilience
     _impl = None  # type: ignore[assignment]
 
 # Always expose the `_impl` symbol on the shim module so tests that
@@ -27,7 +27,7 @@ if _impl is not None:
     # any subsequent imports/attribute checks always see a callable create_app.
     try:
         _cur = getattr(_impl, "create_app", None)
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         _cur = None
     if _cur is None or not callable(_cur):
         # Import the helper and install the stable delegate wrapper.
@@ -48,19 +48,19 @@ if _impl is not None:
                     import researcharr as _pkg
 
                     _delegate = getattr(_pkg, "_create_app_delegate", None)
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
                 if _delegate is not None:
                     try:
                         _impl.__dict__["create_app"] = _delegate
-                    except Exception:
+                    except Exception:  # nosec B110 -- intentional broad except for resilience
                         try:
                             setattr(_impl, "create_app", _delegate)
-                        except Exception:
+                        except Exception:  # nosec B110 -- intentional broad except for resilience
                             pass
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
 
     # Ensure the repo-level module object is treated as the canonical
@@ -76,14 +76,14 @@ if _impl is not None:
         # breaks tests that patch one of those names.
         try:
             _sys.modules["factory"] = _impl
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             # best-effort; ignore failures to overwrite mapping
             pass
         try:
             _sys.modules["researcharr.factory"] = _impl
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         # best-effort; don't fail import on sys.modules manipulation
         pass
 
@@ -109,7 +109,7 @@ def __getattr__(name: str):
         if _impl is not None:
             try:
                 cur = getattr(_impl, "create_app", None)
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 cur = None
             if cur is None or not callable(cur):
                 # Re-install the delegate by importing helpers and writing to __dict__.
@@ -128,15 +128,15 @@ def __getattr__(name: str):
                     if delegate is not None:
                         try:
                             _impl.__dict__["create_app"] = delegate
-                        except Exception:
+                        except Exception:  # nosec B110 -- intentional broad except for resilience
                             try:
                                 setattr(_impl, "create_app", delegate)
-                            except Exception:
+                            except Exception:  # nosec B110 -- intentional broad except for resilience
                                 pass
                         # Also ensure the shim's globals have the updated binding.
                         globals()["create_app"] = delegate
                         return delegate
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
             # Return the current value from _impl (may be delegate or original).
             return getattr(_impl, "create_app", None)

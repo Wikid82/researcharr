@@ -9,6 +9,29 @@ import sys
 from importlib import util as importlib_util
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _cleanup_webui_module():
+    """Ensure tests in this module don't leave mocked modules in sys.modules."""
+    yield
+    # Remove any cached or mocked entries to avoid polluting other tests.
+    sys.modules.pop("researcharr.webui", None)
+    sys.modules.pop("webui", None)
+    # If a test injected a Mock for `flask`, ensure it is removed so other
+    # tests that expect a real `flask` package are not affected.
+    try:
+        from unittest.mock import Mock as _Mock
+
+        if isinstance(sys.modules.get("flask"), _Mock):
+            sys.modules.pop("flask", None)
+    except Exception:
+        # If unittest.mock isn't available or something unexpected occurs,
+        # continue with the regular cleanup.
+        pass
+    importlib.invalidate_caches()
+
 
 def test_webui_import():
     """Test that webui module can be imported."""
@@ -57,7 +80,7 @@ def test_webui_all_exports():
     ]
 
     assert hasattr(webui, "__all__")
-    assert set(webui.__all__) == set(expected)
+    assert set(webui.__all__) == set(expected)  # type: ignore[attr-defined]
 
 
 def test_webui_with_mock_impl():
@@ -68,12 +91,12 @@ def test_webui_with_mock_impl():
     mock_webui.load_user_config = MagicMock(return_value={"user": "test"})
     mock_webui.save_user_config = MagicMock()
 
-    with patch("importlib.import_module", return_value=mock_webui):
+    # Inject the mock into sys.modules rather than patching importlib.import_module
+    # to avoid replacing import machinery globally and leaving cached modules.
+    with patch.dict(sys.modules, {"webui": mock_webui}):
         import importlib
 
-        if "researcharr.webui" in sys.modules:
-            del sys.modules["researcharr.webui"]
-
+        sys.modules.pop("researcharr.webui", None)
         webui = importlib.import_module("researcharr.webui")
 
         # Check that attributes are present
@@ -120,8 +143,7 @@ def test_webui_fallback_no_spec():
     with patch("importlib.import_module", side_effect=import_module_side_effect):
         # Patch via object to avoid resolve/import of importlib during patching
         with patch.object(importlib_util, "spec_from_file_location", return_value=None):
-            if "researcharr.webui" in sys.modules:
-                del sys.modules["researcharr.webui"]
+            sys.modules.pop("researcharr.webui", None)
 
             # Should not raise
             webui = importlib.import_module("researcharr.webui")
@@ -145,8 +167,7 @@ def test_webui_fallback_no_loader():
 
         # Patch via object to avoid resolve/import of importlib during patching
         with patch.object(importlib_util, "spec_from_file_location", return_value=mock_spec):
-            if "researcharr.webui" in sys.modules:
-                del sys.modules["researcharr.webui"]
+            sys.modules.pop("researcharr.webui", None)
 
             # Should not raise
             webui = importlib.import_module("researcharr.webui")
@@ -173,11 +194,12 @@ def test_webui_partial_exports():
             return mock_webui
         return real_import_module(name, *args, **kwargs)
 
-    with patch("importlib.import_module", side_effect=import_module_side_effect):
-        # Monkeypatch attributes directly instead of global getattr to avoid recursion
-        if "researcharr.webui" in sys.modules:
-            del sys.modules["researcharr.webui"]
-
+    # Prefer injecting the mock into sys.modules so importlib machinery isn't
+    # globally patched. This prevents leaked imported modules from polluting
+    # other tests when importlib.import_module is patched elsewhere.
+    with patch.dict(sys.modules, {"webui": mock_webui}):
+        # Ensure fresh import
+        sys.modules.pop("researcharr.webui", None)
         webui = importlib.import_module("researcharr.webui")
 
         # All attributes should exist in __all__
@@ -280,9 +302,9 @@ def test_webui_getattr_exception_handling():
             return raising_impl
         return real_import_module(name, *args, **kwargs)
 
-    with patch("importlib.import_module", side_effect=import_module_side_effect):
-        if "researcharr.webui" in sys.modules:
-            del sys.modules["researcharr.webui"]
+    # Inject the raising impl into sys.modules to avoid patching importlib.
+    with patch.dict(sys.modules, {"webui": raising_impl}):
+        sys.modules.pop("researcharr.webui", None)
 
         # Should handle the exception gracefully
         try:

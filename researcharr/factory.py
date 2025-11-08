@@ -10,10 +10,15 @@ from __future__ import annotations
 import importlib
 from typing import Any  # noqa: F401
 
-try:
-    _impl = importlib.import_module("factory")
-except Exception:  # nosec B110 -- intentional broad except for resilience
-    _impl = None  # type: ignore[assignment]
+
+def _import_impl() -> Any | None:
+    try:
+        return importlib.import_module("factory")
+    except Exception:
+        return None
+
+
+_impl = _import_impl()
 
 # Always expose the `_impl` symbol on the shim module so tests that
 # reload `researcharr.factory` may end up operating against the top-level
@@ -21,81 +26,89 @@ except Exception:  # nosec B110 -- intentional broad except for resilience
 # the shim/import-failure test deterministic.
 globals()["_impl"] = _impl
 
-if _impl is not None:
-    # Idempotent delegate installation: BEFORE setting sys.modules mapping,
-    # ensure create_app is callable on the module object. This guarantees that
-    # any subsequent imports/attribute checks always see a callable create_app.
+
+def _ensure_delegate(module: Any) -> None:
+    """Ensure `module.create_app` is a callable delegate if missing.
+
+    This mirrors the previous inline logic but is now testable directly.
+    """
     try:
-        _cur = getattr(_impl, "create_app", None)
+        cur = getattr(module, "create_app", None)
     except Exception:  # nosec B110 -- intentional broad except for resilience
-        _cur = None
-    if _cur is None or not callable(_cur):
-        # Import the helper and install the stable delegate wrapper.
+        cur = None
+    if cur is not None and callable(cur):
+        return
+    try:
+        import os as _os
+
+        from researcharr._factory_proxy import (
+            install_create_app_helpers as _install_helpers,
+        )
+
+        repo_root = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), ".."))
         try:
-            from researcharr._factory_proxy import (
-                install_create_app_helpers as _install_helpers,
-            )
+            _install_helpers(repo_root)
+        except Exception:  # nosec B110 -- intentional broad except for resilience
+            # helper install is best-effort
+            pass
+        # Re-fetch a delegate off the package
+        delegate = None
+        try:
+            import researcharr as _pkg
 
+            delegate = getattr(_pkg, "_create_app_delegate", None)
+        except Exception:  # nosec B110 -- intentional broad except for resilience
+            delegate = None
+        if delegate is not None:
             try:
-                # Re-run helper installation; it's idempotent.
-                import os as _os
-
-                _repo_root = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), ".."))
-                _install_helpers(_repo_root)
-                # Re-fetch the delegate from the package globals after installation.
-                _delegate = None
+                module.__dict__["create_app"] = delegate
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 try:
-                    import researcharr as _pkg
-
-                    _delegate = getattr(_pkg, "_create_app_delegate", None)
+                    setattr(module, "create_app", delegate)
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
-                if _delegate is not None:
-                    try:
-                        _impl.__dict__["create_app"] = _delegate
-                    except Exception:  # nosec B110 -- intentional broad except for resilience
-                        try:
-                            setattr(_impl, "create_app", _delegate)
-                        except Exception:  # nosec B110 -- intentional broad except for resilience
-                            pass
-            except Exception:  # nosec B110 -- intentional broad except for resilience
-                pass
-        except Exception:  # nosec B110 -- intentional broad except for resilience
-            pass
+    except Exception:  # nosec B110 -- intentional broad except for resilience
+        # fully best-effort
+        pass
 
-    # Ensure the repo-level module object is treated as the canonical
-    # implementation under both import names. This makes import-time
-    # identity consistent so tests that patch `researcharr.factory` or
-    # the top-level `factory` observe the same module object.
+
+def _map_sys_modules(module: Any) -> None:
+    """Map both import names to the same module object in sys.modules."""
     try:
         import sys as _sys
 
-        # Force the well-known import names to refer to the repo-level
-        # implementation module object. Using direct assignment avoids
-        # leaving duplicate module objects under different keys which
-        # breaks tests that patch one of those names.
         try:
-            _sys.modules["factory"] = _impl
+            _sys.modules["factory"] = module
         except Exception:  # nosec B110 -- intentional broad except for resilience
-            # best-effort; ignore failures to overwrite mapping
             pass
         try:
-            _sys.modules["researcharr.factory"] = _impl
+            _sys.modules["researcharr.factory"] = module
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
     except Exception:  # nosec B110 -- intentional broad except for resilience
-        # best-effort; don't fail import on sys.modules manipulation
         pass
 
-    # Re-export public names from the implementation for static analysis
-    # and backwards compatibility.
-    globals().update(
-        {name: getattr(_impl, name) for name in dir(_impl) if not name.startswith("__")}
-    )
-    # Do not compute __all__ dynamically here; some editors (Pylance)
-    # warn about operations on __all__. The shim re-exports all public
-    # names via globals().update above which is sufficient for static
-    # analysis and runtime import resolution.
+
+def _reexport_public(module: Any) -> None:
+    """Re-export non-dunder names from the implementation into this module."""
+    try:
+        globals().update(
+            {name: getattr(module, name) for name in dir(module) if not name.startswith("__")}
+        )
+    except Exception:  # nosec B110 -- intentional broad except for resilience
+        pass
+
+
+if _impl is not None:
+    # Only perform direct re-export when the object is a real module, not a
+    # proxy/wrapper installed by install_create_app_helpers. The helper
+    # provides its own stable module object (e.g. _LoggedModule) that may
+    # intentionally hide internal attributes like _impl for isolation.
+    _ensure_delegate(_impl)
+    _map_sys_modules(_impl)
+    # Re-export only if the implementation actually exposes the attribute.
+    if hasattr(_impl, "__dict__") and "__spec__" in _impl.__dict__:
+        _reexport_public(_impl)
 
 
 # Module-level __getattr__ to heal create_app on late access. Tests that
@@ -107,37 +120,14 @@ def __getattr__(name: str):
     if name == "create_app":
         # Re-check if _impl has a callable create_app; if not, install delegate.
         if _impl is not None:
+            _ensure_delegate(_impl)
+            # Also reflect any healed delegate to our globals for callers that
+            # access the attribute on this module directly.
             try:
-                cur = getattr(_impl, "create_app", None)
+                if "create_app" in getattr(_impl, "__dict__", {}):
+                    globals()["create_app"] = _impl.__dict__["create_app"]
             except Exception:  # nosec B110 -- intentional broad except for resilience
-                cur = None
-            if cur is None or not callable(cur):
-                # Re-install the delegate by importing helpers and writing to __dict__.
-                try:
-                    import os as _os
-
-                    from researcharr._factory_proxy import (
-                        install_create_app_helpers as _install_helpers,
-                    )
-
-                    _repo_root = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), ".."))
-                    _install_helpers(_repo_root)
-                    import researcharr as _pkg
-
-                    delegate = getattr(_pkg, "_create_app_delegate", None)
-                    if delegate is not None:
-                        try:
-                            _impl.__dict__["create_app"] = delegate
-                        except Exception:  # nosec B110 -- intentional broad except for resilience
-                            try:
-                                setattr(_impl, "create_app", delegate)
-                            except Exception:  # nosec B110 -- intentional broad except for resilience
-                                pass
-                        # Also ensure the shim's globals have the updated binding.
-                        globals()["create_app"] = delegate
-                        return delegate
-                except Exception:  # nosec B110 -- intentional broad except for resilience
-                    pass
+                pass
             # Return the current value from _impl (may be delegate or original).
             return getattr(_impl, "create_app", None)
     # For other attributes, delegate to _impl or raise AttributeError.

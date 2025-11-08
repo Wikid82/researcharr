@@ -360,7 +360,9 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                             try:
                                 # Fallback to setattr if direct dict access fails.
                                 setattr(pf, "create_app", delegate)
-                            except Exception:  # nosec B110 -- intentional broad except for resilience
+                            except (
+                                Exception
+                            ):  # nosec B110 -- intentional broad except for resilience
                                 pass
                         # If the module object is a ModuleProxy instance,
                         # also ensure its own instance dict exposes the
@@ -373,10 +375,14 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                             if isinstance(pf, _MP):
                                 try:
                                     pf.__dict__["create_app"] = delegate
-                                except Exception:  # nosec B110 -- intentional broad except for resilience
+                                except (
+                                    Exception
+                                ):  # nosec B110 -- intentional broad except for resilience
                                     try:
                                         setattr(pf, "create_app", delegate)
-                                    except Exception:  # nosec B110 -- intentional broad except for resilience
+                                    except (
+                                        Exception
+                                    ):  # nosec B110 -- intentional broad except for resilience
                                         pass
                         except Exception:  # nosec B110 -- intentional broad except for resilience
                             # ignore import or isinstance errors
@@ -403,7 +409,9 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                         except Exception:  # nosec B110 -- intentional broad except for resilience
                             try:
                                 setattr(_m, "create_app", delegate)
-                            except Exception:  # nosec B110 -- intentional broad except for resilience
+                            except (
+                                Exception
+                            ):  # nosec B110 -- intentional broad except for resilience
                                 pass
                         try:
                             sys.modules.setdefault("researcharr.factory", _m)
@@ -424,10 +432,14 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                             if not hasattr(pf, "create_app"):
                                 try:
                                     pf.__dict__.setdefault("create_app", delegate)
-                                except Exception:  # nosec B110 -- intentional broad except for resilience
+                                except (
+                                    Exception
+                                ):  # nosec B110 -- intentional broad except for resilience
                                     try:
                                         setattr(pf, "create_app", delegate)
-                                    except Exception:  # nosec B110 -- intentional broad except for resilience
+                                    except (
+                                        Exception
+                                    ):  # nosec B110 -- intentional broad except for resilience
                                         pass
                         except Exception:  # nosec B110 -- intentional broad except for resilience
                             pass
@@ -454,12 +466,18 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                 # the delegate.
                                 try:
                                     canonical.__dict__.setdefault("create_app", delegate)
-                                except Exception:  # nosec B110 -- intentional broad except for resilience
+                                except (
+                                    Exception
+                                ):  # nosec B110 -- intentional broad except for resilience
                                     try:
                                         setattr(canonical, "create_app", delegate)
-                                    except Exception:  # nosec B110 -- intentional broad except for resilience
+                                    except (
+                                        Exception
+                                    ):  # nosec B110 -- intentional broad except for resilience
                                         pass
-                            except Exception:  # nosec B110 -- intentional broad except for resilience
+                            except (
+                                Exception
+                            ):  # nosec B110 -- intentional broad except for resilience
                                 pass
 
                         # Create a deterministic module-like object that will be
@@ -495,7 +513,9 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                                 d = object.__getattribute__(self, "__dict__")
                                                 _cur = d.get("create_app")
                                                 has_create = bool(_cur is not None)
-                                            except Exception:  # nosec B110 -- intentional broad except for resilience
+                                            except (
+                                                Exception
+                                            ):  # nosec B110 -- intentional broad except for resilience
                                                 has_create = False
 
                                             _snap = {
@@ -511,9 +531,13 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                                     + _json.dumps(_snap)
                                                     + "\n"
                                                 )
-                                            except Exception:  # nosec B110 -- intentional broad except for resilience
+                                            except (
+                                                Exception
+                                            ):  # nosec B110 -- intentional broad except for resilience
                                                 pass
-                                        except Exception:  # nosec B110 -- intentional broad except for resilience
+                                        except (
+                                            Exception
+                                        ):  # nosec B110 -- intentional broad except for resilience
                                             pass
                                         # Self-heal: if the delegate isn't present,
                                         # attach the stable delegate from the package
@@ -543,7 +567,9 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
 
                                                             try:
                                                                 _inst()
-                                                            except Exception:  # nosec B110 -- intentional broad except for resilience
+                                                            except (
+                                                                Exception
+                                                            ):  # nosec B110 -- intentional broad except for resilience
                                                                 pass
                                                             _pkg = _sys2.modules.get("researcharr")
                                                             if _pkg is not None:
@@ -552,13 +578,19 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                                                     "_create_app_delegate",
                                                                     None,
                                                                 )
-                                                        except Exception:  # nosec B110 -- intentional broad except for resilience
+                                                        except (
+                                                            Exception
+                                                        ):  # nosec B110 -- intentional broad except for resilience
                                                             pass
                                                     if _delegate is not None:
                                                         d["create_app"] = _delegate
-                                                except Exception:  # nosec B110 -- intentional broad except for resilience
+                                                except (
+                                                    Exception
+                                                ):  # nosec B110 -- intentional broad except for resilience
                                                     pass
-                                        except Exception:  # nosec B110 -- intentional broad except for resilience
+                                        except (
+                                            Exception
+                                        ):  # nosec B110 -- intentional broad except for resilience
                                             pass
                                     return object.__getattribute__(self, name)
 
@@ -585,17 +617,33 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                             if val is None:
                                                 continue
                                             _wrapper.__dict__[_a] = val
-                                        except Exception:  # nosec B110 -- intentional broad except for resilience
+                                        except (
+                                            Exception
+                                        ):  # nosec B110 -- intentional broad except for resilience
                                             pass
-                                except Exception:  # nosec B110 -- intentional broad except for resilience
+                                except (
+                                    Exception
+                                ):  # nosec B110 -- intentional broad except for resilience
                                     pass
+                            # Expose a minimal `_impl` symbol for tests that inspect it
+                            try:
+                                if canonical is not None:
+                                    _wrapper.__dict__.setdefault("_impl", canonical)
+                            except (
+                                Exception
+                            ):  # nosec B110 -- intentional broad except for resilience
+                                pass
                             # Ensure delegate is the create_app exposed here
                             try:
                                 _wrapper.__dict__.setdefault("create_app", delegate)
-                            except Exception:  # nosec B110 -- intentional broad except for resilience
+                            except (
+                                Exception
+                            ):  # nosec B110 -- intentional broad except for resilience
                                 try:
                                     setattr(_wrapper, "create_app", delegate)
-                                except Exception:  # nosec B110 -- intentional broad except for resilience
+                                except (
+                                    Exception
+                                ):  # nosec B110 -- intentional broad except for resilience
                                     pass
 
                             # Register wrapper in sys.modules and on the package
@@ -606,18 +654,26 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                 # or proxy entries that may have been created
                                 # earlier during import races.
                                 sys.modules["researcharr.factory"] = _wrapper
-                            except Exception:  # nosec B110 -- intentional broad except for resilience
+                            except (
+                                Exception
+                            ):  # nosec B110 -- intentional broad except for resilience
                                 pass
                             try:
                                 sys.modules["factory"] = _wrapper
-                            except Exception:  # nosec B110 -- intentional broad except for resilience
+                            except (
+                                Exception
+                            ):  # nosec B110 -- intentional broad except for resilience
                                 pass
                             try:
                                 pkg_mod.__dict__["factory"] = _wrapper
-                            except Exception:  # nosec B110 -- intentional broad except for resilience
+                            except (
+                                Exception
+                            ):  # nosec B110 -- intentional broad except for resilience
                                 try:
                                     setattr(pkg_mod, "factory", _wrapper)
-                                except Exception:  # nosec B110 -- intentional broad except for resilience
+                                except (
+                                    Exception
+                                ):  # nosec B110 -- intentional broad except for resilience
                                     pass
                         except Exception:  # nosec B110 -- intentional broad except for resilience
                             pass

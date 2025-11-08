@@ -195,7 +195,9 @@ class CoreApplicationFactory:
                                         data={"plugin": name, "instances": len(data)},
                                         source="core_application_factory",
                                     )
-                            except Exception as e:  # nosec B110 -- intentional broad except for resilience
+                            except (
+                                Exception
+                            ) as e:  # nosec B110 -- intentional broad except for resilience
                                 # Publish plugin error event
                                 self.event_bus.publish_simple(
                                     Events.PLUGIN_ERROR,

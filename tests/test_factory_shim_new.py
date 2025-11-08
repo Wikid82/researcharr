@@ -3,6 +3,8 @@
 This module tests the factory module shim and its delegate system.
 """
 
+# pyright: reportAttributeAccessIssue=false
+
 import sys
 from unittest.mock import MagicMock, patch
 

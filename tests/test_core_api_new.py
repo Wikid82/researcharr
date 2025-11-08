@@ -36,7 +36,7 @@ def test_api_blueprint_exists():
     from researcharr.core import api
 
     assert hasattr(api, "bp")
-    assert api.bp.name == "api_v1"
+    assert api.bp.name == "api_v1"  # type: ignore[attr-defined]
 
 
 def test_require_api_key_decorator():

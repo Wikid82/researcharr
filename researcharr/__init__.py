@@ -126,7 +126,9 @@ try:
                         if not _has_top:
                             try:
                                 sys.modules.setdefault(name, value)
-                            except Exception:  # nosec B110 -- intentional broad except for resilience
+                            except (
+                                Exception
+                            ):  # nosec B110 -- intentional broad except for resilience
                                 pass
                         try:
                             if (
@@ -624,7 +626,9 @@ except Exception:  # nosec B110 -- intentional broad except for resilience
                         if not hasattr(_pkg, _attr):
                             try:
                                 setattr(_pkg, _attr, getattr(_top, _attr))
-                            except Exception:  # nosec B110 -- intentional broad except for resilience
+                            except (
+                                Exception
+                            ):  # nosec B110 -- intentional broad except for resilience
                                 pass
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
@@ -1260,7 +1264,9 @@ def __getattr__(name: str):
                             if _sys.modules.get(_spec_name) is mod:
                                 try:
                                     del _sys.modules[_spec_name]
-                                except Exception:  # nosec B110 -- intentional broad except for resilience
+                                except (
+                                    Exception
+                                ):  # nosec B110 -- intentional broad except for resilience
                                     pass
                         except Exception:  # nosec B110 -- intentional broad except for resilience
                             pass

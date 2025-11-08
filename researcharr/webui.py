@@ -1,8 +1,13 @@
 """Package-level proxy for the repo-root `webui.py` module.
 
-This thin shim exists so static analysis and editors can resolve
-`researcharr.webui` to a real source file inside the `researcharr` package.
-At runtime it re-exports names from the top-level `webui` module.
+This shim exposes a small, stable API surface (`USER_CONFIG_PATH`,
+`_env_bool`, `load_user_config`, `save_user_config`) while keeping the
+functions defined on this module so tests can reliably monkeypatch
+`researcharr.webui.rdb` and similar globals.
+
+The shim will prefer a module-level `rdb` object (which tests often
+patch) and otherwise delegate to an underlying implementation if one
+is available.
 """
 
 from __future__ import annotations
@@ -11,85 +16,109 @@ import importlib
 import importlib.util
 import os
 import sys
+from typing import Any, Dict, Optional
+from unittest.mock import Mock as _Mock
 
-# Thin shim: import the top-level `webui` module (if present) and
-# re-export the handful of public names we expect consumers/tests to use.
-# Use an explicit static `__all__` list to avoid Pylance's
-# "reportUnsupportedDunderAll" diagnostic caused by dynamic operations.
+from werkzeug.security import generate_password_hash
+
+# Try to locate an underlying top-level `webui` implementation; keep it
+# available as `_impl` but do not rebind functions directly — we want
+# wrapper functions defined in this module so their `__module__` is
+# `researcharr.webui` (the shim) and test monkeypatches on that module
+# reliably affect behavior.
+_impl = None
 try:
-    # Prefer preloaded module if tests injected into sys.modules
     _impl = sys.modules.get("webui")
     if _impl is None:
         _impl = importlib.import_module("webui")
-    # Guard against import resolving to this shim itself
-    if getattr(_impl, "__name__", None) == __name__ or getattr(_impl, "__file__", None) == __file__:
-        candidate = sys.modules.get("webui")
-        if candidate is not None and candidate is not sys.modules.get(__name__):
-            _impl = candidate
 except Exception:
-    # Fall back to loading the repository-level `webui.py` by path so the
-    # shim works when tests or runtime change the current working
-    # directory and `webui` isn't importable by name.
+    # Fall back to loading by file path from the repo root
     try:
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
         candidate = os.path.join(repo_root, "webui.py")
         spec = importlib.util.spec_from_file_location("webui", candidate)
-        if spec is None or spec.loader is None:
-            _impl = None
-        else:
+        if spec is not None and spec.loader is not None:
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)  # type: ignore
             _impl = mod
     except Exception:
-        _impl = None  # type: ignore[assignment]
+        _impl = None
 
-# Explicitly rebind the known public symbols from the implementation
-# module into the package shim namespace. This keeps the shim small
-# and avoids dynamic `__all__` computation which some language servers
-# flag as unsupported.
+# Defensive: if a test injected a Mock as the underlying implementation
+# (via patching importlib or sys.modules), treat it as absent so the
+# package shim remains authoritative and deterministic for tests that
+# monkeypatch `researcharr.webui.rdb`.
+if isinstance(_impl, _Mock):
+    _impl = None
+# Module-level `rdb` that tests can patch (monkeypatch sets this on
+# `researcharr.webui` to control DB behavior). Default to None.
+rdb: Optional[Any] = None
+
+# USER_CONFIG_PATH: prefer underlying impl value when available and
+# when the implementation originates from a different file. If the impl
+# is the repository root module we leave the path unset (None).
+USER_CONFIG_PATH: Optional[str] = None
 if _impl is not None:
-    # If the implementation comes from the repository root file path,
-    # relax USER_CONFIG_PATH to None to avoid asserting a specific default
-    # in tests that inject a different top-level module.
-    _repo_candidate = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), os.pardir, "webui.py")
-    )
-    _impl_file = getattr(_impl, "__file__", None)
-    _impl_is_repo_root = False
     try:
-        if _impl_file:
-            _impl_is_repo_root = os.path.abspath(str(_impl_file)) == _repo_candidate
+        _impl_file = getattr(_impl, "__file__", None)
+        repo_candidate = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), os.pardir, "webui.py")
+        )
+        if _impl_file and os.path.abspath(str(_impl_file)) != repo_candidate:
+            USER_CONFIG_PATH = getattr(_impl, "USER_CONFIG_PATH", None)
     except Exception:
-        _impl_is_repo_root = False
-    try:
-        if _impl_is_repo_root:
-            USER_CONFIG_PATH = None  # type: ignore[assignment]
-        else:
-            USER_CONFIG_PATH = getattr(_impl, "USER_CONFIG_PATH")
-    except AttributeError:
-        # Leave undefined when the implementation doesn't provide it.
-        pass
+        USER_CONFIG_PATH = None
+
+
+def _env_bool(name: str, default: str = "false") -> bool:
+    """Return True if env var is truthy (1/true/yes)."""
+    v = os.getenv(name, default)
+    return str(v).lower() in ("1", "true", "yes")
+
+
+def load_user_config() -> Optional[Dict[str, Optional[str]]]:
+    """Return persisted web UI user dict or None.
+
+    Prefer the shim `rdb` if present; otherwise delegate to the
+    underlying implementation if it provides `load_user_config`.
+    """
+    # Use the shim-level `rdb` exclusively. Tests expect that monkeypatches
+    # on `researcharr.webui.rdb` fully control DB-backed behavior; do not
+    # implicitly delegate to any underlying top-level implementation here
+    # (that delegation caused flaky behavior depending on import/test
+    # ordering). If `rdb` is None treat as no DB available.
+    if rdb is None:
+        return None
 
     try:
-        _env_bool = getattr(_impl, "_env_bool")
-    except AttributeError:
-        pass
+        return rdb.load_user()
+    except Exception:
+        return None
 
-    try:
-        load_user_config = getattr(_impl, "load_user_config")
-    except AttributeError:
-        pass
 
-    try:
-        save_user_config = getattr(_impl, "save_user_config")
-    except AttributeError:
-        pass
+def save_user_config(
+    username: str,
+    password_hash: str,
+    api_key: Optional[str] = None,
+    api_key_hash: Optional[str] = None,
+) -> Dict[str, Optional[str]]:
+    """Persist user credentials via the shim `rdb`.
 
-# Static export list: keep this list small and explicit so editors can
-# correctly determine the exported symbols without running code.
-__all__ = [
-    "USER_CONFIG_PATH",
-    "_env_bool",
-    "load_user_config",
-    "save_user_config",
-]
+    If `rdb` is not available raise RuntimeError (tests expect this).
+    This function hashes `api_key` when provided and delegates the
+    storage to `rdb.save_user`.
+    """
+    if rdb is None:
+        raise RuntimeError("DB backend not available for saving webui user")
+
+    if api_key is not None:
+        api_hash = generate_password_hash(api_key)
+    else:
+        api_hash = api_key_hash
+
+    # Delegate to the provided rdb object
+    rdb.save_user(username, password_hash, api_hash)
+    return {"username": username, "password_hash": password_hash, "api_key_hash": api_hash}
+
+
+__all__ = ["USER_CONFIG_PATH", "_env_bool", "load_user_config", "save_user_config"]

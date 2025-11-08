@@ -288,7 +288,9 @@ def create_metrics_app():
     """Create a tiny Flask app with /health and /metrics used by tests."""
     try:
         from flask import Flask, jsonify
-    except Exception:  # flask may not be available in some isolated checks  # nosec B110 -- intentional broad except for resilience
+    except (
+        Exception
+    ):  # flask may not be available in some isolated checks  # nosec B110 -- intentional broad except for resilience
 
         class Dummy:
             def test_client(self):
@@ -301,6 +303,10 @@ def create_metrics_app():
 
     app = Flask("metrics")
     app.metrics = {"requests_total": 0, "errors_total": 0}  # type: ignore[attr-defined]
+    try:
+        app.config["metrics"] = app.metrics
+    except Exception:
+        pass
 
     @app.before_request
     def _before():

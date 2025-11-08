@@ -305,7 +305,9 @@ class Pipeline:
                     )
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
-            except Exception as exc:  # noqa: BLE001 - we want to catch stage errors  # nosec B110 -- intentional broad except for resilience
+            except (
+                Exception
+            ) as exc:  # noqa: BLE001 - we want to catch stage errors  # nosec B110 -- intentional broad except for resilience
                 logger.exception("Stage %s failed for item=%r", spec.stage, item)
                 if attempts_left > 0:
                     # exponential backoff: base * 2**attempts_done
@@ -359,7 +361,9 @@ class Pipeline:
                             # record dead-letter for monitoring
                             try:
                                 self._dead_letters[idx].append(item)
-                            except Exception:  # nosec B110 -- intentional broad except for resilience
+                            except (
+                                Exception
+                            ):  # nosec B110 -- intentional broad except for resilience
                                 pass
                         self._emit_progress(
                             {"type": "failed", "stage": idx, "metrics": dict(spec.metrics or {})}
@@ -844,7 +848,9 @@ def get_prometheus_exporter(pipeline_name: Optional[str] = None, registry: Optio
     """
     try:
         from prometheus_client import CollectorRegistry, Counter, Gauge
-    except Exception as exc:  # pragma: no cover - optional dependency  # nosec B110 -- intentional broad except for resilience
+    except (
+        Exception
+    ) as exc:  # pragma: no cover - optional dependency  # nosec B110 -- intentional broad except for resilience
         raise ImportError("prometheus_client is required for Prometheus exporter") from exc
 
     reg = registry or CollectorRegistry()

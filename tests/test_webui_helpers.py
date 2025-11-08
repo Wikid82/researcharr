@@ -1,13 +1,13 @@
+# Import from researcharr package to ensure consistent module identity
+import importlib
 import types
 
 import pytest
 
-# Import from researcharr package to ensure consistent module identity
-import researcharr.webui as webui
-
 
 def test_env_bool_truthy_and_falsey(monkeypatch):
     monkeypatch.setenv("SOME_FLAG", "true")
+    webui = importlib.import_module("researcharr.webui")
     assert webui._env_bool("SOME_FLAG") is True
     monkeypatch.setenv("SOME_FLAG", "1")
     assert webui._env_bool("SOME_FLAG") is True
@@ -18,6 +18,8 @@ def test_env_bool_truthy_and_falsey(monkeypatch):
 def test_load_user_config_no_db(monkeypatch):
     # Ensure rdb is None - patch all module references
     import sys
+
+    webui = importlib.import_module("researcharr.webui")
 
     # Patch the function's module
     func_module = sys.modules[webui.load_user_config.__module__]
@@ -33,6 +35,7 @@ def test_load_user_config_no_db(monkeypatch):
 def test_load_user_config_with_db(monkeypatch):
     fake_db = types.SimpleNamespace()
     fake_db.load_user = lambda: {"username": "admin", "password_hash": "h"}
+    webui = importlib.import_module("researcharr.webui")
     monkeypatch.setattr(webui, "rdb", fake_db)
     res = webui.load_user_config()
     assert isinstance(res, dict)
@@ -43,6 +46,7 @@ def test_save_user_config_raises_without_db(monkeypatch):
     import sys
 
     # Patch all module references
+    webui = importlib.import_module("researcharr.webui")
     func_module = sys.modules[webui.save_user_config.__module__]
     monkeypatch.setattr(func_module, "rdb", None)
     if "webui" in sys.modules and sys.modules["webui"] is not func_module:
@@ -65,6 +69,7 @@ def test_save_user_config_hashing_and_delegate(monkeypatch):
     import sys
 
     # Patch all module references
+    webui = importlib.import_module("researcharr.webui")
     func_module = sys.modules[webui.save_user_config.__module__]
     monkeypatch.setattr(func_module, "rdb", fake_db)
     if "webui" in sys.modules and sys.modules["webui"] is not func_module:

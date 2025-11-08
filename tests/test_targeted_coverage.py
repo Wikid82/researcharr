@@ -470,7 +470,7 @@ def test_event_post_init_none_timestamp():
     from researcharr.core.events import Event
 
     # Create event with timestamp=None explicitly
-    event = Event(name="test", data="data", timestamp=None)
+    event = Event(name="test", data="data", timestamp=None)  # type: ignore[arg-type]
 
     # Should have been set in __post_init__
     assert event.timestamp is not None
@@ -715,12 +715,12 @@ def test_run_setup_scheduler_no_schedule():
     import run
 
     # schedule is None by default
-    original = run.schedule
+    original = run.schedule  # type: ignore[attr-defined]
     try:
-        run.schedule = None
+        run.schedule = None  # type: ignore[attr-defined]
         run.setup_scheduler()  # Should return early
     finally:
-        run.schedule = original
+        run.schedule = original  # type: ignore[attr-defined]
 
 
 def test_run_job_no_script_configured():

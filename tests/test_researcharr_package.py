@@ -27,7 +27,6 @@ class TestResearcharrPackageModules(unittest.TestCase):
         self.assertTrue(callable(researcharr.factory.create_app))
 
     def test_factory_shim_import_failure(self):
-        pytest.importorskip("importlib")
         # Patch importlib.import_module globally so that when the shim tries
         # to import the top-level `factory` module it will raise ImportError.
         with patch("importlib.import_module", side_effect=ImportError("Module not found")):

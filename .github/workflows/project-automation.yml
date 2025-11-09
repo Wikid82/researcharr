@@ -11,7 +11,7 @@ on:
 
 env:
   PROJECT_NUMBER: 2  # Update this with your actual project number
-  GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   manage_project:
@@ -21,7 +21,7 @@ jobs:
       - name: Add issue to project
         if: github.event_name == 'issues' && github.event.action == 'opened'
         env:
-          GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "🔄 Attempting to add issue #${{ github.event.issue.number }} to project..."
 
@@ -79,7 +79,7 @@ jobs:
 
       - name: Get project data
         env:
-          GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ORGANIZATION: ${{ github.repository_owner }}
           PROJECT_NUMBER: ${{ env.PROJECT_NUMBER }}
         run: |

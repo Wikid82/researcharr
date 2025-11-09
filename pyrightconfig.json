@@ -27,4 +27,6 @@
       "extraPaths": ["."]
     }
   ]
+  ,
+  "stubPath": "typings"
 }

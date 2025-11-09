@@ -256,9 +256,9 @@ def main() -> None:
     else:
         dry_run = args.dry_run
 
-    token = os.getenv("GHCR_TOKEN") or os.getenv("GHCR_PAT")
+    token = os.getenv("GHCR_TOKEN") or os.getenv("GHCR_PAT") or os.getenv("GITHUB_TOKEN")
     if not token:
-        print("GHCR_PAT/GHCR_TOKEN not set in environment. Exiting.")
+        print("GHCR_PAT/GHCR_TOKEN/GITHUB_TOKEN not set in environment. Exiting.")
         sys.exit(1)
 
     # early token validation: call /user to surface token owner and scopes

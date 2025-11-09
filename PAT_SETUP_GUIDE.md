@@ -29,14 +29,14 @@
 2. **Click "New repository secret"**
 
 3. **Configure secret**:
-   - **Name**: `PROJECT_TOKEN`
+   - **Name**: `GITHUB_TOKEN`
    - **Secret**: [Paste your PAT here]
 
 4. **Click "Add secret"**
 
 ## 🚀 Step 3: Test the Automation
 
-Once you've added the `PROJECT_TOKEN` secret:
+Once you've added the `GITHUB_TOKEN` secret:
 
 ### Option A: Run the bulk add workflow
 ```bash
@@ -44,61 +44,92 @@ Once you've added the `PROJECT_TOKEN` secret:
 gh workflow run add-all-issues-to-project.yml
 ```
 
-### Option B: Test with a single issue
+```markdown
+# PAT & Token Guide — updated
+
+This repository now prefers the Actions-provided `GITHUB_TOKEN` in workflows. You generally do NOT need to create or upload a Personal Access Token (PAT) as a secret for the built-in automation to work. The guidance below explains when you still might need a PAT (for local runs or exceptional cross-repo needs), recommended secret names, required scopes, and how to test a token locally.
+
+## Preferred approach: `GITHUB_TOKEN`
+
+- All workflows in this repository use `secrets.GITHUB_TOKEN` by default.
+- Do not create or overwrite a secret named `GITHUB_TOKEN` in the repository—this value is injected by GitHub Actions automatically. Overwriting it with a personal PAT is not recommended.
+
+## When to create a PAT
+
+- Running automation locally (e.g. `.github/scripts/ghcr_cleanup.py --dry-run`) from your machine.
+- Performing cross-repo operations or admin tasks that require scopes not granted to the `GITHUB_TOKEN` in Actions.
+
+## Recommended secret names (if you must add a PAT)
+
+- `GHCR_PAT` or `GHCR_TOKEN`: for scripts that interact with GitHub Packages / GHCR locally or in custom CI.
+- `PROJECT_PAT`: only if you have a customized workflow that explicitly expects it (not required by default workflows in this repo).
+
+## Required scopes
+
+- `read:packages` and `delete:packages` — required to list/delete GHCR/container package versions.
+- `repo` or more granular repo scopes — only if you need repository content or issue access beyond what `GITHUB_TOKEN` provides.
+- `projects` / `projects:write` scope (for older classic Projects APIs) — only if you are using endpoints that require it; the repository workflows are designed to work with `GITHUB_TOKEN` and project permissions when possible.
+
+## How to create a PAT (if needed)
+
+1. Go to https://github.com/settings/tokens/new
+2. Name it (e.g. `researcharr-local-cleanup`) and choose an expiration
+3. Enable only the minimal scopes required for your use-case
+4. Copy the token value
+
+## Add a PAT as a repository secret (only if necessary)
+
+1. In the repository: Settings → Secrets and variables → Actions → New repository secret
+2. Use one of the recommended names (`GHCR_PAT`, `GHCR_TOKEN`, etc.)
+
+Note: The repository's workflows do not require `PROJECT_TOKEN` by default; do not add `PROJECT_TOKEN` unless explicitly needed by your environment.
+
+## Testing a token locally
+
+You can test any token locally by exporting it and calling the API. The cleanup script also performs a `GET /user` check and prints diagnostics when tokens fail.
+
+Example quick check using curl:
+
 ```bash
-# Create a test issue to verify automation works
-gh issue create --title "🧪 Test Automation Issue" --body "Testing project board automation"
+export GHCR_PAT="ghp_..."
+curl -i -H "Authorization: token $GHCR_PAT" https://api.github.com/user
 ```
 
-## 📊 Step 4: Verify Project Board Integration
+- A successful response returns your authenticated user and a `200` status.
+- A `401` with `Bad credentials` indicates the token is invalid or missing scopes.
 
-1. **Check the workflow run**:
-   ```bash
-   gh run list --workflow=add-all-issues-to-project.yml
-   ```
+## Example: run the cleanup script locally (dry-run)
 
-2. **Visit your project board**: https://github.com/users/Wikid82/projects/2
+```bash
+# set a PAT in GHCR_PAT (only for local runs)
+export GHCR_PAT="ghp_..."
+python .github/scripts/ghcr_cleanup.py --dry-run
+```
 
-3. **Verify issues are added** and automatically set to "Backlog" status
+The script will print the request URL, response status, response headers, and response body for failed requests to make debugging easier.
 
-## ⚙️ What the Automation Does
+## Workflow permissions (what to set in workflows)
 
-### Automatic Features (after PAT setup):
-- ✅ **New issues** automatically added to project board
-- ✅ **Status management** based on issue events
-- ✅ **Column transitions** when issues are closed/reopened
-- ✅ **Pull request integration** with project tracking
+If you encounter permission errors from Actions, update the `permissions` block in the workflow YAML to include the capabilities required by that job. Example:
 
-### Manual Features Available:
-- 🔧 **Bulk issue sync** workflow (`add-all-issues-to-project.yml`)
-- 🔧 **Individual issue sync** workflow (`sync-issues-to-project.yml`)
-- 🔧 **Manual workflow triggers** for debugging
+```yaml
+permissions:
+  packages: write    # required for deleting GHCR/container packages
+  contents: read     # required for repository contents access
+  issues: write      # if workflows create/update issues or project items
+```
 
-## 🔧 Troubleshooting
+Grant the minimal permissions needed for each workflow.
 
-### If automation doesn't work:
-1. **Check PAT permissions**: Ensure `Projects: Write` is enabled
-2. **Verify secret name**: Must be exactly `PROJECT_TOKEN`
-3. **Check workflow logs**: `gh run list` and `gh run view [run-id] --log`
+## Troubleshooting
 
-### Rate limits:
-- GitHub API allows 5000 requests/hour with PAT
-- Workflows include delays to avoid hitting limits
+- If automation fails in Actions, inspect the workflow logs (`Actions` tab) and check the `x-oauth-scopes` and `x-ratelimit-*` headers printed by the cleanup script when applicable.
+- For local testing, ensure your PAT has the `read:packages` / `delete:packages` scopes when interacting with GHCR.
 
-## 📚 Next Steps
+## Quick checklist
 
-1. **Set up PAT and secret** (Steps 1-2 above)
-2. **Run bulk add workflow** to sync existing issues
-3. **Set up priority-based views** using `PRIORITY_SETUP_GUIDE.md`
-4. **Start development** with issue #105 (Core Architecture Design)
+- Use `secrets.GITHUB_TOKEN` in Actions — do not override it.
+- For local runs, export `GHCR_PAT` and test with `curl` before running scripts.
+- Adjust workflow `permissions` if you see permission-related failures.
 
-## 🎯 Development Workflow
-
-With automation enabled:
-1. **Create issues** → Automatically added to project
-2. **Move to "In Progress"** → Start working
-3. **Create PR** → Linked to issue
-4. **Merge PR** → Issue auto-moves to "Done"
-5. **Mark as beta candidate** → Moves to "Beta Candidate" column
-
-The automation handles all the project board management while you focus on development!
+```

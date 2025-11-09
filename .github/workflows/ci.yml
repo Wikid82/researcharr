@@ -239,13 +239,13 @@ jobs:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
       - name: No-op linting placeholder
         run: |
-          echo "linting"
+          echo "linting placeholder"
 
-  pytests:
-    name: pytests
+  pytest:
+    name: pytest
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
       - name: No-op pytests placeholder
         run: |
-          echo "pytests"
+          echo "pytest placeholder"

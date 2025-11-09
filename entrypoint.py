@@ -120,6 +120,11 @@ def create_metrics_app():
     # arbitrary attributes used by the tests (e.g. `metrics`).
     app = cast(Any, app)
     app.metrics = {"requests_total": 0, "errors_total": 0}
+    # Also expose via config for tests that look there
+    try:
+        app.config["metrics"] = app.metrics
+    except Exception:
+        pass
 
     @app.before_request
     def _before():

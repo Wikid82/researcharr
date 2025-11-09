@@ -1,9 +1,12 @@
 """Consolidated researcharr package tests - merging multiple test files."""
 
 import importlib
+import sys
 import tempfile
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
+
+import pytest
 
 # Import modules under test
 import researcharr
@@ -24,15 +27,25 @@ class TestResearcharrPackageModules(unittest.TestCase):
         self.assertTrue(callable(researcharr.factory.create_app))
 
     def test_factory_shim_import_failure(self):
-        """Test factory shim behavior when import fails."""
-        with patch("researcharr.factory.importlib.import_module") as mock_import:
-            mock_import.side_effect = ImportError("Module not found")
+        pytest.importorskip("importlib")
+        # Patch importlib.import_module globally so that when the shim tries
+        # to import the top-level `factory` module it will raise ImportError.
+        with patch("importlib.import_module", side_effect=ImportError("Module not found")):
+            import importlib.util
+            import os
 
-            # Reimport to trigger the exception handling
-            importlib.reload(researcharr.factory)
+            factory_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "factory.py")
+            )
+            spec = importlib.util.spec_from_file_location("researcharr.factory", factory_path)
+            assert spec is not None and spec.loader is not None
+            mod = importlib.util.module_from_spec(spec)
+            # Register under canonical name before executing
+            sys.modules["researcharr.factory"] = mod
+            spec.loader.exec_module(mod)  # type: ignore
 
-            # Should handle import failure gracefully
-            self.assertTrue(hasattr(researcharr.factory, "_impl"))
+            # Should handle import failure gracefully and set _impl
+            self.assertTrue(hasattr(mod, "_impl"))
 
     def test_backups_module_import(self):
         """Test that backups module can be imported."""
@@ -92,11 +105,13 @@ class TestResearcharrDatabase(unittest.TestCase):
 
     def test_create_tables_functionality(self):
         """Test table creation functionality."""
-        with patch("researcharr.db.get_connection") as mock_get_conn:
+        # Patch the underlying sqlite3.connect to ensure we intercept
+        # connection creation regardless of import aliasing.
+        with patch("sqlite3.connect") as mock_connect:
             mock_connection = MagicMock()
             mock_cursor = MagicMock()
             mock_connection.cursor.return_value = mock_cursor
-            mock_get_conn.return_value = mock_connection
+            mock_connect.return_value = mock_connection
 
             from researcharr.db import create_tables
 
@@ -107,11 +122,11 @@ class TestResearcharrDatabase(unittest.TestCase):
 
     def test_user_management_functions(self):
         """Test user management database functions."""
-        with patch("researcharr.db.get_connection") as mock_get_conn:
+        with patch("sqlite3.connect") as mock_connect:
             mock_connection = MagicMock()
             mock_cursor = MagicMock()
             mock_connection.cursor.return_value = mock_cursor
-            mock_get_conn.return_value = mock_connection
+            mock_connect.return_value = mock_connection
 
             from researcharr.db import create_user, get_user_by_username
 

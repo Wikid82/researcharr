@@ -8,7 +8,7 @@
 - **Epic organization** with parent/child relationships
 - **Story point estimation** (332 total points planned)
 - **Milestone tracking** across alpha → beta roadmap
-- **PAT configured** with PROJECT_TOKEN secret
+- **Automation uses the repository `GITHUB_TOKEN`** (no repository-level PAT required)
 - **Workflow triggers functioning** (detects new issues)
 
 ### ⚠️ **Known Issue:**
@@ -65,7 +65,7 @@ Move issues to appropriate columns:
 
 ### **Working Automation:**
 - ✅ **Issue creation workflows** trigger correctly
-- ✅ **PAT authentication** is properly configured
+- ✅ **Automation uses `GITHUB_TOKEN`** provided by Actions; ensure workflow permissions are set (see note below)
 - ✅ **Project board detection** works in workflows
 - ✅ **Environment variables** pass correctly to actions
 
@@ -74,6 +74,19 @@ Move issues to appropriate columns:
 Error: Resource not accessible by personal access token
 Mutation: addProjectV2ItemById
 ```
+
+### **Permissions & Troubleshooting (Important)**
+
+The workflows in this repository now rely on the Actions-provided `GITHUB_TOKEN` by default. In most cases this is sufficient. If you see permission errors when workflows interact with Projects or Packages, check the workflow `permissions` block in the workflow YAML and ensure the token has the required scopes. Example minimal permissions for the GHCR prune and project workflows:
+
+```yaml
+permissions:
+   packages: write    # required for deleting GHCR/container packages
+   contents: read     # required for repository contents access
+   issues: write      # if workflows create/update issues or project items
+```
+
+If an organization or repository uses a fine-grained permissions model, you may need to grant these permissions in the workflow file explicitly or provide a PAT with the required scopes as a fallback (see PAT guide). However, by default you do NOT need to add `GITHUB_TOKEN` as a secret.
 
 ### **Potential Solutions (Future):**
 1. **GitHub App approach**: Create custom app with broader permissions

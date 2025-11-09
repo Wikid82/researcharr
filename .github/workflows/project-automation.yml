@@ -11,7 +11,7 @@ on:
 
 env:
   PROJECT_NUMBER: 2  # Update this with your actual project number
-  GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   manage_project:
@@ -21,7 +21,7 @@ jobs:
       - name: Add issue to project
         if: github.event_name == 'issues' && github.event.action == 'opened'
         env:
-          GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "🔄 Attempting to add issue #${{ github.event.issue.number }} to project..."
 
@@ -79,7 +79,7 @@ jobs:
 
       - name: Get project data
         env:
-          GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ORGANIZATION: ${{ github.repository_owner }}
           PROJECT_NUMBER: ${{ env.PROJECT_NUMBER }}
         run: |
@@ -115,9 +115,17 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_ID: ${{ github.event.issue.node_id }}
         run: |
-          PROJECT_ID=$(jq -r '.data.user.projectV2.id' project_data.json)
-          STATUS_FIELD_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .id' project_data.json)
-          IN_PROGRESS_OPTION_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "In Progress") | .id' project_data.json)
+          PROJECT_ID=$(jq -r '.data.user.projectV2.id // empty' project_data.json)
+          if [ -z "$PROJECT_ID" ]; then
+            echo "Project data missing or project not found; skipping move-to-In-Progress"
+            exit 0
+          fi
+          STATUS_FIELD_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .id // empty' project_data.json)
+          IN_PROGRESS_OPTION_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "In Progress") | .id // empty' project_data.json)
+          if [ -z "$STATUS_FIELD_ID" ] || [ -z "$IN_PROGRESS_OPTION_ID" ]; then
+            echo "Status field or In Progress option not found in project data; manual action may be required"
+            exit 0
+          fi
 
           # Get the project item ID
           ITEM_ID=$(gh api graphql -f query='
@@ -160,9 +168,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PROJECT_ID=$(jq -r '.data.user.projectV2.id' project_data.json)
-          STATUS_FIELD_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .id' project_data.json)
-          DONE_OPTION_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "Done") | .id' project_data.json)
+          PROJECT_ID=$(jq -r '.data.user.projectV2.id // empty' project_data.json)
+          if [ -z "$PROJECT_ID" ]; then
+            echo "Project data missing or project not found; skipping move-to-Done"
+            exit 0
+          fi
+          STATUS_FIELD_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .id // empty' project_data.json)
+          DONE_OPTION_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "Done") | .id // empty' project_data.json)
+          if [ -z "$STATUS_FIELD_ID" ] || [ -z "$DONE_OPTION_ID" ]; then
+            echo "Status field or Done option not found in project data; manual action may be required"
+            exit 0
+          fi
 
           if [ "${{ github.event_name }}" == "issues" ]; then
             CONTENT_ID=${{ github.event.issue.node_id }}
@@ -215,9 +231,17 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_ID: ${{ github.event.pull_request.node_id }}
         run: |
-          PROJECT_ID=$(jq -r '.data.user.projectV2.id' project_data.json)
-          STATUS_FIELD_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .id' project_data.json)
-          REVIEW_OPTION_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "Review") | .id' project_data.json)
+          PROJECT_ID=$(jq -r '.data.user.projectV2.id // empty' project_data.json)
+          if [ -z "$PROJECT_ID" ]; then
+            echo "Project data missing or project not found; skipping move-to-Review"
+            exit 0
+          fi
+          STATUS_FIELD_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .id // empty' project_data.json)
+          REVIEW_OPTION_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "Review") | .id // empty' project_data.json)
+          if [ -z "$STATUS_FIELD_ID" ] || [ -z "$REVIEW_OPTION_ID" ]; then
+            echo "Status field or Review option not found in project data; manual action may be required"
+            exit 0
+          fi
 
           # Get the project item ID
           ITEM_ID=$(gh api graphql -f query='
@@ -261,9 +285,17 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_ID: ${{ github.event.issue.node_id }}
         run: |
-          PROJECT_ID=$(jq -r '.data.user.projectV2.id' project_data.json)
-          STATUS_FIELD_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .id' project_data.json)
-          BETA_OPTION_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "Beta Candidate") | .id' project_data.json)
+          PROJECT_ID=$(jq -r '.data.user.projectV2.id // empty' project_data.json)
+          if [ -z "$PROJECT_ID" ]; then
+            echo "Project data missing or project not found; skipping move-to-Beta-Candidate"
+            exit 0
+          fi
+          STATUS_FIELD_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .id // empty' project_data.json)
+          BETA_OPTION_ID=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "Beta Candidate") | .id // empty' project_data.json)
+          if [ -z "$STATUS_FIELD_ID" ] || [ -z "$BETA_OPTION_ID" ]; then
+            echo "Status field or Beta Candidate option not found in project data; manual action may be required"
+            exit 0
+          fi
 
           # Get the project item ID
           ITEM_ID=$(gh api graphql -f query='

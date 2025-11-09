@@ -66,7 +66,13 @@ class TestBackupsModule:
 
         # Invalid backups directory
         with tempfile.TemporaryDirectory() as temp_dir:
-            result = backups.create_backup_file(temp_dir, "/invalid/backups/dir", "test")
+            # Create a *file* at the backups path so mkdir() will fail
+            # (works even when tests run as root in containers where chmod
+            # tricks don't block writes).
+            bad_dir = os.path.join(temp_dir, "bad_backups")
+            with open(bad_dir, "w") as fh:
+                fh.write("not a directory")
+            result = backups.create_backup_file(temp_dir, bad_dir, "test")
             assert result is None
 
     def test_create_backup_file_with_subdirectories(self):

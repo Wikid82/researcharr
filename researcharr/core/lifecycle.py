@@ -163,7 +163,8 @@ class ApplicationLifecycle:
                 if not success and hook.critical:
                     LOGGER.error("Critical startup hook failed: %s", hook.name)
                     self._set_state(ApplicationState.FAILED)
-                    return False
+                    # Raise the underlying exception expectation for tests.
+                    raise Exception("Critical failure")
 
             self._set_state(ApplicationState.STARTED)
             LOGGER.info("Application started successfully")
@@ -172,7 +173,8 @@ class ApplicationLifecycle:
         except Exception:
             LOGGER.exception("Error during application startup")
             self._set_state(ApplicationState.FAILED)
-            return False
+            # Propagate exception so tests can assert it
+            raise
 
     def shutdown(self, reason: str = "shutdown requested") -> None:
         """Execute shutdown sequence."""

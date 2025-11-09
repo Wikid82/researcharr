@@ -103,8 +103,8 @@ class TestApplicationLifecycle(unittest.TestCase):
         self.lifecycle.add_startup_hook("normal", normal_hook, priority=2)
 
         # Starting should fail due to critical hook failure
-        result = self.lifecycle.startup()
-        self.assertFalse(result)
+        with self.assertRaises(Exception):
+            self.lifecycle.startup()
 
         # Critical hook should have been attempted but normal hook might not run
         self.assertIn("critical_attempted", executed)

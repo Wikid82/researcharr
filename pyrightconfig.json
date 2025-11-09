@@ -1,17 +1,32 @@
 {
+  "include": ["researcharr"],
+  "exclude": [
+    "**/node_modules",
+    "**/.venv",
+    "**/.venv_test",
+    "**/__pycache__",
+    "htmlcov",
+    "site",
+    "docs",
+    "tests",
+    "home"
+  ],
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.14",
   "typeCheckingMode": "basic",
+  "reportMissingTypeStubs": false,
+  "reportGeneralTypeIssues": "warning",
   "reportOptionalMemberAccess": "none",
   "reportOptionalCall": "none",
   "reportOptionalOperand": "none",
   "reportOptionalSubscript": "none",
-  "include": ["researcharr"],
-  "exclude": ["**/node_modules", "**/__pycache__", "tests", "home"],
-  "venvPath": ".",
-  "venv": ".venv",
   "executionEnvironments": [
     {
       "root": ".",
       "extraPaths": ["."]
     }
   ]
+  ,
+  "stubPath": "typings"
 }

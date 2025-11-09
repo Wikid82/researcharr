@@ -1,48 +1,10 @@
-name: Publish debug image
+name: Publish debug image (disabled; consolidated)
 
 on:
-  push:
-    # Build/push debug images on branch pushes only (no pull_request runs)
-    branches-ignore: [ main ]
+  workflow_dispatch: {}
 
 jobs:
-  build-and-push:
+  disabled:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push debug image
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ghcr.io/wikid82/researcharr:debug-${{ github.sha }}
-          target: debug
-
-      - name: Write debug image tag file
-        run: |
-          echo "ghcr.io/wikid82/researcharr:debug-${{ github.sha }}" > debug-image-tag.txt
-
-      - name: Upload debug image tag as artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
-        with:
-          name: debug-image-tag
-          path: debug-image-tag.txt
+      - run: echo "Disabled; debug image build deferred."

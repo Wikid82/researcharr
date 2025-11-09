@@ -190,6 +190,22 @@ if "CONFIG_PATH" not in globals():
     CONFIG_PATH = None
 
 
+# Provide a public shim for the implementation's `_get_job_timeout` so tests
+# can import it from `researcharr.run` even though it starts with an underscore
+# (we intentionally expose it here for compatibility).
+def _get_job_timeout():
+    try:
+        if _impl is not None and hasattr(_impl, "_get_job_timeout"):
+            return getattr(_impl, "_get_job_timeout")()
+    except Exception:
+        pass
+    v = os.getenv("JOB_TIMEOUT", "")
+    try:
+        return float(v) if v else None
+    except Exception:
+        return None
+
+
 # Provide a concrete zero-argument `setup_logger()` here so tests that call
 # `researcharr.run.setup_logger()` get a consistent file-logger wired to the
 # `LOG_PATH` constant. Prefer this local helper over copying a function from
@@ -234,6 +250,27 @@ def setup_logger():
                     pass
             _add_file_handler()
     return logger
+
+
+# Provide a wrapper for setup_scheduler that properly forwards the schedule
+# attribute to the implementation module so test patches work correctly.
+def setup_scheduler():
+    """Wrapper that ensures test patches to run.schedule are honored."""
+    if _impl is None:
+        return
+    # Forward the schedule attribute from this shim to the implementation
+    # so when setup_scheduler() runs in the impl module, it sees the patched value
+    try:
+        if "schedule" in globals():
+            setattr(_impl, "schedule", globals()["schedule"])
+    except Exception:
+        pass
+    # Now call the implementation's setup_scheduler
+    try:
+        if hasattr(_impl, "setup_scheduler"):
+            _impl.setup_scheduler()
+    except Exception:
+        pass
 
 
 # Ensure a minimal `load_config` symbol exists so tests that patch

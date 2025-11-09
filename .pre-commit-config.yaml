@@ -97,19 +97,20 @@ repos:
         name: detect-secrets (local wrapper)
         entry: scripts/run-detect-secrets.sh
         language: script
-        files: ''
+        # Exclude tests and node_modules from detect-secrets scans here to
+        # avoid false positives on test fixtures and locally vendored files.
+        files: '^(?!tests/|node_modules/).*'
         stages: [pre-commit]
 
-      - id: mypy-system
-        name: mypy (system)
-        entry: mypy
+      - id: basedpyright-system
+        name: basedpyright (system)
+        # Use a small local wrapper that prefers a local based-pyright/pyright
+        # binary when available. Falls back to npx-based invocation.
+        entry: ./scripts/run-pyright-precommit.sh
         args:
-          - "--config-file"
-          - "mypy.ini"
-          - "--package"
-          - "researcharr"
-          - "--ignore-missing-imports"
-        language: system
+          - "--project"
+          - "basedpyrightconfig.json"
+        language: script
         pass_filenames: false
         stages: [pre-commit]
 

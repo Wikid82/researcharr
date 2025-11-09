@@ -105,11 +105,13 @@ class TestResearcharrDatabase(unittest.TestCase):
 
     def test_create_tables_functionality(self):
         """Test table creation functionality."""
-        with patch("researcharr.db.get_connection") as mock_get_conn:
+        # Patch the underlying sqlite3.connect to ensure we intercept
+        # connection creation regardless of import aliasing.
+        with patch("sqlite3.connect") as mock_connect:
             mock_connection = MagicMock()
             mock_cursor = MagicMock()
             mock_connection.cursor.return_value = mock_cursor
-            mock_get_conn.return_value = mock_connection
+            mock_connect.return_value = mock_connection
 
             from researcharr.db import create_tables
 
@@ -120,11 +122,11 @@ class TestResearcharrDatabase(unittest.TestCase):
 
     def test_user_management_functions(self):
         """Test user management database functions."""
-        with patch("researcharr.db.get_connection") as mock_get_conn:
+        with patch("sqlite3.connect") as mock_connect:
             mock_connection = MagicMock()
             mock_cursor = MagicMock()
             mock_connection.cursor.return_value = mock_cursor
-            mock_get_conn.return_value = mock_connection
+            mock_connect.return_value = mock_connection
 
             from researcharr.db import create_user, get_user_by_username
 

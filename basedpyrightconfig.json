@@ -1,0 +1,30 @@
+{
+  "include": ["researcharr"],
+  "exclude": [
+    "**/node_modules",
+    "**/.venv",
+    "**/.venv_test",
+    "**/__pycache__",
+    "htmlcov",
+    "site",
+    "docs",
+    "tests",
+    "home"
+  ],
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.14",
+  "typeCheckingMode": "basic",
+  "reportMissingTypeStubs": false,
+  "reportGeneralTypeIssues": "warning",
+  "reportOptionalMemberAccess": "none",
+  "reportOptionalCall": "none",
+  "reportOptionalOperand": "none",
+  "reportOptionalSubscript": "none",
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": ["."]
+    }
+  ]
+}

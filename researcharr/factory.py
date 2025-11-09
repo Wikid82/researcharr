@@ -18,7 +18,7 @@ def _import_impl() -> Any | None:
         return None
 
 
-_impl = _import_impl()
+_impl: Any | None = _import_impl()
 
 # Always expose the `_impl` symbol on the shim module so tests that
 # reload `researcharr.factory` may end up operating against the top-level
@@ -131,6 +131,21 @@ def __getattr__(name: str):
             # Return the current value from _impl (may be delegate or original).
             return getattr(_impl, "create_app", None)
     # For other attributes, delegate to _impl or raise AttributeError.
+    # Provide a defensive fallback for `render_template` so tests that
+    # patch `researcharr.factory.render_template` can reliably find the
+    # attribute even when the implementation module doesn't re-export it.
+    if name == "render_template":
+        try:
+            from flask import render_template as _rt
+
+            try:
+                globals()["render_template"] = _rt
+            except Exception:
+                pass
+            return _rt
+        except Exception:
+            pass
+
     if _impl is not None:
         return getattr(_impl, name)
     raise AttributeError(f"module 'researcharr.factory' has no attribute '{name}'")

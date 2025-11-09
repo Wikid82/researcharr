@@ -42,6 +42,16 @@ def test_updates_upgrade_in_image_and_invalid_url(client, login, monkeypatch):
 
     # invalid asset URL
     monkeypatch.delenv("CONTAINER", raising=False)
+    # In containerized test runs /.dockerenv or other indicators may still
+    # report an in-image runtime; force the factory helper to report false
+    # so the URL validation branch is exercised deterministically.
+    try:
+        import researcharr.factory as _factory
+
+        monkeypatch.setattr(_factory, "_running_in_image", lambda: False)
+    except Exception:
+        pass
+
     rv2 = client.post("/api/updates/upgrade", json={"asset_url": "ftp://bad"})
     assert rv2.status_code == 400
     d2 = rv2.get_json()

@@ -141,7 +141,7 @@ def run_job() -> None:
         # than managing Popen.communicate/timeouts manually.
         # Call subprocess.run with explicit keyword arguments. Using a
         # dynamically-built `run_kwargs` dict can confuse static type
-        # checkers (Pyright/Pylance) which may try to match the dict values
+        # checkers (basedpyright/Pylance) which may try to match the dict values
         # to positional parameters and report spurious type errors. By
         # providing the keywords directly we avoid that issue and keep the
         # runtime behavior the same.

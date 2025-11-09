@@ -152,6 +152,47 @@
             "problemMatcher": [],
             "detail": "Runs pytest with coverage using local source (higher coverage, ~64% vs CI's 59%)."
         }
+        ,
+        {
+            "label": "Run Tests (Python 3.10 Docker)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "docker run --rm -e PYTHONPATH=${workspaceFolder} -v ${workspaceFolder}:/work -w /work python:3.10-slim bash -lc 'pip install -q --no-input -r requirements.txt -r requirements-dev.txt pytest >/dev/null && pytest -q'"
+            ],
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [],
+            "detail": "Run full test suite under Python 3.10 in docker (includes system sqlite)."
+        },
+        {
+            "label": "Run Targeted Tests (Python 3.10 Docker)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "docker run --rm -e PYTHONPATH=${workspaceFolder} -v ${workspaceFolder}:/work -w /work python:3.10-slim bash -lc 'pip install -q --no-input -r requirements.txt -r requirements-dev.txt pytest >/dev/null && pytest -q ${input:TEST_FILES}'"
+            ],
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [],
+            "detail": "Run a subset of tests (prompt for paths) under Python 3.10 via docker.",
+            "inputs": [
+                {
+                    "id": "TEST_FILES",
+                    "type": "promptString",
+                    "description": "Test file(s) or pattern (e.g. tests/test_factory_shim_new.py)",
+                    "default": "tests/test_factory_shim_new.py"
+                }
+            ]
+        }
 
 
     ]

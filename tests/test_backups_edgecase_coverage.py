@@ -4,7 +4,7 @@ These tests target uncovered lines in the backups shim module,
 focusing on error handling and fallback behavior.
 """
 
-# pyright: reportAttributeAccessIssue=false
+# basedpyright: reportAttributeAccessIssue=false
 
 from __future__ import annotations
 

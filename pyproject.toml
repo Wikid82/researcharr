@@ -114,8 +114,8 @@ line_length = 100
 known_first_party = ["researcharr"]
 known_third_party = ["pytest", "yaml", "requests", "flask", "werkzeug", "apprise", "apscheduler", "sqlite3"]
 
-# Replacing mypy with a pyright-based static analysis. Configuration is
-# provided via `pyrightconfig.json` at the repo root. Pyright/Pylance will be
+# Replacing mypy with a basedpyright-based static analysis. Configuration is
+# provided via `basedpyrightconfig.json` at the repo root. basedpyright/Pylance will be
 # used for type checking and editor diagnostics; developers may still run
 # based-pyright or `pyright` locally (for example via npx).
 

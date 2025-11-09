@@ -34,7 +34,6 @@ env/
 # ignored.
 *.coverage
 htmlcov/
-junit.xml
 
 # Build and distribution
 dist/
@@ -90,8 +89,7 @@ coverage.json
 coverage.xml
 
 ## Local virtualenvs created by me or CI runs
-.venv-3.13/
-.venv-3.13
+.venv*
 
 # Bandit reports and other security scanner outputs
 bandit-report*.json

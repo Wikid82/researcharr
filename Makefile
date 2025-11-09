@@ -18,6 +18,14 @@ test:
 	# Run the local pytest suite
 	python -m pytest -q
 
+test310:
+	# Run the pytest suite under Python 3.10 via docker (installs runtime + dev requirements)
+	docker run --rm -e PYTHONPATH=/work -v $(PWD):/work -w /work python:3.10-slim bash -lc "pip install -q --no-input -r requirements.txt -r requirements-dev.txt pytest >/dev/null && pytest -q"
+
+test310-target:
+	# Run a targeted subset of tests under Python 3.10 (usage: make test310-target FILES='tests/test_factory_shim_new.py')
+	docker run --rm -e PYTHONPATH=/work -v $(PWD):/work -w /work python:3.10-slim bash -lc "pip install -q --no-input -r requirements.txt -r requirements-dev.txt pytest >/dev/null && pytest -q $(FILES)"
+
 precommit:
 	@echo "Running pre-commit inside project venv"
 	./scripts/run_precommit.sh

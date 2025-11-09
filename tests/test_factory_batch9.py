@@ -52,6 +52,21 @@ def test_api_updates_unignore(client, login):
 
 def test_api_updates_upgrade_invalid_url(client, login):
     login()
+    # Ensure running-in-image detection does not short-circuit upgrade logic
+    try:
+        import researcharr.factory as _factory
+
+        # Force the helper to return False for deterministic URL validation
+        # If caller provided a pytest monkeypatch fixture, use it; otherwise
+        # fall back to directly setting the attribute.
+        try:
+            # monkeypatch fixture not available here directly, so set attribute
+            setattr(_factory, "_running_in_image", lambda: False)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
     rv = client.post("/api/updates/upgrade", json={"asset_url": "ftp://example.com/file"})
     assert rv.status_code == 400
     data = rv.get_json()

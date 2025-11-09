@@ -8,6 +8,7 @@ on:
       - main
       - development
       - nightly
+      - feature/**
 
 # When set to 'true' skip Docker build/publish and image scans. This allows
 # the repository to focus on fast test & lint feedback while Docker tasks

@@ -371,7 +371,7 @@ def create_metrics_app() -> Flask:
                     self._routes = {}
                     self._before = None
 
-                    # Minimal logger stub so pyright and error handler code can access app.logger
+                    # Minimal logger stub so basedpyright and error handler code can access app.logger
                     class _Logger:
                         def exception(self, *a, **k):
                             pass

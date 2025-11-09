@@ -100,14 +100,14 @@ repos:
         files: ''
         stages: [pre-commit]
 
-      - id: pyright-system
-        name: pyright (system)
+      - id: basedpyright-system
+        name: basedpyright (system)
         # Use a small local wrapper that prefers a local based-pyright/pyright
         # binary when available. Falls back to npx-based invocation.
         entry: ./scripts/run-pyright-precommit.sh
         args:
           - "--project"
-          - "pyrightconfig.json"
+          - "basedpyrightconfig.json"
         language: script
         pass_filenames: false
         stages: [pre-commit]

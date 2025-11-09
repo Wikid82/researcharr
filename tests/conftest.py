@@ -9,6 +9,9 @@ import pytest
 
 from researcharr import factory
 
+# Import storage db_session fixture for repository tests
+pytest_plugins = ["tests.storage.conftest"]
+
 
 @pytest.fixture(autouse=True, scope="function")
 def restore_researcharr_create_metrics_app():

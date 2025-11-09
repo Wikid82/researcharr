@@ -78,7 +78,7 @@ ignore_errors = true
 # The discrepancy is due to `researcharr/__init__.py` having low coverage and
 # coverage differences between installed vs editable installs. Revisit this and
 # raise back to 85.0 after improving coverage of low-coverage modules.
-fail_under = 57.0
+fail_under = 70.0
 
 [tool.coverage.html]
 directory = "htmlcov"

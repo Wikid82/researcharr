@@ -188,6 +188,8 @@ jobs:
         flags: python
         # Don't fail CI if the upload step has an error here
         fail_ci_if_error: false
+        # Disable file fixes to skip timestamp validation (prevents "exceeds max age" errors)
+        disable_file_fixes: true
       continue-on-error: true
     - name: Upload test results to Codecov
       if: ${{ !cancelled() && env.RENOVATE_BYPASS != '1' && env.CODECOV_TOKEN != '' }}

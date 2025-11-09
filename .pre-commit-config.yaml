@@ -97,7 +97,9 @@ repos:
         name: detect-secrets (local wrapper)
         entry: scripts/run-detect-secrets.sh
         language: script
-        files: ''
+        # Exclude tests and node_modules from detect-secrets scans here to
+        # avoid false positives on test fixtures and locally vendored files.
+        files: '^(?!tests/|node_modules/).*'
         stages: [pre-commit]
 
       - id: basedpyright-system

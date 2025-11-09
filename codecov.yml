@@ -1,4 +1,5 @@
 codecov:
+  token: 13987d18-8800-42bc-a9e0-89dbfa9f2e9c
   require_ci_to_pass: false
 
 coverage:
@@ -19,6 +20,8 @@ coverage:
 
 ignore:
   - "tests/**"
+  - "unit_tests/**"
+  - "researcharr/tests/**"
   - "docs/**"
   - "site/**"
   - ".venv/**"
@@ -28,3 +31,6 @@ ignore:
   - "container_build/**"
   - "repo-mirror.git/**"
   - "researcharr.egg-info/**"
+  - "home/**"
+  - "**/*.pyi"
+  - "htmlcov/**"

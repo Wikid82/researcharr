@@ -1,81 +1,14 @@
-name: Publish images
+name: Publish images (disabled; use release workflow)
 
 on:
-  push:
-    branches:
-      - '**'
+  workflow_dispatch: {}
 
 permissions:
   contents: read
   packages: write
 
 jobs:
-  publish:
+  disabled:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
-
-      - name: Determine tags
-        id: tags
-        run: |
-          ref=${GITHUB_REF#refs/heads/}
-          # sanitize branch name for tag usage
-          safe_ref=${ref//[^A-Za-z0-9._-]/-}
-          echo "ref=$ref" >> $GITHUB_OUTPUT
-          echo "safe_ref=$safe_ref" >> $GITHUB_OUTPUT
-
-      - name: Log in to GHCR
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push (development branch -> debug target)
-        if: startsWith(github.ref, 'refs/heads/development')
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
-        with:
-          context: .
-          push: true
-          target: debug
-          tags: |
-            ghcr.io/wikid82/researcharr:dev
-            ghcr.io/wikid82/researcharr:branch-${{ steps.tags.outputs.safe_ref }}
-          build-args: |
-            BUILD_VERSION=${{ github.sha }}
-            RUNTIME_UID=1000
-            RUNTIME_GID=1000
-
-      - name: Build and push (main branch -> runtime)
-        if: startsWith(github.ref, 'refs/heads/main')
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
-        with:
-          context: .
-          push: true
-          # default final stage (runtime)
-          tags: |
-            ghcr.io/wikid82/researcharr:latest
-            ghcr.io/wikid82/researcharr:prod
-            ghcr.io/wikid82/researcharr:branch-${{ steps.tags.outputs.safe_ref }}
-          build-args: |
-            BUILD_VERSION=latest
-
-      - name: Build and push (other branches -> branch tag)
-        if: >-
-          startsWith(github.ref, 'refs/heads/') &&
-          github.ref != 'refs/heads/main' &&
-          github.ref != 'refs/heads/development'
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ghcr.io/wikid82/researcharr:branch-${{ steps.tags.outputs.safe_ref }}
-          build-args: |
-            BUILD_VERSION=${{ github.sha }}
+      - run: echo "Disabled; image publishing moved to release workflow."

@@ -1,0 +1,9 @@
+# Bandit configuration
+# Exclude package-level init which intentionally uses broad excepts
+exclude:
+  - researcharr/__init__.py
+
+# Optionally add more files or tests to exclude as needed.
+# To skip specific tests globally, add a `skips` list, e.g.:
+# skips:
+#   - B110

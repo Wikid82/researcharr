@@ -8,16 +8,14 @@ from typing import Optional
 
 from werkzeug.security import generate_password_hash
 
-# The application now uses DB-backed storage for web UI users exclusively.
-# Import the DB helper from the package. If import fails, set `rdb` to None
-# so callers can handle the absence (tests/CI should supply a DB via
-# `researcharr.researcharr.DB_PATH` or `DATABASE_URL`).
+USER_CONFIG_PATH = os.getenv("USER_CONFIG_PATH", "/config/webui_user.yml")
+
+# DB helper import: tests may monkeypatch `webui.rdb` to a fake object with
+# load_user/save_user; leave None when import fails.
 rdb: Optional[ModuleType]
 try:
     from researcharr import db as rdb  # type: ignore
 except Exception:
-    # If the package DB helper can't be imported (tests/CI may stub it),
-    # leave `rdb` as None and callers will handle the absence.
     rdb = None
 
 
@@ -28,31 +26,35 @@ def _env_bool(name: str, default: str = "false") -> bool:
 
 
 def load_user_config():
-    """Return the persisted web UI user dict from the DB or None.
+    """Return persisted web UI user dict or None.
 
-    This function no longer reads from any YAML file. Tests and CI should
-    ensure a DB is available (conftest sets `researcharr.researcharr.DB_PATH`).
+    When `rdb` is None, return None so tests expecting absence pass; when
+    present delegate to `rdb.load_user()` catching errors.
     """
     if rdb is None:
         return None
     try:
-        return rdb.load_user()
+        user = rdb.load_user()
     except Exception:
         return None
+    return user
 
 
 def save_user_config(username, password_hash, api_key=None, api_key_hash=None):
-    """Persist username and password/api hashes to the DB.
+    """Persist user credentials; raise when DB unavailable.
 
-    Accept either a raw api_key (which will be hashed) or an api_key_hash.
-    Raises RuntimeError when no DB backend is available.
+    Hash `api_key` if provided; otherwise use `api_key_hash` verbatim. If
+    `rdb` is None raise RuntimeError (tests assert this). Returns the stored
+    mapping for convenience when available.
     """
-    api_hash = None
-    if api_key is not None:
-        api_hash = generate_password_hash(api_key)
-    elif api_key_hash is not None:
-        api_hash = api_key_hash
-
     if rdb is None:
         raise RuntimeError("DB backend not available for saving webui user")
+    if api_key is not None:
+        api_hash = generate_password_hash(api_key)
+    else:
+        api_hash = api_key_hash
     rdb.save_user(username, password_hash, api_hash)
+    return {"username": username, "password_hash": password_hash, "api_key_hash": api_hash}
+
+
+__all__ = ["USER_CONFIG_PATH", "_env_bool", "load_user_config", "save_user_config"]

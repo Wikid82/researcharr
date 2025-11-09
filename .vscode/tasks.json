@@ -81,15 +81,10 @@
         {
             "label": "Run Tests with Coverage",
             "type": "shell",
-            "command": "python",
+            "command": "bash",
             "args": [
-                "-m",
-                "pytest",
-                "tests/",
-                "--cov=researcharr",
-                "--cov-report=term-missing",
-                "--cov-report=html",
-                "--cov-report=xml"
+                "-c",
+                "SITE_PACKAGES=$(python -c 'import sysconfig; print(sysconfig.get_paths()[\"purelib\"])') && export PYTHONPATH=\"$SITE_PACKAGES:$PYTHONPATH\" && python -m pytest tests/ --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml"
             ],
             "group": {
                 "kind": "test",
@@ -100,7 +95,7 @@
                 "panel": "new"
             },
             "problemMatcher": [],
-            "detail": "Runs pytest with coverage and generates coverage.xml for Coverage Gutters."
+            "detail": "Runs pytest with coverage matching CI environment (uses site-packages in PYTHONPATH)."
         },
         {
             "label": "Run Tests (Quick)",
@@ -123,12 +118,28 @@
         {
             "label": "Run Current Test File with Coverage",
             "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "SITE_PACKAGES=$(python -c 'import sysconfig; print(sysconfig.get_paths()[\"purelib\"])') && export PYTHONPATH=\"$SITE_PACKAGES:$PYTHONPATH\" && python -m pytest ${file} --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml"
+            ],
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [],
+            "detail": "Runs only the currently open test file with coverage matching CI environment."
+        },
+        {
+            "label": "Run Tests with Coverage (Local Mode)",
+            "type": "shell",
             "command": "python",
             "args": [
                 "-m",
                 "pytest",
-                "${file}",
-                "--cov=.",
+                "tests/",
+                "--cov=researcharr",
                 "--cov-report=term-missing",
                 "--cov-report=html",
                 "--cov-report=xml"
@@ -139,7 +150,48 @@
                 "panel": "new"
             },
             "problemMatcher": [],
-            "detail": "Runs only the currently open test file with coverage."
+            "detail": "Runs pytest with coverage using local source (higher coverage, ~64% vs CI's 59%)."
+        }
+        ,
+        {
+            "label": "Run Tests (Python 3.10 Docker)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "docker run --rm -e PYTHONPATH=${workspaceFolder} -v ${workspaceFolder}:/work -w /work python:3.10-slim bash -lc 'pip install -q --no-input -r requirements.txt -r requirements-dev.txt pytest >/dev/null && pytest -q'"
+            ],
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [],
+            "detail": "Run full test suite under Python 3.10 in docker (includes system sqlite)."
+        },
+        {
+            "label": "Run Targeted Tests (Python 3.10 Docker)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "docker run --rm -e PYTHONPATH=${workspaceFolder} -v ${workspaceFolder}:/work -w /work python:3.10-slim bash -lc 'pip install -q --no-input -r requirements.txt -r requirements-dev.txt pytest >/dev/null && pytest -q ${input:TEST_FILES}'"
+            ],
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [],
+            "detail": "Run a subset of tests (prompt for paths) under Python 3.10 via docker.",
+            "inputs": [
+                {
+                    "id": "TEST_FILES",
+                    "type": "promptString",
+                    "description": "Test file(s) or pattern (e.g. tests/test_factory_shim_new.py)",
+                    "default": "tests/test_factory_shim_new.py"
+                }
+            ]
         }
 
 

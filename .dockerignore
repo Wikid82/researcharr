@@ -29,6 +29,9 @@ docs/
 
 # pytest cache
 .pytest_cache/
+.ruff_cache/
+htmlcov/
+coverage.json
 
 # Local files (ignore specific generated runtime artifacts, but keep repo config files)
 ## webui user file removed; DB-backed users in sqlite
@@ -55,3 +58,6 @@ coverage.*
 .venv/
 venv/
 env/
+
+# File Types
+*.xcf

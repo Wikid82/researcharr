@@ -22,7 +22,7 @@ jobs:
     steps:
       - name: Add issues to project
         env:
-          GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "🚀 Adding issues ${{ github.event.inputs.start_issue || '80' }} to ${{ github.event.inputs.end_issue || '113' }} to project #${{ env.PROJECT_NUMBER }}"
 

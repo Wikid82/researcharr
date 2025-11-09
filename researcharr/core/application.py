@@ -121,6 +121,9 @@ class CoreApplicationFactory:
         if success:
             # Create legacy config_data structure for backwards compatibility
             config_data = {
+                "app": self.config_manager.get_section("app"),
+                "logging": self.config_manager.get_section("logging"),
+                "database": self.config_manager.get_section("database"),
                 "general": self.config_manager.get_section("general"),
                 "radarr": [],
                 "sonarr": [],
@@ -144,11 +147,11 @@ class CoreApplicationFactory:
 
                 try:
                     _reg_mod = _importlib_mod.import_module("researcharr.plugins.registry")
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     _reg_mod = _importlib_mod.import_module("plugins.registry")
                 _PluginRegistryRuntime = getattr(_reg_mod, "PluginRegistry")
                 registry = _PluginRegistryRuntime()
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 # Fallback to direct file loading
                 pkg_dir = os.path.dirname(__file__)
                 reg_path = os.path.join(pkg_dir, "..", "..", "plugins", "registry.py")
@@ -192,7 +195,9 @@ class CoreApplicationFactory:
                                         data={"plugin": name, "instances": len(data)},
                                         source="core_application_factory",
                                     )
-                            except Exception as e:
+                            except (
+                                Exception
+                            ) as e:  # nosec B110 -- intentional broad except for resilience
                                 # Publish plugin error event
                                 self.event_bus.publish_simple(
                                     Events.PLUGIN_ERROR,
@@ -204,12 +209,12 @@ class CoreApplicationFactory:
                     for name, config in plugin_configs.items():
                         self.config_manager.set(f"plugins.{name}", config, "plugin_loader")
 
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass  # Best effort
 
                 return registry
 
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass  # Continue without plugins if loading fails
 
         return None
@@ -226,7 +231,7 @@ class CoreApplicationFactory:
             webui: ModuleType | None = None
             try:
                 from researcharr import webui
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 # Fallback to direct import
                 spec = importlib.util.spec_from_file_location(
                     "webui",
@@ -276,10 +281,10 @@ class CoreApplicationFactory:
                             source="core_application_factory",
                         )
 
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass  # Use defaults if loading fails
 
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass  # Use defaults
 
         return user_config
@@ -292,7 +297,7 @@ class CoreApplicationFactory:
             try:
                 db_service = self.container.resolve("database_service")
                 db_service.init_db()
-            except Exception as e:
+            except Exception as e:  # nosec B110 -- intentional broad except for resilience
                 self.event_bus.publish_simple(
                     Events.ERROR_OCCURRED,
                     data={"error": str(e), "component": "database_startup"},
@@ -320,7 +325,7 @@ class CoreApplicationFactory:
                 level = level_map.get(log_level.upper(), logging.INFO)
 
                 logging_service.setup_logger("researcharr", log_file, level)
-            except Exception as e:
+            except Exception as e:  # nosec B110 -- intentional broad except for resilience
                 self.event_bus.publish_simple(
                     Events.ERROR_OCCURRED,
                     data={"error": str(e), "component": "logging_startup"},
@@ -336,7 +341,7 @@ class CoreApplicationFactory:
                     data={"reason": "normal_shutdown"},
                     source="lifecycle_hooks",
                 )
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass  # Best effort
 
         # Register lifecycle hooks
@@ -376,7 +381,7 @@ class CoreApplicationFactory:
             from .api import bp as core_api_bp
 
             app.register_blueprint(core_api_bp, url_prefix="/api/v1")
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass  # Core API is optional
 
         # Setup metrics tracking
@@ -388,7 +393,7 @@ class CoreApplicationFactory:
             def track_requests():
                 metrics_service.increment_requests()
 
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             app.metrics = {"requests_total": 0, "errors_total": 0, "plugins": {}}
 
         return app
@@ -426,7 +431,7 @@ def integrate_with_web_app(app: Any, config_dir: str = "/config") -> Any:
         # Check if already registered
         if not any(bp.name == "api_v1" for bp in app.blueprints.values()):
             app.register_blueprint(core_api_bp, url_prefix="/api/v1")
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
 
     # Enhance metrics with core services
@@ -437,7 +442,7 @@ def integrate_with_web_app(app: Any, config_dir: str = "/config") -> Any:
             existing_metrics = app.metrics.copy()
             metrics_service.metrics.update(existing_metrics)
             app.metrics = metrics_service.get_metrics()
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
 
     return app

@@ -49,7 +49,12 @@ jobs:
               }
             }' -f org=$ORGANIZATION -F number=$PROJECT_NUMBER > project_data.json
 
-          echo "PROJECT_ID=$(jq -r '.data.organization.projectV2.id' project_data.json)" >> $GITHUB_ENV
+          PROJECT_ID=$(jq -r '.data.organization.projectV2.id // empty' project_data.json)
+          if [ -z "$PROJECT_ID" ]; then
+            echo "Could not find project #${PROJECT_NUMBER} in organization ${ORGANIZATION}; aborting sync."
+            exit 0
+          fi
+          echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
 
       - name: Get all issues
         env:
@@ -90,7 +95,11 @@ jobs:
             ITEM_ID=$(echo $ITEM_RESPONSE | jq -r '.data.addProjectV2ItemByContentId.item.id')
 
             # Set status based on issue state and assignment
-            STATUS_FIELD_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .id' project_data.json)
+            STATUS_FIELD_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .id // empty' project_data.json)
+            if [ -z "$STATUS_FIELD_ID" ]; then
+              echo "Status field not found in project data; skipping status update for issue #$ISSUE_NUMBER"
+              continue
+            fi
 
             if [ "$ISSUE_STATE" == "closed" ]; then
               STATUS="Done"
@@ -100,10 +109,13 @@ jobs:
               STATUS="Backlog"
             fi
 
-            STATUS_OPTION_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "'$STATUS'") | .id' project_data.json)
+            STATUS_OPTION_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "'$STATUS'") | .id // empty' project_data.json)
+            if [ -z "$STATUS_OPTION_ID" ]; then
+              echo "Status option '$STATUS' not found for project; skipping status update for issue #$ISSUE_NUMBER"
+            else
 
-            # Update status
-            gh api graphql -f query='
+              # Update status
+              gh api graphql -f query='
               mutation($project:ID!, $item:ID!, $field:ID!, $value:String!) {
                 updateProjectV2ItemFieldValue(input: {
                   projectId: $project
@@ -119,7 +131,8 @@ jobs:
                 }
               }' -f project=$PROJECT_ID -f item=$ITEM_ID -f field=$STATUS_FIELD_ID -f value=$STATUS_OPTION_ID
 
-            echo "Issue #$ISSUE_NUMBER added with status: $STATUS"
+              echo "Issue #$ISSUE_NUMBER added with status: $STATUS"
+            fi
 
           done < <(cat issues.json | jq -c '.')
 
@@ -149,7 +162,11 @@ jobs:
             ITEM_ID=$(echo $ITEM_RESPONSE | jq -r '.data.addProjectV2ItemByContentId.item.id')
 
             # Set status based on PR state
-            STATUS_FIELD_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .id' project_data.json)
+            STATUS_FIELD_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .id // empty' project_data.json)
+            if [ -z "$STATUS_FIELD_ID" ]; then
+              echo "Status field not found in project data; skipping status update for PR #$PR_NUMBER"
+              continue
+            fi
 
             if [ "$IS_MERGED" == "true" ] || [ "$PR_STATE" == "closed" ]; then
               STATUS="Done"
@@ -159,10 +176,12 @@ jobs:
               STATUS="Review"
             fi
 
-            STATUS_OPTION_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "'$STATUS'") | .id' project_data.json)
-
-            # Update status
-            gh api graphql -f query='
+            STATUS_OPTION_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "'$STATUS'") | .id // empty' project_data.json)
+            if [ -z "$STATUS_OPTION_ID" ]; then
+              echo "Status option '$STATUS' not found for project; skipping status update for PR #$PR_NUMBER"
+            else
+              # Update status
+              gh api graphql -f query='
               mutation($project:ID!, $item:ID!, $field:ID!, $value:String!) {
                 updateProjectV2ItemFieldValue(input: {
                   projectId: $project
@@ -178,6 +197,7 @@ jobs:
                 }
               }' -f project=$PROJECT_ID -f item=$ITEM_ID -f field=$STATUS_FIELD_ID -f value=$STATUS_OPTION_ID
 
-            echo "PR #$PR_NUMBER added with status: $STATUS"
+              echo "PR #$PR_NUMBER added with status: $STATUS"
+            fi
 
           done < <(cat prs.json | jq -c '.')

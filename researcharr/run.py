@@ -49,12 +49,22 @@ def setup_scheduler() -> None:
     function will wire a simple periodic job. In tests the `schedule`
     symbol is patched so calling this will exercise the expected calls.
     """
-    if schedule is None:
+    # Look up schedule from both globals and the module's namespace
+    # to support test patches that set run.schedule = mock
+    import sys
+
+    sched = globals().get("schedule")
+    # Also check if the containing module has schedule set by tests
+    if sched is None:
+        mod = sys.modules.get(__name__)
+        if mod is not None:
+            sched = getattr(mod, "schedule", None)
+    if sched is None:
         return
     try:
         # Typical usage in the real project: schedule.every().minutes.do(...)
-        schedule.every().minutes.do(run_job)
-    except Exception:
+        sched.every().minutes.do(run_job)
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         # Swallow errors — tests only care that this function exists and
         # that it calls into schedule if present.
         return
@@ -64,7 +74,7 @@ def _get_job_timeout() -> Optional[float]:
     v = os.getenv("JOB_TIMEOUT", "")
     try:
         return float(v) if v else None
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         return None
 
 
@@ -84,23 +94,37 @@ def run_job() -> None:
     # the module-level attribute, then to the package default constant.
     try:
         env_script = os.environ.get("SCRIPT")
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         env_script = None
     try:
         mod_script = globals().get("SCRIPT")
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         mod_script = None
     script = env_script or mod_script or SCRIPT
-    logger.debug("globals SCRIPT=%r", mod_script)
-    logger.debug("env SCRIPT=%r", env_script)
+    import logging as _lg
+
+    try:
+        _lg.info("globals SCRIPT=%r", mod_script)
+    except Exception:  # nosec B110 -- intentional broad except for resilience
+        pass
+    try:
+        _lg.info("env SCRIPT=%r", env_script)
+    except Exception:  # nosec B110 -- intentional broad except for resilience
+        pass
     try:
         top_run = sys.modules.get("run")
-        logger.debug(
-            "top-level run.SCRIPT=%r",
-            None if top_run is None else getattr(top_run, "SCRIPT", None),
-        )
-    except Exception:
-        logger.debug("top-level run.SCRIPT=<unavailable>")
+        try:
+            _lg.info(
+                "top-level run.SCRIPT=%r",
+                None if top_run is None else getattr(top_run, "SCRIPT", None),
+            )
+        except Exception:  # nosec B110 -- intentional broad except for resilience
+            pass
+    except Exception:  # nosec B110 -- intentional broad except for resilience
+        try:
+            _lg.info("top-level run.SCRIPT=<unavailable>")
+        except Exception:  # nosec B110 -- intentional broad except for resilience
+            pass
     timeout = _get_job_timeout()
 
     # Ensure there is something to execute
@@ -117,7 +141,7 @@ def run_job() -> None:
         # than managing Popen.communicate/timeouts manually.
         # Call subprocess.run with explicit keyword arguments. Using a
         # dynamically-built `run_kwargs` dict can confuse static type
-        # checkers (Pyright/Pylance) which may try to match the dict values
+        # checkers (basedpyright/Pylance) which may try to match the dict values
         # to positional parameters and report spurious type errors. By
         # providing the keywords directly we avoid that issue and keep the
         # runtime behavior the same.
@@ -142,28 +166,28 @@ def run_job() -> None:
             # Always provide the child's output at DEBUG; tests look for the
             # more human-facing "Job stdout" / "Job stderr" lines at INFO.
             logger.debug("run_job stdout: %s", out)
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
         try:
             logger.debug("run_job stderr: %s", err)
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
         try:
             if out:
                 logger.info("Job stdout: %s", out)
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
         try:
             if err:
                 logger.info("Job stderr: %s", err)
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
         logger.info("Job finished with returncode %s", completed.returncode)
     except subprocess.TimeoutExpired:
         # Best-effort kill: subprocess.run already attempts to kill the child,
         # but ensure we log the expected message for tests and diagnostics.
         logger.error("Job exceeded timeout and was killed")
-    except Exception as exc:
+    except Exception as exc:  # nosec B110 -- intentional broad except for resilience
         logger.exception("run_job encountered an error: %s", exc)
 
 

@@ -1,102 +1,10 @@
-name: CI — Tests only
+name: CI — Tests only (disabled; consolidated into main CI)
 
 on:
-  pull_request: {}
-  push:
-    branches:
-      - main
-      - development
-      - '**'
+  workflow_dispatch: {}
 
 jobs:
-  tests:
-    name: "Tests (Python ${{ matrix.python-version }})"
+  disabled:
     runs-on: ubuntu-latest
-    env:
-      RENOVATE_BYPASS: '0'
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    strategy:
-      fail-fast: false
-      matrix:
-        # Remove Python 3.9 (EOL) and include Python 3.14 for test matrix
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-        with:
-          fetch-depth: 0
-
-      - name: Detect Renovate PR and enable bypass
-        if: ${{ github.event_name == 'pull_request' && github.actor == 'renovate[bot]' }}
-        run: echo "RENOVATE_BYPASS=1" >> $GITHUB_ENV
-
-      - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Cache pip
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt','**/requirements-dev.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-${{ matrix.python-version }}-
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-          pip install -e .
-
-      - name: Run pre-commit hooks
-        if: ${{ env.RENOVATE_BYPASS != '1' }}
-        shell: bash {0}
-        run: |
-          set +e  # Disable exit on error for this step
-          pip install pre-commit
-          # Run all hooks and show diffs on failure. Pre-commit warnings are
-          # informational and should not fail the CI build.
-          pre-commit run --all-files --show-diff-on-failure
-          exit 0  # Always exit successfully
-
-      - name: Short-circuit tests for Renovate PRs
-        if: ${{ env.RENOVATE_BYPASS == '1' }}
-        run: |
-          echo "Renovate PR detected; skipping tests and creating placeholder coverage.xml"
-          echo "<?xml version=\"1.0\" ?><coverage line-rate=\"0.0\"></coverage>" > coverage.xml
-
-      - name: Run tests with pytest
-        if: ${{ env.RENOVATE_BYPASS != '1' }}
-        run: |
-          pytest tests/ --maxfail=3 --disable-warnings -v \
-            --cov=researcharr --cov-report=xml:coverage.xml \
-            --junitxml=junit.xml -o junit_family=legacy
-
-      - name: Ensure coverage.xml exists (even if tests failed)
-        if: ${{ always() && env.RENOVATE_BYPASS != '1' }}
-        run: |
-          if [ ! -f coverage.xml ]; then
-            echo "coverage.xml not found; creating placeholder file so upload can proceed."
-            echo "<?xml version=\"1.0\" ?><coverage line-rate=\"0.0\"></coverage>" > coverage.xml
-          fi
-
-      - name: Upload coverage artifact
-        if: ${{ always() && env.RENOVATE_BYPASS != '1' }}
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
-        with:
-          name: coverage-xml-python-${{ matrix.python-version }}
-          path: coverage.xml
-
-      - name: Upload coverage to Codecov
-        if: ${{ always() && env.RENOVATE_BYPASS != '1' && env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-        continue-on-error: true
-      - name: Upload test results to Codecov
-        if: ${{ !cancelled() && env.RENOVATE_BYPASS != '1' && env.CODECOV_TOKEN != '' }}
-        uses: codecov/test-results-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+      - run: echo "This workflow is disabled; use ci.yml instead."

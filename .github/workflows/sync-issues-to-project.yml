@@ -9,8 +9,8 @@ on:
         default: ''
 
 env:
-  PROJECT_NUMBER: 2
-  GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+    PROJECT_NUMBER: 2
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   sync_issues:
@@ -29,10 +29,10 @@ jobs:
         run: |
           pip install requests
 
-      - name: Sync Issues
-        env:
-          GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
-        run: |
+            - name: Sync Issues
+                env:
+                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                run: |
           cat > sync_issues.py << 'EOF'
           import os
           import requests

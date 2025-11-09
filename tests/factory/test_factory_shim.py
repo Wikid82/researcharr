@@ -57,7 +57,7 @@ def test_factory_shim_reexports_top_level_factory(monkeypatch):
     import os
     from importlib import util
 
-    shim_path = os.path.join(os.path.dirname(__file__), "..", "researcharr", "factory.py")
+    shim_path = os.path.join(os.path.dirname(__file__), "..", "..", "researcharr", "factory.py")
     shim_path = os.path.abspath(shim_path)
     spec = util.spec_from_file_location("researcharr.factory_shim_test", shim_path)
     shim = util.module_from_spec(spec)
@@ -94,7 +94,7 @@ def test_factory_shim_absent_top_level(monkeypatch):
     import os
     from importlib import util
 
-    shim_path = os.path.join(os.path.dirname(__file__), "..", "researcharr", "factory.py")
+    shim_path = os.path.join(os.path.dirname(__file__), "..", "..", "researcharr", "factory.py")
     shim_path = os.path.abspath(shim_path)
     spec = util.spec_from_file_location("researcharr.factory_shim_test", shim_path)
     shim = util.module_from_spec(spec)

@@ -7,10 +7,77 @@ from unittest.mock import Mock as _Mock
 
 import pytest
 
+# Ensure repository root is on sys.path so top-level shim modules
+# like `entrypoint`, `run`, and `backups` remain importable after the
+# test directory reorganization.
+try:
+    _repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+    if _repo_root not in sys.path:
+        sys.path.insert(0, _repo_root)
+except Exception:
+    pass
+
 from researcharr import factory
 
-# Import storage db_session fixture for repository tests
-pytest_plugins = ["tests.storage.conftest"]
+# Autouse fixture to restore the real run.run_job implementation if earlier tests
+# replaced it with a Mock. This prevents later run-focused tests from observing
+# a stubbed function and missing expected logging/subprocess behavior.
+import pytest as _pytest
+import unittest.mock as _um
+
+@_pytest.fixture(autouse=True)
+def _restore_run_job_if_mock():
+    try:
+        import run as _top_run
+        if isinstance(getattr(_top_run, 'run_job', None), _um.Mock):
+            real = getattr(_top_run, 'ORIGINAL_RUN_JOB', None)
+            if callable(real):
+                _top_run.run_job = real
+    except Exception:
+        pass
+    try:
+        import researcharr as _pkg
+        _pkg_run = getattr(_pkg, 'run', None)
+        if _pkg_run is not None and isinstance(getattr(_pkg_run, 'run_job', None), _um.Mock):
+            real2 = getattr(_pkg_run, 'ORIGINAL_RUN_JOB', None)
+            if callable(real2):
+                _pkg_run.run_job = real2
+    except Exception:
+        pass
+    yield
+
+# Inline the storage layer fixtures locally instead of using pytest_plugins
+# to avoid plugin import path issues in certain environments.
+import tempfile
+from pathlib import Path
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from researcharr.storage.models import Base
+
+
+@pytest.fixture
+def temp_db():
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+        db_path = Path(f.name)
+    yield db_path
+    if db_path.exists():
+        try:
+            db_path.unlink()
+        except Exception:
+            pass
+
+
+@pytest.fixture
+def db_session(temp_db):
+    engine = create_engine(f"sqlite:///{temp_db}", echo=False)
+    Base.metadata.create_all(engine)
+    SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+        engine.dispose()
 
 
 @pytest.fixture(autouse=True, scope="function")

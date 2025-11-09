@@ -63,8 +63,7 @@ def test_factory_shim_getattr_heals_create_app(monkeypatch):
     import importlib.util
     import os
 
-    shim_path = os.path.join(os.path.dirname(__file__), "..", "researcharr", "factory.py")
-    shim_path = os.path.abspath(shim_path)
+    shim_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "researcharr", "factory.py"))
     spec = importlib.util.spec_from_file_location("researcharr.factory_covshim", shim_path)
     assert spec and spec.loader
     shim_mod = importlib.util.module_from_spec(spec)

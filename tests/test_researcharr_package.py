@@ -6,8 +6,6 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
-import pytest
-
 # Import modules under test
 import researcharr
 import researcharr.backups

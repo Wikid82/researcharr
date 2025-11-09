@@ -1,7 +1,7 @@
 """Tests for the `researcharr.webui` shim module."""
 
 import importlib
-from types import SimpleNamespace
+
 import pytest
 
 

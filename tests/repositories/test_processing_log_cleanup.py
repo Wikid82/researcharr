@@ -2,9 +2,9 @@
 
 from datetime import datetime, timedelta
 
-from researcharr.storage.database import init_db, get_session
-from researcharr.storage.models import ManagedApp, ProcessingLog, AppType
 from researcharr.repositories.processing_log import ProcessingLogRepository
+from researcharr.storage.database import get_session, init_db
+from researcharr.storage.models import AppType, ManagedApp, ProcessingLog
 
 
 def _setup_session(tmp_path):

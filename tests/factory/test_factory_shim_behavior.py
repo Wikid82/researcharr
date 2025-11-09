@@ -55,7 +55,9 @@ def test_shim_reexports_public_names_from_top_level_module(monkeypatch):
     import os
     from importlib import util
 
-    shim_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "researcharr", "factory.py"))
+    shim_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "researcharr", "factory.py")
+    )
     spec = util.spec_from_file_location("researcharr.factory_shim_test", shim_path)
     shim = util.module_from_spec(spec)
     spec.loader.exec_module(shim)

@@ -1,9 +1,8 @@
 """Tests for database session management utilities."""
 
-from pathlib import Path
 import pytest
 
-from researcharr.storage.database import init_db, get_session, _session_factory  # type: ignore
+from researcharr.storage.database import get_session, init_db  # type: ignore
 from researcharr.storage.models import GlobalSettings
 
 

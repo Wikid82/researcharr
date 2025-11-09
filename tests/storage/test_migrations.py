@@ -1,9 +1,7 @@
 """Tests for migration utilities."""
 
-from pathlib import Path
-
-from researcharr.storage.migrations import migrate_database, reset_database
 from researcharr.storage.database import get_session
+from researcharr.storage.migrations import migrate_database, reset_database
 from researcharr.storage.models import GlobalSettings
 
 

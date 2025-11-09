@@ -9,8 +9,6 @@ from __future__ import annotations
 import importlib.util
 import logging
 import os
-import subprocess as _stdlib_subprocess  # nosec B404
-import types
 from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
@@ -90,8 +88,8 @@ def run_job(*args, **kwargs):
     import `from researcharr import run` receive identical behaviour regardless
     of import ordering or prior test mutations of the package submodule.
     """
-    import sys as _sys
     import subprocess  # nosec B404
+    import sys as _sys
 
     logger = logging.getLogger("researcharr.cron")
     if logger.level > logging.INFO:
@@ -102,7 +100,7 @@ def run_job(*args, **kwargs):
     # Ensure logs propagate to root so pytest caplog captures them even if
     # previous tests attached file handlers that bypass propagation.
     try:
-        for _h in list(getattr(logger, 'handlers', [])):
+        for _h in list(getattr(logger, "handlers", [])):
             try:
                 logger.removeHandler(_h)
             except Exception:
@@ -192,6 +190,7 @@ def run_job(*args, **kwargs):
 
     # Support call signature compatibility (ignore *args/**kwargs)
     return None
+
 
 # Preserve original implementation reference for potential test fixtures.
 ORIGINAL_RUN_JOB = run_job

@@ -2,8 +2,6 @@
 
 import importlib
 import sys
-import types
-import pytest
 
 
 def test_package_import_and_basic_attributes():

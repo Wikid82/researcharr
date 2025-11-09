@@ -1,7 +1,7 @@
 """Tests for the top-level `backups` shim module."""
 
 import importlib
-from pathlib import Path
+
 import pytest
 
 

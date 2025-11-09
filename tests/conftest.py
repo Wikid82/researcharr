@@ -17,41 +17,48 @@ try:
 except Exception:
     pass
 
-from researcharr import factory
+import unittest.mock as _um
 
 # Autouse fixture to restore the real run.run_job implementation if earlier tests
 # replaced it with a Mock. This prevents later run-focused tests from observing
 # a stubbed function and missing expected logging/subprocess behavior.
 import pytest as _pytest
-import unittest.mock as _um
+
+from researcharr import factory
+
 
 @_pytest.fixture(autouse=True)
 def _restore_run_job_if_mock():
     try:
         import run as _top_run
-        if isinstance(getattr(_top_run, 'run_job', None), _um.Mock):
-            real = getattr(_top_run, 'ORIGINAL_RUN_JOB', None)
+
+        if isinstance(getattr(_top_run, "run_job", None), _um.Mock):
+            real = getattr(_top_run, "ORIGINAL_RUN_JOB", None)
             if callable(real):
                 _top_run.run_job = real
     except Exception:
         pass
     try:
         import researcharr as _pkg
-        _pkg_run = getattr(_pkg, 'run', None)
-        if _pkg_run is not None and isinstance(getattr(_pkg_run, 'run_job', None), _um.Mock):
-            real2 = getattr(_pkg_run, 'ORIGINAL_RUN_JOB', None)
+
+        _pkg_run = getattr(_pkg, "run", None)
+        if _pkg_run is not None and isinstance(getattr(_pkg_run, "run_job", None), _um.Mock):
+            real2 = getattr(_pkg_run, "ORIGINAL_RUN_JOB", None)
             if callable(real2):
                 _pkg_run.run_job = real2
     except Exception:
         pass
     yield
 
+
 # Inline the storage layer fixtures locally instead of using pytest_plugins
 # to avoid plugin import path issues in certain environments.
 import tempfile
 from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from researcharr.storage.models import Base
 
 

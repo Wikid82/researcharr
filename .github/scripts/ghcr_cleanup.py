@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
 import requests
+from requests import exceptions as req_exceptions
 
 GITHUB_API = "https://api.github.com"
 DEFAULT_TIMEOUT = 30
@@ -66,7 +67,18 @@ def list_packages(owner: str, token: str) -> List[Dict[str, Any]]:
             r = requests.get(url, headers=headers, timeout=DEFAULT_TIMEOUT)
             if r.status_code == 404:
                 break
-            r.raise_for_status()
+            try:
+                r.raise_for_status()
+            except req_exceptions.HTTPError:
+                print("Failed GitHub API request:", url)
+                try:
+                    body = r.json()
+                except Exception:
+                    body = r.text
+                print("Status:", r.status_code)
+                print("Response headers:", dict(r.headers))
+                print("Response body:", body)
+                raise
             data = r.json()
             if not data:
                 break
@@ -111,7 +123,17 @@ def list_package_versions(owner: str, package_name: str, token: str) -> List[Dic
             r = requests.get(url, headers=headers, timeout=DEFAULT_TIMEOUT)
             if r.status_code == 404:
                 break
-            r.raise_for_status()
+            try:
+                r.raise_for_status()
+            except req_exceptions.HTTPError:
+                print("Failed GitHub API request:", url)
+                try:
+                    body = r.json()
+                except Exception:
+                    body = r.text
+                print("Status:", r.status_code)
+                print("Response body:", body)
+                raise
             data = r.json()
             if not data:
                 break
@@ -237,6 +259,57 @@ def main() -> None:
     token = os.getenv("GHCR_TOKEN") or os.getenv("GHCR_PAT")
     if not token:
         print("GHCR_PAT/GHCR_TOKEN not set in environment. Exiting.")
+        sys.exit(1)
+
+    # early token validation: call /user to surface token owner and scopes
+    def _get_user_and_scopes(tok: str) -> tuple[Optional[str], List[str]]:
+        headers = get_auth_headers(tok)
+        try:
+            r = requests.get(api_path("user"), headers=headers, timeout=DEFAULT_TIMEOUT)
+        except Exception as exc:
+            print("Could not contact GitHub /user endpoint:", exc)
+            return None, []
+        if r.status_code != 200:
+            # print helpful debug info and don't proceed
+            print("Failed to verify token via GET /user:", r.status_code)
+            try:
+                body = r.json()
+            except Exception:
+                body = r.text
+            print("Response body:", body)
+            return None, []
+        login = None
+        try:
+            login = r.json().get("login")
+        except Exception:
+            login = None
+        scopes_raw = r.headers.get("x-oauth-scopes") or r.headers.get("x-github-auth-scopes") or ""
+        scopes = [s.strip() for s in scopes_raw.split(",") if s.strip()]
+        return login, scopes
+
+    login, scopes = _get_user_and_scopes(token)
+    if login:
+        print(f"Authenticated as: {login}")
+    if scopes:
+        print("Token scopes:", scopes)
+    else:
+        print("Warning: token scopes header not present; proceeding but API calls may fail.")
+
+    # Determine required permissions: dry-run only needs read access to packages
+    required_read = {"read:packages", "packages:read"}
+    required_write = {"write:packages", "packages:write", "delete:packages", "packages:delete"}
+    has_read = any(s in scopes for s in required_read) or "repo" in scopes
+    has_write = any(s in scopes for s in required_write) or "repo" in scopes
+    if not dry_run and not has_write:
+        print(
+            "Token does not appear to have package write/delete permission required to perform deletions."
+        )
+        print("Required scope examples: write:packages or delete:packages. Current scopes:", scopes)
+        print("If you only want to run a dry-run, set DRY_RUN=true or pass --dry-run.")
+        sys.exit(1)
+    if not has_read:
+        print("Token does not appear to have package read permission required to list packages.")
+        print("Required scope example: read:packages. Current scopes:", scopes)
         sys.exit(1)
 
     owner = os.getenv("OWNER")

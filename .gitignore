@@ -106,3 +106,4 @@ static/banner.xcf
 node_modules/
 .tmp_coverage/
 logs/
+node_modules

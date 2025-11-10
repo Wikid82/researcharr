@@ -9,9 +9,9 @@ types-PyYAML
 types-Markdown
 
 # Optional packages used by pipeline features (convenience for local dev)
-PyYAML>=6.0
-jsonschema>=4.0
-prometheus-client>=0.16.0
+PyYAML==6.0.3
+jsonschema==4.25.1
+prometheus-client==0.23.1
 
 # Optional tooling (development-only)
 setuptools_scm

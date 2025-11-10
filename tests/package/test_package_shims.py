@@ -18,7 +18,9 @@ def test_factory_shim_reexports_top_level_factory():
     import importlib.util
     import os
 
-    factory_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "factory.py"))
+    factory_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "researcharr", "factory.py")
+    )
     spec = importlib.util.spec_from_file_location("researcharr.factory", factory_path)
     assert spec is not None and spec.loader is not None
     shim = importlib.util.module_from_spec(spec)

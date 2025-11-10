@@ -7,8 +7,8 @@ from pathlib import Path
 from unittest.mock import Mock, mock_open, patch
 
 # Import the root researcharr.py module directly (not the package)
-# Get the project root directory (parent of tests directory)
-project_root = Path(__file__).parent.parent
+# Compute project root (file is in tests/root/) ascend two levels
+project_root = Path(__file__).resolve().parents[2]
 researcharr_path = project_root / "researcharr.py"
 
 spec = importlib.util.spec_from_file_location("researcharr_root", str(researcharr_path))

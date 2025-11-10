@@ -118,6 +118,9 @@ if os.path.exists(_impl_path):
     globals()["researcharr"] = _impl
     sys.modules["researcharr.researcharr"] = _impl
 
+# Version string to keep parity with nested package init
+__version__ = "0.1.0"
+
 # Explicitly define __all__ for static analysis tools
 __all__ = []
 

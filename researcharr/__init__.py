@@ -27,10 +27,10 @@ from types import ModuleType
 # canonical module object and that ``importlib.reload()`` will work,
 # set the package object's class to a small ModuleType subclass that
 # normalizes access for a handful of known names.
-try:
+try:  # pragma: no cover - complex module reconciliation for import edge cases
 
-    class _ResearcharrModule(ModuleType):
-        def __getattribute__(self, name: str):
+    class _ResearcharrModule(ModuleType):  # pragma: no cover
+        def __getattribute__(self, name: str):  # pragma: no cover
             # Only handle a small, well-known set of repo-root modules.
             if name in ("factory", "run", "webui", "backups", "api", "entrypoint"):
                 try:

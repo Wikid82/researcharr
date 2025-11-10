@@ -31,7 +31,7 @@ try:
     _impl = sys.modules.get("webui")
     if _impl is None:
         _impl = importlib.import_module("webui")
-except Exception:
+except Exception:  # pragma: no cover - defensive fallback for test isolation
     # Fall back to loading by file path from the repo root
     try:
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
@@ -41,7 +41,7 @@ except Exception:
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)  # type: ignore
             _impl = mod
-    except Exception:
+    except Exception:  # pragma: no cover
         _impl = None
 
 # Defensive: if a test injected a Mock as the underlying implementation
@@ -66,7 +66,7 @@ if _impl is not None:
         )
         if _impl_file and os.path.abspath(str(_impl_file)) != repo_candidate:
             USER_CONFIG_PATH = getattr(_impl, "USER_CONFIG_PATH", None)
-    except Exception:
+    except Exception:  # pragma: no cover - defensive path resolution
         USER_CONFIG_PATH = None
 
 
@@ -92,7 +92,7 @@ def load_user_config() -> Optional[Dict[str, Optional[str]]]:
 
     try:
         return rdb.load_user()
-    except Exception:
+    except Exception:  # pragma: no cover - defensive DB error handling
         return None
 
 

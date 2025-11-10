@@ -6,8 +6,6 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
-import pytest
-
 # Import modules under test
 import researcharr
 import researcharr.backups
@@ -34,7 +32,7 @@ class TestResearcharrPackageModules(unittest.TestCase):
             import os
 
             factory_path = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", "factory.py")
+                os.path.join(os.path.dirname(__file__), "..", "..", "researcharr", "factory.py")
             )
             spec = importlib.util.spec_from_file_location("researcharr.factory", factory_path)
             assert spec is not None and spec.loader is not None

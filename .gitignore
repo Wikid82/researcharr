@@ -34,6 +34,12 @@ env/
 # ignored.
 *.coverage
 htmlcov/
+.coverage.*
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.hypothesis/
 
 # Build and distribution
 dist/
@@ -96,6 +102,16 @@ bandit-report*.json
 
 # Local Bandit debug/verbose outputs
 bandit-debug-*.log
+
+# Test output files
+test_output*.txt
+*.pyc.*.pyc
+
+# Temporary test files
+tmp_*.py
+test_*.tmp
+*_temp.py
+
 static/banner.xcf
 
 # File Types
@@ -106,3 +122,19 @@ static/banner.xcf
 node_modules/
 .tmp_coverage/
 logs/
+
+# Alembic migrations runtime
+alembic.ini.bak
+alembic/versions/__pycache__/
+
+# Documentation build artifacts
+site/
+.mkdocs_cache/
+docs/_build/
+
+# IDE and editor files
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store

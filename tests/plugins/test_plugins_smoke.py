@@ -17,7 +17,7 @@ def test_plugins_package_imports():
 
 def test_plugins_registry_register_and_instance():
     reg_mod = importlib.import_module("researcharr.plugins.registry")
-    Registry = getattr(reg_mod, "PluginRegistry")
+    Registry = reg_mod.PluginRegistry
     registry = Registry()
 
     class Dummy:

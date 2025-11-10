@@ -1,11 +1,11 @@
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 import pytest
 from flask import Flask
 from werkzeug.security import generate_password_hash
 
 # Import api directly from researcharr package
-import researcharr.api as api
+from researcharr import api
 
 
 class DummyRegistry:
@@ -71,7 +71,7 @@ def test_openapi_and_docs_require_key(app):
     # set API key
     key = "sekrit"
     app.config_data = cast(
-        Dict[str, Any], {"general": {"api_key_hash": generate_password_hash(key)}}
+        dict[str, Any], {"general": {"api_key_hash": generate_password_hash(key)}}
     )
     with app.test_client() as c:
         # openapi is public
@@ -91,10 +91,10 @@ def test_openapi_and_docs_require_key(app):
 def test_plugins_and_validation_and_sync_and_notifications(app):
     key = "api123"
     app.config_data = cast(
-        Dict[str, Any], {"general": {"api_key_hash": generate_password_hash(key)}}
+        dict[str, Any], {"general": {"api_key_hash": generate_password_hash(key)}}
     )
     app.config_data = cast(
-        Dict[str, Any], {"general": {"api_key_hash": generate_password_hash(key)}}
+        dict[str, Any], {"general": {"api_key_hash": generate_password_hash(key)}}
     )
 
     # register dummy plugin
@@ -136,11 +136,11 @@ def test_plugins_and_validation_and_sync_and_notifications(app):
 def test_plugin_not_found_and_invalid_index(app):
     key = "k"
     app.config_data = cast(
-        Dict[str, Any], {"general": {"api_key_hash": generate_password_hash(key)}}
+        dict[str, Any], {"general": {"api_key_hash": generate_password_hash(key)}}
     )
     app.plugin_registry = DummyRegistry({})
     app.config_data = cast(
-        Dict[str, Any], {"general": {"api_key_hash": generate_password_hash(key)}}
+        dict[str, Any], {"general": {"api_key_hash": generate_password_hash(key)}}
     )
     app.plugin_registry = DummyRegistry({})
     app.config_data.update({"dummy": []})

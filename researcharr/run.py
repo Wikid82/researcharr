@@ -13,14 +13,13 @@ import os
 import subprocess  # nosec B404
 import sys
 import threading
-from typing import Optional
 
 # Defaults (tests override these via monkeypatch)
 LOG_PATH = os.environ.get("LOG_PATH", "/config/cron.log")
 SCRIPT = os.environ.get("SCRIPT", "/app/scripts/researcharr.py")
 
 # Module-level lock for concurrency control (tests may set RUN_JOB_CONCURRENCY)
-_run_job_lock: Optional[threading.Lock] = None
+_run_job_lock: threading.Lock | None = None
 
 
 def load_config(path: str = "config.yml") -> dict:
@@ -34,6 +33,16 @@ def load_config(path: str = "config.yml") -> dict:
     # project's entrypoint modules. Returning an empty dict is sufficient
     # for tests that only need the symbol to exist or to be patched.
     return {}
+
+
+def setup_logger():
+    """Lightweight logger setup stub used by tests.
+
+    Tests may patch this symbol. Provide a no-op implementation so the
+    symbol exists during test-time imports and patches.
+    """
+    # Real logger setup happens during run_job() call
+    return logging.getLogger("researcharr.cron")
 
 
 # Placeholder for the optional `schedule` library used by the full project.
@@ -70,7 +79,7 @@ def setup_scheduler() -> None:
         return
 
 
-def _get_job_timeout() -> Optional[float]:
+def _get_job_timeout() -> float | None:
     v = os.getenv("JOB_TIMEOUT", "")
     try:
         return float(v) if v else None
@@ -84,13 +93,17 @@ def run_job() -> None:
     Logs to the `researcharr.cron` logger so tests can capture messages with
     caplog.
     """
+    # Always get a fresh logger reference at call time (tests may reset
+    # handlers/levels between runs).
     logger = logging.getLogger("researcharr.cron")
-    # Ensure the logger level allows INFO/DEBUG messages expected by tests.
-    if logger.level > logging.INFO:
-        try:
-            logger.setLevel(logging.INFO)
-        except Exception:  # pragma: no cover - defensive logger setup
-            pass
+    # Ensure propagation so pytest caplog captures our records even if
+    # other tests modified logger handlers or levels.
+    logger.propagate = True
+    # Set level to DEBUG if still NOTSET so INFO/DEBUG messages appear in caplog.
+    # Caplog propagates from our logger to root, so we need a level that permits
+    # the messages to be emitted at all.
+    if logger.level == logging.NOTSET:
+        logger.setLevel(logging.DEBUG)
 
     # Resolve the script path dynamically so callers can override it by
     # setting the module attribute on either the package module or the
@@ -98,43 +111,60 @@ def run_job() -> None:
     # other in different environments).
     # Prefer an explicit environment override (tests set this). Fall back to
     # the module-level attribute, then to the package default constant.
+    # Preserve empty string and None (explicitly cleared) rather than falling back.
+    # Use sentinel to distinguish "not found" from "found but None/empty".
+    _NOTFOUND = object()
     try:
-        env_script = os.environ.get("SCRIPT")
-    except Exception:  # pragma: no cover - nosec B110 -- intentional broad except for resilience
-        env_script = None
+        env_script = os.environ.get("SCRIPT", _NOTFOUND)
+    except Exception:  # pragma: no cover - resilience
+        env_script = _NOTFOUND
     try:
-        mod_script = globals().get("SCRIPT")
-    except Exception:  # pragma: no cover - nosec B110 -- intentional broad except for resilience
-        mod_script = None
-    script = env_script or mod_script or SCRIPT
-    import logging as _lg
-
+        mod_script = globals().get("SCRIPT", _NOTFOUND)
+    except Exception:  # pragma: no cover - resilience
+        mod_script = _NOTFOUND
+    # Also inspect top-level shim module (name "run") if present – tests may
+    # clear or set its SCRIPT independently of the package module.
+    top_run_mod = sys.modules.get("run")
     try:
-        _lg.info("globals SCRIPT=%r", mod_script)
+        shim_script = getattr(top_run_mod, "SCRIPT", _NOTFOUND) if top_run_mod else _NOTFOUND
+    except Exception:  # pragma: no cover - resilience
+        shim_script = _NOTFOUND
+    # Selection order: environment -> package module -> top-level shim -> default constant.
+    # Use sentinel checks so empty string and None are respected (trigger error).
+    if env_script is not _NOTFOUND:
+        script = env_script
+    elif mod_script is not _NOTFOUND:
+        script = mod_script
+    elif shim_script is not _NOTFOUND:
+        script = shim_script
+    else:
+        script = SCRIPT
+    # Log diagnostics at INFO for test visibility (tests check these in caplog.text)
+    try:
+        logger.info("globals SCRIPT=%r", mod_script)
     except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
     try:
-        _lg.info("env SCRIPT=%r", env_script)
+        logger.info("env SCRIPT=%r", env_script)
     except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
     try:
-        top_run = sys.modules.get("run")
         try:
-            _lg.info(
+            logger.info(
                 "top-level run.SCRIPT=%r",
-                None if top_run is None else getattr(top_run, "SCRIPT", None),
+                None if top_run_mod is None else getattr(top_run_mod, "SCRIPT", None),
             )
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
     except Exception:  # nosec B110 -- intentional broad except for resilience
         try:
-            _lg.info("top-level run.SCRIPT=<unavailable>")
+            logger.info("top-level run.SCRIPT=<unavailable>")
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
     timeout = _get_job_timeout()
 
     # Ensure there is something to execute
-    if not script:
+    if not script:  # empty string, None, or other falsy value
         logger.error("No SCRIPT configured for run_job")
         return
 
@@ -154,13 +184,14 @@ def run_job() -> None:
         if timeout is not None:
             completed = subprocess.run(  # nosec B603
                 [sys.executable, str(script)],
+                check=False,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
             )
         else:
             completed = subprocess.run(  # nosec B603
-                [sys.executable, str(script)], capture_output=True, text=True
+                [sys.executable, str(script)], check=False, capture_output=True, text=True
             )
         out = completed.stdout
         err = completed.stderr

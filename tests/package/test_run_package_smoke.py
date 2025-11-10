@@ -6,14 +6,14 @@ from unittest.mock import MagicMock, Mock, patch
 
 def test_run_module_imports():
     """Test that run package module imports successfully."""
-    import researcharr.run as run
+    from researcharr import run
 
     assert run is not None
 
 
 def test_run_has_expected_exports():
     """Test that run exports expected functions."""
-    import researcharr.run as run
+    from researcharr import run
 
     assert hasattr(run, "run_job")
     assert hasattr(run, "setup_scheduler")
@@ -25,7 +25,7 @@ def test_run_has_expected_exports():
 
 def test_load_config_returns_dict():
     """Test load_config returns a dictionary."""
-    import researcharr.run as run
+    from researcharr import run
 
     result = run.load_config()
     assert isinstance(result, dict)
@@ -33,7 +33,7 @@ def test_load_config_returns_dict():
 
 def test_get_job_timeout_from_env(monkeypatch):
     """Test _get_job_timeout parses environment variable."""
-    import researcharr.run as run
+    from researcharr import run
 
     monkeypatch.setenv("JOB_TIMEOUT", "300")
     timeout = run._get_job_timeout()
@@ -42,7 +42,7 @@ def test_get_job_timeout_from_env(monkeypatch):
 
 def test_get_job_timeout_default():
     """Test _get_job_timeout returns None when not set."""
-    import researcharr.run as run
+    from researcharr import run
 
     with patch.dict("os.environ", {}, clear=True):
         timeout = run._get_job_timeout()
@@ -51,7 +51,7 @@ def test_get_job_timeout_default():
 
 def test_get_job_timeout_invalid_returns_none(monkeypatch):
     """Test _get_job_timeout returns None for invalid values."""
-    import researcharr.run as run
+    from researcharr import run
 
     monkeypatch.setenv("JOB_TIMEOUT", "invalid")
     timeout = run._get_job_timeout()
@@ -60,7 +60,7 @@ def test_get_job_timeout_invalid_returns_none(monkeypatch):
 
 def test_run_job_with_script(monkeypatch, caplog):
     """Test run_job executes when script is configured."""
-    import researcharr.run as run
+    from researcharr import run
 
     monkeypatch.setenv("SCRIPT", "echo test")
 
@@ -76,7 +76,7 @@ def test_run_job_with_script(monkeypatch, caplog):
 
 def test_run_job_logs_error_when_no_script(caplog):
     """Test run_job logs error when no script configured."""
-    import researcharr.run as run
+    from researcharr import run
 
     with patch.dict("os.environ", {}, clear=True):
         with patch.object(run, "SCRIPT", None):
@@ -90,7 +90,7 @@ def test_run_job_handles_timeout_expired(monkeypatch, caplog):
     """Test run_job handles subprocess.TimeoutExpired."""
     import subprocess
 
-    import researcharr.run as run
+    from researcharr import run
 
     monkeypatch.setenv("SCRIPT", "sleep 100")
 
@@ -105,7 +105,7 @@ def test_run_job_handles_timeout_expired(monkeypatch, caplog):
 
 def test_run_job_handles_general_exception(monkeypatch, caplog):
     """Test run_job handles general exceptions."""
-    import researcharr.run as run
+    from researcharr import run
 
     monkeypatch.setenv("SCRIPT", "echo test")
 
@@ -120,7 +120,7 @@ def test_run_job_handles_general_exception(monkeypatch, caplog):
 
 def test_setup_scheduler_without_schedule():
     """Test setup_scheduler works when schedule is None."""
-    import researcharr.run as run
+    from researcharr import run
 
     with patch.object(run, "schedule", None):
         # Should not raise
@@ -129,7 +129,7 @@ def test_setup_scheduler_without_schedule():
 
 def test_setup_scheduler_with_schedule():
     """Test setup_scheduler configures schedule when available."""
-    import researcharr.run as run
+    from researcharr import run
 
     mock_schedule = MagicMock()
 
@@ -142,7 +142,7 @@ def test_setup_scheduler_with_schedule():
 
 def test_run_job_logs_stdout(monkeypatch, caplog):
     """Test run_job logs subprocess stdout."""
-    import researcharr.run as run
+    from researcharr import run
 
     monkeypatch.setenv("SCRIPT", "echo hello")
 
@@ -157,7 +157,7 @@ def test_run_job_logs_stdout(monkeypatch, caplog):
 
 def test_run_job_logs_stderr(monkeypatch, caplog):
     """Test run_job logs subprocess stderr."""
-    import researcharr.run as run
+    from researcharr import run
 
     monkeypatch.setenv("SCRIPT", "echo error")
 
@@ -172,7 +172,7 @@ def test_run_job_logs_stderr(monkeypatch, caplog):
 
 def test_run_job_with_timeout_parameter(monkeypatch, caplog):
     """Test run_job uses timeout when JOB_TIMEOUT is set."""
-    import researcharr.run as run
+    from researcharr import run
 
     monkeypatch.setenv("SCRIPT", "echo test")
     monkeypatch.setenv("JOB_TIMEOUT", "60")
@@ -191,7 +191,7 @@ def test_run_job_with_timeout_parameter(monkeypatch, caplog):
 
 def test_main_once_true():
     """Test main function with once=True runs job once."""
-    import researcharr.run as run
+    from researcharr import run
 
     with patch.object(run, "run_job") as mock_run_job:
         run.main(once=True)
@@ -200,7 +200,7 @@ def test_main_once_true():
 
 def test_main_once_false():
     """Test main function with once=False (breaks after first iteration for test)."""
-    import researcharr.run as run
+    from researcharr import run
 
     with patch.object(run, "run_job") as mock_run_job:
         # The implementation breaks after first iteration in test mode

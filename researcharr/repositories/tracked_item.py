@@ -3,8 +3,11 @@
 from datetime import datetime
 
 from sqlalchemy import and_, or_
+from sqlalchemy.orm import joinedload
 
+from researcharr.repositories.exceptions import ValidationError
 from researcharr.storage.models import SortStrategy, TrackedItem
+from researcharr.validators import validate_tracked_item
 
 from .base import BaseRepository
 
@@ -14,7 +17,12 @@ class TrackedItemRepository(BaseRepository[TrackedItem]):
 
     def get_by_id(self, id: int) -> TrackedItem | None:
         """Get tracked item by ID."""
-        return self.session.query(TrackedItem).filter(TrackedItem.id == id).first()
+        return (
+            self.session.query(TrackedItem)
+            .options(joinedload(TrackedItem.app))
+            .filter(TrackedItem.id == id)
+            .first()
+        )
 
     def get_all(self) -> list[TrackedItem]:
         """Get all tracked items."""
@@ -22,12 +30,20 @@ class TrackedItemRepository(BaseRepository[TrackedItem]):
 
     def create(self, entity: TrackedItem) -> TrackedItem:
         """Create new tracked item."""
+        try:
+            validate_tracked_item(entity)
+        except ValidationError:
+            raise
         self.session.add(entity)
         self.session.flush()
         return entity
 
     def update(self, entity: TrackedItem) -> TrackedItem:
         """Update existing tracked item."""
+        try:
+            validate_tracked_item(entity)
+        except ValidationError:
+            raise
         self.session.merge(entity)
         self.session.flush()
         return entity
@@ -52,6 +68,10 @@ class TrackedItemRepository(BaseRepository[TrackedItem]):
             List of TrackedItem instances
         """
         return self.session.query(TrackedItem).filter(TrackedItem.app_id == app_id).all()
+
+    def get_page(self, page: int, page_size: int) -> list[TrackedItem]:
+        """Return paginated tracked items (simple ordering by id)."""
+        return self.paginate(TrackedItem, page, page_size)
 
     def get_by_arr_id(self, app_id: int, arr_id: int) -> TrackedItem | None:
         """

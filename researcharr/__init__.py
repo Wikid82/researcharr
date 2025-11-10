@@ -198,11 +198,11 @@ try:
                 try:
                     from flask import render_template as _rt
 
-                    setattr(_new, "render_template", _rt)
+                    _new.render_template = _rt
                 except Exception:
                     try:
                         # last resort: set to None so patch can replace it
-                        setattr(_new, "render_template", None)
+                        _new.render_template = None
                     except Exception:
                         pass
                 # preserve spec if possible
@@ -277,7 +277,7 @@ def _load_impl() -> ModuleType | None:
                 # Ensure __file__ is set so consumers can inspect it
                 try:
                     if not getattr(m, "__file__", None):
-                        setattr(m, "__file__", os.path.abspath(path))
+                        m.__file__ = os.path.abspath(path)
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
                 return m
@@ -320,13 +320,13 @@ if impl is not None:
     try:
         if getattr(impl, "requests", None) is not None:
             name = "researcharr.researcharr.requests"
-            sys.modules.setdefault(name, getattr(impl, "requests"))
+            sys.modules.setdefault(name, impl.requests)
     except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
     try:
         if getattr(impl, "yaml", None) is not None:
             name = "researcharr.researcharr.yaml"
-            sys.modules.setdefault(name, getattr(impl, "yaml"))
+            sys.modules.setdefault(name, impl.yaml)
     except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
     try:
@@ -334,7 +334,7 @@ if impl is not None:
         # under the nested module path so import-style lookups succeed.
         if getattr(impl, "sqlite3", None) is not None:
             name = "researcharr.researcharr.sqlite3"
-            sys.modules.setdefault(name, getattr(impl, "sqlite3"))
+            sys.modules.setdefault(name, impl.sqlite3)
     except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
     try:
@@ -747,10 +747,7 @@ try:
         # succeed.
         if _top is not None and _pkg is not _top:
             try:
-                if (
-                    getattr(_top, "__spec__", None) is None
-                    or getattr(_top, "__spec__").name != _pkg_name
-                ):
+                if getattr(_top, "__spec__", None) is None or _top.__spec__.name != _pkg_name:
                     _top.__spec__ = importlib.util.spec_from_loader(_pkg_name, loader=None)
             except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
@@ -778,20 +775,20 @@ try:
     _top_run = sys.modules.get("run")
     if _top_run is not None:
         try:
-            if not hasattr(_top_run, "schedule") or getattr(_top_run, "schedule") is None:
+            if not hasattr(_top_run, "schedule") or _top_run.schedule is None:
                 # Create a module-like object so patch() can set attributes on it
                 _sched = types.ModuleType("run.schedule")
                 # Provide minimal callable attributes so tests can patch
                 # them (patch requires the attribute to exist).
                 try:
-                    setattr(_sched, "every", lambda *a, **kw: None)
+                    _sched.every = lambda *a, **kw: None
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
                 try:
-                    setattr(_sched, "run_pending", lambda *a, **kw: None)
+                    _sched.run_pending = lambda *a, **kw: None
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
-                setattr(_top_run, "schedule", _sched)
+                _top_run.schedule = _sched
                 # Also register a synthetic module path for importlib-style
                 # lookups (some patch implementations import the dotted
                 # module before walking attributes).
@@ -806,26 +803,23 @@ try:
             # If package-level run already has schedule pointing at a real
             # object, prefer that. Otherwise, point it at the top-level
             # synthetic object if available, or create one locally.
-            if hasattr(_pkg_run, "schedule") and getattr(_pkg_run, "schedule") is not None:
+            if hasattr(_pkg_run, "schedule") and _pkg_run.schedule is not None:
                 pass
+            elif _top_run is not None and getattr(_top_run, "schedule", None) is not None:
+                _pkg_run.schedule = _top_run.schedule
+                sys.modules.setdefault("researcharr.run.schedule", _top_run.schedule)
             else:
-                if _top_run is not None and getattr(_top_run, "schedule", None) is not None:
-                    setattr(_pkg_run, "schedule", getattr(_top_run, "schedule"))
-                    sys.modules.setdefault(
-                        "researcharr.run.schedule", getattr(_top_run, "schedule")
-                    )
-                else:
-                    _sched2 = types.ModuleType("researcharr.run.schedule")
-                    try:
-                        setattr(_sched2, "every", lambda *a, **kw: None)
-                    except Exception:  # nosec B110 -- intentional broad except for resilience
-                        pass
-                    try:
-                        setattr(_sched2, "run_pending", lambda *a, **kw: None)
-                    except Exception:  # nosec B110 -- intentional broad except for resilience
-                        pass
-                    setattr(_pkg_run, "schedule", _sched2)
-                    sys.modules.setdefault("researcharr.run.schedule", _sched2)
+                _sched2 = types.ModuleType("researcharr.run.schedule")
+                try:
+                    _sched2.every = lambda *a, **kw: None
+                except Exception:  # nosec B110 -- intentional broad except for resilience
+                    pass
+                try:
+                    _sched2.run_pending = lambda *a, **kw: None
+                except Exception:  # nosec B110 -- intentional broad except for resilience
+                    pass
+                _pkg_run.schedule = _sched2
+                sys.modules.setdefault("researcharr.run.schedule", _sched2)
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
 except Exception:  # nosec B110 -- intentional broad except for resilience
@@ -947,7 +941,7 @@ try:
                         _pf.__dict__["create_app"] = _delegate
                     except Exception:  # nosec B110 -- intentional broad except for resilience
                         try:
-                            setattr(_pf, "create_app", _delegate)
+                            _pf.create_app = _delegate
                         except Exception:  # nosec B110 -- intentional broad except for resilience
                             pass
             except Exception:  # nosec B110 -- intentional broad except for resilience
@@ -983,7 +977,7 @@ try:
                     _m.__dict__["create_app"] = _delegate
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     try:
-                        setattr(_m, "create_app", _delegate)
+                        _m.create_app = _delegate
                     except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
         # Ensure the package attribute points at a module object whose
@@ -998,7 +992,7 @@ try:
                     _factory_attr.__dict__["create_app"] = _delegate
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     try:
-                        setattr(_factory_attr, "create_app", _delegate)
+                        _factory_attr.create_app = _delegate
                     except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
 except Exception:  # nosec B110 -- intentional broad except for resilience
@@ -1182,7 +1176,7 @@ try:
             return _orig_reload(module)
 
         try:
-            setattr(_il, "reload", _patched_reload)
+            _il.reload = _patched_reload
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
 except Exception:  # nosec B110 -- intentional broad except for resilience
@@ -1361,7 +1355,7 @@ try:
                 _pf.__dict__["render_template"] = _rt
             except Exception:
                 try:
-                    setattr(_pf, "render_template", _rt)
+                    _pf.render_template = _rt
                 except Exception:
                     pass
         except Exception:

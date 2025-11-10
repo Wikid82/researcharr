@@ -64,7 +64,7 @@ def _ensure_delegate(module: Any) -> None:
                 module.__dict__["create_app"] = delegate
             except Exception:  # nosec B110 -- intentional broad except for resilience
                 try:
-                    setattr(module, "create_app", delegate)
+                    module.create_app = delegate
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
     except Exception:  # nosec B110 -- intentional broad except for resilience

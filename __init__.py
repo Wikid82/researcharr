@@ -209,7 +209,7 @@ try:
                         _pf.__dict__["create_app"] = _delegate
                     except Exception:
                         try:
-                            setattr(_pf, "create_app", _delegate)
+                            _pf.create_app = _delegate
                         except Exception:
                             pass
         # Ensure the package attribute points at a module exposing a
@@ -232,7 +232,7 @@ try:
                             _attr.__dict__["create_app"] = _delegate
                         except Exception:
                             try:
-                                setattr(_attr, "create_app", _delegate)
+                                _attr.create_app = _delegate
                             except Exception:
                                 pass
     except Exception:
@@ -290,7 +290,7 @@ def __getattr__(name: str):
                     pf.__dict__["create_app"] = delegate
                 except Exception:
                     try:
-                        setattr(pf, "create_app", delegate)
+                        pf.create_app = delegate
                     except Exception:
                         pass
 

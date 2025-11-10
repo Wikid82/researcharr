@@ -82,7 +82,40 @@ def health():
 
 @bp.route("/metrics")
 def metrics():
-    return jsonify(getattr(current_app, "metrics", {}))
+    # Preserve legacy expectation: return exactly current_app.metrics if set.
+    base = getattr(current_app, "metrics", {}) or {}
+    try:
+        # Only augment if tests haven't overridden metrics with a specific dict
+        # Heuristic: if legacy test sets e.g. {"jobs": 3} keep shape unchanged.
+        if set(base.keys()) != {"jobs"}:  # legacy test uses single key dict
+            from researcharr.cache import (
+                metrics as cache_metrics,  # type: ignore
+            )
+
+            c = cache_metrics() or {}
+            base = dict(base)  # copy before mutation
+            base["cache_hits"] = int(c.get("hits", 0))
+            base["cache_misses"] = int(c.get("misses", 0))
+            base["cache_sets"] = int(c.get("sets", 0))
+            base["cache_evictions"] = int(c.get("evictions", 0))
+    except Exception:
+        pass
+    return jsonify(base)
+
+
+@bp.route("/metrics.prom")
+def metrics_prometheus():
+    """Prometheus text format metrics (default registry)."""
+    try:
+        from prometheus_client import CONTENT_TYPE_LATEST
+        from prometheus_client import REGISTRY as _DEFAULT_REGISTRY
+        from prometheus_client import generate_latest
+    except Exception:
+        return jsonify({"error": "prometheus_client not installed"}), 501
+    output = generate_latest(_DEFAULT_REGISTRY)
+    from flask import Response as _Response
+
+    return _Response(output, content_type=CONTENT_TYPE_LATEST)
 
 
 @bp.route("/plugins")

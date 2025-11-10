@@ -32,7 +32,7 @@ def test_backups_create_and_import_and_restore(client, login, tmp_path, monkeypa
     login()
 
     # Monkeypatch the underlying create_backup_file to a simple stub
-    import researcharr.factory as factory
+    from researcharr import factory
 
     monkeypatch.setattr(factory, "create_backup_file", lambda a, b, prefix="": "test-backup.zip")
 
@@ -146,7 +146,7 @@ def test_plugin_validate_and_sync_unknown(client, login):
 
 def test_general_settings_regen_api(client, login, monkeypatch):
     # ensure regen_api sets api_key_hash and attempts to persist
-    import researcharr.factory as factory
+    from researcharr import factory
 
     # stub webui.save_user_config so it doesn't perform IO
     monkeypatch.setattr(

@@ -7,8 +7,9 @@ import secrets
 import shutil
 import time
 import zipfile
+from collections.abc import Mapping
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Mapping, Optional
+from typing import TYPE_CHECKING, Any
 
 import yaml
 from flask import (
@@ -132,8 +133,8 @@ def save_user_config(cfg, path=None):
 
 def load_pipeline_from_config(
     name_or_path: str,
-    variables: Optional[dict] = None,
-    schema: Optional[dict] = None,
+    variables: dict | None = None,
+    schema: dict | None = None,
     expand_env: bool = True,
 ):
     """Load a Pipeline from the repository `config/` directory or a direct path.
@@ -360,17 +361,15 @@ def create_app() -> Flask:
     if not secret and env_prod:
         # Fail fast in production if SECRET_KEY is missing.
         raise SystemExit(
-            (
-                "SECRET_KEY environment variable is required in production."
-                " Set SECRET_KEY and restart."
-            )
+            "SECRET_KEY environment variable is required in production."
+            " Set SECRET_KEY and restart."
         )
     if not secret:
         secret = "dev"  # nosec B105
         # Will be visible in logs once the app logger is configured; use
         # print as a fallback in early startup paths.
         try:
-            print(("WARNING: using insecure default SECRET_KEY; " "set SECRET_KEY in production"))
+            print("WARNING: using insecure default SECRET_KEY; " "set SECRET_KEY in production")
         except Exception:
             pass
     app.secret_key = secret
@@ -389,7 +388,7 @@ def create_app() -> Flask:
                 _m.__dict__["render_template"] = render_template
             except Exception:
                 try:
-                    setattr(_m, "render_template", render_template)
+                    _m.render_template = render_template
                 except Exception:
                     pass
     except Exception:
@@ -495,7 +494,7 @@ def create_app() -> Flask:
 
     # Attempt to import the `webui` module lazily so test fixtures that
     # patch DB paths can run before we touch persistent storage.
-    _webui: Optional[ModuleType] = None
+    _webui: ModuleType | None = None
     try:
         try:
             from researcharr import webui as _webui  # type: ignore
@@ -625,7 +624,7 @@ def create_app() -> Flask:
                 _reg_mod = _importlib_mod.import_module("researcharr.plugins.registry")
             except Exception:
                 _reg_mod = _importlib_mod.import_module("plugins.registry")
-            _PluginRegistryRuntime = getattr(_reg_mod, "PluginRegistry")
+            _PluginRegistryRuntime = _reg_mod.PluginRegistry
             registry = _PluginRegistryRuntime()
         except Exception:
             # Fallback: attempt to load the module directly from the
@@ -644,7 +643,7 @@ def create_app() -> Flask:
             loader = spec.loader
             assert loader is not None
             loader.exec_module(plugin_mod)
-            _PluginRegistryRuntime = getattr(plugin_mod, "PluginRegistry")
+            _PluginRegistryRuntime = plugin_mod.PluginRegistry
             registry = _PluginRegistryRuntime()
 
         # Discover any local plugin modules placed under researcharr/plugins
@@ -1099,7 +1098,7 @@ def create_app() -> Flask:
         meta = {}
         try:
             if os.path.exists(app_log):
-                with open(app_log, "r", errors="ignore") as fh:
+                with open(app_log, errors="ignore") as fh:
                     all_lines = fh.read().splitlines()
                 tail = all_lines[-lines:]
                 content = "\n".join(tail)
@@ -1162,7 +1161,7 @@ def create_app() -> Flask:
         total = 0
         try:
             if os.path.exists(hist_file):
-                with open(hist_file, "r") as fh:
+                with open(hist_file) as fh:
                     for line in fh:
                         line = line.strip()
                         if not line:
@@ -1272,7 +1271,7 @@ def create_app() -> Flask:
                     yield "\n"
 
                 # now stream appended lines by seeking to end and reading
-                with open(app_log, "r", errors="ignore") as fh:
+                with open(app_log, errors="ignore") as fh:
                     fh.seek(0, os.SEEK_END)
                     while True:
                         where = fh.tell()
@@ -2099,7 +2098,7 @@ def create_app() -> Flask:
             # Run in background thread
             import threading
 
-            t = threading.Thread(target=getattr(run_mod, "run_job"), daemon=True)
+            t = threading.Thread(target=run_mod.run_job, daemon=True)
             t.start()
             return jsonify({"result": "triggered"})
         except Exception:
@@ -2383,6 +2382,50 @@ def create_app() -> Flask:
             app.logger.exception("Failed to download backup: %s", e)
             return jsonify({"error": "download_failed"}), 500
 
+    @app.route("/api/backups/compatibility/<path:name>", methods=["GET"])
+    def api_backups_compatibility(name: str):
+        """Return compatibility info for a backup, including suggested image tag."""
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        backups_dir = os.path.join(config_root, "backups")
+        fpath = os.path.join(backups_dir, name)
+        try:
+            if not os.path.realpath(fpath).startswith(os.path.realpath(backups_dir)):
+                return jsonify({"error": "invalid_name"}), 400
+            if not os.path.exists(fpath):
+                return jsonify({"error": "not_found"}), 404
+            try:
+                from researcharr.storage.recovery import (
+                    get_alembic_head_revision,
+                    read_backup_meta,
+                    suggest_image_tag_from_meta,
+                )
+
+                meta = read_backup_meta(fpath) or {}
+                head = get_alembic_head_revision()
+                bkup_rev = meta.get("alembic_revision")
+                status = "ok"
+                suggested = None
+                if bkup_rev and head and bkup_rev != head:
+                    status = "schema_newer_than_runtime"
+                    suggested = suggest_image_tag_from_meta(meta)
+                return jsonify(
+                    {
+                        "name": name,
+                        "meta": meta,
+                        "runtime_head": head,
+                        "status": status,
+                        "suggested_image_tag": suggested,
+                    }
+                )
+            except Exception as e:
+                app.logger.exception("Failed to compute compatibility: %s", e)
+                return jsonify({"error": "compatibility_failed"}), 500
+        except Exception as e:
+            app.logger.exception("Failed to process compatibility: %s", e)
+            return jsonify({"error": "compatibility_error"}), 500
+
     @app.route("/api/backups/delete/<path:name>", methods=["DELETE"])
     def api_backups_delete(name: str):
         if not is_logged_in():
@@ -2437,6 +2480,42 @@ def create_app() -> Flask:
                 shutil.rmtree(tmpdir)
             os.makedirs(tmpdir, exist_ok=True)
             with zipfile.ZipFile(fpath, "r") as zf:
+                # Validate backup compatibility (if meta present)
+                try:
+                    meta_bytes = zf.read("backup_meta.json")
+                    import json as _json
+
+                    meta = _json.loads(meta_bytes.decode("utf-8"))
+                except Exception:
+                    meta = {}
+
+                # If backup schema is newer than app supports, abort with guidance
+                try:
+                    from researcharr.storage.recovery import (
+                        get_alembic_head_revision,
+                        suggest_image_tag_from_meta,
+                    )
+
+                    head = get_alembic_head_revision()
+                    bkup_rev = meta.get("alembic_revision")
+                    if bkup_rev and head and bkup_rev != head:
+                        # Determine if newer: if not in script history, conservatively block
+                        newer = bkup_rev != head
+                        if newer:
+                            return (
+                                jsonify(
+                                    {
+                                        "error": "incompatible_backup",
+                                        "alembic_revision": bkup_rev,
+                                        "suggested_image_tag": suggest_image_tag_from_meta(meta),
+                                        "message": "Backup was created with a newer schema. Switch to the suggested image tag, restore, then upgrade.",
+                                    }
+                                ),
+                                409,
+                            )
+                except Exception:
+                    pass
+
                 zf.extractall(tmpdir)
             for root, dirs, files in os.walk(tmpdir):
                 rel = os.path.relpath(root, tmpdir)
@@ -2464,6 +2543,20 @@ def create_app() -> Flask:
             resp = {"result": "restored"}
             if pre_name:
                 resp["pre_restore_backup"] = pre_name
+            # If DB was restored, attempt to run migrations forward to head
+            try:
+                restored_db = os.path.join(config_root, "researcharr.db")
+                if os.path.exists(restored_db):
+                    try:
+                        from researcharr.storage.migrations import (
+                            migrate_database,
+                        )
+
+                        migrate_database(restored_db, use_migrations=True)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
             return jsonify(resp)
         except Exception as e:
             app.logger.exception("Failed to restore backup: %s", e)

@@ -67,4 +67,4 @@ def test_shim_reexports_public_names_from_top_level_module(monkeypatch):
     # Public names from the top-level module should be available on the shim
     assert hasattr(shim, "create_app")
     assert shim.create_app is create_app_marker
-    assert getattr(shim, "SOME_CONST") == 12345
+    assert shim.SOME_CONST == 12345

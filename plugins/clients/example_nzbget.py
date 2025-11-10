@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 from flask import Blueprint, jsonify
 
@@ -13,14 +13,14 @@ class Plugin(BasePlugin):
     description = "Example NZBGet client plugin"
     docs_url = "https://nzbget.net/"
 
-    def validate(self) -> Dict[str, Any]:
+    def validate(self) -> dict[str, Any]:
         host = self.config.get("host")
         port = self.config.get("port")
         if not host or not port:
             return {"success": False, "msg": "Missing host or port"}
         return {"success": True}
 
-    def sync(self) -> Dict[str, Any]:
+    def sync(self) -> dict[str, Any]:
         # Read-only: attempt to fetch queue info from NZBGet if configured,
         # otherwise return a mocked queue for UI display.
         host = self.config.get("host")
@@ -74,7 +74,7 @@ class Plugin(BasePlugin):
             ],
         }
 
-    def health(self) -> Dict[str, Any]:
+    def health(self) -> dict[str, Any]:
         return {"status": "ok", "name": self.config.get("name")}
 
     def blueprint(self):

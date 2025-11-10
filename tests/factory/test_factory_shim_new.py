@@ -214,7 +214,7 @@ def test_factory_callable_check():
 
     # If create_app exists, it should be callable
     if hasattr(factory, "create_app"):
-        create_app = getattr(factory, "create_app")
+        create_app = factory.create_app
         assert callable(create_app) or create_app is None
 
 

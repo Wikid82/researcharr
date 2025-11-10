@@ -6,9 +6,10 @@ application components.
 
 import logging
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 LOGGER = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ class Event:
     name: str
     data: Any = None
     timestamp: datetime = field(default_factory=datetime.utcnow)
-    source: Optional[str] = None
+    source: str | None = None
 
     def __post_init__(self):
         """Ensure timestamp is set."""
@@ -32,10 +33,10 @@ class EventBus:
     """Thread-safe event bus for publish-subscribe messaging."""
 
     def __init__(self):
-        self._subscribers: Dict[str, List[Callable[[Event], None]]] = {}
-        self._wildcard_subscribers: List[Callable[[Event], None]] = []
+        self._subscribers: dict[str, list[Callable[[Event], None]]] = {}
+        self._wildcard_subscribers: list[Callable[[Event], None]] = []
         self._lock = threading.RLock()
-        self._event_history: List[Event] = []
+        self._event_history: list[Event] = []
         self._max_history = 1000
 
     def subscribe(self, event_name: str, handler: Callable[[Event], None]) -> None:
@@ -98,14 +99,12 @@ class EventBus:
             except Exception:
                 LOGGER.exception("Error in event handler for event: %s", event.name)
 
-    def publish_simple(
-        self, event_name: str, data: Any = None, source: Optional[str] = None
-    ) -> None:
+    def publish_simple(self, event_name: str, data: Any = None, source: str | None = None) -> None:
         """Convenience method to publish a simple event."""
         event = Event(name=event_name, data=data, source=source)
         self.publish(event)
 
-    def get_event_history(self, event_name: Optional[str] = None, limit: int = 100) -> List[Event]:
+    def get_event_history(self, event_name: str | None = None, limit: int = 100) -> list[Event]:
         """Get recent event history, optionally filtered by event name."""
         with self._lock:
             events = self._event_history.copy()
@@ -121,7 +120,7 @@ class EventBus:
             self._event_history.clear()
             LOGGER.debug("Cleared event history")
 
-    def get_subscriber_count(self, event_name: Optional[str] = None) -> int:
+    def get_subscriber_count(self, event_name: str | None = None) -> int:
         """Get number of subscribers for an event, or total if event_name is None."""
         with self._lock:
             if event_name:
@@ -131,14 +130,14 @@ class EventBus:
                 total += len(self._wildcard_subscribers)
                 return total
 
-    def list_events(self) -> List[str]:
+    def list_events(self) -> list[str]:
         """List all event names that have subscribers."""
         with self._lock:
             return list(self._subscribers.keys())
 
 
 # Global event bus instance
-_event_bus: Optional[EventBus] = None
+_event_bus: EventBus | None = None
 _event_bus_lock = threading.Lock()
 
 
@@ -175,7 +174,7 @@ def publish(event: Event) -> None:
     get_event_bus().publish(event)
 
 
-def publish_simple(event_name: str, data: Any = None, source: Optional[str] = None) -> None:
+def publish_simple(event_name: str, data: Any = None, source: str | None = None) -> None:
     """Publish a simple event to the global event bus."""
     get_event_bus().publish_simple(event_name, data, source)
 

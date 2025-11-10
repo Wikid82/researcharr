@@ -146,15 +146,14 @@ def serve():
         if os.environ.get("PYTEST_CURRENT_TEST"):
             return
         try:
-            getattr(app, "run")(host="0.0.0.0", port=2929)  # nosec B104
+            app.run(host="0.0.0.0", port=2929)  # nosec B104
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
-    else:
-        if hasattr(app, "run"):
-            try:
-                getattr(app, "run")(host="0.0.0.0", port=2929)  # nosec B104
-            except Exception:  # nosec B110 -- intentional broad except for resilience
-                pass
+    elif hasattr(app, "run"):
+        try:
+            app.run(host="0.0.0.0", port=2929)  # nosec B104
+        except Exception:  # nosec B110 -- intentional broad except for resilience
+            pass
 
 
 def install_create_metrics_dispatcher() -> None:
@@ -170,7 +169,7 @@ def install_create_metrics_dispatcher() -> None:
         orig = None
         if impl_mod is not None and hasattr(impl_mod, "create_metrics_app"):
             try:
-                orig = getattr(impl_mod, "create_metrics_app")
+                orig = impl_mod.create_metrics_app
             except Exception:  # nosec B110 -- intentional broad except for resilience
                 orig = None
 

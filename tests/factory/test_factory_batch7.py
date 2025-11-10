@@ -3,7 +3,7 @@ def test_setup_generates_api_and_persists(client, tmp_path, monkeypatch):
     cfg = tmp_path / "config"
     cfg.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("CONFIG_DIR", str(cfg))
-    import researcharr.factory as factory
+    from researcharr import factory
 
     class W:
         def save_user_config(self, *a, **k):

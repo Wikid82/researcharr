@@ -21,8 +21,9 @@ import importlib
 import json
 import logging
 import random
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class Stage:
         return None
 
 
-def _callable_to_stage(fn: Union[Callable[[Any], Any], Callable[[Any], Awaitable[Any]]]) -> Stage:
+def _callable_to_stage(fn: Callable[[Any], Any] | Callable[[Any], Awaitable[Any]]) -> Stage:
     """Wrap a callable (sync or async) into a Stage instance."""
 
     class _FnStage(Stage):
@@ -66,12 +67,12 @@ class _StageSpec:
     max_retries: int
     backoff_base: float = 0.1
     backoff_jitter: float = 0.0
-    queue_full_policy: Optional[str] = None
-    queue_full_handler: Optional[Callable[[Any], Any]] = None
-    error_handler: Optional[Callable[[Exception, Any], Any]] = None
-    error_handler_name: Optional[str] = None
+    queue_full_policy: str | None = None
+    queue_full_handler: Callable[[Any], Any] | None = None
+    error_handler: Callable[[Exception, Any], Any] | None = None
+    error_handler_name: str | None = None
     # runtime metrics
-    metrics: Dict[str, int] = field(default_factory=dict)
+    metrics: dict[str, int] = field(default_factory=dict)
 
 
 class Pipeline:
@@ -86,18 +87,18 @@ class Pipeline:
     """
 
     def __init__(self) -> None:
-        self._stage_specs: List[_StageSpec] = []
-        self._queues: List[asyncio.Queue] = []
-        self._workers: List[asyncio.Task] = []
-        self._progress_callbacks: List[Callable[[dict], Any]] = []
+        self._stage_specs: list[_StageSpec] = []
+        self._queues: list[asyncio.Queue] = []
+        self._workers: list[asyncio.Task] = []
+        self._progress_callbacks: list[Callable[[dict], Any]] = []
         self._started = False
         self._closed = False
         # monitoring / debugging
         self.debug: bool = False
-        self._metrics_exporters: List[Callable[[dict], Any]] = []
-        self._metrics_task: Optional[asyncio.Task] = None
+        self._metrics_exporters: list[Callable[[dict], Any]] = []
+        self._metrics_task: asyncio.Task | None = None
         # dead-letter items per-stage index: list of items that were dropped
-        self._dead_letters: List[List[Any]] = []
+        self._dead_letters: list[list[Any]] = []
 
     # handler registry is module-level; pipeline may reference names
 
@@ -160,7 +161,7 @@ class Pipeline:
         }
 
     # Dead-letter API -------------------------------------------------------
-    def get_dead_letters(self, stage_index: int) -> List[Any]:
+    def get_dead_letters(self, stage_index: int) -> list[Any]:
         if stage_index < 0 or stage_index >= len(self._dead_letters):
             raise IndexError("stage_index out of range")
         return list(self._dead_letters[stage_index])
@@ -183,16 +184,16 @@ class Pipeline:
 
     def add_stage(
         self,
-        stage: Union[Stage, Callable[[Any], Any]],
+        stage: Stage | Callable[[Any], Any],
         *,
         concurrency: int = 1,
         max_queue: int = 100,
         max_retries: int = 0,
         backoff_base: float = 0.1,
         backoff_jitter: float = 0.0,
-        error_handler: Optional[Union[Callable[[Exception, Any], Any], str]] = None,
-        queue_full_policy: Optional[str] = None,
-        queue_full_handler: Optional[Callable[[Any], Any]] = None,
+        error_handler: Callable[[Exception, Any], Any] | str | None = None,
+        queue_full_policy: str | None = None,
+        queue_full_handler: Callable[[Any], Any] | None = None,
     ) -> None:
         if self._started:
             raise RuntimeError("cannot add stage after start")
@@ -456,7 +457,7 @@ class Pipeline:
         # fallback: block
         await q.put((item, first_spec.max_retries))
 
-    async def shutdown(self, *, drain: bool = True, timeout: Optional[float] = 5.0) -> None:
+    async def shutdown(self, *, drain: bool = True, timeout: float | None = 5.0) -> None:
         """Shutdown the pipeline.
 
         If drain=True, wait for all queues to be processed. Otherwise, cancel workers.
@@ -519,7 +520,7 @@ class Pipeline:
         await self.shutdown(drain=True)
 
     # Async context manager support ----------------------------------------
-    async def __aenter__(self) -> "Pipeline":
+    async def __aenter__(self) -> Pipeline:
         await self.start()
         return self
 
@@ -569,11 +570,11 @@ class Pipeline:
     @classmethod
     def from_template_dict(
         cls,
-        template: Dict[str, Any],
-        variables: Optional[Dict[str, Any]] = None,
-        schema: Optional[Dict[str, Any]] = None,
+        template: dict[str, Any],
+        variables: dict[str, Any] | None = None,
+        schema: dict[str, Any] | None = None,
         expand_env: bool = False,
-    ) -> "Pipeline":
+    ) -> Pipeline:
         """
         Create a Pipeline from a template dict, performing substitution on string
         values. Supports both `{var}` style formatting via Python's
@@ -652,10 +653,10 @@ class Pipeline:
     def from_template_file(
         cls,
         path: str,
-        variables: Optional[Dict[str, Any]] = None,
-        schema: Optional[Dict[str, Any]] = None,
+        variables: dict[str, Any] | None = None,
+        schema: dict[str, Any] | None = None,
         expand_env: bool = False,
-    ) -> "Pipeline":
+    ) -> Pipeline:
         """Load a template file (JSON or YAML) and create a Pipeline after substitution.
 
         Detection: if the file extension is .yml or .yaml we attempt to load
@@ -667,17 +668,17 @@ class Pipeline:
         if lower.endswith(".yml") or lower.endswith(".yaml"):
             import yaml  # type: ignore
 
-            with open(path, "r", encoding="utf-8") as fh:
+            with open(path, encoding="utf-8") as fh:
                 data = yaml.safe_load(fh)
         else:
-            with open(path, "r", encoding="utf-8") as fh:
+            with open(path, encoding="utf-8") as fh:
                 data = json.load(fh)
         return cls.from_template_dict(
             data, variables=variables, schema=schema, expand_env=expand_env
         )
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Pipeline":
+    def from_dict(cls, data: dict[str, Any]) -> Pipeline:
         """Create a Pipeline from a config dict produced by `to_dict()`.
 
         Expected format:
@@ -724,10 +725,10 @@ class Pipeline:
     def from_config(
         cls,
         name_or_path: str,
-        variables: Optional[Dict[str, Any]] = None,
-        schema: Optional[Dict[str, Any]] = None,
+        variables: dict[str, Any] | None = None,
+        schema: dict[str, Any] | None = None,
         expand_env: bool = True,
-    ) -> "Pipeline":
+    ) -> Pipeline:
         """Load a pipeline configuration from the repository `config/` directory or a path.
 
         If `name_or_path` is an existing file path it will be loaded directly.
@@ -759,12 +760,12 @@ class Pipeline:
         raise FileNotFoundError(f"Pipeline config '{name_or_path}' not found in {cfg_dir}")
 
     @classmethod
-    def from_json(cls, path: str) -> "Pipeline":
+    def from_json(cls, path: str) -> Pipeline:
         """Load a pipeline config previously written with `to_json()`.
 
         This convenience reads the JSON file and delegates to `from_dict()`.
         """
-        with open(path, "r", encoding="utf-8") as fh:
+        with open(path, encoding="utf-8") as fh:
             data = json.load(fh)
         return cls.from_dict(data)
 
@@ -801,7 +802,7 @@ class Pipeline:
 
 
 # Handler registry for serializing named handlers (error handlers, sinks, etc.)
-HANDLER_REGISTRY: Dict[str, Callable[..., Any]] = {}
+HANDLER_REGISTRY: dict[str, Callable[..., Any]] = {}
 
 
 def register_handler(name: str, fn: Callable[..., Any]) -> None:
@@ -817,7 +818,7 @@ def unregister_handler(name: str) -> None:
     HANDLER_REGISTRY.pop(name, None)
 
 
-def get_registered_handler(name: str) -> Optional[Callable[..., Any]]:
+def get_registered_handler(name: str) -> Callable[..., Any] | None:
     return HANDLER_REGISTRY.get(name)
 
 
@@ -836,7 +837,7 @@ class IdentityStage(Stage):
         return item
 
 
-def get_prometheus_exporter(pipeline_name: Optional[str] = None, registry: Optional[Any] = None):
+def get_prometheus_exporter(pipeline_name: str | None = None, registry: Any | None = None):
     """Return an exporter function that updates Prometheus metrics from a snapshot.
 
     This function lazily imports prometheus_client. If prometheus_client is not
@@ -895,7 +896,7 @@ def get_prometheus_exporter(pipeline_name: Optional[str] = None, registry: Optio
     )
 
     # closure state for delta tracking
-    last_seen: Dict[int, Dict[str, int]] = {}
+    last_seen: dict[int, dict[str, int]] = {}
 
     def _label_values(stage_idx: int, stage_cls: str):
         return {

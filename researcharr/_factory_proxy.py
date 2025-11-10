@@ -155,9 +155,9 @@ def create_proxies(repo_root: str | None = None) -> None:
                     _real_pkg = sys.modules.get(_pkg_name)
                     _real_short = sys.modules.get(_short)
                     if getattr(_real_pkg, "__spec__", None) is not None:
-                        _spec = getattr(_real_pkg, "__spec__")
+                        _spec = _real_pkg.__spec__
                     elif getattr(_real_short, "__spec__", None) is not None:
-                        _spec = getattr(_real_short, "__spec__")
+                        _spec = _real_short.__spec__
                 if _spec is not None:
                     try:
                         object.__setattr__(_proxy, "__spec__", _spec)
@@ -325,11 +325,11 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
         delegate = _CreateAppDelegate()
         # Attach markers
         try:
-            setattr(delegate, "_is_stable_delegate", True)
+            delegate._is_stable_delegate = True
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
         try:
-            setattr(delegate, "_is_delegate", True)
+            delegate._is_delegate = True
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
 
@@ -359,7 +359,7 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                         except Exception:  # nosec B110 -- intentional broad except for resilience
                             try:
                                 # Fallback to setattr if direct dict access fails.
-                                setattr(pf, "create_app", delegate)
+                                pf.create_app = delegate
                             except (
                                 Exception
                             ):  # nosec B110 -- intentional broad except for resilience
@@ -379,7 +379,7 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                     Exception
                                 ):  # nosec B110 -- intentional broad except for resilience
                                     try:
-                                        setattr(pf, "create_app", delegate)
+                                        pf.create_app = delegate
                                     except (
                                         Exception
                                     ):  # nosec B110 -- intentional broad except for resilience
@@ -408,7 +408,7 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                             _m.__dict__.setdefault("create_app", delegate)
                         except Exception:  # nosec B110 -- intentional broad except for resilience
                             try:
-                                setattr(_m, "create_app", delegate)
+                                _m.create_app = delegate
                             except (
                                 Exception
                             ):  # nosec B110 -- intentional broad except for resilience
@@ -436,7 +436,7 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                     Exception
                                 ):  # nosec B110 -- intentional broad except for resilience
                                     try:
-                                        setattr(pf, "create_app", delegate)
+                                        pf.create_app = delegate
                                     except (
                                         Exception
                                     ):  # nosec B110 -- intentional broad except for resilience
@@ -470,7 +470,7 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                     Exception
                                 ):  # nosec B110 -- intentional broad except for resilience
                                     try:
-                                        setattr(canonical, "create_app", delegate)
+                                        canonical.create_app = delegate
                                     except (
                                         Exception
                                     ):  # nosec B110 -- intentional broad except for resilience
@@ -640,7 +640,7 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                 Exception
                             ):  # nosec B110 -- intentional broad except for resilience
                                 try:
-                                    setattr(_wrapper, "create_app", delegate)
+                                    _wrapper.create_app = delegate
                                 except (
                                     Exception
                                 ):  # nosec B110 -- intentional broad except for resilience
@@ -670,7 +670,7 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                 Exception
                             ):  # nosec B110 -- intentional broad except for resilience
                                 try:
-                                    setattr(pkg_mod, "factory", _wrapper)
+                                    pkg_mod.factory = _wrapper
                                 except (
                                     Exception
                                 ):  # nosec B110 -- intentional broad except for resilience

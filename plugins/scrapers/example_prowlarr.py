@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 from flask import Blueprint, jsonify
 
@@ -13,14 +13,14 @@ class Plugin(BasePlugin):
     description = "Example Prowlarr plugin (search indexer aggregator)"
     docs_url = "https://github.com/Prowlarr/Prowlarr"
 
-    def validate(self) -> Dict[str, Any]:
+    def validate(self) -> dict[str, Any]:
         url = self.config.get("url")
         api_key = self.config.get("api_key")
         if not url or not api_key:
             return {"success": False, "msg": "Missing url or api_key"}
         return {"success": True}
 
-    def sync(self) -> Dict[str, Any]:
+    def sync(self) -> dict[str, Any]:
         # Read-only: attempt to fetch indexer/status information from Prowlarr
         url = self.config.get("url")
         api_key = self.config.get("api_key")
@@ -49,7 +49,7 @@ class Plugin(BasePlugin):
             ],
         }
 
-    def health(self) -> Dict[str, Any]:
+    def health(self) -> dict[str, Any]:
         url = self.config.get("url")
         api_key = self.config.get("api_key")
         if not url or not api_key:

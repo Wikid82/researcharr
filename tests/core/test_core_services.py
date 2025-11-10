@@ -2,10 +2,15 @@
 
 import logging
 import sqlite3
+
+# Import test utilities for logging isolation
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
+
+import pytest
 
 from researcharr.core.container import get_container
 from researcharr.core.services import (
@@ -22,6 +27,8 @@ from researcharr.core.services import (
     load_config,
     setup_logger,
 )
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 class TestDatabaseService(unittest.TestCase):
@@ -84,30 +91,55 @@ class TestDatabaseService(unittest.TestCase):
         self.assertEqual(default_service.db_path, "researcharr.db")
 
 
+@pytest.mark.logging
 class TestLoggingService(unittest.TestCase):
-    """Test the logging service implementation."""
+    """Test the logging service implementation.
+
+    Uses LoggerTestHelper to ensure proper logging isolation and prevent
+    test pollution that can break pytest's caplog fixture.
+    """
 
     def setUp(self):
         """Set up test environment."""
         self.temp_dir = Path(tempfile.mkdtemp())
         self.log_file = self.temp_dir / "test.log"
         self.logging_service = LoggingService()
+        # Store logger helpers for cleanup
+        self._logger_helpers = []
 
     def tearDown(self):
         """Clean up test environment."""
         import shutil
 
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-
-        # Clean up loggers to prevent interference between tests
+        # Clean up loggers using the helper to ensure proper state restoration
         for name in list(self.logging_service._loggers.keys()):
             logger = self.logging_service._loggers[name]
+            # Save original state before cleanup
+            original_handlers = logger.handlers[:]
+            original_level = logger.level
+            original_propagate = logger.propagate
+
+            # Remove all handlers we added
             for handler in logger.handlers[:]:
                 handler.close()
                 logger.removeHandler(handler)
 
+            # Note: We don't restore handlers here since these are test-created loggers
+            # that should be fully cleaned up, not restored to a previous state
+
+        # Clean up any helpers we created
+        for helper in self._logger_helpers:
+            helper.cleanup()
+
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
     def test_setup_logger(self):
-        """Test logger setup and configuration."""
+        """Test logger setup and configuration.
+
+        Note: The LoggingService manages its own loggers. We don't need to use
+        LoggerTestHelper here since the service creates and manages the loggers
+        internally, and our tearDown properly cleans them up.
+        """
         logger = self.logging_service.setup_logger("test_logger", str(self.log_file))
 
         # Check logger was created

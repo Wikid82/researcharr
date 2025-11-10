@@ -1,4 +1,8 @@
-"""Base repository interface."""
+"""Base repository interface.
+
+Adds common optional helpers for bulk operations and simple pagination.
+Concrete repositories may use these directly without overriding.
+"""
 
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
@@ -86,3 +90,57 @@ class BaseRepository(ABC, Generic[T]):
             True if deleted, False if not found
         """
         pass
+
+    # Optional helpers (non-abstract)
+    def bulk_create(self, entities: list[T]) -> list[T]:
+        """Persist a list of new entities efficiently.
+
+        Args:
+            entities: List of transient entity instances.
+        Returns:
+            Same list with primary keys populated after flush.
+        """
+        if not entities:
+            return entities
+        self.session.add_all(entities)
+        self.session.flush()
+        return entities
+
+    def bulk_upsert(self, entities: list[T]) -> list[T]:
+        """Upsert a collection of entities (merge semantics per instance).
+
+        Args:
+            entities: List of detached or transient entities.
+        Returns:
+            List of managed (merged) entities after flush.
+        """
+        if not entities:
+            return entities
+        merged: list[T] = []
+        for e in entities:
+            merged.append(self.session.merge(e))  # type: ignore[arg-type]
+        self.session.flush()
+        return merged
+
+    def paginate(self, model_cls, page: int, page_size: int) -> list[T]:
+        """Return a page of rows for the given mapped class.
+
+        This generic helper requires the concrete repository to supply the
+        mapped class when calling. It avoids storing model type state in the
+        base class while still offering a shared pagination helper.
+
+        Args:
+            model_cls: SQLAlchemy declarative model class.
+            page: 1-based page number.
+            page_size: Number of rows per page.
+        Returns:
+            List of entities for the requested page.
+        """
+        page = max(page, 1)
+        offset = (page - 1) * page_size
+        return (
+            self.session.query(model_cls)  # type: ignore[arg-type]
+            .offset(offset)
+            .limit(page_size)
+            .all()
+        )

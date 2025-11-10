@@ -352,7 +352,7 @@ if __name__ == "__main__":
 
 def test_backups_exports_all_functions():
     """Test that backups shim exports all expected functions."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     expected = [
         "BackupPath",
@@ -376,7 +376,7 @@ def test_backups_exports_all_functions():
 
 def test_backups_get_backup_info_delegates():
     """Test get_backup_info delegates to backups_impl."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     with patch("researcharr.backups_impl.get_backup_info", return_value={"test": "info"}) as mock:
         result = backups.get_backup_info("/fake/path.zip")
@@ -387,7 +387,7 @@ def test_backups_get_backup_info_delegates():
 
 def test_backups_prune_backups_delegates():
     """Test prune_backups delegates to backups_impl."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     with patch("researcharr.backups_impl.prune_backups", return_value=None) as mock:
         config = {"retain_count": 5}
@@ -399,7 +399,7 @@ def test_backups_prune_backups_delegates():
 
 def test_backups_list_backups_delegates():
     """Test list_backups delegates to backups_impl."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     with patch("researcharr.backups_impl.list_backups", return_value=[]) as mock:
         result = backups.list_backups("/backups")
@@ -410,7 +410,7 @@ def test_backups_list_backups_delegates():
 
 def test_backups_list_backups_with_pattern():
     """Test list_backups passes pattern to impl."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     with patch("researcharr.backups_impl.list_backups", return_value=[]) as mock:
         result = backups.list_backups("/backups")
@@ -421,7 +421,7 @@ def test_backups_list_backups_with_pattern():
 
 def test_backups_restore_backup_delegates():
     """Test restore_backup delegates to backups_impl."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     with patch("researcharr.backups_impl.restore_backup", return_value=True) as mock:
         result = backups.restore_backup("/backup.zip", "/restore")
@@ -432,7 +432,7 @@ def test_backups_restore_backup_delegates():
 
 def test_backups_validate_backup_file_delegates():
     """Test validate_backup_file delegates to backups_impl."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     with patch("researcharr.backups_impl.validate_backup_file", return_value=True) as mock:
         result = backups.validate_backup_file("/backup.zip")
@@ -443,7 +443,7 @@ def test_backups_validate_backup_file_delegates():
 
 def test_backups_get_backup_size_delegates():
     """Test get_backup_size delegates to backups_impl."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     with patch("researcharr.backups_impl.get_backup_size", return_value=12345) as mock:
         result = backups.get_backup_size("/backup.zip")
@@ -454,7 +454,7 @@ def test_backups_get_backup_size_delegates():
 
 def test_backups_cleanup_temp_files_delegates():
     """Test cleanup_temp_files delegates to backups_impl."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     with patch("researcharr.backups_impl.cleanup_temp_files", return_value=None) as mock:
         result = backups.cleanup_temp_files("/tmp/path")
@@ -465,7 +465,7 @@ def test_backups_cleanup_temp_files_delegates():
 
 def test_backups_get_default_backup_config_delegates():
     """Test get_default_backup_config delegates to backups_impl."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     with patch("researcharr.backups_impl.get_default_backup_config", return_value={}) as mock:
         result = backups.get_default_backup_config()
@@ -476,7 +476,7 @@ def test_backups_get_default_backup_config_delegates():
 
 def test_backups_merge_backup_configs_delegates():
     """Test merge_backup_configs delegates to backups_impl."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     with patch(
         "researcharr.backups_impl.merge_backup_configs", return_value={"merged": True}
@@ -489,7 +489,7 @@ def test_backups_merge_backup_configs_delegates():
 
 def test_create_backup_file_raises_on_missing_config_root():
     """Test create_backup_file raises when config root doesn't exist and no prefix."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     with pytest.raises(Exception, match="Config root does not exist"):
         backups.create_backup_file("/nonexistent/path", "/backups", prefix="")
@@ -497,7 +497,7 @@ def test_create_backup_file_raises_on_missing_config_root():
 
 def test_create_backup_file_allows_missing_config_with_prefix():
     """Test create_backup_file allows missing config root when prefix provided."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     config_dir = "/nonexistent/path"
     backups_dir = tempfile.mkdtemp()
@@ -514,7 +514,7 @@ def test_create_backup_file_allows_missing_config_with_prefix():
 
 def test_create_backup_file_delegates_on_valid_config():
     """Test create_backup_file delegates to impl when config exists."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     config_dir = tempfile.mkdtemp()
     backups_dir = tempfile.mkdtemp()
@@ -534,7 +534,7 @@ def test_create_backup_file_delegates_on_valid_config():
 
 def test_create_backup_file_handles_path_construction_exception():
     """Test create_backup_file handles Path construction exception."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     # Use an invalid path string
     invalid_path = "\x00invalid\x00path"
@@ -552,7 +552,7 @@ def test_create_backup_file_handles_path_construction_exception():
 
 def test_backup_path_class_internal_import_available():
     """Test BackupPath uses _backups_impl version when available."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     # BackupPath should be available
     assert hasattr(backups, "BackupPath")
@@ -581,7 +581,7 @@ def test_backup_path_fallback_class_basic():
 
 def test_backup_path_fallback_startswith_with_separator():
     """Test BackupPath fallback startswith with path separator."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     BackupPath = backups.BackupPath  # type: ignore[attr-defined]
 
@@ -596,7 +596,7 @@ def test_backup_path_fallback_startswith_with_separator():
 
 def test_backup_path_fallback_startswith_name_only():
     """Test BackupPath fallback startswith with name-only prefix."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     BackupPath = backups.BackupPath  # type: ignore[attr-defined]
 
@@ -610,7 +610,7 @@ def test_backup_path_fallback_startswith_name_only():
 
 def test_backup_path_fallback_startswith_none_prefix():
     """Test BackupPath fallback handles None prefix."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     BackupPath = backups.BackupPath  # type: ignore[attr-defined]
 
@@ -623,7 +623,7 @@ def test_backup_path_fallback_startswith_none_prefix():
 
 def test_backup_path_fallback_startswith_exception_handling():
     """Test BackupPath fallback handles exceptions in startswith."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     BackupPath = backups.BackupPath  # type: ignore[attr-defined]
 
@@ -644,7 +644,7 @@ def test_backup_path_fallback_startswith_exception_handling():
 
 def test_create_backup_file_with_empty_string_prefix():
     """Test create_backup_file with empty string prefix (should raise on missing)."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     with pytest.raises(Exception, match="Config root does not exist"):
         backups.create_backup_file("/nonexistent", "/backups", prefix="")
@@ -652,7 +652,7 @@ def test_create_backup_file_with_empty_string_prefix():
 
 def test_create_backup_file_passes_prefix_to_impl():
     """Test create_backup_file passes prefix parameter correctly."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     config_dir = tempfile.mkdtemp()
     backups_dir = tempfile.mkdtemp()
@@ -672,7 +672,7 @@ def test_create_backup_file_passes_prefix_to_impl():
 
 def test_backups_module_imports_backups_impl():
     """Test that backups module imports backups_impl."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     # Verify the module loaded successfully
     assert backups is not None
@@ -681,7 +681,7 @@ def test_backups_module_imports_backups_impl():
 
 def test_backup_path_windows_separator():
     """Test BackupPath fallback handles Windows-style separators."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     BackupPath = backups.BackupPath  # type: ignore[attr-defined]
 
@@ -694,7 +694,7 @@ def test_backup_path_windows_separator():
 
 def test_create_backup_validation_edge_cases():
     """Test create_backup_file validation edge cases."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     # Test with existing dir and empty prefix
     config_dir = tempfile.mkdtemp()
@@ -712,7 +712,7 @@ def test_create_backup_validation_edge_cases():
 
 def test_delegation_functions_pass_args_kwargs():
     """Test that all delegation functions pass *args and **kwargs."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     # Test get_backup_info with correct signature (single path argument)
     with patch("researcharr.backups_impl.get_backup_info", return_value=None) as mock:
@@ -727,7 +727,7 @@ def test_delegation_functions_pass_args_kwargs():
 
 def test_backup_path_import_fallback_chain():
     """Test BackupPath import fallback logic."""
-    import researcharr.backups as backups
+    from researcharr import backups
 
     # BackupPath should be defined regardless of import success
     assert hasattr(backups, "BackupPath")

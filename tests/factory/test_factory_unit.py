@@ -2,7 +2,7 @@ import sys
 
 import pytest
 
-import researcharr.factory as factory
+from researcharr import factory
 
 
 def test_create_app_smoke():
@@ -47,6 +47,6 @@ def test_create_app_attaches_plugin_registry():
     app = factory.create_app()
     # plugin registry should be attached even if no plugins are discovered
     assert hasattr(app, "plugin_registry")
-    reg = getattr(app, "plugin_registry")
+    reg = app.plugin_registry
     assert hasattr(reg, "list_plugins")
     assert callable(reg.list_plugins)

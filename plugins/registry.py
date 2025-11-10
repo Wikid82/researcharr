@@ -1,7 +1,6 @@
 import importlib
 import importlib.util
 import os
-from typing import Dict, List, Type
 
 from researcharr.plugins.base import BasePlugin
 
@@ -9,9 +8,9 @@ from researcharr.plugins.base import BasePlugin
 class PluginRegistry:
     def __init__(self):
         # mapping plugin_name -> plugin class
-        self._plugins: Dict[str, Type[BasePlugin]] = {}
+        self._plugins: dict[str, type[BasePlugin]] = {}
 
-    def register(self, name: str, cls: Type[BasePlugin]):
+    def register(self, name: str, cls: type[BasePlugin]):
         self._plugins[name] = cls
 
     def get(self, name: str):
@@ -76,11 +75,11 @@ class PluginRegistry:
 
                 self.register(plugin_name, plugin_cls)
 
-    def create_instance(self, plugin_name: str, config: Dict):
+    def create_instance(self, plugin_name: str, config: dict):
         cls = self.get(plugin_name)
         if not cls:
             raise KeyError(f"Unknown plugin: {plugin_name}")
         return cls(config)
 
-    def list_plugins(self) -> List[str]:
+    def list_plugins(self) -> list[str]:
         return list(self._plugins.keys())

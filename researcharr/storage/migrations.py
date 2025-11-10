@@ -8,22 +8,27 @@ from researcharr.storage.database import get_session, init_db
 logger = logging.getLogger(__name__)
 
 
-def migrate_database(database_path: str | Path) -> None:
+def migrate_database(database_path: str | Path, use_migrations: bool = True) -> None:
     """
     Initialize database and apply migrations.
 
     Args:
         database_path: Path to SQLite database file
+        use_migrations: If True, use Alembic migrations. If False, use create_all().
     """
     logger.info(f"Initializing database at {database_path}")
-    init_db(database_path)
+    init_db(database_path, use_migrations=use_migrations)
 
-    # Ensure GlobalSettings singleton exists
+    # Ensure GlobalSettings singleton exists without relying on any
+    # cross-test cache state.
     with get_session() as session:
-        from researcharr.repositories import GlobalSettingsRepository
+        from researcharr.storage.models import GlobalSettings
 
-        settings_repo = GlobalSettingsRepository(session)
-        settings = settings_repo.get_or_create()
+        settings = session.query(GlobalSettings).filter_by(id=1).first()
+        if settings is None:
+            settings = GlobalSettings(id=1)
+            session.add(settings)
+            session.flush()
         logger.info(f"GlobalSettings initialized with ID: {settings.id}")
 
 

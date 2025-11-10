@@ -247,7 +247,7 @@ class TestMiscellaneousConsolidated(unittest.TestCase):
                 mock_run.return_value = MagicMock(returncode=0)
 
                 # Test cleanup operations
-                result = subprocess.run(["echo", "test"])
+                result = subprocess.run(["echo", "test"], check=False)
                 self.assertEqual(result.returncode, 0)
 
         except ImportError:

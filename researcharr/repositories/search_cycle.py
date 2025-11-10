@@ -2,7 +2,17 @@
 
 from datetime import datetime
 
+from sqlalchemy import desc
+
+from researcharr.cache import get as cache_get
+from researcharr.cache import invalidate as cache_invalidate
+from researcharr.cache import (
+    make_key,
+)
+from researcharr.cache import set as cache_set
+from researcharr.repositories.exceptions import ValidationError
 from researcharr.storage.models import CyclePhase, SearchCycle
+from researcharr.validators import validate_search_cycle
 
 from .base import BaseRepository
 
@@ -53,6 +63,16 @@ class SearchCycleRepository(BaseRepository[SearchCycle]):
             self.session.query(SearchCycle)
             .filter(SearchCycle.app_id == app_id)
             .order_by(SearchCycle.cycle_number.desc())
+            .all()
+        )
+
+    def get_recent_for_app(self, app_id: int, limit: int = 5) -> list[SearchCycle]:
+        """Return most recent cycles by started_at for an app."""
+        return (
+            self.session.query(SearchCycle)
+            .filter(SearchCycle.app_id == app_id)
+            .order_by(desc(SearchCycle.started_at))
+            .limit(limit)
             .all()
         )
 
@@ -108,8 +128,15 @@ class SearchCycleRepository(BaseRepository[SearchCycle]):
             phase=CyclePhase.SYNCING,
             started_at=datetime.utcnow(),
         )
+        try:
+            validate_search_cycle(cycle)
+        except ValidationError:
+            raise
         self.session.add(cycle)
         self.session.flush()
+        # Invalidate cached latest/active for this app
+        cache_invalidate(make_key(("SearchCycle", "latest", app_id)))
+        cache_invalidate(make_key(("SearchCycle", "active", app_id)))
         return cycle
 
     def update_phase(self, cycle_id: int, phase: CyclePhase) -> SearchCycle | None:
@@ -126,7 +153,13 @@ class SearchCycleRepository(BaseRepository[SearchCycle]):
         cycle = self.get_by_id(cycle_id)
         if cycle:
             cycle.phase = phase
+            try:
+                validate_search_cycle(cycle)
+            except ValidationError:
+                raise
             self.session.flush()
+            cache_invalidate(make_key(("SearchCycle", "latest", cycle.app_id)))
+            cache_invalidate(make_key(("SearchCycle", "active", cycle.app_id)))
         return cycle
 
     def complete_cycle(self, cycle_id: int, next_cycle_at: datetime) -> SearchCycle | None:
@@ -144,5 +177,51 @@ class SearchCycleRepository(BaseRepository[SearchCycle]):
         if cycle:
             cycle.completed_at = datetime.utcnow()
             cycle.next_cycle_at = next_cycle_at
+            try:
+                validate_search_cycle(cycle)
+            except ValidationError:
+                raise
             self.session.flush()
+            cache_invalidate(make_key(("SearchCycle", "latest", cycle.app_id)))
+            cache_invalidate(make_key(("SearchCycle", "active", cycle.app_id)))
         return cycle
+
+    # Cached read helpers -------------------------------------------------
+    def get_latest_cycle(self, app_id: int) -> SearchCycle | None:  # type: ignore[override]
+        key = make_key(("SearchCycle", "latest", app_id))
+        cached = cache_get(key)
+        if cached is not None:
+            # cached value stores the primary key id to avoid leaking ORM
+            # objects across sessions/tests. Resolve id to object.
+            try:
+                return self.session.get(SearchCycle, int(cached))
+            except Exception:
+                # If resolution fails, fall through to DB query
+                pass
+        result = (
+            self.session.query(SearchCycle)
+            .filter(SearchCycle.app_id == app_id)
+            .order_by(SearchCycle.cycle_number.desc())
+            .first()
+        )
+        if result is not None:
+            # store id only
+            cache_set(key, result.id, ttl=30)
+        return result
+
+    def get_active_cycle(self, app_id: int) -> SearchCycle | None:  # type: ignore[override]
+        key = make_key(("SearchCycle", "active", app_id))
+        cached = cache_get(key)
+        if cached is not None:
+            try:
+                return self.session.get(SearchCycle, int(cached))
+            except Exception:
+                pass
+        result = (
+            self.session.query(SearchCycle)
+            .filter(SearchCycle.app_id == app_id, SearchCycle.completed_at.is_(None))
+            .first()
+        )
+        if result is not None:
+            cache_set(key, result.id, ttl=30)
+        return result

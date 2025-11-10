@@ -1,5 +1,8 @@
-"""Repository for GlobalSettings model."""
+"""Repository for GlobalSettings model with caching of singleton access."""
 
+from researcharr.cache import get as cache_get
+from researcharr.cache import invalidate as cache_invalidate
+from researcharr.cache import set as cache_set
 from researcharr.storage.models import GlobalSettings
 
 from .base import BaseRepository
@@ -26,6 +29,7 @@ class GlobalSettingsRepository(BaseRepository[GlobalSettings]):
         """Update settings."""
         self.session.merge(entity)
         self.session.flush()
+        cache_invalidate("GlobalSettings:singleton")
         return entity
 
     def delete(self, id: int) -> bool:
@@ -44,9 +48,13 @@ class GlobalSettingsRepository(BaseRepository[GlobalSettings]):
         Returns:
             GlobalSettings singleton instance
         """
+        cached = cache_get("GlobalSettings:singleton")
+        if cached is not None:
+            return cached
         settings = self.session.query(GlobalSettings).filter(GlobalSettings.id == 1).first()
         if not settings:
             settings = GlobalSettings(id=1)
             self.session.add(settings)
             self.session.flush()
+        cache_set("GlobalSettings:singleton", settings, ttl=300)
         return settings

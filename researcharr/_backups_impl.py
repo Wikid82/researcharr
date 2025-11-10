@@ -14,7 +14,6 @@ import os
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Optional
 
 LOGGER = logging.getLogger(__name__)
 
@@ -50,7 +49,7 @@ class BackupPath(str):
 
 def create_backup_file(
     config_root: str | Path, backups_dir: str | Path, prefix: str = ""
-) -> Optional[str]:
+) -> str | None:
     """Create a simple zip containing the config tree metadata.
 
     This is a conservative, side-effect-minimizing implementation used to
@@ -89,12 +88,12 @@ def create_backup_file(
         return None
 
 
-def prune_backups(backups_dir: str | Path, cfg: Optional[dict] = None) -> None:
+def prune_backups(backups_dir: str | Path, cfg: dict | None = None) -> None:
     # Minimal no-op pruning implementation
     return None
 
 
-def get_backup_info(backup_path: str | Path) -> Optional[dict]:
+def get_backup_info(backup_path: str | Path) -> dict | None:
     p = Path(backup_path)
     if not p.exists() or not p.is_file():
         return None

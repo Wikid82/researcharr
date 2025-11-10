@@ -4,7 +4,7 @@ dynamic attributes and commonly used Flask symbols. It's for static
 analysis only; at runtime the real `flask` package is used when installed.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 class Response:
     def __init__(
@@ -25,14 +25,14 @@ class Blueprint:
 
 class Flask:
     name: str
-    secret_key: Optional[str]
-    config: Dict[str, Any]
+    secret_key: str | None
+    config: dict[str, Any]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None: ...
 
     # dynamic attributes added by the application code
-    config_data: Dict[str, Any]
-    metrics: Dict[str, Any]
+    config_data: dict[str, Any]
+    metrics: dict[str, Any]
     plugin_registry: Any
 
     # runtime conveniences the codebase uses; accept any args to avoid

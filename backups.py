@@ -8,9 +8,9 @@ import the top-level `backups` module get the same public functions.
 from __future__ import annotations
 
 from importlib import import_module
-from typing import Any, Optional
+from typing import Any
 
-_IMPL: Optional[Any] = None
+_IMPL: Any | None = None
 try:
     # Import the concrete implementations from the package internals.
     # The canonical, full implementation lives in `researcharr.backups_impl`.

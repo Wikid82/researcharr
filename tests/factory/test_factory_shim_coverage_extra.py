@@ -105,6 +105,6 @@ def test_factory_shim_attribute_error_when_impl_missing(monkeypatch):
     with patch("importlib.import_module", _fail_factory):
         shim = _im.import_module("researcharr.factory")
 
-    assert getattr(shim, "_impl") is None
+    assert shim._impl is None
     with pytest.raises(AttributeError):
         _ = shim.nonexistent_attribute_for_cov

@@ -2,7 +2,10 @@
 minversion = "7.0"
 # TEMP: lower coverage gate to allow CI to pass while we stabilize the consolidated tests.
 # Raise this back to 85 (or higher) once the suite is green and expanded.
-addopts = "-v"
+# Enable pytest-xdist for parallel execution with process isolation to prevent
+# logging state pollution between tests. -n auto uses CPU count, --dist=loadfile
+# keeps tests from the same file together to minimize overhead.
+addopts = "-v --log-file=pytest.log --log-file-mode=a -n auto --dist=loadfile"
 testpaths = [
     "tests",
 ]
@@ -20,6 +23,8 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "logging: marks tests that manipulate logging state (may need isolation)",
+    "no_xdist: marks tests that must run without pytest-xdist parallelization",
 ]
 filterwarnings = [
     "ignore::DeprecationWarning",
@@ -34,6 +39,7 @@ filterwarnings = [
 source = ["researcharr"]
 omit = [
     "tests/*",
+    "researcharr/tests/*",
     "htmlcov/*",
     ".venv/*",
     "venv/*",
@@ -78,7 +84,7 @@ ignore_errors = true
 # The discrepancy is due to `researcharr/__init__.py` having low coverage and
 # coverage differences between installed vs editable installs. Revisit this and
 # raise back to 85.0 after improving coverage of low-coverage modules.
-fail_under = 60.0
+fail_under = 70.0
 
 [tool.coverage.html]
 directory = "htmlcov"
@@ -86,6 +92,40 @@ directory = "htmlcov"
 [tool.ruff]
 line-length = 100
 target-version = "py314"
+
+[tool.ruff.lint]
+# Enable pyflakes (F), pycodestyle (E, W), and various other rule sets
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "DTZ",  # flake8-datetimez
+    "T20",  # flake8-print
+    "PL",   # pylint
+]
+
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "PLR0913", # too many arguments
+    "PLR0912", # too many branches
+    "PLR2004", # magic value comparison
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use assert statements and have more flexible structure
+"tests/**/*.py" = [
+    "PLR2004",  # magic values are fine in tests
+    "S101",     # assert statements are expected in tests
+]
+
+[tool.ruff.lint.flake8-bugbear]
+# B008: Do not call functions with mutable default arguments
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
 
 [tool.black]
 line-length = 100

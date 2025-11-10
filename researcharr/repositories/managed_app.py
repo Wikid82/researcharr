@@ -1,6 +1,16 @@
 """Repository for ManagedApp model."""
 
+from sqlalchemy.orm import joinedload
+
+from researcharr.cache import get as cache_get
+from researcharr.cache import invalidate as cache_invalidate
+from researcharr.cache import (
+    make_key,
+)
+from researcharr.cache import set as cache_set
+from researcharr.repositories.exceptions import ValidationError
 from researcharr.storage.models import AppType, ManagedApp
+from researcharr.validators import validate_managed_app
 
 from .base import BaseRepository
 
@@ -10,7 +20,19 @@ class ManagedAppRepository(BaseRepository[ManagedApp]):
 
     def get_by_id(self, id: int) -> ManagedApp | None:
         """Get app by ID."""
-        return self.session.query(ManagedApp).filter(ManagedApp.id == id).first()
+        key = make_key(("ManagedApp", "id", id))
+        cached = cache_get(key)
+        if cached is not None:
+            return cached
+        result = (
+            self.session.query(ManagedApp)
+            .options(joinedload(ManagedApp.tracked_items))
+            .filter(ManagedApp.id == id)
+            .first()
+        )
+        if result is not None:
+            cache_set(key, result, ttl=120)
+        return result
 
     def get_all(self) -> list[ManagedApp]:
         """Get all apps."""
@@ -18,14 +40,24 @@ class ManagedAppRepository(BaseRepository[ManagedApp]):
 
     def create(self, entity: ManagedApp) -> ManagedApp:
         """Create new app."""
+        try:
+            validate_managed_app(entity)
+        except ValidationError:
+            raise
         self.session.add(entity)
         self.session.flush()
+        cache_invalidate("ManagedApp:")
         return entity
 
     def update(self, entity: ManagedApp) -> ManagedApp:
         """Update existing app."""
+        try:
+            validate_managed_app(entity)
+        except ValidationError:
+            raise
         self.session.merge(entity)
         self.session.flush()
+        cache_invalidate("ManagedApp:")
         return entity
 
     def delete(self, id: int) -> bool:
@@ -34,6 +66,7 @@ class ManagedAppRepository(BaseRepository[ManagedApp]):
         if app:
             self.session.delete(app)
             self.session.flush()
+            cache_invalidate("ManagedApp:")
             return True
         return False
 
@@ -44,7 +77,17 @@ class ManagedAppRepository(BaseRepository[ManagedApp]):
         Returns:
             List of active ManagedApp instances
         """
-        return self.session.query(ManagedApp).filter(ManagedApp.is_active).all()
+        key = make_key(("ManagedApp", "active"))
+        cached = cache_get(key)
+        if cached is not None:
+            return cached
+        result = self.session.query(ManagedApp).filter(ManagedApp.is_active).all()
+        cache_set(key, result, ttl=60)
+        return result
+
+    def get_page(self, page: int, page_size: int) -> list[ManagedApp]:
+        """Return a page of managed apps (no eager relations)."""
+        return self.paginate(ManagedApp, page, page_size)
 
     def get_by_type(self, app_type: AppType) -> list[ManagedApp]:
         """
@@ -56,7 +99,13 @@ class ManagedAppRepository(BaseRepository[ManagedApp]):
         Returns:
             List of ManagedApp instances
         """
-        return self.session.query(ManagedApp).filter(ManagedApp.app_type == app_type).all()
+        key = make_key(("ManagedApp", "type", app_type))
+        cached = cache_get(key)
+        if cached is not None:
+            return cached
+        result = self.session.query(ManagedApp).filter(ManagedApp.app_type == app_type).all()
+        cache_set(key, result, ttl=60)
+        return result
 
     def get_by_url(self, base_url: str, app_type: AppType) -> ManagedApp | None:
         """
@@ -69,8 +118,15 @@ class ManagedAppRepository(BaseRepository[ManagedApp]):
         Returns:
             ManagedApp instance or None if not found
         """
-        return (
+        key = make_key(("ManagedApp", "by_url", app_type, base_url))
+        cached = cache_get(key)
+        if cached is not None:
+            return cached
+        result = (
             self.session.query(ManagedApp)
             .filter(ManagedApp.base_url == base_url, ManagedApp.app_type == app_type)
             .first()
         )
+        if result is not None:
+            cache_set(key, result, ttl=300)
+        return result

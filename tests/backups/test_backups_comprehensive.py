@@ -300,7 +300,7 @@ class TestBackupsModule:
             restored_file = os.path.join(restore_dir, "test_config.yml")
             assert os.path.exists(restored_file)
 
-            with open(restored_file, "r") as f:
+            with open(restored_file) as f:
                 content = f.read()
                 assert "original: config" in content
 

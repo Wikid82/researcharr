@@ -61,7 +61,7 @@ def test_api_updates_upgrade_invalid_url(client, login):
         # fall back to directly setting the attribute.
         try:
             # monkeypatch fixture not available here directly, so set attribute
-            setattr(_factory, "_running_in_image", lambda: False)
+            _factory._running_in_image = lambda: False
         except Exception:
             pass
     except Exception:

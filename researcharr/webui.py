@@ -16,7 +16,7 @@ import importlib
 import importlib.util
 import os
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
 from unittest.mock import Mock as _Mock
 
 from werkzeug.security import generate_password_hash
@@ -52,12 +52,12 @@ if isinstance(_impl, _Mock):
     _impl = None
 # Module-level `rdb` that tests can patch (monkeypatch sets this on
 # `researcharr.webui` to control DB behavior). Default to None.
-rdb: Optional[Any] = None
+rdb: Any | None = None
 
 # USER_CONFIG_PATH: prefer underlying impl value when available and
 # when the implementation originates from a different file. If the impl
 # is the repository root module we leave the path unset (None).
-USER_CONFIG_PATH: Optional[str] = None
+USER_CONFIG_PATH: str | None = None
 if _impl is not None:
     try:
         _impl_file = getattr(_impl, "__file__", None)
@@ -76,7 +76,7 @@ def _env_bool(name: str, default: str = "false") -> bool:
     return str(v).lower() in ("1", "true", "yes")
 
 
-def load_user_config() -> Optional[Dict[str, Optional[str]]]:
+def load_user_config() -> dict[str, str | None] | None:
     """Return persisted web UI user dict or None.
 
     Prefer the shim `rdb` if present; otherwise delegate to the
@@ -99,9 +99,9 @@ def load_user_config() -> Optional[Dict[str, Optional[str]]]:
 def save_user_config(
     username: str,
     password_hash: str,
-    api_key: Optional[str] = None,
-    api_key_hash: Optional[str] = None,
-) -> Dict[str, Optional[str]]:
+    api_key: str | None = None,
+    api_key_hash: str | None = None,
+) -> dict[str, str | None]:
     """Persist user credentials via the shim `rdb`.
 
     If `rdb` is not available raise RuntimeError (tests expect this).

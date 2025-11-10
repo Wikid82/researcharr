@@ -9,7 +9,6 @@ from __future__ import annotations
 import os
 import sqlite3
 import time
-from typing import Dict, Optional
 
 
 def _get_db_path() -> str:
@@ -58,7 +57,7 @@ def init_db() -> None:
         conn.close()
 
 
-def load_user() -> Optional[Dict[str, Optional[str]]]:
+def load_user() -> dict[str, str | None] | None:
     """Return the first user row as a dict or None if no user exists."""
     init_db()
     conn = get_connection()
@@ -82,7 +81,7 @@ def load_user() -> Optional[Dict[str, Optional[str]]]:
 def save_user(
     username: str,
     password_hash: str,
-    api_key_hash: Optional[str] = None,
+    api_key_hash: str | None = None,
 ) -> None:
     """Insert or update the single webui user (id=1 semantics).
 
@@ -112,7 +111,7 @@ def save_user(
 
 
 # Backward-compatible wrappers / aliases for test compatibility
-def get_user_by_username(username: Optional[str] = None) -> Optional[Dict[str, Optional[str]]]:
+def get_user_by_username(username: str | None = None) -> dict[str, str | None] | None:
     """Return the first user row.
 
     Historically tests call `get_user_by_username(username)` even though the

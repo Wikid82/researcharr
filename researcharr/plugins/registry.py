@@ -12,7 +12,7 @@ from __future__ import annotations
 try:  # prefer the repository-level implementation
     from plugins.registry import PluginRegistry  # type: ignore
 except Exception:  # pragma: no cover - fallback for editor/type-checker
-    from typing import Any, Dict, List
+    from typing import Any
 
     class PluginRegistry:  # simple local fallback used only when the real
         """Fallback PluginRegistry exposing the minimal runtime API.
@@ -22,7 +22,7 @@ except Exception:  # pragma: no cover - fallback for editor/type-checker
         """
 
         def __init__(self) -> None:
-            self._plugins: Dict[str, type[Any]] = {}
+            self._plugins: dict[str, type[Any]] = {}
 
         def register(self, name: str, cls: type[Any]) -> None:
             self._plugins[name] = cls
@@ -34,13 +34,13 @@ except Exception:  # pragma: no cover - fallback for editor/type-checker
             # No-op fallback; real implementation discovers files on disk.
             return None
 
-        def create_instance(self, plugin_name: str, config: Dict) -> Any:
+        def create_instance(self, plugin_name: str, config: dict) -> Any:
             cls = self.get(plugin_name)
             if not cls:
                 raise KeyError(f"Unknown plugin: {plugin_name}")
             return cls(config)
 
-        def list_plugins(self) -> List[str]:
+        def list_plugins(self) -> list[str]:
             return list(self._plugins.keys())
 
 

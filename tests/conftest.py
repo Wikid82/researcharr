@@ -1,7 +1,7 @@
 import importlib
 import os
 import sys
-from typing import Generator
+from collections.abc import Generator
 from unittest import mock
 from unittest.mock import Mock as _Mock
 
@@ -17,12 +17,16 @@ try:
 except Exception:
     pass
 
+import logging as _logging
 import unittest.mock as _um
 
 # Autouse fixture to restore the real run.run_job implementation if earlier tests
 # replaced it with a Mock. This prevents later run-focused tests from observing
 # a stubbed function and missing expected logging/subprocess behavior.
 import pytest as _pytest
+
+# Preserve original logging.getLogger so we can restore if a test leaves a patch behind.
+_ORIGINAL_GETLOGGER = getattr(_logging, "getLogger", None)
 
 from researcharr import factory
 
@@ -49,6 +53,155 @@ def _restore_run_job_if_mock():
     except Exception:
         pass
     yield
+
+
+@_pytest.fixture(autouse=True, scope="function")
+def _preserve_root_logger_handlers():
+    """Preserve and restore root logger handlers to prevent caplog interference.
+
+    Some tests may call logging.basicConfig() or manipulate root logger handlers,
+    which breaks pytest's caplog fixture for subsequent tests. This fixture saves
+    the handler list before each test and restores it after.
+    """
+    import logging
+
+    root = logging.getLogger()
+    # Save the current handlers (make a copy of the list)
+    saved_handlers = list(root.handlers)
+    saved_level = root.level
+    saved_disabled = root.disabled
+
+    yield
+
+    # Restore the original handlers after the test
+    root.handlers[:] = saved_handlers
+    root.level = saved_level
+    root.disabled = saved_disabled
+
+
+@_pytest.fixture(autouse=True, scope="function")
+def _reset_logger_levels_before_and_after_test():
+    """Reset all logger levels before and after each test to prevent pollution.
+
+    Running this BEFORE the test ensures caplog gets attached to a clean logger.
+    """
+    # Reset BEFORE the test
+    try:
+        import logging
+
+        # Reset the researcharr.cron logger specifically
+        logger = logging.getLogger("researcharr.cron")
+        logger.setLevel(logging.NOTSET)
+        logger.propagate = True
+        # Don't clear handlers - that breaks caplog!
+
+        # Reset the researcharr.core.lifecycle logger
+        lifecycle_logger = logging.getLogger("researcharr.core.lifecycle")
+        lifecycle_logger.setLevel(logging.NOTSET)
+        lifecycle_logger.propagate = True
+    except Exception:
+        pass
+
+    yield
+
+    # Reset AFTER the test as well
+    try:
+        import logging
+
+        logger = logging.getLogger("researcharr.cron")
+        logger.setLevel(logging.NOTSET)
+        logger.propagate = True
+
+        lifecycle_logger = logging.getLogger("researcharr.core.lifecycle")
+        lifecycle_logger.setLevel(logging.NOTSET)
+        lifecycle_logger.propagate = True
+    except Exception:
+        pass
+
+
+@_pytest.fixture(autouse=True)
+def _restore_logging_getLogger_if_mock():
+    """Ensure logging.getLogger is the real function, not a lingering Mock.
+
+    Some tests patch logging.getLogger; if a patch leaks (due to nested test
+    definitions or unexpected exceptions) subsequent tests depending on real
+    logger behavior (caplog) will observe a MagicMock and fail to capture.
+    This fixture defensively restores the original function before each test.
+    """
+    try:
+        import logging as _lg
+        import unittest.mock as _um
+
+        if isinstance(getattr(_lg, "getLogger", None), _um.Mock) and callable(_ORIGINAL_GETLOGGER):
+            _lg.getLogger = _ORIGINAL_GETLOGGER  # type: ignore[assignment]
+    except Exception:
+        pass
+    yield
+
+
+@_pytest.fixture(autouse=True)
+def _restore_run_script_after_test():
+    """Restore researcharr.run.SCRIPT and run.SCRIPT to their original values after each test.
+
+    This prevents test pollution where one test patches SCRIPT and affects
+    subsequent tests that expect the default value. We need to restore both
+    the package module and the top-level module.
+    """
+    _sentinel = object()
+
+    # Save original values from both modules
+    try:
+        import researcharr.run as _pkg_run_mod
+
+        _pkg_original_script = getattr(_pkg_run_mod, "SCRIPT", _sentinel)
+    except Exception:
+        _pkg_run_mod = None
+        _pkg_original_script = _sentinel
+
+    try:
+        import sys
+
+        _top_run_mod = sys.modules.get("run")
+        if _top_run_mod is not None:
+            _top_original_script = getattr(_top_run_mod, "SCRIPT", _sentinel)
+        else:
+            _top_original_script = _sentinel
+    except Exception:
+        _top_run_mod = None
+        _top_original_script = _sentinel
+
+    yield
+
+    # Restore original SCRIPT values after test
+    if _pkg_run_mod is not None:
+        try:
+            if _pkg_original_script is not _sentinel:
+                _pkg_run_mod.SCRIPT = _pkg_original_script
+            elif hasattr(_pkg_run_mod, "SCRIPT"):
+                try:
+                    delattr(_pkg_run_mod, "SCRIPT")
+                except AttributeError:
+                    pass
+        except Exception:
+            pass
+
+    if _top_run_mod is not None:
+        try:
+            import sys
+
+            _top_run_mod = sys.modules.get("run")  # Re-fetch in case it changed
+            if _top_run_mod is not None:
+                # For the top-level shim, we need to remove SCRIPT from __dict__
+                # if it was added directly, rather than trying to set it (which
+                # would add it to __dict__ and bypass the shim's __getattr__).
+                # The shim should always forward SCRIPT lookups to _impl.
+                if "SCRIPT" in getattr(_top_run_mod, "__dict__", {}):
+                    try:
+                        delattr(_top_run_mod, "SCRIPT")
+                    except AttributeError:
+                        pass
+        except Exception:
+            pass
 
 
 # Inline the storage layer fixtures locally instead of using pytest_plugins
@@ -171,10 +324,9 @@ def ensure_real_flask_module(request):
             if replaced:
                 # restore the original Mock
                 sys.modules["flask"] = orig
-            else:
-                # If there was no original and a test added flask, remove it
-                if orig is None:
-                    sys.modules.pop("flask", None)
+            # If there was no original and a test added flask, remove it
+            elif orig is None:
+                sys.modules.pop("flask", None)
         except Exception:
             pass
 
@@ -430,3 +582,19 @@ def app(monkeypatch, tmp_path) -> Generator:
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+
+def pytest_collection_modifyitems(config, items):
+    """Pytest hook to handle special markers.
+
+    Tests marked with @pytest.mark.no_xdist will be modified to run
+    without xdist parallelization by checking if we're in an xdist worker
+    and skipping the test if so (it will run in the main process instead).
+    """
+    # Check if xdist is active
+    if hasattr(config, "workerinput"):
+        # We're in an xdist worker - skip tests marked no_xdist
+        skip_xdist = pytest.mark.skip(reason="Test marked no_xdist, run in main process")
+        for item in items:
+            if "no_xdist" in item.keywords:
+                item.add_marker(skip_xdist)

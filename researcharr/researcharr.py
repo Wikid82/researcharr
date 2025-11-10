@@ -258,7 +258,7 @@ def load_config(path="config.yml"):
     # "researcharr.researcharr.os.path.exists" are respected.
     _mod = sys.modules.get("researcharr") or sys.modules.get(__name__)
     _os = getattr(_mod, "os", os)
-    _exists = getattr(getattr(_os, "path"), "exists", os.path.exists)
+    _exists = getattr(_os.path, "exists", os.path.exists)
 
     if not _exists(path):
         # If tests explicitly patched exists to simulate a missing file,
@@ -396,9 +396,8 @@ def serve():
         if os.environ.get("PYTEST_CURRENT_TEST"):
             return
         app.run(host="0.0.0.0", port=2929)  # nosec B104
-    else:
-        if hasattr(app, "run"):
-            app.run(host="0.0.0.0", port=2929)  # nosec B104
+    elif hasattr(app, "run"):
+        app.run(host="0.0.0.0", port=2929)  # nosec B104
 
 
 # (The complex, multi-source resolution `serve()` was removed in favor of

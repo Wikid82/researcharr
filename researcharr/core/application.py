@@ -7,7 +7,7 @@ extracted from factory.py, integrated with the new core architecture components.
 import importlib.util
 import os
 from types import ModuleType
-from typing import Any, Dict
+from typing import Any
 
 import yaml
 from flask import Flask
@@ -23,6 +23,12 @@ from .services import (
     LoggingService,
     MetricsService,
 )
+
+try:
+    # Optional: repository Unit of Work registration
+    from researcharr.repositories.uow import UnitOfWork  # type: ignore
+except Exception:  # pragma: no cover - defensive import for optional module
+    UnitOfWork = None  # type: ignore
 
 
 class CoreApplicationFactory:
@@ -47,6 +53,14 @@ class CoreApplicationFactory:
         self.container.register_singleton("event_bus", self.event_bus)
         self.container.register_singleton("lifecycle", self.lifecycle)
 
+        # Register a factory for UnitOfWork if available
+        try:
+            if UnitOfWork is not None:
+                self.container.register_factory("unit_of_work", lambda: UnitOfWork())
+        except Exception:
+            # Non-critical; continue without UoW service if registration fails
+            pass
+
         # Publish service registration event
         self.event_bus.publish_simple(
             Events.APP_STARTING,
@@ -64,7 +78,7 @@ class CoreApplicationFactory:
             source="core_application_factory",
         )
 
-    def setup_configuration(self, config_dir: str = "/config") -> Dict[str, Any]:
+    def setup_configuration(self, config_dir: str = "/config") -> dict[str, Any]:
         """Setup application configuration with core architecture integration."""
         # Add configuration sources
         self.config_manager.add_source(
@@ -149,7 +163,7 @@ class CoreApplicationFactory:
                     _reg_mod = _importlib_mod.import_module("researcharr.plugins.registry")
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     _reg_mod = _importlib_mod.import_module("plugins.registry")
-                _PluginRegistryRuntime = getattr(_reg_mod, "PluginRegistry")
+                _PluginRegistryRuntime = _reg_mod.PluginRegistry
                 registry = _PluginRegistryRuntime()
             except Exception:  # nosec B110 -- intentional broad except for resilience
                 # Fallback to direct file loading
@@ -162,7 +176,7 @@ class CoreApplicationFactory:
                     if spec and spec.loader:
                         plugin_mod = importlib.util.module_from_spec(spec)
                         spec.loader.exec_module(plugin_mod)
-                        _PluginRegistryRuntime = getattr(plugin_mod, "PluginRegistry")
+                        _PluginRegistryRuntime = plugin_mod.PluginRegistry
                         registry = _PluginRegistryRuntime()
 
             if registry:
@@ -219,7 +233,7 @@ class CoreApplicationFactory:
 
         return None
 
-    def setup_user_authentication(self, config_dir: str = "/config") -> Dict[str, Any]:
+    def setup_user_authentication(self, config_dir: str = "/config") -> dict[str, Any]:
         """Setup user authentication with webui integration."""
         user_config = {
             "username": "admin",

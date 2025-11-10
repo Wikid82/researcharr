@@ -1,6 +1,6 @@
 import json
 
-import researcharr.factory as factory
+from researcharr import factory
 
 # Note: _parse_instances is defined inside create_app() and not exported at
 # module level. We exercise its behavior indirectly via endpoints below.

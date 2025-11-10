@@ -357,7 +357,7 @@ class TestConfigurationManager(unittest.TestCase):
             self.assertTrue(save_path.exists())
 
             # Load saved config to verify
-            with open(save_path, "r") as f:
+            with open(save_path) as f:
                 saved_data = yaml.safe_load(f)
 
             self.assertEqual(saved_data["test"]["value"], "saved")

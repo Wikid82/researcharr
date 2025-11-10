@@ -8,13 +8,15 @@ health monitoring, and external service connectivity.
 import logging
 import os
 import sqlite3
-from typing import Any, Dict, List, Optional
+from pathlib import Path
+from typing import Any
 
 from flask import Flask
 
 from .config import get_config_manager
 from .container import get_container
 from .events import Events, get_event_bus
+from .logging import get_logger as get_logger_from_factory
 
 # Global constants
 DEFAULT_DB_PATH = "researcharr.db"
@@ -23,10 +25,10 @@ DEFAULT_DB_PATH = "researcharr.db"
 class DatabaseService:
     """Database service for SQLite operations."""
 
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: str | None = None):
         self.db_path = db_path or DEFAULT_DB_PATH
 
-    def init_db(self, db_path: Optional[str] = None) -> None:
+    def init_db(self, db_path: str | None = None) -> None:
         """Initialize the database with required tables."""
         db_path = db_path or self.db_path
 
@@ -56,7 +58,7 @@ class DatabaseService:
             source="database_service",
         )
 
-    def check_connection(self, db_path: Optional[str] = None) -> bool:
+    def check_connection(self, db_path: str | None = None) -> bool:
         """Check database connectivity."""
         db_path = db_path or self.db_path
         try:
@@ -69,39 +71,52 @@ class DatabaseService:
 
 
 class LoggingService:
-    """Centralized logging service."""
+    """Centralized logging service.
+
+    This service now delegates to the researcharr.core.logging module's
+    LoggerFactory for proper isolation and testability. It maintains the
+    same API for backward compatibility with existing code.
+    """
 
     def __init__(self):
-        self._loggers: Dict[str, logging.Logger] = {}
+        self._loggers: dict[str, logging.Logger] = {}
 
-    def setup_logger(self, name: str, log_file: str, level: Optional[int] = None) -> logging.Logger:
-        """Create and return a configured logger.
+    def setup_logger(
+        self,
+        name: str,
+        log_file: str | Path,
+        level: int | None = None,
+    ) -> logging.Logger:
+        """Create and return a configured logger using the logger factory.
 
-        Tests expect a callable `setup_logger` that returns an object with an
-        `info` method. Provide a minimal, well-behaved logger here.
+        This now delegates to researcharr.core.logging.get_logger for proper
+        isolation and prevention of test pollution.
+
+        Args:
+            name: Logger name
+            log_file: Path to log file
+            level: Optional logging level (default: INFO)
+
+        Returns:
+            logging.Logger: Configured logger instance
         """
-        if name in self._loggers:
-            return self._loggers[name]
+        # Use the factory to get/create the logger
+        logger = get_logger_from_factory(
+            name=name,
+            level=level or logging.INFO,
+            log_file=log_file,
+            propagate=True,
+        )
 
-        logger = logging.getLogger(name)
-
-        # Prevent adding duplicate handlers in repeated test runs
-        if not logger.handlers:
-            handler = logging.FileHandler(log_file)
-            fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-            handler.setFormatter(fmt)
-            logger.addHandler(handler)
-
-        if level is not None:
-            logger.setLevel(level)
-        else:
-            logger.setLevel(logging.INFO)
-
+        # Store in local registry for backward compatibility
         self._loggers[name] = logger
         return logger
 
-    def get_logger(self, name: str) -> Optional[logging.Logger]:
-        """Get an existing logger by name."""
+    def get_logger(self, name: str) -> logging.Logger | None:
+        """Get an existing logger by name.
+
+        Returns None if the logger hasn't been created via this service.
+        """
         return self._loggers.get(name)
 
 
@@ -117,7 +132,7 @@ class ConnectivityService:
         else:
             self.requests = globals()["requests"]
 
-    def has_valid_url_and_key(self, instances: List[Dict[str, Any]]) -> bool:
+    def has_valid_url_and_key(self, instances: list[dict[str, Any]]) -> bool:
         """Check if all instances have valid URLs and API keys."""
         return all(
             not i.get("enabled") or (i.get("url", "").startswith("http") and i.get("api_key"))
@@ -217,9 +232,9 @@ class HealthService:
     def __init__(self):
         self.container = get_container()
 
-    def check_system_health(self) -> Dict[str, Any]:
+    def check_system_health(self) -> dict[str, Any]:
         """Perform comprehensive health checks."""
-        health_status: Dict[str, Any] = {"status": "ok", "components": {}}
+        health_status: dict[str, Any] = {"status": "ok", "components": {}}
 
         # Check database
         try:
@@ -279,7 +294,7 @@ class MetricsService:
             self.metrics["services"][service] = {}
         self.metrics["services"][service][metric] = value
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get all metrics."""
         return self.metrics.copy()
 
@@ -338,9 +353,9 @@ def create_metrics_app() -> Flask:
             # If any of the above fails, continue using whatever we have
             pass
 
-        Flask = getattr(_flask_mod, "Flask")
-        jsonify = getattr(_flask_mod, "jsonify")
-        request = getattr(_flask_mod, "request")
+        Flask = _flask_mod.Flask
+        jsonify = _flask_mod.jsonify
+        request = _flask_mod.request
 
     app = Flask("metrics")
     # Defensive recovery & fallback if Flask() produced a Mock
@@ -648,9 +663,68 @@ def create_metrics_app() -> Flask:
     def metrics_endpoint():
         """Metrics endpoint."""
         try:
-            return jsonify(_metrics.get_metrics())
+            data = dict(_metrics.get_metrics())
+            try:
+                # Merge in cache metrics if available
+                from researcharr.cache import (
+                    metrics as cache_metrics,  # type: ignore
+                )
+
+                c = cache_metrics() or {}
+                # expose as flat keys to avoid breaking callers
+                data["cache_hits"] = int(c.get("hits", 0))
+                data["cache_misses"] = int(c.get("misses", 0))
+                data["cache_sets"] = int(c.get("sets", 0))
+                data["cache_evictions"] = int(c.get("evictions", 0))
+            except Exception:
+                pass
+            return jsonify(data)
         except Exception:
-            return _metrics.get_metrics()
+            # Fallback if jsonify is not available
+            data = dict(_metrics.get_metrics())
+            try:
+                from researcharr.cache import (
+                    metrics as cache_metrics,  # type: ignore
+                )
+
+                c = cache_metrics() or {}
+                data["cache_hits"] = int(c.get("hits", 0))
+                data["cache_misses"] = int(c.get("misses", 0))
+                data["cache_sets"] = int(c.get("sets", 0))
+                data["cache_evictions"] = int(c.get("evictions", 0))
+            except Exception:
+                pass
+            return data
+
+    @app.route("/metrics.prom")
+    def metrics_prometheus():
+        """Prometheus text exposition for default registry."""
+        try:
+            from prometheus_client import CONTENT_TYPE_LATEST
+            from prometheus_client import REGISTRY as _DEFAULT_REGISTRY
+            from prometheus_client import generate_latest
+        except Exception:
+            # Prometheus not installed; return a helpful message
+            try:
+                return jsonify({"error": "prometheus_client not installed"}), 501
+            except Exception:
+                return {"error": "prometheus_client not installed"}, 501
+
+        try:
+            output = generate_latest(_DEFAULT_REGISTRY)
+            # For real Flask
+            from flask import Response as _Response  # type: ignore
+
+            return _Response(output, content_type=CONTENT_TYPE_LATEST)
+        except Exception:
+            # Fallback minimal response
+            txt = b"# Metrics unavailable\n"
+            try:
+                from flask import Response as _Response  # type: ignore
+
+                return _Response(txt, content_type="text/plain; version=0.0.4; charset=utf-8")
+            except Exception:
+                return txt
 
     @app.errorhandler(404)
     @app.errorhandler(500)
@@ -751,10 +825,9 @@ def create_metrics_app() -> Flask:
                 needs_flask_client = True
             elif client is None:
                 needs_flask_client = True
-            else:
-                # Some tests rely on `session_transaction` being present.
-                if not hasattr(client, "session_transaction"):
-                    needs_flask_client = True
+            # Some tests rely on `session_transaction` being present.
+            elif not hasattr(client, "session_transaction"):
+                needs_flask_client = True
 
             if needs_flask_client:
                 try:
@@ -957,7 +1030,7 @@ def serve() -> None:
 
 
 # Configuration loading function (moved from researcharr.py)
-def load_config(path: str = "config.yml") -> Dict[str, Any]:
+def load_config(path: str = "config.yml") -> dict[str, Any]:
     """Load configuration from YAML file.
 
     This function provides backwards compatibility with the original
@@ -983,19 +1056,19 @@ def load_config(path: str = "config.yml") -> Dict[str, Any]:
 
 
 # Backwards compatibility functions (for existing code that imports these directly)
-def init_db(db_path: Optional[str] = None) -> None:
+def init_db(db_path: str | None = None) -> None:
     """Initialize database (backwards compatibility)."""
     db_service = DatabaseService(db_path)
     db_service.init_db()
 
 
-def setup_logger(name: str, log_file: str, level: Optional[int] = None) -> logging.Logger:
+def setup_logger(name: str, log_file: str, level: int | None = None) -> logging.Logger:
     """Setup logger (backwards compatibility)."""
     logging_service = LoggingService()
     return logging_service.setup_logger(name, log_file, level)
 
 
-def has_valid_url_and_key(instances: List[Dict[str, Any]]) -> bool:
+def has_valid_url_and_key(instances: list[dict[str, Any]]) -> bool:
     """Check instance validity (backwards compatibility)."""
     connectivity_service = ConnectivityService()
     return connectivity_service.has_valid_url_and_key(instances)

@@ -3,7 +3,7 @@ import sqlite3
 
 import pytest
 
-import researcharr.factory as factory
+from researcharr import factory
 
 
 @pytest.fixture

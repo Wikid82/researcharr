@@ -6,34 +6,53 @@ import sqlite3
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, mock_open, patch
 
+import pytest
 from flask import Flask
 
 # Import the module under test
 import researcharr
 
+# Import test utilities for logging isolation
+_test_utils_path = str(Path(__file__).parent.parent)
+if _test_utils_path not in sys.path:
+    sys.path.insert(0, _test_utils_path)
 
+
+@pytest.mark.logging
 class TestRootResearcharrModule(unittest.TestCase):
-    """Comprehensive test cases for root researcharr.py module."""
+    """Comprehensive test cases for root researcharr.py module.
+
+    Uses LoggerTestHelper to ensure proper logging isolation and prevent
+    test pollution that can break pytest's caplog fixture.
+    """
 
     def setUp(self):
         """Set up test environment."""
         self.test_dir = tempfile.mkdtemp()
         self.test_db_path = os.path.join(self.test_dir, "test_researcharr.db")
         self.test_log_path = os.path.join(self.test_dir, "test.log")
+        # Track logger helpers for cleanup
+        self._logger_helpers = []
 
     def tearDown(self):
-        """Clean up test environment."""
+        """Clean up test environment with proper logging state restoration."""
         import shutil
 
-        shutil.rmtree(self.test_dir, ignore_errors=True)
+        # Clean up logger helpers (ensures proper state restoration)
+        for helper in self._logger_helpers:
+            helper.cleanup()
 
-        # Clean up any loggers created during tests
+        # Additional cleanup for any direct logger manipulations
         logger = logging.getLogger("test_logger")
         for handler in logger.handlers[:]:
+            handler.close()
             logger.removeHandler(handler)
         logger.setLevel(logging.NOTSET)
+
+        shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def test_module_constants_and_paths(self):
         """Test module-level constants and __path__ attribute."""
@@ -503,7 +522,7 @@ class TestRootResearcharrModule(unittest.TestCase):
             try:
                 if hasattr(mod, "create_metrics_app"):
                     try:
-                        setattr(mod, "create_metrics_app", _make_factory)
+                        mod.create_metrics_app = _make_factory
                         replaced.append(name)
                     except Exception:
                         pass

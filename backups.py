@@ -83,6 +83,8 @@ def create_backup_file(config_root, backups_dir, prefix=""):
     if not cr.exists() and not prefix:
         raise Exception("config_root does not exist and no prefix provided")
     # Delegate to the implementation module
+    if _IMPL is None:
+        raise ImportError("backups_impl not available")
     return _IMPL.create_backup_file(config_root, backups_dir, prefix=prefix)
 
 

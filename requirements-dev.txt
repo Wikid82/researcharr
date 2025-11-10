@@ -1,12 +1,14 @@
 isort==7.0.0
-ruff
-bandit
+# Pin ruff to an available release compatible with Python 3.10
+ruff==0.14.4
+bandit==1.8.1
 pre-commit
 pytest==8.4.2
 pytest-cov
 types-requests
 types-PyYAML
 types-Markdown
+playwright==1.37.0
 
 # Optional packages used by pipeline features (convenience for local dev)
 PyYAML==6.0.3
@@ -17,13 +19,13 @@ prometheus-client==0.23.1
 setuptools_scm
 python-json-logger
 debugpy
-ruff
+# Unpinned ruff invocation below removed (already pinned above)
 ipython
 ipdb
 tox
 pip-tools
 bandit
-safety
+safety==3.7.0
 pytest-xdist
 detect-secrets
 

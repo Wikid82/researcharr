@@ -17,9 +17,10 @@ __pycache__/
 .env.*
 venv/
 
-# Tests, docs and development files (not needed in image)
-tests/
-unit_tests/
+# Tests, docs and development files (not needed in prod image)
+# Commented out tests for debug/test image builds so we can run pytest inside container.
+# tests/
+# unit_tests/
 docs/
 site/
 *.md

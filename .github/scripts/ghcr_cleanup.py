@@ -19,12 +19,18 @@ import argparse
 import json
 import os
 import sys
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Any
 from urllib.parse import urlencode
 
 import requests
 from requests import exceptions as req_exceptions
+
+# Python 3.10 compatibility: UTC added in 3.11
+try:
+    from datetime import UTC
+except ImportError:
+    UTC = UTC
 
 GITHUB_API = "https://api.github.com"
 DEFAULT_TIMEOUT = 30

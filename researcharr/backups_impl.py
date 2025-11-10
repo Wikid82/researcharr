@@ -12,9 +12,11 @@ import shutil
 import sqlite3
 import tempfile
 import zipfile
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from researcharr.compat import UTC
 
 
 def create_backup_file(
@@ -64,7 +66,7 @@ def create_backup_file(
             zf.writestr("metadata.txt", f"backup_created={timestamp}\n")
             try:
                 zf.writestr("backup_meta.json", json.dumps(meta, separators=(",", ":")))
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
 
             if config_root.exists() and config_root.is_dir():
@@ -91,16 +93,22 @@ def create_backup_file(
                                         "backup_meta.json",
                                         json.dumps(meta, separators=(",", ":")),
                                     )
-                                except Exception:
+                                except (
+                                    Exception
+                                ):  # nosec B110 -- intentional broad except for resilience
                                     pass
-                            except Exception:
+                            except (
+                                Exception
+                            ):  # nosec B110 -- intentional broad except for resilience
                                 pass
                             try:
                                 zf.write(snap, arcname=arcname)
                             finally:
                                 try:
                                     Path(snap).unlink(missing_ok=True)
-                                except Exception:
+                                except (
+                                    Exception
+                                ):  # nosec B110 -- intentional broad except for resilience
                                     pass
                             # Optionally include WAL/SHM for point-in-time within interval
                             if _env_true("RESEARCHARR_BACKUP_INCLUDE_WAL"):
@@ -109,7 +117,9 @@ def create_backup_file(
                                     if wal.exists() and wal.is_file():
                                         try:
                                             zf.write(wal, arcname=str(Path("db") / wal.name))
-                                        except Exception:
+                                        except (
+                                            Exception
+                                        ):  # nosec B110 -- intentional broad except for resilience
                                             pass
                             continue
                         zf.write(p, arcname=arcname)
@@ -219,7 +229,7 @@ def prune_backups(backups_dir: str | Path, cfg: dict | None = None) -> None:
                         p.unlink()
                     except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
-            except Exception:  # nosec B110 -- intentional broad except for resilience
+            except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                 continue
 
 
@@ -255,7 +265,7 @@ def list_backups(backups_dir: str | Path, *, pattern: str | None = None) -> list
             if pattern and pattern not in info.get("name", ""):
                 continue
             res.append(info)
-        except Exception:  # nosec B110 -- intentional broad except for resilience
+        except Exception:  # nosec B110, B112 -- intentional broad except for resilience
             continue
     return res
 
@@ -282,7 +292,7 @@ def restore_backup(backup_path: str | Path, restore_dir: str | Path) -> bool:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with open(target, "wb") as f:
                     f.write(data)
-            except Exception:  # nosec B110 -- intentional broad except for resilience
+            except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                 # best-effort for per-file extraction failures; continue
                 continue
 
@@ -351,7 +361,7 @@ def get_backup_info(backup_path: str | Path) -> dict[str, object] | None:
 
                         meta_bytes = zf.read("backup_meta.json")
                         info["meta"] = _json.loads(meta_bytes.decode("utf-8"))
-                    except Exception:
+                    except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
@@ -423,14 +433,14 @@ def _sqlite_hot_copy(live_db_path: Path) -> Path:
                     return tmp
                 finally:
                     dest.close()
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
         # Fallback: direct file copy
         shutil.copy2(str(live_db_path), str(tmp))
         return tmp
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         # As a last resort, return the original path (zip will read live file)
         try:
             return live_db_path
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             return tmp

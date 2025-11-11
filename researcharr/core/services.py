@@ -1588,7 +1588,10 @@ def create_metrics_app() -> Flask:
         is_ci = os.getenv("CI") == "true" or os.getenv("RESEARCHARR_CI_DEBUG")
         if is_ci:
             print("--- create_metrics_app CI diagnostics ---")
-            print("CI_ENV:", dict(CI=os.getenv("CI"), RESEARCHARR_CI_DEBUG=os.getenv("RESEARCHARR_CI_DEBUG")))
+            print(
+                "CI_ENV:",
+                dict(CI=os.getenv("CI"), RESEARCHARR_CI_DEBUG=os.getenv("RESEARCHARR_CI_DEBUG")),
+            )
             print("flask_mod:", type(flask_mod), "is_mock:", isinstance(flask_mod, _Mock))
             try:
                 inst_tc = getattr(app, "test_client", None)

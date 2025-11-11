@@ -1367,7 +1367,14 @@ def create_metrics_app() -> Flask:
     # monkeypatch or replace Flask's `test_client` with simple Mocks
     # that don't implement the context manager protocol; wrap whatever
     # object is returned so `with app.test_client() as c:` always works.
-    _orig_test_client = getattr(app.__class__, "test_client", None)
+    # Capture the original instance-level and class-level test_client
+    # references *before* we make any wrapper assignments so that we
+    # can delegate to them without causing recursion. Some tests may
+    # monkeypatch Flask's test_client later in the process; capturing
+    # these now avoids re-entering our own wrappers.
+    _orig_instance_test_client = getattr(app, "test_client", None)
+    _orig_class_test_client = getattr(app.__class__, "test_client", None)
+    _orig_test_client = _orig_class_test_client
 
     def _wrapped_test_client(self, *a, **kw):  # type: ignore[override]
         nonlocal app
@@ -1722,16 +1729,54 @@ def create_metrics_app() -> Flask:
                         return False
                 return False
 
+        # Avoid recursion by calling the previously captured references
+        # instead of `app.test_client` which may be overwritten below.
         def _force_test_client(*a, **kw):
+            base = None
             try:
-                base = app.test_client(*a, **kw)  # may already be wrapped
-            except Exception:  # nosec B110
-                base = getattr(app, "test_client", None)
-                if callable(base):
+                # Prefer the original instance-level test_client if it
+                # exists and is callable.
+                if (
+                    callable(_orig_instance_test_client)
+                    and _orig_instance_test_client is not _force_test_client
+                ):
                     try:
-                        base = base(*a, **kw)
-                    except Exception:  # nosec B110
-                        pass
+                        base = _orig_instance_test_client(*a, **kw)
+                    except Exception:
+                        base = None
+            except Exception:
+                base = None
+
+            # First try the original class-level test_client: when present
+            # this usually yields a proper FlaskClient (or bound descriptor)
+            # rather than a bare function that our wrappers would wrap.
+            if base is None and callable(_orig_class_test_client):
+                try:
+                    base = _orig_class_test_client(app, *a, **kw)
+                except Exception:
+                    base = None
+
+            # If class-level and instance-level saved references failed,
+            # try to instantiate a real FlaskClient. This works when
+            # Flask is available and the app is a real Flask instance.
+            if base is None:
+                try:
+                    from flask.testing import FlaskClient as _FlaskClient
+
+                    base = _FlaskClient(app)
+                except Exception:
+                    base = None
+
+            # As a last resort, fall back to attempting to call the
+            # current attribute while guarding against recursion.
+            if base is None:
+                cur = getattr(app, "test_client", None)
+                if callable(cur) and cur is not _force_test_client:
+                    try:
+                        base = cur(*a, **kw)
+                    except Exception:
+                        base = cur
+
             return _FinalClientWrapper(base)
 
         # Replace instance-level attribute
@@ -1744,12 +1789,11 @@ def create_metrics_app() -> Flask:
         try:
             FlaskClass = app.__class__
             if not getattr(FlaskClass, "_ra_tc_final_wrapped", False):
-
-                def _class_level(self, *a, **kw):  # type: ignore[override]
-                    return _force_test_client(*a, **kw)
-
+                # Avoid mutating the Flask class in this final hardening
+                # patch. Replacing the class's test_client can break other
+                # apps in the same process and leads to test pollution.
+                # Keep the conservative flag so repeated attempts won't reapply.
                 try:
-                    FlaskClass.test_client = _class_level  # type: ignore[method-assign]
                     FlaskClass._ra_tc_final_wrapped = True
                 except Exception:  # nosec B110
                     pass

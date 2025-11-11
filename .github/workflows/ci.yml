@@ -232,22 +232,24 @@ jobs:
 
 # Lightweight placeholder job to satisfy external/legacy required status contexts
 # Some branch protection rules or external integrations expect check runs named
-# `linting` and `pytests`. These jobs are no-ops so they complete quickly and
-# satisfy required contexts without duplicating the real CI work.
+# `linting` and `pytests`. These jobs depend on the build matrix completing
+# successfully, so they will fail if any of the real tests fail.
   linting:
     name: linting
     runs-on: ubuntu-latest
+    needs: build
     steps:
       - uses: actions/checkout@71cf2267d89c5cb81562390fa70a37fa40b1305e
       - name: No-op linting placeholder
         run: |
-          echo "linting placeholder"
+          echo "linting placeholder - all build jobs passed"
 
   pytest:
     name: pytest
     runs-on: ubuntu-latest
+    needs: build
     steps:
       - uses: actions/checkout@71cf2267d89c5cb81562390fa70a37fa40b1305e
       - name: No-op pytests placeholder
         run: |
-          echo "pytest placeholder"
+          echo "pytest placeholder - all build jobs passed"

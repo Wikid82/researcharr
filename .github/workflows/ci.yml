@@ -36,7 +36,7 @@ jobs:
       SAFE_BRANCH: "${{ github.ref_name }}"
       BRANCH: "${{ github.ref_name }}"
       # CODECOV_TOKEN is exposed as env var to enable conditional checks
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN || '' }}
       # Use an explicit sqlite DATABASE_URL during CI so DB-backed tests run
       # against an isolated file in the workspace.
       DATABASE_URL: "sqlite:///${{ github.workspace }}/researcharr-test.db"
@@ -185,7 +185,7 @@ jobs:
         # Point explicitly at the XML file pytest writes
         files: coverage.xml
         # Provide token explicitly (public repos don't require it)
-        token: ${{ secrets.CODECOV_TOKEN }}
+        token: ${{ secrets.CODECOV_TOKEN || '' }}
         # Tag this upload so it is easy to find in Codecov UI
         flags: python
         # Don't fail CI if the upload step has an error here
@@ -195,7 +195,7 @@ jobs:
       if: ${{ !cancelled() && env.RENOVATE_BYPASS != '1' && env.CODECOV_TOKEN != '' }}
       uses: codecov/test-results-action@47f89e9acb64b76debcd5ea40642d25a4adced9f # v1
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+        token: ${{ secrets.CODECOV_TOKEN || '' }}
 
     - name: Lint Dockerfile (hadolint)
       if: ${{ env.RENOVATE_BYPASS != '1' }}

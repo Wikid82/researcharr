@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
 # Run BasedPyright (preferred) or pyright for pre-commit. The script will
 # prefer a local binary if available, otherwise it will fall back to `npx`.
+# Skip in CI if npx/pyright are unavailable.
 
 set -euo pipefail
+
+# Skip in CI if no pyright binary or npx is available
+if [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+  if ! command -v based-pyright >/dev/null 2>&1 && \
+     ! command -v pyright >/dev/null 2>&1 && \
+     ! command -v npx >/dev/null 2>&1; then
+    echo "Skipping basedpyright in CI (no binary/npx available)"
+    exit 0
+  fi
+fi
 
 if command -v based-pyright >/dev/null 2>&1; then
   exec based-pyright "$@"

@@ -2,6 +2,12 @@
 set -euo pipefail
 
 # Run Safety vulnerability scan as a pre-commit local hook.
+# Skip in CI to avoid interactive authentication prompts.
+if [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+  echo "Skipping safety scan in CI environment"
+  exit 0
+fi
+
 # Prefer project venv Python if present, otherwise fall back to system python.
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PY="python3"

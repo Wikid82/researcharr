@@ -15,7 +15,7 @@ done
 # Try modern Safety v3+ command first; fall back to deprecated 'check'.
 # Exit non-zero on vulnerabilities so pre-commit can block the commit.
 if "$PY" -m safety --help >/dev/null 2>&1; then
-  if "$PY" -m safety scan --full-report; then
+  if "$PY" -m safety scan --non-interactive --full-report; then
     exit 0
   else
     echo "Safety scan reported vulnerabilities." >&2
@@ -25,7 +25,7 @@ fi
 
 # Fallback for environments where module invocation differs
 if command -v safety >/dev/null 2>&1; then
-  if safety scan --full-report; then
+  if safety scan --non-interactive --full-report; then
     exit 0
   else
     echo "Safety scan reported vulnerabilities." >&2

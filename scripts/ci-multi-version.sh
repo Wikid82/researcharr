@@ -200,7 +200,7 @@ for version in ${VERSIONS}; do
             --entrypoint pytest \
             -w /app \
             "${image_name}" \
-            ${PYTEST_OPTS} "${TEST_TARGET}" \
+            "${PYTEST_OPTS}" "${TEST_TARGET}" \
             "${PYTEST_LOG_FLAGS[@]}" \
             "${MF_FLAG[@]}" \
             --disable-warnings \
@@ -224,7 +224,7 @@ for version in ${VERSIONS}; do
             --entrypoint pytest \
             -w /app \
             "${image_name}" \
-            ${PYTEST_OPTS} "${TEST_TARGET}" \
+            "${PYTEST_OPTS}" "${TEST_TARGET}" \
             "${PYTEST_LOG_FLAGS[@]}" \
             "${MF_FLAG[@]}" \
             --disable-warnings \

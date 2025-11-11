@@ -37,7 +37,7 @@ from researcharr.backups import create_backup_file, prune_backups
 
 class _RuntimeConfig:
     """Singleton to hold runtime configuration checks that need to be patchable in tests.
-    
+
     Tests can override these methods to control runtime behavior without dealing with
     module identity issues across Python versions.
     """
@@ -47,7 +47,7 @@ class _RuntimeConfig:
     @classmethod
     def running_in_image(cls) -> bool:
         """Check if running in a container/image environment.
-        
+
         Tests can patch this via: _RuntimeConfig._running_in_image_override = lambda: False
         """
         if cls._running_in_image_override is not None:
@@ -57,7 +57,7 @@ class _RuntimeConfig:
     @classmethod
     def get_webui(cls):
         """Get the webui module, with override support for tests.
-        
+
         Tests can patch this via: _RuntimeConfig._webui_override = MockWebUI()
         """
         if cls._webui_override is not None:

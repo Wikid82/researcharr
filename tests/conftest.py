@@ -55,6 +55,66 @@ def _restore_run_job_if_mock():
     yield
 
 
+@_pytest.fixture(autouse=True)
+def _restore_create_metrics_app_if_mock():
+    """Restore real create_metrics_app implementations if they were mocked.
+    
+    This prevents mock leakage across parallel test workers where one test
+    patches create_metrics_app globally and affects other tests expecting
+    the real implementation.
+    """
+    # Save original implementations before test
+    _originals = {}
+    
+    try:
+        import researcharr
+        _originals['researcharr'] = getattr(researcharr, 'create_metrics_app', None)
+    except Exception:
+        pass
+    
+    try:
+        import researcharr.core.services as _services
+        _originals['services'] = getattr(_services, 'create_metrics_app', None)
+    except Exception:
+        pass
+    
+    try:
+        import researcharr.researcharr as _impl
+        _originals['impl'] = getattr(_impl, 'create_metrics_app', None)
+    except Exception:
+        pass
+    
+    yield
+    
+    # After test: restore originals if they were replaced with mocks
+    try:
+        import researcharr
+        current = getattr(researcharr, 'create_metrics_app', None)
+        if isinstance(current, _um.Mock) and _originals.get('researcharr') is not None:
+            if not isinstance(_originals['researcharr'], _um.Mock):
+                researcharr.create_metrics_app = _originals['researcharr']
+    except Exception:
+        pass
+    
+    try:
+        import researcharr.core.services as _services
+        current = getattr(_services, 'create_metrics_app', None)
+        if isinstance(current, _um.Mock) and _originals.get('services') is not None:
+            if not isinstance(_originals['services'], _um.Mock):
+                _services.create_metrics_app = _originals['services']
+    except Exception:
+        pass
+    
+    try:
+        import researcharr.researcharr as _impl
+        current = getattr(_impl, 'create_metrics_app', None)
+        if isinstance(current, _um.Mock) and _originals.get('impl') is not None:
+            if not isinstance(_originals['impl'], _um.Mock):
+                _impl.create_metrics_app = _originals['impl']
+    except Exception:
+        pass
+
+
 @_pytest.fixture(autouse=True, scope="function")
 def _preserve_root_logger_handlers():
     """Preserve and restore root logger handlers to prevent caplog interference.

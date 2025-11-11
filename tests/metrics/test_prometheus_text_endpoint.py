@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import MagicMock
 
 pytest.importorskip("prometheus_client")
 

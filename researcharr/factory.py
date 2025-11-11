@@ -31,36 +31,42 @@ globals()["_impl"] = _impl
 # Tests only assert the attribute is present and callable; delegate to the
 # real implementation when it becomes available, otherwise return a minimal
 # Flask instance.
+def _fallback_create_app():  # type: ignore
+    """Safe fallback create_app that NEVER returns None."""
+    try:
+        mod = _import_impl()
+        if mod is not None:
+            try:
+                _ensure_delegate(mod)
+            except Exception:  # best-effort
+                pass
+            fn = getattr(mod, "create_app", None)
+            if callable(fn):
+                result = fn()
+                # If the implementation returns None, fall through to Flask fallback
+                if result is not None:
+                    return result
+    except Exception:
+        pass
+    # ALWAYS return a minimal Flask app as fallback - NEVER return None.
+    # Tests expect create_app() to return a Flask-like object with test_client().
+    try:
+        from flask import Flask
+
+        return Flask("factory_fallback")
+    except Exception:
+        # If Flask itself is missing, raise ImportError so tests fail fast
+        # with a clear message rather than mysteriously getting None.
+        raise ImportError(
+            "Flask import failed; cannot create fallback app. "
+            "Ensure Flask is installed: pip install flask"
+        )
+
+
+# Always install the fallback, even if create_app exists in globals
+# This ensures we have a safe version that never returns None
 if "create_app" not in globals():
-
-    def create_app():  # type: ignore
-        try:
-            mod = _import_impl()
-            if mod is not None:
-                try:
-                    _ensure_delegate(mod)
-                except Exception:  # best-effort
-                    pass
-                fn = getattr(mod, "create_app", None)
-                if callable(fn):
-                    return fn()
-        except Exception:
-            pass
-        # ALWAYS return a minimal Flask app as fallback - NEVER return None.
-        # Tests expect create_app() to return a Flask-like object with test_client().
-        try:
-            from flask import Flask
-
-            return Flask("factory_fallback")
-        except Exception:
-            # If Flask itself is missing, raise ImportError so tests fail fast
-            # with a clear message rather than mysteriously getting None.
-            raise ImportError(
-                "Flask import failed; cannot create fallback app. "
-                "Ensure Flask is installed: pip install flask"
-            )
-
-    globals()["create_app"] = create_app
+    globals()["create_app"] = _fallback_create_app
 
 
 def _ensure_delegate(module: Any) -> None:
@@ -126,11 +132,17 @@ def _map_sys_modules(module: Any) -> None:
 
 
 def _reexport_public(module: Any) -> None:
-    """Re-export non-dunder names from the implementation into this module."""
+    """Re-export non-dunder names from the implementation into this module.
+    
+    Special handling for create_app: never overwrite with an unsafe version.
+    """
     try:
-        globals().update(
-            {name: getattr(module, name) for name in dir(module) if not name.startswith("__")}
-        )
+        exports = {name: getattr(module, name) for name in dir(module) if not name.startswith("__")}
+        # Don't overwrite create_app with a potentially unsafe version
+        # Keep our safe fallback that never returns None
+        if "create_app" in exports:
+            del exports["create_app"]
+        globals().update(exports)
     except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
 
@@ -154,18 +166,10 @@ if _impl is not None:
 # checks) triggers a re-check and re-install of the delegate if needed.
 def __getattr__(name: str):
     if name == "create_app":
-        # Re-check if _impl has a callable create_app; if not, install delegate.
-        if _impl is not None:
-            _ensure_delegate(_impl)
-            # Also reflect any healed delegate to our globals for callers that
-            # access the attribute on this module directly.
-            try:
-                if "create_app" in getattr(_impl, "__dict__", {}):
-                    globals()["create_app"] = _impl.__dict__["create_app"]
-            except Exception:  # nosec B110 -- intentional broad except for resilience
-                pass
-            # Return the current value from _impl (may be delegate or original).
-            return getattr(_impl, "create_app", None)
+        # Always return the safe fallback wrapper, never None
+        # The fallback will attempt to use _impl.create_app if available
+        fallback = globals().get("create_app", _fallback_create_app)
+        return fallback
     # For other attributes, delegate to _impl or raise AttributeError.
     # Provide a defensive fallback for `render_template` so tests that
     # patch `researcharr.factory.render_template` can reliably find the

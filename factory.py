@@ -2170,6 +2170,7 @@ def create_app() -> Flask:
         # Add backup metrics if available
         try:
             import os
+
             from researcharr.backups import get_default_backup_config, merge_backup_configs
             from researcharr.monitoring import BackupHealthMonitor
 

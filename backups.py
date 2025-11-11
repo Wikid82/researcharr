@@ -78,8 +78,8 @@ def get_backup_config(config_root: str | Any) -> dict:
     intentionally simple.
     """
     try:
-        from pathlib import Path
         import os as _os
+        from pathlib import Path
 
         root = Path(str(config_root or _os.getenv("CONFIG_DIR", "/config")))
         backups_dir = root / "backups"
@@ -98,6 +98,7 @@ def get_backup_config(config_root: str | Any) -> dict:
             return cfg
     except Exception:
         return {"backups_dir": f"{config_root}/backups"}
+
 
 # Ensure package-qualified name points to the same module object
 # Top-level shim should not override the package-qualified module mapping;

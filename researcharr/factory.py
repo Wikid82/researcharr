@@ -260,17 +260,20 @@ def __getattr__(name: str):
         return getattr(current_impl, name)
     raise AttributeError(f"module 'researcharr.factory' has no attribute '{name}'")
 
+
 # Provide a module-level _running_in_image that tests can monkeypatch directly.
 # Now delegates to the top-level factory's RuntimeConfig for consistent behavior.
 def _running_in_image() -> bool:  # type: ignore
     try:
         # Import and use the singleton from top-level factory
         from factory import _RuntimeConfig
+
         return _RuntimeConfig.running_in_image()
     except Exception:
         # Fallback for edge cases where top-level isn't available
         try:
             import os as _os
+
             if _os.path.exists("/.dockerenv"):
                 return True
             if _os.getenv("KUBERNETES_SERVICE_HOST"):

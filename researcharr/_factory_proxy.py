@@ -292,6 +292,7 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                     try:
                         # Python 3.14 changed module resolution - check sys.modules first
                         import sys
+
                         top = sys.modules.get("factory")
                         if top is None:
                             top = importlib.import_module("factory")

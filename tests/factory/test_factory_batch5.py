@@ -35,6 +35,7 @@ def test_updates_upgrade_in_image_and_invalid_url(client, login, monkeypatch):
     # when running in image, upgrade is disallowed
     # Use RuntimeConfig singleton for reliable patching across Python versions
     from factory import _RuntimeConfig
+
     monkeypatch.setattr(_RuntimeConfig, "_running_in_image_override", lambda: True)
 
     login()

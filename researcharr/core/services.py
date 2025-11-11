@@ -1744,8 +1744,10 @@ def create_metrics_app() -> Flask:
         try:
             FlaskClass = app.__class__
             if not getattr(FlaskClass, "_ra_tc_final_wrapped", False):
+
                 def _class_level(self, *a, **kw):  # type: ignore[override]
                     return _force_test_client(*a, **kw)
+
                 try:
                     FlaskClass.test_client = _class_level  # type: ignore[method-assign]
                     FlaskClass._ra_tc_final_wrapped = True

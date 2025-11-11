@@ -26,6 +26,7 @@ _impl: Any | None = _import_impl()
 # the shim/import-failure test deterministic.
 globals()["_impl"] = _impl
 
+
 # Fallback: ensure a callable `create_app` attribute exists even when the
 # top-level import failed (e.g. rare early import-order races under xdist).
 # Tests only assert the attribute is present and callable; delegate to the
@@ -133,7 +134,7 @@ def _map_sys_modules(module: Any) -> None:
 
 def _reexport_public(module: Any) -> None:
     """Re-export non-dunder names from the implementation into this module.
-    
+
     Special handling for create_app: never overwrite with an unsafe version.
     """
     try:

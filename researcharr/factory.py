@@ -51,6 +51,53 @@ def _fallback_create_app():  # type: ignore
         pass
     # ALWAYS return a minimal Flask app as fallback - NEVER return None.
     # Tests expect create_app() to return a Flask-like object with test_client().
+def _fallback_create_app():  # type: ignore
+    """Safe fallback create_app that NEVER returns None.
+
+    If the real create_app raises an exception, re-raise it instead of
+    falling back silently. The fallback is ONLY used when the implementation
+    module cannot be imported.
+    """
+    mod = _import_impl()
+    if mod is None:
+        # Module import failed - return fallback
+        try:
+            from flask import Flask
+
+            return Flask("factory_fallback")
+        except Exception:
+            raise ImportError(
+                "Flask import failed; cannot create fallback app. "
+                "Ensure Flask is installed: pip install flask"
+            )
+
+    # Module imported successfully - ensure delegate is set up
+    try:
+        _ensure_delegate(mod)
+    except Exception:  # best-effort
+        pass
+
+    # Get create_app from the module
+    fn = getattr(mod, "create_app", None)
+    if not callable(fn):
+        # No callable create_app - return fallback
+        try:
+            from flask import Flask
+
+            return Flask("factory_fallback")
+        except Exception:
+            raise ImportError(
+                "Flask import failed; cannot create fallback app. "
+                "Ensure Flask is installed: pip install flask"
+            )
+
+    # Call the real create_app - DO NOT catch exceptions here
+    # If create_app fails, the exception should propagate to the caller
+    result = fn()
+    if result is not None:
+        return result
+
+    # create_app returned None - return fallback
     try:
         from flask import Flask
 

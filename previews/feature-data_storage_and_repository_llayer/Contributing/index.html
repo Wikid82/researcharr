@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="researcharr contributors" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Contributing to researcharr - researcharr</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/css/researcharr.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Contributing to researcharr";
+        var mkdocs_page_input_path = "Contributing.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> researcharr
+        </a>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">researcharr documentation — Day One</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../API/">ResearchArr API (v1)</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Backup-and-Recovery/">Backup and Recovery Procedures</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CI-and-Development/">CI and Development</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CLI-Usage/">CLI Usage Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CONFIGURATION/">Configuration Reference</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Changelog/">Changelog</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Contributing to researcharr</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#branching-workflow">Branching Workflow</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#getting-started">Getting Started</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#development-environment">Development Environment</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#running-tests">Running Tests</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#ci-and-docker-notes">CI and Docker notes</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#formatting-pre-commit-checklist">Formatting &amp; pre-commit checklist</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#submitting-changes">Submitting Changes</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#code-review">Code Review</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#project-roadmap-goals">Project Roadmap &amp; Goals</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#questions-or-help">Questions or Help?</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-CI-Local-Differences/">Coverage Differences: CI vs Local</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Example-Comparison/">Coverage Gutters Example Structure</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Quick-Reference/">Coverage Gutters - Quick Reference Card</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Quick-Start/">Coverage Gutters - Visual Quick Start Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Setup/">Coverage Gutters Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEV/">DEV</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Deployment-and-Resources/">Deployment and Resource Recommendations</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Environment-Variables/">Environment variables</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../FAQ/">FAQ</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Getting-Started/">Getting Started</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Health-and-Metrics/">Health and Metrics Endpoints</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Integrations/">Integrations</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Logs/">Logs and Live Streaming</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Packaging-and-Distribution/">Packaging and Distribution</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Plugins/">Plugins and instance configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Recent-Changes/">Recent Changes</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Renovate-Configuration/">Renovate Bot Configuration Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Roadmap/">Roadmap</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../SERVICES_ARCHITECTURE/">Services Architecture</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Status-and-Warnings/">System status warnings and how to fix them</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Versioning/">Versioning &amp; Releases</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">researcharr</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Contributing to researcharr</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="contributing-to-researcharr">Contributing to researcharr</h1>
+<p>Thank you for your interest in contributing! This project welcomes new contributors. Please read the guidelines below to get started.</p>
+<h2 id="branching-workflow">Branching Workflow</h2>
+<ul>
+<li>The <code>main</code> branch is always stable and production-ready.</li>
+<li>The <code>development</code> branch is for active development and integration.</li>
+<li>All new features and fixes should be developed in feature branches off of <code>development</code>.</li>
+</ul>
+<p><strong>Typical workflow:</strong></p>
+<ol>
+<li>Make sure you have the latest code:
+  <code>bash
+  git checkout main
+  git pull origin main
+  git checkout development
+  git pull origin development</code></li>
+<li>Create a feature branch:
+  <code>bash
+  git checkout -b feature/your-feature
+  # ...work, commit, push...
+  git push -u origin feature/your-feature</code></li>
+<li>Open a pull request (PR) to merge your feature branch into <code>development</code> (the main integration branch). Small bugfixes or docs-only changes may be opened directly against <code>development</code>.</li>
+<li>When <code>development</code> is stable and tested, it will be merged into <code>main</code> for releases.</li>
+</ol>
+<h2 id="getting-started">Getting Started</h2>
+<ul>
+<li>Fork the repository and clone your fork.</li>
+<li>Create a new branch for your feature or bugfix.</li>
+<li>Install dependencies with <code>pip install -r requirements.txt</code> (or use Docker for a containerized dev environment). We recommend using a virtualenv as described below.</li>
+</ul>
+<h2 id="development-environment">Development Environment</h2>
+<ul>
+<li>Python 3.8+ is required.</li>
+<li>Use a virtual environment (<code>python -m venv .venv &amp;&amp; source .venv/bin/activate</code>).</li>
+<li>All dependencies are listed in <code>requirements.txt</code>.</li>
+</ul>
+<h2 id="running-tests">Running Tests</h2>
+<ul>
+<li>All code changes should be covered by tests.</li>
+<li>Run the full test suite with:
+  <code>bash
+  python -m pytest tests/ -v</code></li>
+<li>Tests cover config loading, error handling, database integrity, and web UI endpoints.</li>
+</ul>
+<p>Before opening a PR, run the auto-fixers and pre-commit hooks (see Formatting &amp; pre-commit checklist).</p>
+<h2 id="ci-and-docker-notes">CI and Docker notes</h2>
+<p>The project runs CI (lint, type checks, and tests) automatically on every push and every pull request via <code>.github/workflows/ci.yml</code>. CI uses pip caching to speed up installs. Please run tests and formatters locally before opening PRs.</p>
+<p>Docker images are built for all branches and published to GitHub Container Registry, tagged by branch name (e.g. <code>ghcr.io/wikid82/researcharr:feature-xyz</code>). If you want to avoid images from forks or PRs, open an issue or ping a maintainer — we can restrict publishes to <code>push</code> events on the main repository only.</p>
+<h3 id="formatting-pre-commit-checklist">Formatting &amp; pre-commit checklist</h3>
+<p>Run the auto-fixers locally to match CI checks before committing:</p>
+<pre><code class="language-bash">isort --profile=black .
+black .
+</code></pre>
+<p>Install and use pre-commit to catch issues early:</p>
+<pre><code class="language-bash">pip install pre-commit
+pre-commit install
+pre-commit run --all-files
+</code></pre>
+<p>Suggested commit message style:</p>
+<ul>
+<li>Use imperative, present-tense style: "Add feature X", "Fix bug Y".</li>
+<li>Reference related issues when relevant: "Fixes #123".</li>
+</ul>
+<h2 id="submitting-changes">Submitting Changes</h2>
+<ul>
+<li>Push your branch to your fork and open a pull request (PR) against the <code>development</code> branch.</li>
+<li>Describe your changes and reference any related issues.</li>
+<li>Ensure all tests pass and formatters are run before requesting review.</li>
+</ul>
+<h2 id="code-review">Code Review</h2>
+<ul>
+<li>PRs are reviewed for correctness, clarity, and test coverage.</li>
+<li>Address any requested changes promptly.</li>
+<li>Squash commits if requested.</li>
+</ul>
+<h2 id="project-roadmap-goals">Project Roadmap &amp; Goals</h2>
+<ul>
+<li>See the <a href="../Roadmap/">Roadmap</a> in this <code>docs/</code> folder for project direction and priorities.</li>
+</ul>
+<h2 id="questions-or-help">Questions or Help?</h2>
+<ul>
+<li>Check the documentation in this <code>docs/</code> folder (for example <code>Getting-Started.md</code>) or read the <code>FAQ.md</code> for common questions. If that doesn't help, open an issue on GitHub.</li>
+<li>For major changes, open a discussion or issue first to get feedback.</li>
+</ul>
+<hr />
+<p>Happy coding!</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../Changelog/" class="btn btn-neutral float-left" title="Changelog"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../Coverage-CI-Local-Differences/" class="btn btn-neutral float-right" title="Coverage Differences: CI vs Local">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="None" class="fa fa-code-fork" style="color: #fcfcfc"> Wikid82/researcharr</a>
+        </span>
+    
+    
+      <span><a href="../Changelog/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../Coverage-CI-Local-Differences/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

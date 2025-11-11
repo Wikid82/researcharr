@@ -29,10 +29,55 @@ from flask import (
 )
 
 # Re-export select helpers for tests that patch attributes on module objects.
-__all__ = ["check_password_hash"]
+__all__ = ["check_password_hash", "_RuntimeConfig"]
 from werkzeug.utils import secure_filename
 
 from researcharr.backups import create_backup_file, prune_backups
+
+
+class _RuntimeConfig:
+    """Singleton to hold runtime configuration checks that need to be patchable in tests.
+    
+    Tests can override these methods to control runtime behavior without dealing with
+    module identity issues across Python versions.
+    """
+    _running_in_image_override = None
+    _webui_override = None
+    
+    @classmethod
+    def running_in_image(cls) -> bool:
+        """Check if running in a container/image environment.
+        
+        Tests can patch this via: _RuntimeConfig._running_in_image_override = lambda: False
+        """
+        if cls._running_in_image_override is not None:
+            return cls._running_in_image_override()
+        return _default_running_in_image_check()
+    
+    @classmethod
+    def get_webui(cls):
+        """Get the webui module, with override support for tests.
+        
+        Tests can patch this via: _RuntimeConfig._webui_override = MockWebUI()
+        """
+        if cls._webui_override is not None:
+            return cls._webui_override
+        return None  # Will fall through to _get_webui() logic
+
+
+def _default_running_in_image_check() -> bool:
+    """Default implementation of container detection."""
+    try:
+        if os.path.exists("/.dockerenv"):
+            return True
+        if os.getenv("KUBERNETES_SERVICE_HOST"):
+            return True
+        if os.getenv("CONTAINER") or os.getenv("IN_CONTAINER"):
+            return True
+    except Exception:
+        pass
+    return False
+
 
 # Provide a lightweight, patch-friendly webui sentinel early so tests that
 # perform `patch('researcharr.factory.webui.save_user_config')` before
@@ -149,6 +194,15 @@ def save_user_config(cfg, path=None):
     except Exception:
         # Don't escalate IO errors during tests
         return None
+
+
+# Provide a module-level `_running_in_image` function so tests can
+# monkeypatch it reliably on the module object. The create_app() closure
+# will prefer a module-level override when present; having a default
+# implementation here also provides sensible behavior outside of tests.
+def _running_in_image() -> bool:
+    """Check if running in container. Delegates to RuntimeConfig for test override support."""
+    return _RuntimeConfig.running_in_image()
 
 
 def load_pipeline_from_config(
@@ -545,24 +599,31 @@ def create_app() -> Flask:
         _webui = None
 
     def _get_webui():
+        # Check for test override first
+        override = _RuntimeConfig.get_webui()
+        if override is not None:
+            return override
+            
         try:
             import sys as _sys2
 
             _cand = _sys2.modules.get("webui")
-            if (
-                _cand is not None
-                and hasattr(_cand, "load_user_config")
-                and hasattr(_cand, "save_user_config")
+            # Accept modules that provide either both functions or at
+            # least a save_user_config for write-only flows (e.g. setup).
+            if _cand is not None and (
+                hasattr(_cand, "save_user_config") or (
+                    hasattr(_cand, "load_user_config") and hasattr(_cand, "save_user_config")
+                )
             ):
                 return _cand
         except Exception:
             pass
         try:
             _cand = globals().get("webui")
-            if (
-                _cand is not None
-                and hasattr(_cand, "load_user_config")
-                and hasattr(_cand, "save_user_config")
+            if _cand is not None and (
+                hasattr(_cand, "save_user_config") or (
+                    hasattr(_cand, "load_user_config") and hasattr(_cand, "save_user_config")
+                )
             ):
                 return _cand
         except Exception:
@@ -879,6 +940,7 @@ def create_app() -> Flask:
                         _get_webui().save_user_config(username, phash, api_key=generated_api)
                     else:
                         _get_webui().save_user_config(username, phash, api_key=api_key)
+                    # Set flag only after successful save (no exception raised)
                     app.config["USER_CONFIG_EXISTS"] = True
                     # If we generated an API token, show it once on a success
                     # page so the operator can copy it. Otherwise redirect to
@@ -2748,61 +2810,9 @@ def create_app() -> Flask:
     # Determine runtime-in-image state. Resolve any module-level override
     # dynamically at call-time so tests can monkeypatch `researcharr.factory`'s
     # `_running_in_image` after the app has been created.
-    def _local_running_in_image_heuristic() -> bool:
-        try:
-            if os.path.exists("/.dockerenv"):
-                return True
-            if os.getenv("KUBERNETES_SERVICE_HOST"):
-                return True
-            if os.getenv("CONTAINER") or os.getenv("IN_CONTAINER"):
-                return True
-        except Exception:
-            pass
-        return False
-
     def _running_in_image() -> bool:
-        # Prefer an explicit module-level override if present. Check common
-        # module keys and also the current module/spec names to support
-        # different import layouts and factory shims in tests/containers.
-        try:
-            import sys as _sys
-
-            keys = ["researcharr.factory", "factory"]
-            try:
-                if __name__ not in keys:
-                    keys.append(__name__)
-            except Exception:
-                pass
-            try:
-                _spec = globals().get("__spec__")
-                _spec_name = getattr(_spec, "name", None)
-                if _spec_name and _spec_name not in keys:
-                    keys.append(_spec_name)
-            except Exception:
-                pass
-
-            for _key in keys:
-                try:
-                    _mod = _sys.modules.get(_key)
-                    if _mod is None:
-                        continue
-                    _fn = getattr(_mod, "_running_in_image", None)
-                    if _fn is None:
-                        continue
-                    # Avoid calling into this closure recursively.
-                    if _fn is _running_in_image:
-                        continue
-                    if callable(_fn):
-                        try:
-                            return bool(_fn())
-                        except Exception:
-                            # ignore override errors and fall back
-                            pass
-                except Exception:
-                    continue
-        except Exception:
-            pass
-        return _local_running_in_image_heuristic()
+        # Use the RuntimeConfig singleton which handles test overrides consistently
+        return _RuntimeConfig.running_in_image()
 
     # Caching and backoff for update checks
     def _updates_cache_path():
@@ -3032,23 +3042,40 @@ def create_app() -> Flask:
         asset_url = data.get("asset_url")
 
         # Disallow upgrades when running in an image-managed runtime first,
-        # regardless of URL validity. This matches expected behavior in tests.
-        # Re-resolve override at call-time again (tests may patch after app creation)
+        # regardless of URL validity. Honor RuntimeConfig override with highest priority,
+        # then any module-level override, then the default detector. Always evaluate at
+        # request time to respect patches applied after app creation.
+        effective_in_image = None
         try:
-            import sys as _sys
+            # 1) RuntimeConfig override has highest precedence
+            if getattr(_RuntimeConfig, "_running_in_image_override", None) is not None:
+                try:
+                    effective_in_image = bool(_RuntimeConfig._running_in_image_override())
+                except Exception:
+                    effective_in_image = None
+            # 2) Next, honor a module-level override if present and distinct
+            if effective_in_image is None:
+                try:
+                    import sys as _sys
 
-            _mod = _sys.modules.get("researcharr.factory") or _sys.modules.get("factory")
-            if _mod is not None:
-                _override = getattr(_mod, "_running_in_image", None)
-                if callable(_override) and _override is not _running_in_image:
-                    try:
-                        if bool(_override()):
-                            return jsonify({"error": "in_image_runtime"}), 400
-                    except Exception:
-                        pass
+                    _mod = _sys.modules.get("researcharr.factory") or _sys.modules.get("factory")
+                    if _mod is not None:
+                        _override = getattr(_mod, "_running_in_image", None)
+                        if callable(_override) and _override is not _running_in_image:
+                            try:
+                                effective_in_image = bool(_override())
+                            except Exception:
+                                effective_in_image = None
+                except Exception:
+                    effective_in_image = None
+            # 3) Fallback to default detector
+            if effective_in_image is None:
+                effective_in_image = bool(_running_in_image())
         except Exception:
-            pass
-        if _running_in_image():
+            # If anything goes wrong determining the runtime, be conservative
+            effective_in_image = True
+
+        if effective_in_image:
             return jsonify({"error": "in_image_runtime"}), 400
 
         # Then validate the asset URL for non-image runtimes

@@ -71,7 +71,7 @@ def get(key: str) -> Any:
             _ensure_prometheus()
             c = _PROM_COUNTERS.get("misses")
             try:
-                c and c.inc()
+                c and c.inc()  # type: ignore[reportUnusedExpression]
             except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
             return None
@@ -95,7 +95,7 @@ def get(key: str) -> Any:
         _ensure_prometheus()
         c = _PROM_COUNTERS.get("hits")
         try:
-            c and c.inc()
+            c and c.inc()  # type: ignore[reportUnusedExpression]
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
         return value
@@ -111,7 +111,7 @@ def set(key: str, value: Any, ttl: int) -> None:
         _ensure_prometheus()
         c = _PROM_COUNTERS.get("sets")
         try:
-            c and c.inc()
+            c and c.inc()  # type: ignore[reportUnusedExpression]
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
 
@@ -126,7 +126,7 @@ def invalidate(prefix: str) -> None:
                 _ensure_prometheus()
                 c = _PROM_COUNTERS.get("evictions")
                 try:
-                    c and c.inc()
+                    c and c.inc()  # type: ignore[reportUnusedExpression]
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
 
@@ -138,7 +138,7 @@ def clear_all() -> None:
         _ensure_prometheus()
         c = _PROM_COUNTERS.get("evictions")
         try:
-            c and c.inc()
+            c and c.inc()  # type: ignore[reportUnusedExpression]
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
 

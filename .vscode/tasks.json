@@ -183,22 +183,14 @@
                 "panel": "new"
             },
             "problemMatcher": [],
-            "detail": "Run a subset of tests (prompt for paths) under Python 3.10 via docker.",
-            "inputs": [
-                {
-                    "id": "TEST_FILES",
-                    "type": "promptString",
-                    "description": "Test file(s) or pattern (e.g. tests/test_factory_shim_new.py)",
-                    "default": "tests/test_factory_shim_new.py"
-                }
-            ]
+            "detail": "Run a subset of tests (prompt for paths) under Python 3.10 via docker."
         },
         {
             "label": "CI: Multi-Version Test (Quick)",
             "type": "shell",
             "command": "./scripts/ci-multi-version.sh",
             "args": [
-                "--skip-build"
+                ""
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -263,7 +255,11 @@
         {
             "label": "Pre-commit + Coverage (Local)",
             "type": "shell",
-            "command": "pre-commit run --all-files && python -m pytest tests/ --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml",
+            "command": "bash",
+            "args": [
+                "-c",
+                "source ${workspaceFolder}/.venv/bin/activate && pre-commit run --all-files && python -m pytest tests/ --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml"
+            ],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -278,7 +274,11 @@
         {
             "label": "Pre-commit + Coverage (CI Mode)",
             "type": "shell",
-            "command": "pre-commit run --all-files && SITE_PACKAGES=$(python -c 'import sysconfig; print(sysconfig.get_paths()[\"purelib\"])') && export PYTHONPATH=\"$SITE_PACKAGES:$PYTHONPATH\" && python -m pytest tests/ --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml",
+            "command": "bash",
+            "args": [
+                "-c",
+                "source ${workspaceFolder}/.venv/bin/activate && pre-commit run --all-files && SITE_PACKAGES=$(python -c 'import sysconfig; print(sysconfig.get_paths()[\"purelib\"])') && export PYTHONPATH=\"$SITE_PACKAGES:$PYTHONPATH\" && python -m pytest tests/ --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml"
+            ],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -294,7 +294,11 @@
         {
             "label": "Pre-commit (CI Smoke)",
             "type": "shell",
-            "command": "pre-commit run --all-files && ./scripts/test-ci-smoke.sh",
+            "command": "bash",
+            "args": [
+                "-c",
+                "source ${workspaceFolder}/.venv/bin/activate && pre-commit run --all-files && ./scripts/test-ci-smoke.sh"
+            ],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -305,8 +309,88 @@
             },
             "problemMatcher": [],
             "detail": "Run pre-commit hooks then CI-mode smoke tests (fast, mimics CI import path)."
+        },
+        {
+            "label": "Ruff: Check",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "source ${workspaceFolder}/.venv/bin/activate && ruff check ."
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": [],
+            "detail": "Run ruff linter to check for issues."
+        },
+        {
+            "label": "Ruff: Format",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "source ${workspaceFolder}/.venv/bin/activate && ruff format ."
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": [],
+            "detail": "Run ruff formatter to auto-fix formatting issues."
+        },
+        {
+            "label": "Ruff: Check & Fix",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "source ${workspaceFolder}/.venv/bin/activate && ruff check --fix . && ruff format ."
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": [],
+            "detail": "Run ruff linter with auto-fix, then format code."
+        },
+        {
+            "label": "Basedpyright: Check",
+            "type": "shell",
+            "command": "./scripts/run-pyright-precommit.sh",
+            "args": [
+                "--project",
+                "basedpyrightconfig.json"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": [],
+            "detail": "Run basedpyright type checker (uses wrapper script to find based-pyright/pyright/npx)."
         }
 
 
+    ],
+    "inputs": [
+        {
+            "id": "TEST_FILES",
+            "type": "promptString",
+            "description": "Test file(s) or pattern (e.g. tests/test_factory_shim_new.py)",
+            "default": "tests/test_factory_shim_new.py"
+        }
     ]
 }

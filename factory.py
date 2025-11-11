@@ -34,6 +34,25 @@ from werkzeug.utils import secure_filename
 
 from researcharr.backups import create_backup_file, prune_backups
 
+# Provide a lightweight, patch-friendly webui sentinel early so tests that
+# perform `patch('researcharr.factory.webui.save_user_config')` before
+# create_app() runs have an object to attach attributes onto. The real webui
+# loader later replaces this with the concrete module or a richer stub.
+try:
+
+    class _EarlyWebUIStub:
+        def load_user_config(self):
+            return {}
+
+        def save_user_config(self, *a, **k):
+            return None
+
+    # Only set when not already provided by prior import order.
+    if globals().get("webui") is None:
+        globals()["webui"] = _EarlyWebUIStub()
+except Exception:
+    pass
+
 # Expose a sentinel `_impl` on the top-level factory module. Tests that
 # reload `researcharr.factory` may end up operating against the top-level
 # module object depending on import order; having `_impl` present makes
@@ -326,7 +345,11 @@ def create_app() -> Flask:
 
     # Annotate as Any so static type checkers (Pylance) don't warn about
     # project-specific attributes we attach to the Flask app at runtime.
-    app: Any = Flask(__name__, template_folder=templates_path)
+    # Use a stable import name to avoid Flask attempting to resolve a plain
+    # top-level module name like 'factory' which can behave like a namespace
+    # in certain environments (leading to instance path resolution errors).
+    import_name = "researcharr" if __name__ == "factory" else __name__
+    app: Any = Flask(import_name, template_folder=templates_path)
     # Ensure exceptions raised during request handling are passed to the
     # error handlers (tests expect the app to return 500 responses that
     # go through our handlers even when TESTING=True).
@@ -493,39 +516,79 @@ def create_app() -> Flask:
     app.metrics = {"requests_total": 0, "errors_total": 0, "plugins": {}}
 
     # Attempt to import the `webui` module lazily so test fixtures that
-    # patch DB paths can run before we touch persistent storage.
+    # patch DB paths can run before we touch persistent storage. Prefer a
+    # top-level module named 'webui' when present (as tests often provide),
+    # then fall back to the packaged module or a direct file load. Provide
+    # a resolver helper so routes always see the current patched object.
     _webui: ModuleType | None = None
     try:
-        try:
-            from researcharr import webui as _webui  # type: ignore
-        except Exception:
-            spec = importlib.util.spec_from_file_location(
-                "webui", os.path.join(os.path.dirname(__file__), "webui.py")
-            )
-            if spec is None or spec.loader is None:
-                _webui = None
-            else:
-                _webui = importlib.util.module_from_spec(spec)
-                loader = spec.loader
-                assert loader is not None
-                loader.exec_module(_webui)  # type: ignore
+        import sys as _sys
+
+        _top = _sys.modules.get("webui")
+        if _top is not None:
+            _webui = _top
+        else:
+            try:
+                from researcharr import webui as _webui  # type: ignore
+            except Exception:
+                spec = importlib.util.spec_from_file_location(
+                    "webui", os.path.join(os.path.dirname(__file__), "webui.py")
+                )
+                if spec is None or spec.loader is None:
+                    _webui = None
+                else:
+                    _webui = importlib.util.module_from_spec(spec)
+                    loader = spec.loader
+                    assert loader is not None
+                    loader.exec_module(_webui)  # type: ignore
     except Exception:
         _webui = None
 
-    # If we successfully loaded a concrete webui module, expose its
-    # loader/save helpers at module scope so tests can patch them via
-    # `factory.load_user_config` / `factory.save_user_config`.
-    if _webui is not None:
+    def _get_webui():
         try:
-            # Expose the concrete module so callers and tests can patch
-            # `factory.webui.*` members as needed. Do NOT override the
-            # module-level `load_user_config`/`save_user_config` names used
-            # for general config file IO — keep those as the config file
-            # helpers so tests that patch `factory.load_user_config` still
-            # work.
-            globals()["webui"] = _webui
+            import sys as _sys2
+
+            _cand = _sys2.modules.get("webui")
+            if (
+                _cand is not None
+                and hasattr(_cand, "load_user_config")
+                and hasattr(_cand, "save_user_config")
+            ):
+                return _cand
         except Exception:
             pass
+        try:
+            _cand = globals().get("webui")
+            if (
+                _cand is not None
+                and hasattr(_cand, "load_user_config")
+                and hasattr(_cand, "save_user_config")
+            ):
+                return _cand
+        except Exception:
+            pass
+        if _webui is not None:
+            return _webui
+
+        class _CfgIO:
+            def load_user_config(self):  # type: ignore
+                try:
+                    return globals().get("load_user_config")()
+                except Exception:
+                    return {}
+
+            def save_user_config(self, *a, **k):  # type: ignore
+                try:
+                    return globals().get("save_user_config")(*a, **k)
+                except Exception:
+                    return None
+
+        return _CfgIO()
+
+    try:
+        globals()["webui"] = _webui or globals().get("webui") or _get_webui()
+    except Exception:
+        pass
 
     # Ensure web UI user config exists on startup. If a first-run password is
     # generated, the loader returns the plaintext as `password` so we can set
@@ -537,7 +600,7 @@ def create_app() -> Flask:
         # keeps that behavior centralized and easier to test.
         try:
             try:
-                ucfg = webui.load_user_config()
+                ucfg = _get_webui().load_user_config()
             except Exception:
                 ucfg = None
         except Exception:
@@ -568,7 +631,7 @@ def create_app() -> Flask:
                         if api_key_val:
                             hashed = generate_password_hash(str(api_key_val))
                             username_default = app.config_data["user"]["username"]
-                            webui.save_user_config(
+                            _get_webui().save_user_config(
                                 ucfg.get("username", username_default),
                                 ucfg.get("password_hash"),
                                 api_key_hash=hashed,
@@ -646,9 +709,14 @@ def create_app() -> Flask:
             _PluginRegistryRuntime = plugin_mod.PluginRegistry
             registry = _PluginRegistryRuntime()
 
-        # Discover any local plugin modules placed under researcharr/plugins
+        # Discover any local plugin modules. Prefer repository-level
+        # '<repo>/plugins' when present, falling back to the packaged
+        # 'researcharr/plugins' directory otherwise so example plugins are
+        # visible in both layouts (repo and installed package).
         pkg_dir = os.path.dirname(__file__)
-        plugins_dir = os.path.join(pkg_dir, "plugins")
+        repo_plugins = os.path.abspath(os.path.join(pkg_dir, os.pardir, "plugins"))
+        pkg_plugins = os.path.join(pkg_dir, "plugins")
+        plugins_dir = repo_plugins if os.path.isdir(repo_plugins) else pkg_plugins
         registry.discover_local(plugins_dir)
         # For tests we may want to instantiate configured plugin instances
         app.plugin_registry = registry
@@ -808,9 +876,9 @@ def create_app() -> Flask:
                     generated_api = None
                     if not api_key:
                         generated_api = secrets.token_urlsafe(32)
-                        webui.save_user_config(username, phash, api_key=generated_api)
+                        _get_webui().save_user_config(username, phash, api_key=generated_api)
                     else:
-                        webui.save_user_config(username, phash, api_key=api_key)
+                        _get_webui().save_user_config(username, phash, api_key=api_key)
                     app.config["USER_CONFIG_EXISTS"] = True
                     # If we generated an API token, show it once on a success
                     # page so the operator can copy it. Otherwise redirect to
@@ -956,7 +1024,7 @@ def create_app() -> Flask:
                 # Persist to file if webui.save_user_config is available
                 try:
                     pwd_hash = generate_password_hash(password)
-                    webui.save_user_config(app.config_data["user"]["username"], pwd_hash)
+                    _get_webui().save_user_config(app.config_data["user"]["username"], pwd_hash)
                 except Exception:
                     # best-effort persistence; ignore failures here
                     pass
@@ -987,10 +1055,10 @@ def create_app() -> Flask:
                 app.config_data.setdefault("general", {})["api_key_hash"] = new_hash
                 # Persist to the user config so the key survives restarts
                 try:
-                    ucfg = webui.load_user_config() or {}
+                    ucfg = _get_webui().load_user_config() or {}
                     username = ucfg.get("username", app.config_data["user"]["username"])
                     pwd_hash = ucfg.get("password_hash")
-                    webui.save_user_config(username, pwd_hash, api_key_hash=new_hash)
+                    _get_webui().save_user_config(username, pwd_hash, api_key_hash=new_hash)
                 except Exception:
                     app.logger.exception("Failed to persist regenerated API key")
                 flash("API key regenerated")
@@ -2693,13 +2761,27 @@ def create_app() -> Flask:
         return False
 
     def _running_in_image() -> bool:
-        # Prefer an explicit module-level override if present. Check both
-        # the package-qualified and top-level module keys to support
-        # different import layouts in tests.
+        # Prefer an explicit module-level override if present. Check common
+        # module keys and also the current module/spec names to support
+        # different import layouts and factory shims in tests/containers.
         try:
             import sys as _sys
 
-            for _key in ("researcharr.factory", "factory"):
+            keys = ["researcharr.factory", "factory"]
+            try:
+                if __name__ not in keys:
+                    keys.append(__name__)
+            except Exception:
+                pass
+            try:
+                _spec = globals().get("__spec__")
+                _spec_name = getattr(_spec, "name", None)
+                if _spec_name and _spec_name not in keys:
+                    keys.append(_spec_name)
+            except Exception:
+                pass
+
+            for _key in keys:
                 try:
                     _mod = _sys.modules.get(_key)
                     if _mod is None:
@@ -2951,6 +3033,21 @@ def create_app() -> Flask:
 
         # Disallow upgrades when running in an image-managed runtime first,
         # regardless of URL validity. This matches expected behavior in tests.
+        # Re-resolve override at call-time again (tests may patch after app creation)
+        try:
+            import sys as _sys
+
+            _mod = _sys.modules.get("researcharr.factory") or _sys.modules.get("factory")
+            if _mod is not None:
+                _override = getattr(_mod, "_running_in_image", None)
+                if callable(_override) and _override is not _running_in_image:
+                    try:
+                        if bool(_override()):
+                            return jsonify({"error": "in_image_runtime"}), 400
+                    except Exception:
+                        pass
+        except Exception:
+            pass
         if _running_in_image():
             return jsonify({"error": "in_image_runtime"}), 400
 

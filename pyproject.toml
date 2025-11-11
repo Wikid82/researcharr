@@ -1,5 +1,5 @@
 [tool.pytest.ini_options]
-minversion = "7.0"
+version = "9.0.0"
 # TEMP: lower coverage gate to allow CI to pass while we stabilize the consolidated tests.
 # Raise this back to 85 (or higher) once the suite is green and expanded.
 # Enable pytest-xdist for parallel execution with process isolation to prevent
@@ -351,6 +351,13 @@ ignore = [
 "plugins/**/*.py" = [
     "PLC0415",  # lazy imports for requests/apprise
     "B007",     # unused loop var acceptable
+    "T201",     # allow debug prints guarded by RESEARCHARR_DEBUG_REGISTRY_SHIM
+]
+
+# Packaged plugins shim: lazy imports and debug prints
+"researcharr/plugins/**/*.py" = [
+    "PLC0415",  # lazy imports in fallback implementation
+    "T201",     # allow debug prints guarded by RESEARCHARR_DEBUG_REGISTRY_SHIM
 ]
 
 # Scripts are CLI utilities; relax print bans and similar

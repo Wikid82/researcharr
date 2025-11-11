@@ -8,7 +8,16 @@ set -euo pipefail
 DEFAULT_VERSIONS="3.10 3.11 3.12 3.13 3.14"
 SKIP_BUILD=false
 VERSIONS="${DEFAULT_VERSIONS}"
-TEST_FILE="tests/run/test_run.py"
+# By default, run the FULL test suite. Override with --smoke or --test-target
+TEST_TARGET="tests"
+# Additional pytest options (space-separated). Override with --pytest-opts "..."
+PYTEST_OPTS="-q"
+# Stop after N failures (default 1). Use 0 to disable.
+MAXFAIL=0
+# Console output filtering for this script: summary|errors|full
+LOG_LEVEL="summary"
+# Optional pytest CLI log level (e.g., DEBUG, INFO, WARNING, ERROR)
+PYTEST_LOG_LEVEL=""
 IMAGE_PREFIX="researcharr:py"
 IMAGE_SUFFIX="-debug"
 
@@ -30,6 +39,31 @@ while [[ $# -gt 0 ]]; do
             VERSIONS="$2"
             shift 2
             ;;
+        --test-target)
+            TEST_TARGET="$2"
+            shift 2
+            ;;
+        --smoke)
+            # Quick smoke: limit to the lightweight run test file
+            TEST_TARGET="tests/run/test_run.py"
+            shift
+            ;;
+        --pytest-opts)
+            PYTEST_OPTS="$2"
+            shift 2
+            ;;
+        --maxfail)
+            MAXFAIL="$2"
+            shift 2
+            ;;
+        --log-level)
+            LOG_LEVEL="$2"
+            shift 2
+            ;;
+        --pytest-log-level)
+            PYTEST_LOG_LEVEL="$2"
+            shift 2
+            ;;
         --help|-h)
             cat <<EOF
 Local multi-version CI for researcharr
@@ -39,6 +73,11 @@ Usage: $0 [OPTIONS]
 Options:
     --skip-build           Skip building Docker images, only run tests
     --versions "X.Y ..."   Space-separated Python versions to test (default: ${DEFAULT_VERSIONS})
+    --test-target PATH     Path passed to pytest (default: tests)
+    --pytest-opts "OPTS"   Extra pytest options (quoted; appended before test target)
+    --maxfail N            Stop after N failures (default: 1). Use 0 to disable.
+    --log-level LEVEL      Script output filtering: summary (default), errors, full
+    --pytest-log-level L   Forward to pytest as --log-cli-level (enables log-cli)
     --help, -h             Show this help message
 
 Examples:
@@ -70,6 +109,13 @@ echo -e "${BLUE}=====================================${NC}"
 echo ""
 echo "Testing Python versions: ${VERSIONS}"
 echo "Skip build: ${SKIP_BUILD}"
+echo "Test target: ${TEST_TARGET}"
+echo "Pytest opts: ${PYTEST_OPTS}"
+echo "Maxfail: ${MAXFAIL}"
+echo "Log level: ${LOG_LEVEL}"
+if [[ -n "${PYTEST_LOG_LEVEL}" ]]; then
+    echo "Pytest log level: ${PYTEST_LOG_LEVEL}"
+fi
 echo ""
 
 # Track results
@@ -86,15 +132,7 @@ if [[ "${SKIP_BUILD}" == "false" ]]; then
         version_short=$(echo "${version}" | tr -d '.')
         image_name="${IMAGE_PREFIX}${version_short}${IMAGE_SUFFIX}"
 
-        # Check if image already exists
-        if docker image inspect "${image_name}" > /dev/null 2>&1; then
-            echo -e "${GREEN}✓ Image exists: ${image_name} (skipping build)${NC}"
-            BUILD_RESULTS["${version}"]="exists"
-            echo ""
-            continue
-        fi
-
-        echo -e "${YELLOW}Building ${image_name}...${NC}"
+        echo -e "${YELLOW}Building ${image_name} (no cache skip) ...${NC}"
         if docker build \
             --target debug \
             --build-arg PY_VERSION="${version}" \
@@ -143,22 +181,62 @@ for version in ${VERSIONS}; do
     fi
 
     # Run pytest in container
-    if docker run \
-        --rm -t \
-        --entrypoint pytest \
-        -w /app \
-        "${image_name}" \
-        -q "${TEST_FILE}" \
-        --maxfail=1 \
-        --disable-warnings \
-        2>&1 | tee "/tmp/researcharr-test-${version_short}.log" | grep -E "passed|failed|ERROR"; then
-        echo -e "${GREEN}✓ Tests passed: Python ${version}${NC}"
-        TEST_RESULTS["${version}"]="success"
+    # Build maxfail flag (omit when 0)
+    MF_FLAG=()
+    if [[ "${MAXFAIL}" != "0" ]]; then
+        MF_FLAG=("--maxfail=${MAXFAIL}")
+    fi
+
+    # Optional pytest CLI logging flags
+    PYTEST_LOG_FLAGS=()
+    if [[ -n "${PYTEST_LOG_LEVEL}" ]]; then
+        PYTEST_LOG_FLAGS=("--log-cli-level" "${PYTEST_LOG_LEVEL}" "-o" "log_cli=true")
+    fi
+
+    # Choose console filtering based on LOG_LEVEL
+    if [[ "${LOG_LEVEL}" == "full" ]]; then
+        if docker run \
+            --rm -t \
+            --entrypoint pytest \
+            -w /app \
+            "${image_name}" \
+            ${PYTEST_OPTS} "${TEST_TARGET}" \
+            "${PYTEST_LOG_FLAGS[@]}" \
+            "${MF_FLAG[@]}" \
+            --disable-warnings \
+            2>&1 | tee "/tmp/researcharr-test-${version_short}.log"; then
+            echo -e "${GREEN}✓ Tests passed: Python ${version}${NC}"
+            TEST_RESULTS["${version}"]="success"
+        else
+            echo -e "${RED}✗ Tests failed: Python ${version}${NC}"
+            echo "  Check /tmp/researcharr-test-${version_short}.log for details"
+            TEST_RESULTS["${version}"]="failed"
+            FAILED_VERSIONS+=("${version}")
+        fi
     else
-        echo -e "${RED}✗ Tests failed: Python ${version}${NC}"
-        echo "  Check /tmp/researcharr-test-${version_short}.log for details"
-        TEST_RESULTS["${version}"]="failed"
-        FAILED_VERSIONS+=("${version}")
+        # summary/errors modes use grep to reduce console noise
+        PATTERN="passed|failed|ERROR"
+        if [[ "${LOG_LEVEL}" == "errors" ]]; then
+            PATTERN="FAILED|ERROR|E\\s+"
+        fi
+        if docker run \
+            --rm -t \
+            --entrypoint pytest \
+            -w /app \
+            "${image_name}" \
+            ${PYTEST_OPTS} "${TEST_TARGET}" \
+            "${PYTEST_LOG_FLAGS[@]}" \
+            "${MF_FLAG[@]}" \
+            --disable-warnings \
+            2>&1 | tee "/tmp/researcharr-test-${version_short}.log" | grep -E "${PATTERN}"; then
+            echo -e "${GREEN}✓ Tests passed: Python ${version}${NC}"
+            TEST_RESULTS["${version}"]="success"
+        else
+            echo -e "${RED}✗ Tests failed: Python ${version}${NC}"
+            echo "  Check /tmp/researcharr-test-${version_short}.log for details"
+            TEST_RESULTS["${version}"]="failed"
+            FAILED_VERSIONS+=("${version}")
+        fi
     fi
     echo ""
 done

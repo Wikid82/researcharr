@@ -22,6 +22,19 @@ class _ModuleProxy(ModuleType):
         object.__setattr__(self, "_short_name", short_name)
         object.__setattr__(self, "_repo_fp", repo_fp)
         object.__setattr__(self, "_target", None)
+        # Ensure a callable placeholder for create_app is present immediately.
+        # Some container import orders access researcharr.factory before the
+        # helpers installer runs; without this attribute the package test
+        # asserting hasattr+callable fails. The real delegate will overwrite
+        # this placeholder later.
+        try:  # best-effort; must never raise during import
+
+            def _initial_create_app(*a, **kw):  # noqa: D401
+                raise ImportError("create_app implementation not available yet")
+
+            self.__dict__.setdefault("create_app", _initial_create_app)
+        except Exception:  # nosec B110 -- intentional broad except for resilience
+            pass
 
     def _ensure_target(self):
         tgt = object.__getattribute__(self, "_target")

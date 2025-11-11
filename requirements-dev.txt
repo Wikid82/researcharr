@@ -3,7 +3,7 @@ isort==7.0.0
 ruff==0.14.4
 bandit==1.8.1
 pre-commit
-pytest==8.4.2
+pytest==9.0.0
 pytest-cov
 types-requests
 types-PyYAML

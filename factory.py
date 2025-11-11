@@ -43,7 +43,7 @@ class _RuntimeConfig:
     """
     _running_in_image_override = None
     _webui_override = None
-    
+
     @classmethod
     def running_in_image(cls) -> bool:
         """Check if running in a container/image environment.
@@ -53,7 +53,7 @@ class _RuntimeConfig:
         if cls._running_in_image_override is not None:
             return cls._running_in_image_override()
         return _default_running_in_image_check()
-    
+
     @classmethod
     def get_webui(cls):
         """Get the webui module, with override support for tests.
@@ -603,7 +603,7 @@ def create_app() -> Flask:
         override = _RuntimeConfig.get_webui()
         if override is not None:
             return override
-            
+
         try:
             import sys as _sys2
 

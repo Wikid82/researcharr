@@ -36,7 +36,7 @@ def test_updates_upgrade_in_image_and_invalid_url(client, login, monkeypatch):
     # Use RuntimeConfig singleton for reliable patching across Python versions
     from factory import _RuntimeConfig
     monkeypatch.setattr(_RuntimeConfig, "_running_in_image_override", lambda: True)
-    
+
     login()
     rv = client.post("/api/updates/upgrade", json={"asset_url": "https://example.com/asset.zip"})
     assert rv.status_code == 400

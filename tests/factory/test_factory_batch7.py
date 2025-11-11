@@ -3,7 +3,7 @@ def test_setup_generates_api_and_persists(client, tmp_path, monkeypatch):
     cfg = tmp_path / "config"
     cfg.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("CONFIG_DIR", str(cfg))
-    
+
     # Use RuntimeConfig to inject webui stub reliably across Python versions
     from factory import _RuntimeConfig
 
@@ -11,12 +11,12 @@ def test_setup_generates_api_and_persists(client, tmp_path, monkeypatch):
         def save_user_config(self, *a, **k):
             # no-op persistence (success - no exception)
             return None
-        
+
         def load_user_config(self):
             return {}
 
     monkeypatch.setattr(_RuntimeConfig, "_webui_override", W())
-    
+
     # create app via client fixture already done; post to setup
     rv = client.post(
         "/setup", data={"username": "u", "password": "longpass", "confirm": "longpass"}

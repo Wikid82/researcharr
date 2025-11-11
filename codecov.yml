@@ -37,6 +37,7 @@ ignore:
   - "node_modules/**"
   - "alembic/versions/**"
   - "typings/**"
+  - ".tmp/**"
   - "**/*.pyi"
   - "**/conftest.py"
   - "**/__pycache__/**"

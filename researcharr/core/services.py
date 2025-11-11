@@ -1532,16 +1532,15 @@ def create_metrics_app() -> Flask:
         FlaskClass = app.__class__
         _orig_class_tc = getattr(FlaskClass, "test_client", None)
         if callable(_orig_class_tc) and not getattr(FlaskClass, "_ra_tc_wrapped", False):
+
             def _class_wrapped(self, *a, **kw):  # type: ignore[override]
-                try:
-                    base_client = _orig_class_tc(self, *a, **kw)
-                except Exception:  # nosec B110
-                    base_client = None
-                return _ClientWrapper(base_client)
+                # Delegate to the existing wrapper logic which preserves
+                # the original Flask behavior and applies our safeguards.
+                return _wrapped_test_client(self, *a, **kw)
 
             try:
-                setattr(FlaskClass, "test_client", _class_wrapped)
-                setattr(FlaskClass, "_ra_tc_wrapped", True)
+                FlaskClass.test_client = _class_wrapped
+                FlaskClass._ra_tc_wrapped = True
             except Exception:  # nosec B110
                 pass
     except Exception:  # nosec B110

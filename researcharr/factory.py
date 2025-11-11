@@ -51,6 +51,8 @@ def _fallback_create_app():  # type: ignore
         pass
     # ALWAYS return a minimal Flask app as fallback - NEVER return None.
     # Tests expect create_app() to return a Flask-like object with test_client().
+
+
 def _fallback_create_app():  # type: ignore
     """Safe fallback create_app that NEVER returns None.
 
@@ -111,10 +113,10 @@ def _fallback_create_app():  # type: ignore
         )
 
 
-# Always install the fallback, even if create_app exists in globals
-# This ensures we have a safe version that never returns None
-if "create_app" not in globals():
-    globals()["create_app"] = _fallback_create_app
+# Do NOT pre-bind a fallback create_app in globals. Tests expect the
+# shim to re-export the exact top-level function object when available.
+# Attribute access for missing names is handled via __getattr__ below
+# which will delegate to the implementation or provide a safe fallback.
 
 
 def _ensure_delegate(module: Any) -> None:
@@ -163,16 +165,24 @@ def _ensure_delegate(module: Any) -> None:
 
 
 def _map_sys_modules(module: Any) -> None:
-    """Map both import names to the same module object in sys.modules."""
+    """Map both import names to this shim module in sys.modules.
+
+    This ensures monkeypatching attributes like `_running_in_image` on either
+    `factory` or `researcharr.factory` affects this shim, while attribute access
+    still delegates to the real implementation via re-exports and __getattr__.
+    """
     try:
         import sys as _sys
 
+        current = _sys.modules.get(__name__)
+        if current is None:
+            current = module
         try:
-            _sys.modules["factory"] = module
+            _sys.modules["factory"] = current
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
         try:
-            _sys.modules["researcharr.factory"] = module
+            _sys.modules["researcharr.factory"] = current
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
     except Exception:  # nosec B110 -- intentional broad except for resilience
@@ -182,15 +192,19 @@ def _map_sys_modules(module: Any) -> None:
 def _reexport_public(module: Any) -> None:
     """Re-export non-dunder names from the implementation into this module.
 
-    Special handling for create_app: never overwrite with an unsafe version.
+    Special handling for create_app: when present and callable on the
+    implementation, export it directly so identity checks pass.
     """
     try:
         exports = {name: getattr(module, name) for name in dir(module) if not name.startswith("__")}
-        # Don't overwrite create_app with a potentially unsafe version
-        # Keep our safe fallback that never returns None
-        if "create_app" in exports:
-            del exports["create_app"]
         globals().update(exports)
+        # Ensure create_app points to the implementation when available
+        try:
+            impl_ca = getattr(module, "create_app", None)
+            if callable(impl_ca):
+                globals()["create_app"] = impl_ca
+        except Exception:  # nosec B110 -- best-effort only
+            pass
     except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
 
@@ -202,9 +216,10 @@ if _impl is not None:
     # intentionally hide internal attributes like _impl for isolation.
     _ensure_delegate(_impl)
     _map_sys_modules(_impl)
-    # Re-export only if the implementation actually exposes the attribute.
-    if hasattr(_impl, "__dict__") and "__spec__" in _impl.__dict__:
-        _reexport_public(_impl)
+    # Re-export the implementation's public names so tests can monkeypatch
+    # them directly on researcharr.factory. This includes backup helpers
+    # (create_backup_file, prune_backups) and create_app identity.
+    _reexport_public(_impl)
 
 
 # Module-level __getattr__ to heal create_app on late access. Tests that
@@ -214,8 +229,14 @@ if _impl is not None:
 # checks) triggers a re-check and re-install of the delegate if needed.
 def __getattr__(name: str):
     if name == "create_app":
-        # Always return the safe fallback wrapper, never None
-        # The fallback will attempt to use _impl.create_app if available
+        # Check if _impl has create_app first - this preserves test-injected functions
+        # Use globals() to get current _impl value as it may be updated after module load
+        current_impl = globals().get("_impl")
+        if current_impl is not None:
+            impl_create_app = getattr(current_impl, "create_app", None)
+            if callable(impl_create_app):
+                return impl_create_app
+        # Fallback to the safe wrapper if _impl doesn't have create_app
         fallback = globals().get("create_app", _fallback_create_app)
         return fallback
     # For other attributes, delegate to _impl or raise AttributeError.
@@ -234,6 +255,28 @@ def __getattr__(name: str):
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
 
-    if _impl is not None:
-        return getattr(_impl, name)
+    current_impl = globals().get("_impl")
+    if current_impl is not None:
+        return getattr(current_impl, name)
     raise AttributeError(f"module 'researcharr.factory' has no attribute '{name}'")
+
+# Provide a module-level _running_in_image that tests can monkeypatch directly.
+# Now delegates to the top-level factory's RuntimeConfig for consistent behavior.
+def _running_in_image() -> bool:  # type: ignore
+    try:
+        # Import and use the singleton from top-level factory
+        from factory import _RuntimeConfig
+        return _RuntimeConfig.running_in_image()
+    except Exception:
+        # Fallback for edge cases where top-level isn't available
+        try:
+            import os as _os
+            if _os.path.exists("/.dockerenv"):
+                return True
+            if _os.getenv("KUBERNETES_SERVICE_HOST"):
+                return True
+            if _os.getenv("CONTAINER") or _os.getenv("IN_CONTAINER"):
+                return True
+        except Exception:
+            pass
+        return False

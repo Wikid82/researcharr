@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# basedpyright: reportArgumentType=false
 """Command-line interface for ResearchArr backup and recovery operations.
 
 This CLI provides operators with scriptable access to backup, restore, and
@@ -25,8 +26,6 @@ import json
 import os
 import sys
 from datetime import datetime
-
-from researcharr.compat import UTC
 from pathlib import Path
 
 import yaml
@@ -40,6 +39,7 @@ from researcharr.backups import (
     restore_backup,
     validate_backup_file,
 )
+from researcharr.compat import UTC
 from researcharr.core.services import DatabaseService, MonitoringService
 from researcharr.monitoring import get_database_health_monitor
 from researcharr.storage.recovery import (

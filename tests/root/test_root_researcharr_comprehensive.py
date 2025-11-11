@@ -10,10 +10,10 @@ from pathlib import Path
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
-from flask import Flask
 
 # Import the module under test
 import researcharr
+from flask import Flask
 
 # Import test utilities for logging isolation
 _test_utils_path = str(Path(__file__).parent.parent)

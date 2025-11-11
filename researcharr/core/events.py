@@ -216,3 +216,23 @@ class Events:
     PLUGIN_ENABLED = "plugin.enabled"
     PLUGIN_DISABLED = "plugin.disabled"
     PLUGIN_ERROR = "plugin.error"
+
+    # Backup and recovery
+    BACKUP_CREATED = "backup.created"
+    BACKUP_FAILED = "backup.failed"
+    BACKUP_RESTORED = "backup.restored"
+    BACKUP_RESTORE_FAILED = "backup.restore_failed"
+    BACKUP_PRUNED = "backup.pruned"
+    BACKUP_STALE = "backup.stale"
+    BACKUP_VALIDATION_FAILED = "backup.validation_failed"
+    PRE_RESTORE_SNAPSHOT_CREATED = "backup.pre_restore_snapshot_created"
+    RESTORE_ROLLBACK_EXECUTED = "backup.restore_rollback_executed"
+
+    # Database health
+    DB_HEALTH_CHECK = "db.health_check"
+    DB_HEALTH_CHECK_FAILED = "db.health_check_failed"
+    DB_INTEGRITY_FAILED = "db.integrity_failed"
+    DB_PERFORMANCE_DEGRADED = "db.performance_degraded"
+    DB_SIZE_WARNING = "db.size_warning"
+    DB_MIGRATION_PENDING = "db.migration_pending"
+    DB_CONNECTION_FAILED = "db.connection_failed"

@@ -584,6 +584,229 @@ def client(app):
     return app.test_client()
 
 
+@pytest.fixture
+def mock_filesystem():
+    """Mock FileSystemService for testing without actual file I/O.
+
+    Provides an in-memory filesystem mock that tracks all file operations.
+    Usage:
+        def test_something(mock_filesystem):
+            mock_filesystem.files['/path/to/file.txt'] = 'content'
+            assert mock_filesystem.read_text('/path/to/file.txt') == 'content'
+    """
+
+    class MockFileSystem:
+        def __init__(self):
+            self.files = {}
+            self.directories = {"/"}
+
+        def exists(self, path):
+            from pathlib import Path
+
+            p = str(Path(path))
+            return p in self.files or p in self.directories
+
+        def read_text(self, path, encoding="utf-8"):
+            from pathlib import Path
+
+            p = str(Path(path))
+            if p not in self.files:
+                raise FileNotFoundError(p)
+            content = self.files[p]
+            if isinstance(content, bytes):
+                return content.decode(encoding)
+            return content
+
+        def write_text(self, path, content, encoding="utf-8"):
+            from pathlib import Path
+
+            p = str(Path(path))
+            self.files[p] = content
+            # Ensure parent directories exist
+            parent = str(Path(p).parent)
+            self.directories.add(parent)
+
+        def read_bytes(self, path):
+            from pathlib import Path
+
+            p = str(Path(path))
+            if p not in self.files:
+                raise FileNotFoundError(p)
+            content = self.files[p]
+            if isinstance(content, str):
+                return content.encode("utf-8")
+            return content
+
+        def write_bytes(self, path, content):
+            from pathlib import Path
+
+            p = str(Path(path))
+            self.files[p] = content
+            parent = str(Path(p).parent)
+            self.directories.add(parent)
+
+        def mkdir(self, path, parents=True, exist_ok=True):
+            from pathlib import Path
+
+            p = str(Path(path))
+            if not exist_ok and p in self.directories:
+                raise FileExistsError(p)
+            self.directories.add(p)
+            if parents:
+                current = Path(p)
+                while str(current.parent) != str(current):
+                    self.directories.add(str(current.parent))
+                    current = current.parent
+
+        def remove(self, path):
+            from pathlib import Path
+
+            p = str(Path(path))
+            if p in self.files:
+                del self.files[p]
+            elif p in self.directories:
+                self.directories.remove(p)
+
+        def rmtree(self, path):
+            from pathlib import Path
+
+            p = str(Path(path))
+            # Remove all files and subdirectories starting with this path
+            to_remove_files = [f for f in self.files if f.startswith(p + "/") or f == p]
+            to_remove_dirs = [d for d in self.directories if d.startswith(p + "/") or d == p]
+            for f in to_remove_files:
+                del self.files[f]
+            for d in to_remove_dirs:
+                self.directories.remove(d)
+
+        def listdir(self, path):
+            from pathlib import Path
+
+            p = str(Path(path))
+            if not p.endswith("/"):
+                p += "/"
+            items = set()
+            for f in self.files:
+                if f.startswith(p):
+                    rel = f[len(p) :]
+                    if "/" not in rel:
+                        items.add(rel)
+            for d in self.directories:
+                if d.startswith(p) and d != p:
+                    rel = d[len(p) :]
+                    if "/" in rel:
+                        items.add(rel.split("/")[0])
+                    else:
+                        items.add(rel)
+            return list(items)
+
+        def copy(self, src, dst):
+            from pathlib import Path
+
+            s = str(Path(src))
+            d = str(Path(dst))
+            if s not in self.files:
+                raise FileNotFoundError(s)
+            self.files[d] = self.files[s]
+
+        def move(self, src, dst):
+            from pathlib import Path
+
+            s = str(Path(src))
+            d = str(Path(dst))
+            if s not in self.files:
+                raise FileNotFoundError(s)
+            self.files[d] = self.files[s]
+            del self.files[s]
+
+        def get_size(self, path):
+            from pathlib import Path
+
+            p = str(Path(path))
+            if p not in self.files:
+                raise FileNotFoundError(p)
+            content = self.files[p]
+            if isinstance(content, bytes):
+                return len(content)
+            return len(content.encode("utf-8"))
+
+        def is_file(self, path):
+            from pathlib import Path
+
+            return str(Path(path)) in self.files
+
+        def is_dir(self, path):
+            from pathlib import Path
+
+            return str(Path(path)) in self.directories
+
+        def open(self, path, mode="r", encoding=None):
+            """Mock open() that returns a file-like object."""
+            from io import BytesIO, StringIO
+            from pathlib import Path
+
+            p = str(Path(path))
+
+            if "r" in mode:
+                if p not in self.files:
+                    raise FileNotFoundError(p)
+                content = self.files[p]
+                if "b" in mode:
+                    if isinstance(content, str):
+                        return BytesIO(content.encode(encoding or "utf-8"))
+                    return BytesIO(content)
+                else:
+                    if isinstance(content, bytes):
+                        return StringIO(content.decode(encoding or "utf-8"))
+                    return StringIO(content)
+            elif "b" in mode:
+                buffer = BytesIO()
+                original_close = buffer.close
+
+                def close_wrapper():
+                    self.files[p] = buffer.getvalue()
+                    original_close()
+
+                buffer.close = close_wrapper
+                return buffer
+            else:
+                buffer = StringIO()
+                original_close = buffer.close
+
+                def close_wrapper():
+                    self.files[p] = buffer.getvalue()
+                    original_close()
+
+                buffer.close = close_wrapper
+                return buffer
+
+    return MockFileSystem()
+
+
+@pytest.fixture
+def mock_http_client():
+    """Mock HttpClientService for testing without actual HTTP requests.
+
+    Usage:
+        def test_something(mock_http_client):
+            mock_http_client.get.return_value.status_code = 200
+            mock_http_client.get.return_value.json.return_value = {'key': 'value'}
+    """
+    from unittest.mock import MagicMock
+
+    mock = MagicMock()
+    # Setup default responses
+    mock.get.return_value.status_code = 200
+    mock.get.return_value.json.return_value = {}
+    mock.post.return_value.status_code = 200
+    mock.post.return_value.json.return_value = {}
+    mock.put.return_value.status_code = 200
+    mock.put.return_value.json.return_value = {}
+    mock.delete.return_value.status_code = 204
+
+    return mock
+
+
 def pytest_collection_modifyitems(config, items):
     """Pytest hook to handle special markers.
 
@@ -598,3 +821,20 @@ def pytest_collection_modifyitems(config, items):
         for item in items:
             if "no_xdist" in item.keywords:
                 item.add_marker(skip_xdist)
+
+
+def pytest_ignore_collect(path, config):
+    """Exclude specific duplicate-basename test modules from collection.
+
+    Avoids import file mismatch when two different directories contain
+    files with the same basename (e.g., test_webui_shim.py).
+    """
+    try:
+        p = str(path)
+    except Exception:
+        p = str(path)
+    # Ignore the shadowing copy under tests/researcharr; the active tests
+    # for the webui shim live in tests/researcharr/test_webui_pkg_shim.py
+    if p.endswith("tests/researcharr/test_webui_shim.py"):
+        return True
+    return False

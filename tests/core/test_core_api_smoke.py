@@ -1,5 +1,6 @@
-from flask import Flask
 from werkzeug.security import generate_password_hash
+
+from flask import Flask
 
 
 def make_app(

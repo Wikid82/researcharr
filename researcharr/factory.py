@@ -140,10 +140,10 @@ def __getattr__(name: str):
 
             try:
                 globals()["render_template"] = _rt
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
             return _rt
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
 
     if _impl is not None:

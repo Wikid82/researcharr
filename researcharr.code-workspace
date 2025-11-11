@@ -1,0 +1,29 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "git.branchProtectionPrompt": "alwaysCommit",
+    "chat.agent.maxRequests": 250,
+    // Exclude GitHub workflows from Pylance/Pyright analysis
+    "python.analysis.exclude": [
+      ".github/workflows"
+    ],
+    // Ensure imports resolve within workspace
+    "python.analysis.extraPaths": [
+      "researcharr"
+    ],
+    // Completely disable GitHub Actions workflow validation to prevent false positives
+    "github-actions.workflows.validation": false,
+    // Additional YAML validation overrides
+    "yaml.validate": true,
+    "yaml.customTags": [
+      "!secrets"
+    ],
+    "[github-actions-workflow]": {
+      "yaml.validate": false
+    }
+  }
+}

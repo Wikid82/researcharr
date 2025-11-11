@@ -6,8 +6,9 @@ This module tests the core API blueprint, decorators, and endpoints.
 from unittest.mock import MagicMock, patch
 
 import pytest
-from flask import Flask
 from werkzeug.security import generate_password_hash
+
+from flask import Flask
 
 
 @pytest.fixture

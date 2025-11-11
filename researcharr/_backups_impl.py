@@ -130,7 +130,7 @@ def list_backups(backups_dir: str | Path) -> list[dict]:
             try:
                 st = entry.stat()
                 out.append({"name": entry.name, "size": st.st_size, "mtime": int(st.st_mtime)})
-            except Exception:  # nosec B110 -- intentional broad except for resilience
+            except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                 continue
     return out
 

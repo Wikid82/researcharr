@@ -18,6 +18,7 @@ _engine: Engine | None = None
 
 def get_engine() -> Engine:
     """
+    # basedpyright: reportAttributeAccessIssue=false
     Get the current database engine.
 
     Returns:
@@ -60,8 +61,9 @@ def init_db(database_path: str | Path, use_migrations: bool = True) -> None:
 
     if use_migrations:
         # Use Alembic migrations for production
-        from alembic import command
         from alembic.config import Config
+
+        from alembic import command
 
         # Find alembic.ini in the repo root
         repo_root = Path(__file__).parent.parent.parent

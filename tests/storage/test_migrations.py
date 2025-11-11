@@ -4,9 +4,9 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+from alembic.config import Config
 
 from alembic import command
-from alembic.config import Config
 from researcharr.storage.database import get_session, init_db
 from researcharr.storage.migrations import migrate_database, reset_database
 from researcharr.storage.models import GlobalSettings

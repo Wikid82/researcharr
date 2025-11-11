@@ -9,12 +9,11 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-
-from researcharr.compat import UTC
 from pathlib import Path
 from typing import Any
 
 from researcharr.backups import restore_backup, validate_backup_file
+from researcharr.compat import UTC
 from researcharr.monitoring.backup_monitor import get_backup_monitor
 from researcharr.storage.recovery import (
     check_db_integrity,
@@ -119,7 +118,7 @@ def restore_with_rollback(
 
         if current_revision and backup_revision and current_revision != backup_revision:
             warning = (
-                f"Schema version mismatch: current={current_revision}, " f"backup={backup_revision}"
+                f"Schema version mismatch: current={current_revision}, backup={backup_revision}"
             )
             errors.append(warning)
 

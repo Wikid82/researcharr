@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
+
 from flask import Flask
 
 # Import the module under test (package import to avoid CWD issues in CI)

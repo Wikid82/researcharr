@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 def migrate_database(database_path: str | Path, use_migrations: bool = True) -> None:
     """
+    # basedpyright: reportAttributeAccessIssue=false
     Initialize database and apply migrations.
 
     Args:

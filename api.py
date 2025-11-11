@@ -1,5 +1,7 @@
 from functools import wraps
 
+from werkzeug.security import check_password_hash
+
 from flask import (
     Blueprint,
     current_app,
@@ -7,7 +9,6 @@ from flask import (
     render_template_string,
     request,
 )
-from werkzeug.security import check_password_hash
 
 bp = Blueprint("api_v1", __name__)
 
@@ -107,9 +108,8 @@ def metrics():
 def metrics_prometheus():
     """Prometheus text format metrics (default registry)."""
     try:
-        from prometheus_client import CONTENT_TYPE_LATEST
+        from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
         from prometheus_client import REGISTRY as _DEFAULT_REGISTRY
-        from prometheus_client import generate_latest
     except Exception:
         return jsonify({"error": "prometheus_client not installed"}), 501
     output = generate_latest(_DEFAULT_REGISTRY)
@@ -214,7 +214,7 @@ def openapi():
             "title": "ResearchArr API",
             "version": "1.0.0",
             "description": (
-                "Minimal API for ResearchArr: plugins, metrics, health, " "and notifications."
+                "Minimal API for ResearchArr: plugins, metrics, health, and notifications."
             ),
         },
         "servers": [{"url": f"http://{host}/api/v1"}],

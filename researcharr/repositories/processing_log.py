@@ -51,6 +51,7 @@ class ProcessingLogRepository(BaseRepository[ProcessingLog]):
 
     def get_by_app(self, app_id: int, limit: int = 100) -> list[ProcessingLog]:
         """
+        # basedpyright: reportAttributeAccessIssue=false
         Get recent processing logs for a specific app.
 
         Args:

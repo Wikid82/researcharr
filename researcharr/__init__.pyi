@@ -1,6 +1,22 @@
+from __future__ import annotations
+
 import logging
 from collections.abc import Mapping
 from typing import Any
+
+# Re-export common submodules first (keep imports at top for Ruff E402 compliance)
+from . import api as api
+from . import backups as backups
+from . import cache as cache
+from . import core as core
+from . import factory as factory
+from . import monitoring as monitoring
+from . import plugins as plugins
+from . import repositories as repositories
+from . import run as run
+from . import scheduling as scheduling
+from . import storage as storage
+from . import webui as webui
 
 # Basic package-level exports used across the tests
 DB_PATH: str
@@ -25,21 +41,6 @@ def create_user(username: str, password_hash: str) -> None: ...
 
 __version__: str
 
-# Re-export common submodules so editors/type checkers resolve
-from . import cache as cache
-from . import backups as backups
-from . import factory as factory
-from . import run as run
-from . import webui as webui
-from . import api as api
-from . import core as core
-from . import storage as storage
-from . import repositories as repositories
-from . import plugins as plugins
-from . import monitoring as monitoring
-from . import scheduling as scheduling
-
-# Explicit exported names
 __all__ = [
     "cache",
     "backups",

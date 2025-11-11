@@ -93,22 +93,16 @@ def create_backup_file(
                                         "backup_meta.json",
                                         json.dumps(meta, separators=(",", ":")),
                                     )
-                                except (
-                                    Exception
-                                ):  # nosec B110 -- intentional broad except for resilience
+                                except Exception:  # nosec B110 -- intentional broad except for resilience
                                     pass
-                            except (
-                                Exception
-                            ):  # nosec B110 -- intentional broad except for resilience
+                            except Exception:  # nosec B110 -- intentional broad except for resilience
                                 pass
                             try:
                                 zf.write(snap, arcname=arcname)
                             finally:
                                 try:
                                     Path(snap).unlink(missing_ok=True)
-                                except (
-                                    Exception
-                                ):  # nosec B110 -- intentional broad except for resilience
+                                except Exception:  # nosec B110 -- intentional broad except for resilience
                                     pass
                             # Optionally include WAL/SHM for point-in-time within interval
                             if _env_true("RESEARCHARR_BACKUP_INCLUDE_WAL"):
@@ -117,9 +111,7 @@ def create_backup_file(
                                     if wal.exists() and wal.is_file():
                                         try:
                                             zf.write(wal, arcname=str(Path("db") / wal.name))
-                                        except (
-                                            Exception
-                                        ):  # nosec B110 -- intentional broad except for resilience
+                                        except Exception:  # nosec B110 -- intentional broad except for resilience
                                             pass
                             continue
                         zf.write(p, arcname=arcname)

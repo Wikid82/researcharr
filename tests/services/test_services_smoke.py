@@ -61,7 +61,7 @@ def test_connectivity_service_radarr_success(monkeypatch):
     from researcharr.core.services import ConnectivityService
 
     svc = ConnectivityService()
-    svc.requests = _fake_requests(200)
+    svc.http_client = _fake_requests(200)
     logger = logging.getLogger("svc.test")
     assert svc.check_radarr_connection("http://ok", "k", logger) is True
 
@@ -71,10 +71,10 @@ def test_connectivity_service_radarr_failure_and_exception(monkeypatch):
 
     logger = logging.getLogger("svc.test2")
     svc = ConnectivityService()
-    svc.requests = _fake_requests(404)
+    svc.http_client = _fake_requests(404)
     assert svc.check_radarr_connection("http://bad", "k", logger) is False
     svc = ConnectivityService()
-    svc.requests = _fake_requests(raise_exc=True)
+    svc.http_client = _fake_requests(raise_exc=True)
     assert svc.check_radarr_connection("http://err", "k", logger) is False
 
 
@@ -83,10 +83,10 @@ def test_connectivity_service_sonarr_success_and_failure(monkeypatch):
 
     logger = logging.getLogger("svc.test3")
     svc = ConnectivityService()
-    svc.requests = _fake_requests(200)
+    svc.http_client = _fake_requests(200)
     assert svc.check_sonarr_connection("http://ok", "k", logger) is True
     svc = ConnectivityService()
-    svc.requests = _fake_requests(404)
+    svc.http_client = _fake_requests(404)
     assert svc.check_sonarr_connection("http://bad", "k", logger) is False
 
 
@@ -147,7 +147,7 @@ def test_metrics_app_error_handler_and_events():
         from unittest.mock import Mock as _Mock
 
         tc = getattr(app, "test_client", None)
-        print("DEBUG test: app.test_client type:", type(tc), "is_mock:", isinstance(tc, _Mock))
+        # DEBUG: Check if test_client is a Mock
     except Exception:
         pass
 
@@ -163,22 +163,12 @@ def test_metrics_app_error_handler_and_events():
             import traceback
             from unittest.mock import Mock as _Mock
 
-            print("DEBUG FAILURE: app repr:", repr(app))
-            print(
-                "DEBUG FAILURE: app type:", type(app), "module:", getattr(app, "__module__", None)
-            )
-            print("DEBUG FAILURE: app.__class__:", app.__class__)
+            # Debug information for test failure investigation
+            logger = logging.getLogger(__name__)
+            logger.debug("App type: %s, module: %s", type(app), getattr(app, "__module__", None))
             tc = getattr(app, "test_client", None)
-            print(
-                "DEBUG FAILURE: app.test_client type:", type(tc), "is_mock:", isinstance(tc, _Mock)
-            )
-            print(
-                "DEBUG FAILURE: sys.modules['flask']:",
-                type(sys.modules.get("flask")),
-                "is_mock:",
-                isinstance(sys.modules.get("flask"), _Mock),
-            )
-            print("DEBUG FAILURE: sys.modules keys sample:", list(sys.modules.keys())[:40])
+            logger.debug("test_client type: %s, is_mock: %s", type(tc), isinstance(tc, _Mock))
+            logger.debug("flask module is_mock: %s", isinstance(sys.modules.get("flask"), _Mock))
             traceback.print_stack()
         except Exception:
             pass

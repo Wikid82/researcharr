@@ -3,18 +3,19 @@
 Monitors backup operations, tracks metrics, and publishes events for
 alerting when backups fail or become stale.
 """
+# basedpyright: reportArgumentType=false
+# basedpyright: reportCallIssue=false
 
 from __future__ import annotations
 
 import logging
 import os
 from datetime import datetime
-
-from researcharr.compat import UTC
 from pathlib import Path
 from typing import Any
 
 from researcharr.backups import get_backup_info, list_backups
+from researcharr.compat import UTC
 from researcharr.core.events import get_event_bus
 from researcharr.core.logging import get_logger
 

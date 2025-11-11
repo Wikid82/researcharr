@@ -138,7 +138,7 @@ def check_radarr_connection(*args, **kwargs):
                 if isinstance(_g, _mock.Mock):
                     _requests = _m
                     break
-            except Exception:  # nosec B110 -- intentional broad except for resilience
+            except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                 continue
 
         if _requests is None:
@@ -153,7 +153,7 @@ def check_radarr_connection(*args, **kwargs):
                     try:
                         if os.environ.get("RESEARCHARR_SHIM_DEBUG2"):
                             print(
-                                f"SHIMDBG_RADARR: inspecting module {getattr(mod, '__name__', None)} id={id(mod)} cand={repr(cand)} get={repr(getattr(cand,'get',None))}"
+                                f"SHIMDBG_RADARR: inspecting module {getattr(mod, '__name__', None)} id={id(mod)} cand={repr(cand)} get={repr(getattr(cand, 'get', None))}"
                             )
                     except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
@@ -170,7 +170,7 @@ def check_radarr_connection(*args, **kwargs):
                     if isinstance(_modname, str) and _modname.startswith("tests"):
                         _requests = cand
                         break
-                except Exception:  # nosec B110 -- intentional broad except for resilience
+                except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                     continue
 
     if _requests is None:
@@ -234,7 +234,7 @@ def check_sonarr_connection(*args, **kwargs):
                 if isinstance(cand, _mock.Mock):
                     _requests = cand
                     break
-            except Exception:  # nosec B110 -- intentional broad except for resilience
+            except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                 continue
 
     if _requests is None:
@@ -288,9 +288,7 @@ def create_metrics_app():
     """Create a tiny Flask app with /health and /metrics used by tests."""
     try:
         from flask import Flask, jsonify
-    except (
-        Exception
-    ):  # flask may not be available in some isolated checks  # nosec B110 -- intentional broad except for resilience
+    except Exception:  # flask may not be available in some isolated checks  # nosec B110 -- intentional broad except for resilience
 
         class Dummy:
             def test_client(self):
@@ -305,7 +303,7 @@ def create_metrics_app():
     app.metrics = {"requests_total": 0, "errors_total": 0}  # type: ignore[attr-defined]
     try:
         app.config["metrics"] = app.metrics
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
 
     @app.before_request

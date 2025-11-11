@@ -1,3 +1,4 @@
+# basedpyright: reportAttributeAccessIssue=false
 """Fallback package shim for the directory-import path.
 
 When the import system resolves the name `researcharr` to the nested
@@ -126,9 +127,7 @@ try:  # pragma: no cover - complex module reconciliation for import edge cases
                         if not _has_top:
                             try:
                                 sys.modules.setdefault(name, value)
-                            except (
-                                Exception
-                            ):  # nosec B110 -- intentional broad except for resilience
+                            except Exception:  # nosec B110 -- intentional broad except for resilience
                                 pass
                         try:
                             if (
@@ -190,44 +189,44 @@ try:
                             continue
                         try:
                             setattr(_new, _a, getattr(_pf, _a))
-                        except Exception:
+                        except Exception:  # nosec B110 -- intentional broad except for resilience
                             pass
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
                 # ensure render_template is present
                 try:
                     from flask import render_template as _rt
 
                     _new.render_template = _rt
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     try:
                         # last resort: set to None so patch can replace it
                         _new.render_template = None
-                    except Exception:
+                    except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
                 # preserve spec if possible
                 try:
                     _spec = getattr(_pf, "__spec__", None)
                     if _spec is not None:
                         _new.__spec__ = _spec
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
                 # register new module object under both keys
                 try:
                     _sys.modules[_pkg_key] = _new
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
                 try:
                     _sys.modules[_top_key] = _new
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
                 try:
                     globals()["factory"] = _new
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
-except Exception:
+except Exception:  # nosec B110 -- intentional broad except for resilience
     pass
 
 
@@ -692,9 +691,7 @@ except Exception:  # nosec B110 -- intentional broad except for resilience
                         if not hasattr(_pkg, _attr):
                             try:
                                 setattr(_pkg, _attr, getattr(_top, _attr))
-                            except (
-                                Exception
-                            ):  # nosec B110 -- intentional broad except for resilience
+                            except Exception:  # nosec B110 -- intentional broad except for resilience
                                 pass
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
@@ -850,13 +847,13 @@ try:
     # point so tests that patch `researcharr.create_metrics_app` are
     # consistently honored. Re-exporting the implementation's symbol here
     # could overwrite the dispatcher installed above.
-    from .researcharr import DB_PATH  # noqa: F401
-    from .researcharr import check_radarr_connection  # noqa: F401
-    from .researcharr import check_sonarr_connection  # noqa: F401
-    from .researcharr import has_valid_url_and_key  # noqa: F401
-    from .researcharr import init_db  # noqa: F401
-    from .researcharr import load_config  # noqa: F401
     from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
+        DB_PATH,  # noqa: F401
+        check_radarr_connection,  # noqa: F401
+        check_sonarr_connection,  # noqa: F401
+        has_valid_url_and_key,  # noqa: F401
+        init_db,  # noqa: F401
+        load_config,  # noqa: F401
         setup_logger,
     )
 except ImportError:
@@ -1324,9 +1321,7 @@ def __getattr__(name: str):
                             if _sys.modules.get(_spec_name) is mod:
                                 try:
                                     del _sys.modules[_spec_name]
-                                except (
-                                    Exception
-                                ):  # nosec B110 -- intentional broad except for resilience
+                                except Exception:  # nosec B110 -- intentional broad except for resilience
                                     pass
                         except Exception:  # nosec B110 -- intentional broad except for resilience
                             pass
@@ -1353,14 +1348,14 @@ try:
 
             try:
                 _pf.__dict__["render_template"] = _rt
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 try:
                     _pf.render_template = _rt
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
-except Exception:
+except Exception:  # nosec B110 -- intentional broad except for resilience
     pass
 
 try:
@@ -1389,16 +1384,16 @@ try:
                                 from flask import render_template as _rt
 
                                 return _rt
-                            except Exception:
+                            except Exception:  # nosec B110 -- intentional broad except for resilience
                                 pass
                         raise
 
             try:
                 _pf.__class__ = _FallbackModule  # type: ignore
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 # best-effort; ignore if runtime prevents changing __class__
                 pass
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
-except Exception:
+except Exception:  # nosec B110 -- intentional broad except for resilience
     pass

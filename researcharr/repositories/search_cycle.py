@@ -51,6 +51,7 @@ class SearchCycleRepository(BaseRepository[SearchCycle]):
 
     def get_by_app(self, app_id: int) -> list[SearchCycle]:
         """
+        # basedpyright: reportRedeclaration=false
         Get all search cycles for a specific app.
 
         Args:
@@ -195,7 +196,7 @@ class SearchCycleRepository(BaseRepository[SearchCycle]):
             # objects across sessions/tests. Resolve id to object.
             try:
                 return self.session.get(SearchCycle, int(cached))
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 # If resolution fails, fall through to DB query
                 pass
         result = (
@@ -215,7 +216,7 @@ class SearchCycleRepository(BaseRepository[SearchCycle]):
         if cached is not None:
             try:
                 return self.session.get(SearchCycle, int(cached))
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
         result = (
             self.session.query(SearchCycle)

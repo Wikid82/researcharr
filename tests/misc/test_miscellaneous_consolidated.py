@@ -221,7 +221,6 @@ class TestMiscellaneousConsolidated(unittest.TestCase):
             with app.app_context():  # type: ignore[attr-defined]
                 # Test configuration scenarios
                 if hasattr(app, "config_data"):
-
                     # Test different config scenarios
                     scenarios = [
                         {"general": {"debug": True}},

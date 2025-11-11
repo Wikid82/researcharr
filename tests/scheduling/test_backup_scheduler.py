@@ -3,7 +3,6 @@ import types
 from datetime import datetime, timedelta
 
 from researcharr.compat import UTC
-
 from researcharr.scheduling.backup_scheduler import BackupSchedulerService
 
 

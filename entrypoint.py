@@ -169,9 +169,8 @@ def create_metrics_app():
     @app.route("/metrics.prom")
     def metrics_prometheus():
         try:
-            from prometheus_client import CONTENT_TYPE_LATEST
+            from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
             from prometheus_client import REGISTRY as _DEFAULT_REGISTRY
-            from prometheus_client import generate_latest
         except Exception:
             return jsonify({"error": "prometheus_client not installed"}), 501
 

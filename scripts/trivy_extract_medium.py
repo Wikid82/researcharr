@@ -8,6 +8,7 @@ Usage:
 This prints a concise table with the following columns:
 VulnerabilityID, Package, InstalledVersion, FixedVersion, Title, Target.
 """
+
 import json
 import sys
 from pathlib import Path

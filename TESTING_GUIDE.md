@@ -1,5 +1,22 @@
 # Testing Guide for researcharr
 
+## Multi-Version Testing
+
+Test across Python 3.10, 3.11, 3.12, 3.13, and 3.14 using Docker:
+
+```bash
+# Build and test all versions (first time or after dependency changes)
+./scripts/ci-multi-version.sh
+
+# Test using existing images (fast)
+./scripts/ci-multi-version.sh --skip-build
+
+# Test specific versions only
+./scripts/ci-multi-version.sh --skip-build --versions "3.11 3.14"
+```
+
+The script builds debug Docker images for each Python version and runs smoke tests. Build logs and test outputs are saved to `/tmp/researcharr-*.log` for troubleshooting.
+
 ## Quick Start
 
 Run all tests:

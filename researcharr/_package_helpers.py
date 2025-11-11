@@ -77,7 +77,7 @@ def serve():
                     if isinstance(cand, _mock.Mock):
                         create = cand
                         break
-                except Exception:  # nosec B110 -- intentional broad except for resilience
+                except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                     continue
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
@@ -101,7 +101,7 @@ def serve():
                         if cid not in seen_ids:
                             seen_ids.add(cid)
                             candidates.append(cand)
-                except Exception:  # nosec B110 -- intentional broad except for resilience
+                except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                     continue
         except Exception:  # nosec B110 -- intentional broad except for resilience
             candidates = []
@@ -116,7 +116,7 @@ def serve():
                     _res = cand()
                     if first_app is None:
                         first_app = _res
-                except Exception:  # nosec B110 -- intentional broad except for resilience
+                except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                     # Ignore candidate failures; continue trying others
                     continue
             app = first_app
@@ -203,7 +203,7 @@ def install_create_metrics_dispatcher() -> None:
 
                         if isinstance(cand, _mock.Mock):
                             return cand(*a, **kw)
-                    except Exception:  # nosec B110 -- intentional broad except for resilience
+                    except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                         continue
             except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass

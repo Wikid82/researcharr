@@ -86,7 +86,6 @@ def get_project_id(owner, project_number, token):
                 and data["data"][query_type]
                 and data["data"][query_type]["projectV2"]
             ):
-
                 project_data = data["data"][query_type]["projectV2"]
                 print(f"✅ Found project ID: {project_data['id']}")
 

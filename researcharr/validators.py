@@ -3,6 +3,7 @@
 These provide defensive checks before flush/commit and raise
 `repositories.exceptions.ValidationError` when invariants are violated.
 """
+# basedpyright: reportAttributeAccessIssue=false
 
 from __future__ import annotations
 

@@ -10,18 +10,25 @@ from types import ModuleType
 from typing import Any
 
 import yaml
-from flask import Flask
 from werkzeug.security import generate_password_hash
+
+from flask import Flask
 
 from .config import get_config_manager
 from .container import get_container
 from .events import Events, get_event_bus
 from .lifecycle import add_shutdown_hook, add_startup_hook, get_lifecycle
 from .services import (
+    ConnectivityService,
     DatabaseService,
+    FileSystemService,
     HealthService,
+    HttpClientService,
     LoggingService,
     MetricsService,
+    MonitoringService,
+    SchedulerService,
+    StorageService,
 )
 
 try:
@@ -42,11 +49,35 @@ class CoreApplicationFactory:
 
     def register_core_services(self) -> None:
         """Register all core services in the container."""
-        # Register core services
-        self.container.register_singleton("database_service", DatabaseService())
+        # Get configuration for service initialization
+        # Note: config_manager stores config in _config dict
+        config = self.config_manager._config if hasattr(self.config_manager, "_config") else {}
+
+        # Get DB path from config or environment or use default
+        db_path = (
+            config.get("database", {}).get("path")
+            or os.getenv("RESEARCHARR_DB")
+            or "researcharr.db"
+        )
+
+        # Register infrastructure services first (no dependencies)
+        self.container.register_singleton("filesystem_service", FileSystemService())
+        self.container.register_singleton("http_client_service", HttpClientService())
+
+        # Register core services with injected dependencies
+        self.container.register_singleton("database_service", DatabaseService(db_path))
         self.container.register_singleton("logging_service", LoggingService())
         self.container.register_singleton("health_service", HealthService())
         self.container.register_singleton("metrics_service", MetricsService())
+
+        # Register connectivity service with HTTP client
+        http_client = self.container.resolve("http_client_service")
+        self.container.register_singleton("connectivity_service", ConnectivityService(http_client))
+
+        # Register scheduler and monitoring services
+        self.container.register_singleton("scheduler_service", SchedulerService(config))
+        self.container.register_singleton("monitoring_service", MonitoringService(config))
+        self.container.register_singleton("storage_service", StorageService())
 
         # Register configuration and events
         self.container.register_singleton("config_manager", self.config_manager)
@@ -57,7 +88,7 @@ class CoreApplicationFactory:
         try:
             if UnitOfWork is not None:
                 self.container.register_factory("unit_of_work", lambda: UnitOfWork())
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             # Non-critical; continue without UoW service if registration fails
             pass
 
@@ -66,10 +97,16 @@ class CoreApplicationFactory:
             Events.APP_STARTING,
             data={
                 "services_registered": [
+                    "filesystem",
+                    "http_client",
+                    "connectivity",
                     "database",
                     "logging",
                     "health",
                     "metrics",
+                    "scheduler",
+                    "monitoring",
+                    "storage",
                     "config",
                     "events",
                     "lifecycle",
@@ -209,9 +246,7 @@ class CoreApplicationFactory:
                                         data={"plugin": name, "instances": len(data)},
                                         source="core_application_factory",
                                     )
-                            except (
-                                Exception
-                            ) as e:  # nosec B110 -- intentional broad except for resilience
+                            except Exception as e:  # nosec B110 -- intentional broad except for resilience
                                 # Publish plugin error event
                                 self.event_bus.publish_simple(
                                     Events.PLUGIN_ERROR,
@@ -347,6 +382,32 @@ class CoreApplicationFactory:
                 )
                 # Don't raise - logging failure shouldn't stop startup
 
+        def startup_scheduler():
+            """Start the scheduler service."""
+            try:
+                scheduler_service = self.container.resolve("scheduler_service")
+                if scheduler_service.start():
+                    self.event_bus.publish_simple(
+                        Events.APP_STARTED,
+                        data={"component": "scheduler"},
+                        source="lifecycle_hooks",
+                    )
+            except Exception as e:  # nosec B110 -- intentional broad except for resilience
+                self.event_bus.publish_simple(
+                    Events.ERROR_OCCURRED,
+                    data={"error": str(e), "component": "scheduler_startup"},
+                    source="lifecycle_hooks",
+                )
+                # Non-critical - app can run without scheduler
+
+        def shutdown_scheduler():
+            """Stop the scheduler service."""
+            try:
+                scheduler_service = self.container.resolve("scheduler_service")
+                scheduler_service.stop()
+            except Exception:  # nosec B110 -- intentional broad except for resilience
+                pass  # Best effort
+
         def shutdown_cleanup():
             """Cleanup on shutdown."""
             try:
@@ -361,6 +422,8 @@ class CoreApplicationFactory:
         # Register lifecycle hooks
         add_startup_hook("core_database", startup_database, priority=10, critical=True)
         add_startup_hook("core_logging", startup_logging, priority=20, critical=False)
+        add_startup_hook("core_scheduler", startup_scheduler, priority=30, critical=False)
+        add_shutdown_hook("core_scheduler", shutdown_scheduler, priority=10, critical=False)
         add_shutdown_hook("core_cleanup", shutdown_cleanup, priority=90, critical=False)
 
     def create_core_app(self, config_dir: str = "/config") -> Flask:

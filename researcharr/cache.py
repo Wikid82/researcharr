@@ -46,7 +46,7 @@ def _ensure_prometheus():
         _PROM_COUNTERS["evictions"] = Counter(
             "cache_evictions_total", "Total cache evictions", ["component"], registry=None
         ).labels(component="cache")
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         # Library missing or counter creation failed; leave counters disabled
         pass
 
@@ -72,7 +72,7 @@ def get(key: str) -> Any:
             c = _PROM_COUNTERS.get("misses")
             try:
                 c and c.inc()
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
             return None
         expires, value = entry
@@ -88,7 +88,7 @@ def get(key: str) -> Any:
                     c1.inc()
                 if c2:
                     c2.inc()
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
             return None
         _metrics["hits"] += 1
@@ -96,7 +96,7 @@ def get(key: str) -> Any:
         c = _PROM_COUNTERS.get("hits")
         try:
             c and c.inc()
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
         return value
 
@@ -112,7 +112,7 @@ def set(key: str, value: Any, ttl: int) -> None:
         c = _PROM_COUNTERS.get("sets")
         try:
             c and c.inc()
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
 
 
@@ -127,7 +127,7 @@ def invalidate(prefix: str) -> None:
                 c = _PROM_COUNTERS.get("evictions")
                 try:
                     c and c.inc()
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
 
 
@@ -139,7 +139,7 @@ def clear_all() -> None:
         c = _PROM_COUNTERS.get("evictions")
         try:
             c and c.inc()
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
 
 

@@ -184,6 +184,8 @@ jobs:
       with:
         # Point explicitly at the XML file pytest writes
         files: coverage.xml
+        # Provide token explicitly (public repos don't require it)
+        token: ${{ secrets.CODECOV_TOKEN }}
         # Tag this upload so it is easy to find in Codecov UI
         flags: python
         # Don't fail CI if the upload step has an error here

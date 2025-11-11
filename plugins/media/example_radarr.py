@@ -1,7 +1,6 @@
 from typing import Any
 
 from flask import Blueprint, jsonify, request
-
 from plugins.base import BasePlugin
 
 PLUGIN_NAME = "radarr"

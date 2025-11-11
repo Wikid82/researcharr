@@ -1,8 +1,9 @@
 from typing import Any, cast
 
 import pytest
-from flask import Flask
 from werkzeug.security import generate_password_hash
+
+from flask import Flask
 
 # Import api directly from researcharr package
 from researcharr import api
@@ -145,7 +146,6 @@ def test_plugin_not_found_and_invalid_index(app):
     app.plugin_registry = DummyRegistry({})
     app.config_data.update({"dummy": []})
     with app.test_client() as c:
-
         # invalid index
         app.plugin_registry = DummyRegistry({"dummy": DummyPlugin})
         app.config_data.update({"dummy": []})

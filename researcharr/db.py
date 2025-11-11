@@ -64,7 +64,7 @@ def load_user() -> dict[str, str | None] | None:
     try:
         cur = conn.cursor()
         cur.execute(
-            "SELECT username, password_hash, api_key_hash" " FROM webui_users ORDER BY id LIMIT 1"
+            "SELECT username, password_hash, api_key_hash FROM webui_users ORDER BY id LIMIT 1"
         )
         row = cur.fetchone()
         if not row:
@@ -95,8 +95,7 @@ def save_user(
         cur = conn.cursor()
         # Try update first; if no rows updated, insert.
         cur.execute(
-            "UPDATE webui_users SET username = ?, password_hash = ?,"
-            " api_key_hash = ? WHERE id = 1",
+            "UPDATE webui_users SET username = ?, password_hash = ?, api_key_hash = ? WHERE id = 1",
             (username, password_hash, api_key_hash),
         )
         if cur.rowcount == 0:

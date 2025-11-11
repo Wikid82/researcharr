@@ -7,9 +7,9 @@ from typing import cast
 from unittest.mock import mock_open, patch
 
 import pytest
-from flask import Flask
 from flask.testing import FlaskClient
 
+from flask import Flask
 from researcharr.factory import create_app
 
 
@@ -94,7 +94,6 @@ class TestFactoryRoutes:
             patch("researcharr.factory.generate_password_hash") as mock_hash,
             patch("researcharr.factory.webui.save_user_config") as mock_save,
         ):
-
             mock_hash.return_value = "hashed_password"
             mock_save.return_value = True
 
@@ -217,7 +216,6 @@ class TestFactoryRoutes:
             patch("researcharr.factory.generate_password_hash") as mock_hash,
             patch("researcharr.factory.webui.save_user_config") as mock_save,
         ):
-
             mock_hash.return_value = "new_hashed_password"
             mock_save.return_value = True
 
@@ -358,7 +356,6 @@ class TestFactoryBackupRoutes:
             patch("factory._create_backup_file") as mock_create,
             patch("factory._prune_backups"),
         ):
-
             mock_create.return_value = "backup_20241101_120000.zip"
 
             response = client.post("/api/backups/create")

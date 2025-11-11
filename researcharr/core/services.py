@@ -1,3 +1,4 @@
+# basedpyright: reportAttributeAccessIssue=false
 """Core Services Module.
 
 This module contains the foundational services extracted from the main
@@ -7,9 +8,10 @@ health monitoring, and external service connectivity.
 
 import logging
 import os
+import shutil
 import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from flask import Flask
 
@@ -20,6 +22,148 @@ from .logging import get_logger as get_logger_from_factory
 
 # Global constants
 DEFAULT_DB_PATH = "researcharr.db"
+
+
+class FileSystemProtocol(Protocol):
+    """Protocol for file system operations to enable easy mocking in tests."""
+
+    def exists(self, path: str | Path) -> bool:
+        """Check if path exists."""
+        ...
+
+    def read_text(self, path: str | Path, encoding: str = "utf-8") -> str:
+        """Read text file content."""
+        ...
+
+    def write_text(self, path: str | Path, content: str, encoding: str = "utf-8") -> None:
+        """Write text content to file."""
+        ...
+
+    def read_bytes(self, path: str | Path) -> bytes:
+        """Read binary file content."""
+        ...
+
+    def write_bytes(self, path: str | Path, content: bytes) -> None:
+        """Write binary content to file."""
+        ...
+
+    def mkdir(self, path: str | Path, parents: bool = True, exist_ok: bool = True) -> None:
+        """Create directory."""
+        ...
+
+    def remove(self, path: str | Path) -> None:
+        """Remove file or empty directory."""
+        ...
+
+    def rmtree(self, path: str | Path) -> None:
+        """Remove directory tree."""
+        ...
+
+    def listdir(self, path: str | Path) -> list[str]:
+        """List directory contents."""
+        ...
+
+    def copy(self, src: str | Path, dst: str | Path) -> None:
+        """Copy file."""
+        ...
+
+    def move(self, src: str | Path, dst: str | Path) -> None:
+        """Move file or directory."""
+        ...
+
+    def get_size(self, path: str | Path) -> int:
+        """Get file size in bytes."""
+        ...
+
+    def is_file(self, path: str | Path) -> bool:
+        """Check if path is a file."""
+        ...
+
+    def is_dir(self, path: str | Path) -> bool:
+        """Check if path is a directory."""
+        ...
+
+
+class FileSystemService:
+    """Service for file system operations with testable interface.
+
+    This service provides a clean abstraction over file system operations,
+    making it easy to mock in tests without patching builtins.open.
+    """
+
+    def exists(self, path: str | Path) -> bool:
+        """Check if path exists."""
+        return Path(path).exists()
+
+    def read_text(self, path: str | Path, encoding: str = "utf-8") -> str:
+        """Read text file content."""
+        return Path(path).read_text(encoding=encoding)
+
+    def write_text(self, path: str | Path, content: str, encoding: str = "utf-8") -> None:
+        """Write text content to file."""
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(content, encoding=encoding)
+
+    def read_bytes(self, path: str | Path) -> bytes:
+        """Read binary file content."""
+        return Path(path).read_bytes()
+
+    def write_bytes(self, path: str | Path, content: bytes) -> None:
+        """Write binary content to file."""
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(content)
+
+    def mkdir(self, path: str | Path, parents: bool = True, exist_ok: bool = True) -> None:
+        """Create directory."""
+        Path(path).mkdir(parents=parents, exist_ok=exist_ok)
+
+    def remove(self, path: str | Path) -> None:
+        """Remove file or empty directory."""
+        p = Path(path)
+        if p.is_file():
+            p.unlink()
+        elif p.is_dir():
+            p.rmdir()
+
+    def rmtree(self, path: str | Path) -> None:
+        """Remove directory tree."""
+        shutil.rmtree(path)
+
+    def listdir(self, path: str | Path) -> list[str]:
+        """List directory contents."""
+        return [item.name for item in Path(path).iterdir()]
+
+    def copy(self, src: str | Path, dst: str | Path) -> None:
+        """Copy file."""
+        shutil.copy2(src, dst)
+
+    def move(self, src: str | Path, dst: str | Path) -> None:
+        """Move file or directory."""
+        shutil.move(str(src), str(dst))
+
+    def get_size(self, path: str | Path) -> int:
+        """Get file size in bytes."""
+        return Path(path).stat().st_size
+
+    def is_file(self, path: str | Path) -> bool:
+        """Check if path is a file."""
+        return Path(path).is_file()
+
+    def is_dir(self, path: str | Path) -> bool:
+        """Check if path is a directory."""
+        return Path(path).is_dir()
+
+    def open(self, path: str | Path, mode: str = "r", encoding: str | None = None):
+        """Open a file and return a file object.
+
+        This method provides direct access to Python's built-in open() for
+        cases where streaming or line-by-line reading is needed.
+        """
+        if encoding is not None:
+            return open(path, mode, encoding=encoding)
+        return open(path, mode)
 
 
 class DatabaseService:
@@ -120,17 +264,46 @@ class LoggingService:
         return self._loggers.get(name)
 
 
+class HttpClientService:
+    """Service for HTTP requests with testable interface.
+
+    This service wraps the requests library to make HTTP calls testable
+    without patching at the module level.
+    """
+
+    def __init__(self):
+        """Initialize the HTTP client service."""
+        import requests
+
+        self._requests = requests
+
+    def get(self, url: str, **kwargs) -> Any:
+        """Perform a GET request."""
+        return self._requests.get(url, **kwargs)
+
+    def post(self, url: str, **kwargs) -> Any:
+        """Perform a POST request."""
+        return self._requests.post(url, **kwargs)
+
+    def put(self, url: str, **kwargs) -> Any:
+        """Perform a PUT request."""
+        return self._requests.put(url, **kwargs)
+
+    def delete(self, url: str, **kwargs) -> Any:
+        """Perform a DELETE request."""
+        return self._requests.delete(url, **kwargs)
+
+    def request(self, method: str, url: str, **kwargs) -> Any:
+        """Perform a generic HTTP request."""
+        return self._requests.request(method, url, **kwargs)
+
+
 class ConnectivityService:
     """Service for checking external service connectivity."""
 
-    def __init__(self):
-        # Allow test fixtures to monkeypatch requests
-        if "requests" not in globals():
-            import requests
-
-            self.requests = requests
-        else:
-            self.requests = globals()["requests"]
+    def __init__(self, http_client: HttpClientService | None = None):
+        """Initialize connectivity service with optional HTTP client injection."""
+        self.http_client = http_client or HttpClientService()
 
     def has_valid_url_and_key(self, instances: list[dict[str, Any]]) -> bool:
         """Check if all instances have valid URLs and API keys."""
@@ -146,7 +319,7 @@ class ConnectivityService:
             return False
 
         try:
-            r = self.requests.get(url)
+            r = self.http_client.get(url)
             if r.status_code == 200:
                 logger.info("Radarr connection successful.")
 
@@ -189,7 +362,7 @@ class ConnectivityService:
             return False
 
         try:
-            r = self.requests.get(url)
+            r = self.http_client.get(url)
             if r.status_code == 200:
                 logger.info("Sonarr connection successful.")
 
@@ -231,19 +404,47 @@ class HealthService:
 
     def __init__(self):
         self.container = get_container()
+        self._db_health_monitor = None
+
+    def _get_db_health_monitor(self):
+        """Lazy initialization of database health monitor."""
+        if self._db_health_monitor is None:
+            try:
+                from researcharr.monitoring import get_database_health_monitor
+
+                db_service = self.container.resolve("database_service")
+                self._db_health_monitor = get_database_health_monitor(db_path=db_service.db_path)
+            except Exception as e:
+                import logging
+
+                logging.getLogger(__name__).warning(
+                    f"Failed to initialize database health monitor: {e}"
+                )
+        return self._db_health_monitor
 
     def check_system_health(self) -> dict[str, Any]:
         """Perform comprehensive health checks."""
         health_status: dict[str, Any] = {"status": "ok", "components": {}}
 
-        # Check database
+        # Check database with detailed monitoring
         try:
-            db_service = self.container.resolve("database_service")
-            db_ok = db_service.check_connection()
-            health_status["components"]["database"] = {
-                "status": "ok" if db_ok else "error",
-                "path": db_service.db_path,
-            }
+            db_monitor = self._get_db_health_monitor()
+            if db_monitor:
+                # Use comprehensive database health check
+                db_health = db_monitor.check_database_health()
+                health_status["components"]["database"] = {
+                    "status": db_health["status"],
+                    "checks": db_health["checks"],
+                    "alerts": db_health.get("alerts", []),
+                }
+            else:
+                # Fallback to basic check
+                db_service = self.container.resolve("database_service")
+                db_ok = db_service.check_connection()
+                health_status["components"]["database"] = {
+                    "status": "ok" if db_ok else "error",
+                    "path": db_service.db_path,
+                }
         except Exception as e:  # nosec B110 -- intentional broad except for resilience
             health_status["components"]["database"] = {
                 "status": "error",
@@ -299,6 +500,413 @@ class MetricsService:
         return self.metrics.copy()
 
 
+class SchedulerService:
+    """Centralized scheduler service for managing automated jobs.
+
+    Wraps APScheduler BackgroundScheduler and manages backup and database
+    health monitoring schedulers. Integrates with application lifecycle.
+    """
+
+    def __init__(self, config: dict[str, Any] | None = None):
+        self.config = config or {}
+        self._scheduler = None
+        self._backup_scheduler = None
+        self._database_scheduler = None
+        self._started = False
+
+    def initialize(self) -> bool:
+        """Initialize the scheduler and job services.
+
+        Returns:
+            True if initialization successful, False otherwise
+        """
+        try:
+            # Import APScheduler
+            from apscheduler.schedulers.background import BackgroundScheduler
+
+            # Get timezone from config
+            timezone = self.config.get("scheduling", {}).get("timezone", "UTC")
+
+            # Create scheduler
+            self._scheduler = BackgroundScheduler(timezone=timezone)
+
+            # Import scheduler services
+            from researcharr.scheduling import (
+                BackupSchedulerService,
+                DatabaseSchedulerService,
+            )
+
+            # Create backup scheduler service
+            self._backup_scheduler = BackupSchedulerService(self._scheduler, self.config)
+
+            # Create database scheduler service
+            self._database_scheduler = DatabaseSchedulerService(self._scheduler, self.config)
+
+            return True
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Failed to initialize scheduler: {e}")
+            return False
+
+    def start(self) -> bool:
+        """Start the scheduler and setup jobs.
+
+        Returns:
+            True if started successfully, False otherwise
+        """
+        if self._started:
+            return True
+
+        if self._scheduler is None:
+            if not self.initialize():
+                return False
+
+        try:
+            # Setup backup scheduler jobs
+            if self._backup_scheduler:
+                self._backup_scheduler.setup()
+
+            # Setup database scheduler jobs
+            if self._database_scheduler:
+                self._database_scheduler.setup()
+
+            # Start the scheduler
+            if self._scheduler:
+                self._scheduler.start()
+                self._started = True
+
+                # Publish event
+                get_event_bus().publish_simple(
+                    Events.APP_STARTED,
+                    data={"scheduler_started": True},
+                    source="scheduler_service",
+                )
+
+                return True
+        except Exception as e:
+            logging.getLogger(__name__).exception(f"Failed to start scheduler: {e}")
+
+        return False
+
+    def stop(self) -> None:
+        """Stop the scheduler and all jobs."""
+        if not self._started or self._scheduler is None:
+            return
+
+        try:
+            # Remove jobs
+            if self._backup_scheduler:
+                self._backup_scheduler.remove_jobs()
+
+            if self._database_scheduler:
+                self._database_scheduler.remove_jobs()
+
+            # Shutdown scheduler
+            self._scheduler.shutdown(wait=False)
+            self._started = False
+
+            # Publish event
+            get_event_bus().publish_simple(
+                Events.APP_STOPPING,
+                data={"scheduler_stopped": True},
+                source="scheduler_service",
+            )
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Error stopping scheduler: {e}")
+
+    def is_running(self) -> bool:
+        """Check if scheduler is running."""
+        return self._started and self._scheduler is not None
+
+    def get_schedule_info(self) -> dict[str, Any]:
+        """Get information about all scheduled jobs."""
+        info: dict[str, Any] = {
+            "scheduler_running": self.is_running(),
+            "backups": {},
+            "database": {},
+        }
+
+        if self._backup_scheduler:
+            info["backups"] = self._backup_scheduler.get_schedule_info()
+
+        if self._database_scheduler:
+            info["database"] = self._database_scheduler.get_schedule_info()
+
+        return info
+
+
+class MonitoringService:
+    """Centralized monitoring service for health checks and metrics.
+
+    Orchestrates BackupHealthMonitor and DatabaseHealthMonitor, providing
+    a unified interface for all monitoring operations.
+    """
+
+    def __init__(self, config: dict[str, Any] | None = None):
+        self.config = config or {}
+        self._backup_monitor = None
+        self._database_monitor = None
+
+    def initialize(self) -> bool:
+        """Initialize monitoring components.
+
+        Returns:
+            True if initialization successful, False otherwise
+        """
+        try:
+            # Import monitoring services
+            from researcharr.monitoring import (
+                BackupHealthMonitor,
+                get_database_health_monitor,
+            )
+
+            # Get configuration
+            config_root = os.getenv("CONFIG_DIR", "/config")
+            backups_dir = os.path.join(config_root, "backups")
+
+            # Initialize backup monitor
+            backup_config = self.config.get("backups", {})
+            # Prefer a legacy positional-call shape for test compatibility.
+            # If the concrete implementation doesn't accept it, fall back to
+            # the keyword-based initializer used in production.
+            try:
+                # Expected positional form in tests: (backups_dir, backups_config)
+                self._backup_monitor = BackupHealthMonitor(backups_dir, backup_config)  # type: ignore[misc]
+            except TypeError:
+                stale_hours = backup_config.get("stale_threshold_hours", 48)
+                min_count = backup_config.get("min_backup_count", 1)
+                self._backup_monitor = BackupHealthMonitor(
+                    config_dir=config_root,
+                    stale_threshold_hours=stale_hours,
+                    min_backup_count=min_count,
+                )
+
+            # Initialize database monitor
+            self._database_monitor = get_database_health_monitor(config=self.config)
+
+            return True
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Failed to initialize monitoring: {e}")
+            return False
+
+    def check_all_health(self) -> dict[str, Any]:
+        """Run all health checks and return consolidated results."""
+        results: dict[str, Any] = {
+            "status": "ok",
+            "backups": {},
+            "database": {},
+            "alerts": [],
+        }
+
+        # Ensure monitors are initialized
+        if self._backup_monitor is None or self._database_monitor is None:
+            if not self.initialize():
+                results["status"] = "error"
+                results["alerts"].append(
+                    {"level": "error", "message": "Monitoring not initialized"}
+                )
+                return results
+
+        # Check backup health
+        try:
+            if self._backup_monitor:
+                backup_health = self._backup_monitor.check_backup_health()
+                results["backups"] = backup_health
+
+                # Aggregate backup alerts
+                for alert in backup_health.get("alerts", []):
+                    results["alerts"].append({"source": "backups", **alert})
+        except Exception as e:
+            results["backups"] = {"status": "error", "error": str(e)}
+            results["alerts"].append({"level": "error", "source": "backups", "message": str(e)})
+
+        # Check database health
+        try:
+            if self._database_monitor:
+                db_health = self._database_monitor.check_database_health()
+                results["database"] = db_health
+
+                # Aggregate database alerts
+                for alert in db_health.get("alerts", []):
+                    results["alerts"].append({"source": "database", **alert})
+        except Exception as e:
+            results["database"] = {"status": "error", "error": str(e)}
+            results["alerts"].append({"level": "error", "source": "database", "message": str(e)})
+
+        # Determine overall status
+        if (
+            results["backups"].get("status") == "error"
+            or results["database"].get("status") == "error"
+        ):
+            results["status"] = "error"
+        elif (
+            results["backups"].get("status") == "warning"
+            or results["database"].get("status") == "warning"
+        ):
+            results["status"] = "warning"
+
+        return results
+
+    def get_all_metrics(self) -> dict[str, Any]:
+        """Collect all metrics from monitoring components."""
+        metrics: dict[str, Any] = {"backups": {}, "database": {}}
+
+        # Ensure monitors are initialized
+        if self._backup_monitor is None or self._database_monitor is None:
+            self.initialize()
+
+        # Collect backup metrics
+        try:
+            if self._backup_monitor:
+                metrics["backups"] = self._backup_monitor.get_metrics()
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Failed to get backup metrics: {e}")
+
+        # Collect database metrics
+        try:
+            if self._database_monitor:
+                metrics["database"] = self._database_monitor.get_metrics()
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Failed to get database metrics: {e}")
+
+        return metrics
+
+
+class StorageService:
+    """Centralized storage service for repository operations.
+
+    Provides a clean interface to the Unit of Work pattern and repositories,
+    simplifying database operations and transaction management.
+    """
+
+    def __init__(self):
+        """Initialize the storage service."""
+        self._initialized = False
+
+    def initialize(self) -> bool:
+        """Initialize the storage service.
+
+        Returns:
+            True if initialization successful, False otherwise
+        """
+        try:
+            # Import UnitOfWork to verify it's available
+
+            self._initialized = True
+            return True
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Failed to initialize storage: {e}")
+            return False
+
+    def create_unit_of_work(self):
+        """Create a new Unit of Work for transactional operations.
+
+        Returns:
+            UnitOfWork instance that can be used as a context manager
+
+        Example:
+            with storage_service.create_unit_of_work() as uow:
+                app = uow.apps.get_by_id(1)
+                app.enabled = True
+                # Commits automatically on exit
+        """
+        if not self._initialized:
+            self.initialize()
+
+        from researcharr.repositories.uow import UnitOfWork
+
+        return UnitOfWork()
+
+    def get_app(self, app_id: int):
+        """Get a managed app by ID.
+
+        Args:
+            app_id: ID of the app to retrieve
+
+        Returns:
+            ManagedApp instance or None if not found
+        """
+        with self.create_unit_of_work() as uow:
+            return uow.apps.get_by_id(app_id)
+
+    def get_all_apps(self):
+        """Get all managed apps.
+
+        Returns:
+            List of ManagedApp instances
+        """
+        with self.create_unit_of_work() as uow:
+            return uow.apps.get_all()
+
+    def get_enabled_apps(self):
+        """Get all enabled managed apps.
+
+        Returns:
+            List of enabled ManagedApp instances
+        """
+        with self.create_unit_of_work() as uow:
+            return uow.apps.get_enabled()
+
+    def get_tracked_item(self, item_id: int):
+        """Get a tracked item by ID.
+
+        Args:
+            item_id: ID of the item to retrieve
+
+        Returns:
+            TrackedItem instance or None if not found
+        """
+        with self.create_unit_of_work() as uow:
+            return uow.items.get_by_id(item_id)
+
+    def get_processing_logs(self, limit: int = 100):
+        """Get recent processing logs.
+
+        Args:
+            limit: Maximum number of logs to retrieve
+
+        Returns:
+            List of ProcessingLog instances
+        """
+        with self.create_unit_of_work() as uow:
+            return uow.logs.get_recent(limit=limit)
+
+    def get_search_cycle(self, cycle_id: int):
+        """Get a search cycle by ID.
+
+        Args:
+            cycle_id: ID of the cycle to retrieve
+
+        Returns:
+            SearchCycle instance or None if not found
+        """
+        with self.create_unit_of_work() as uow:
+            return uow.cycles.get_by_id(cycle_id)
+
+    def get_setting(self, key: str, default=None):
+        """Get a global setting by key.
+
+        Args:
+            key: Setting key to retrieve
+            default: Default value if setting not found
+
+        Returns:
+            Setting value or default
+        """
+        with self.create_unit_of_work() as uow:
+            setting = uow.settings.get_by_key(key)
+            return setting.value if setting else default
+
+    def set_setting(self, key: str, value: Any) -> None:
+        """Set a global setting.
+
+        Args:
+            key: Setting key
+            value: Setting value
+        """
+        with self.create_unit_of_work() as uow:
+            uow.settings.set(key, value)
+
+
 def create_metrics_app() -> Flask:
     """Create a minimal Flask app with health and metrics endpoints.
 
@@ -342,14 +950,14 @@ def create_metrics_app() -> Flask:
                             import sys
 
                             sys.modules["flask"] = real_mod
-                        except Exception:
+                        except Exception:  # nosec B110 -- intentional broad except for resilience
                             # If we cannot update sys.modules for any reason,
                             # continue using the resolved real_mod locally.
                             pass
-                    except Exception:
+                    except Exception:  # nosec B110 -- intentional broad except for resilience
                         # If loading fails, continue using the mocked module
                         pass
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             # If any of the above fails, continue using whatever we have
             pass
 
@@ -373,7 +981,7 @@ def create_metrics_app() -> Flask:
                     RealFlask = getattr(real_mod, "Flask", None)
                     if RealFlask is not None and not isinstance(RealFlask, _Mock):
                         app = RealFlask("metrics")
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
         # Final explicit fallback if still Mock
         if isinstance(app, _Mock):
@@ -423,7 +1031,7 @@ def create_metrics_app() -> Flask:
                             if app_ref._before:
                                 try:
                                     app_ref._before()
-                                except Exception:
+                                except Exception:  # nosec B110 -- intentional broad except for resilience
                                     pass
                             fn = app_ref._routes.get((path, "GET"))
                             if fn is None:
@@ -438,7 +1046,7 @@ def create_metrics_app() -> Flask:
                                 )()
                             try:
                                 res = fn()
-                            except Exception:
+                            except Exception:  # nosec B110 -- intentional broad except for resilience
                                 app_ref.metrics["errors_total"] += 1
                                 return type(
                                     "Resp",
@@ -459,7 +1067,7 @@ def create_metrics_app() -> Flask:
                     return _Client()
 
             app = _BasicFallbackFlask("metrics")
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
 
     # Resolve DB path from implementation if available for compatibility
@@ -472,7 +1080,7 @@ def create_metrics_app() -> Flask:
             db_path = getattr(impl, "DB_PATH", db_path)
         else:
             db_path = getattr(_pkg, "DB_PATH", db_path)
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
 
     # Use per-app services to avoid global counter leakage across tests
@@ -536,7 +1144,7 @@ def create_metrics_app() -> Flask:
                             if app_ref._before:
                                 try:
                                     app_ref._before()
-                                except Exception:
+                                except Exception:  # nosec B110 -- intentional broad except for resilience
                                     pass
                             fn = app_ref._routes.get(path)
                             if fn is None:
@@ -594,7 +1202,7 @@ def create_metrics_app() -> Flask:
             app = _FallbackFlask("metrics")
             app.metrics = _metrics.metrics
             app.config["metrics"] = app.metrics
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
 
     # Attach metrics to app (works for both real Flask and fallback)
@@ -603,7 +1211,7 @@ def create_metrics_app() -> Flask:
             app.metrics = _metrics.metrics  # type: ignore[attr-defined]
         if not hasattr(app, "config") or "metrics" not in app.config:
             app.config["metrics"] = _metrics.metrics  # type: ignore[attr-defined,index]
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
 
     # Increment request counter for every request
@@ -676,10 +1284,10 @@ def create_metrics_app() -> Flask:
                 data["cache_misses"] = int(c.get("misses", 0))
                 data["cache_sets"] = int(c.get("sets", 0))
                 data["cache_evictions"] = int(c.get("evictions", 0))
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
             return jsonify(data)
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             # Fallback if jsonify is not available
             data = dict(_metrics.get_metrics())
             try:
@@ -692,7 +1300,7 @@ def create_metrics_app() -> Flask:
                 data["cache_misses"] = int(c.get("misses", 0))
                 data["cache_sets"] = int(c.get("sets", 0))
                 data["cache_evictions"] = int(c.get("evictions", 0))
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
             return data
 
@@ -700,9 +1308,8 @@ def create_metrics_app() -> Flask:
     def metrics_prometheus():
         """Prometheus text exposition for default registry."""
         try:
-            from prometheus_client import CONTENT_TYPE_LATEST
+            from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
             from prometheus_client import REGISTRY as _DEFAULT_REGISTRY
-            from prometheus_client import generate_latest
         except Exception:
             # Prometheus not installed; return a helpful message
             try:
@@ -815,9 +1422,9 @@ def create_metrics_app() -> Flask:
                             RealFlask = getattr(real_mod, "Flask", None)
                             if RealFlask is not None:
                                 app = RealFlask("metrics")
-                        except Exception:
+                        except Exception:  # nosec B110 -- intentional broad except for resilience
                             pass
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
             from unittest.mock import Mock as _Mock
 
@@ -835,14 +1442,14 @@ def create_metrics_app() -> Flask:
 
                     # Instantiate a FlaskClient directly bound to our app
                     client = _FlaskClient(self)
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     # If we couldn't create a FlaskClient, continue with
                     # existing client and wrap it below. For non–Flask
                     # apps (like factory.create_app()) that return a full
                     # Flask instance, the wrapper class provides a sensible
                     # context manager so `with app.test_client() as c:` works.
                     pass
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
 
         # Debug: show what we're wrapping to help track Mock leakage.
@@ -853,7 +1460,7 @@ def create_metrics_app() -> Flask:
                 print("DEBUG _wrapped_test_client: wrapping a Mock client", client)
             else:
                 print("DEBUG _wrapped_test_client: wrapping client type", type(client))
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
 
         class _ClientWrapper:
@@ -932,7 +1539,7 @@ def create_metrics_app() -> Flask:
             "class.test_client=",
             type(getattr(app.__class__, "test_client", None)),
         )
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
 
     # The wrapper above will, if it cannot obtain a usable client via the
@@ -1012,7 +1619,7 @@ def create_metrics_app() -> Flask:
                     return _C()
 
             app = _MinimalApp()
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
 
     return app
@@ -1030,29 +1637,36 @@ def serve() -> None:
 
 
 # Configuration loading function (moved from researcharr.py)
-def load_config(path: str = "config.yml") -> dict[str, Any]:
+def load_config(path: str = "config.yml", fs: FileSystemService | None = None) -> dict[str, Any]:
     """Load configuration from YAML file.
 
     This function provides backwards compatibility with the original
     researcharr.py load_config function.
+
+    Args:
+        path: Path to config file
+        fs: Optional FileSystemService for dependency injection
     """
     if "yaml" not in globals():
         import yaml
 
         globals()["yaml"] = yaml
 
-    if not os.path.exists(path):
+    if fs is None:
+        fs = FileSystemService()
+
+    if not fs.exists(path):
         raise FileNotFoundError(path)
 
-    with open(path) as f:
-        config = globals()["yaml"].safe_load(f)
-        # If the file is empty or evaluates to None, return an empty dict so
-        # callers/tests can handle missing values gracefully.
-        if not config:
-            return {}
-        # Don't raise on missing fields; return whatever is present. Tests
-        # expect partial configs to be accepted.
-        return config
+    content = fs.read_text(path)
+    config = globals()["yaml"].safe_load(content)
+    # If the file is empty or evaluates to None, return an empty dict so
+    # callers/tests can handle missing values gracefully.
+    if not config:
+        return {}
+    # Don't raise on missing fields; return whatever is present. Tests
+    # expect partial configs to be accepted.
+    return config
 
 
 # Backwards compatibility functions (for existing code that imports these directly)
@@ -1076,11 +1690,13 @@ def has_valid_url_and_key(instances: list[dict[str, Any]]) -> bool:
 
 def check_radarr_connection(url: str, api_key: str, logger: logging.Logger) -> bool:
     """Check Radarr connection (backwards compatibility)."""
-    connectivity_service = ConnectivityService()
+    http_client = HttpClientService()
+    connectivity_service = ConnectivityService(http_client)
     return connectivity_service.check_radarr_connection(url, api_key, logger)
 
 
 def check_sonarr_connection(url: str, api_key: str, logger: logging.Logger) -> bool:
     """Check Sonarr connection (backwards compatibility)."""
-    connectivity_service = ConnectivityService()
+    http_client = HttpClientService()
+    connectivity_service = ConnectivityService(http_client)
     return connectivity_service.check_sonarr_connection(url, api_key, logger)

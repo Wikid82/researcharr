@@ -72,6 +72,7 @@ class ManagedAppRepository(BaseRepository[ManagedApp]):
 
     def get_active_apps(self) -> list[ManagedApp]:
         """
+        # basedpyright: reportAttributeAccessIssue=false
         Get all active apps.
 
         Returns:

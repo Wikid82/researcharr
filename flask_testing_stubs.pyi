@@ -11,14 +11,12 @@ class FlaskClient:
 
     def get(self, path: str, **kwargs: Any) -> Any:  # simplified
         ...
-
     def post(self, path: str, **kwargs: Any) -> Any:  # simplified
         ...
 
 class FlaskApp:
     def test_client(self) -> FlaskClient:  # simplified
         ...
-
     def app_context(self) -> ContextManager[Any]:
         """Context manager for application context."""
         ...

@@ -192,6 +192,119 @@
                     "default": "tests/test_factory_shim_new.py"
                 }
             ]
+        },
+        {
+            "label": "CI: Multi-Version Test (Quick)",
+            "type": "shell",
+            "command": "./scripts/ci-multi-version.sh",
+            "args": [
+                "--skip-build"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            },
+            "problemMatcher": [],
+            "detail": "Test Python 3.10-3.14 using existing debug images (fast)."
+        },
+        {
+            "label": "CI: Multi-Version Build & Test",
+            "type": "shell",
+            "command": "./scripts/ci-multi-version.sh",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            },
+            "problemMatcher": [],
+            "detail": "Build debug images and test Python 3.10-3.14 (slow, after dependency changes)."
+        },
+        {
+            "label": "CI: Local (Single Version)",
+            "type": "shell",
+            "command": "./scripts/ci-local.sh",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            },
+            "problemMatcher": [],
+            "detail": "Run full local CI: deps, pre-commit, pytest, Docker build, Trivy scan."
+        },
+        {
+            "label": "CI: Local (Skip Docker)",
+            "type": "shell",
+            "command": "./scripts/ci-local.sh",
+            "args": [
+                "--no-docker",
+                "--no-trivy"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            },
+            "problemMatcher": [],
+            "detail": "Run local CI checks without Docker/Trivy (fast pre-commit check)."
+        },
+        {
+            "label": "Pre-commit + Coverage (Local)",
+            "type": "shell",
+            "command": "pre-commit run --all-files && python -m pytest tests/ --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            },
+            "problemMatcher": [],
+            "detail": "Run pre-commit hooks then pytest with coverage (local source, all tests pass)."
+        },
+        {
+            "label": "Pre-commit + Coverage (CI Mode)",
+            "type": "shell",
+            "command": "pre-commit run --all-files && SITE_PACKAGES=$(python -c 'import sysconfig; print(sysconfig.get_paths()[\"purelib\"])') && export PYTHONPATH=\"$SITE_PACKAGES:$PYTHONPATH\" && python -m pytest tests/ --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            },
+            "problemMatcher": [],
+            "detail": "Run pre-commit + pytest with CI PYTHONPATH (tests installed package, 4 known failures)."
+        }
+        ,
+        {
+            "label": "Pre-commit (CI Smoke)",
+            "type": "shell",
+            "command": "pre-commit run --all-files && ./scripts/test-ci-smoke.sh",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            },
+            "problemMatcher": [],
+            "detail": "Run pre-commit hooks then CI-mode smoke tests (fast, mimics CI import path)."
         }
 
 

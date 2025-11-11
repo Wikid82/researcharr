@@ -203,30 +203,22 @@ def run_job() -> None:
             # Always provide the child's output at DEBUG; tests look for the
             # more human-facing "Job stdout" / "Job stderr" lines at INFO.
             logger.debug("run_job stdout: %s", out)
-        except (
-            Exception
-        ):  # pragma: no cover - nosec B110 -- intentional broad except for resilience
-            pass
+        except Exception:  # pragma: no cover
+            pass  # nosec B110 -- intentional broad except for resilience
         try:  # pragma: no cover - defensive logging
             logger.debug("run_job stderr: %s", err)
-        except (
-            Exception
-        ):  # pragma: no cover - nosec B110 -- intentional broad except for resilience
-            pass
+        except Exception:  # pragma: no cover
+            pass  # nosec B110 -- intentional broad except for resilience
         try:
             if out:
                 logger.info("Job stdout: %s", out)
-        except (
-            Exception
-        ):  # pragma: no cover - nosec B110 -- intentional broad except for resilience
-            pass
+        except Exception:  # pragma: no cover
+            pass  # nosec B110 -- intentional broad except for resilience
         try:
             if err:
                 logger.info("Job stderr: %s", err)
-        except (
-            Exception
-        ):  # pragma: no cover - nosec B110 -- intentional broad except for resilience
-            pass
+        except Exception:  # pragma: no cover
+            pass  # nosec B110 -- intentional broad except for resilience
         logger.info("Job finished with returncode %s", completed.returncode)
     except subprocess.TimeoutExpired:
         # Best-effort kill: subprocess.run already attempts to kill the child,

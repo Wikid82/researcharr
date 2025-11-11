@@ -1,5 +1,7 @@
 """Storage module for database models and session management."""
+# basedpyright: reportAttributeAccessIssue=false
 
+from . import recovery as recovery  # re-export recovery helpers for tests
 from .database import get_session, init_db
 from .models import (
     AppType,
@@ -25,4 +27,5 @@ __all__ = [
     "AppType",
     "init_db",
     "get_session",
+    "recovery",
 ]

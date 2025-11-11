@@ -43,6 +43,7 @@ class GlobalSettingsRepository(BaseRepository[GlobalSettings]):
 
     def get_or_create(self) -> GlobalSettings:
         """
+        # basedpyright: reportAttributeAccessIssue=false
         Get existing settings or create with defaults.
 
         Returns:

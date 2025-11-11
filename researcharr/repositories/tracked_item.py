@@ -59,6 +59,7 @@ class TrackedItemRepository(BaseRepository[TrackedItem]):
 
     def get_by_app(self, app_id: int) -> list[TrackedItem]:
         """
+        # basedpyright: reportAttributeAccessIssue=false
         Get all tracked items for a specific app.
 
         Args:

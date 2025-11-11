@@ -250,7 +250,9 @@ class TestConnectivityService(unittest.TestCase):
         mock_get.return_value = mock_response
 
         result = self.connectivity_service.check_radarr_connection(
-            "http://localhost:7878", "test_key", self.logger  # pragma: allowlist secret
+            "http://localhost:7878",
+            "test_key",
+            self.logger,  # pragma: allowlist secret
         )
 
         self.assertTrue(result)
@@ -339,7 +341,9 @@ class TestHealthService(unittest.TestCase):
         container = get_container()
         container.register_singleton("database_service", mock_db_service)
 
-        health_status = self.health_service.check_system_health()
+        # Mock the database health monitor to avoid comprehensive checks
+        with patch.object(self.health_service, "_get_db_health_monitor", return_value=None):
+            health_status = self.health_service.check_system_health()
 
         # Check overall structure
         self.assertIn("status", health_status)
@@ -361,7 +365,9 @@ class TestHealthService(unittest.TestCase):
         container = get_container()
         container.register_singleton("database_service", mock_db_service)
 
-        health_status = self.health_service.check_system_health()
+        # Mock the database health monitor to avoid comprehensive checks
+        with patch.object(self.health_service, "_get_db_health_monitor", return_value=None):
+            health_status = self.health_service.check_system_health()
 
         # Overall status should be error
         self.assertEqual(health_status["status"], "error")
@@ -539,6 +545,42 @@ logging:
         config = load_config(str(config_file))
         self.assertEqual(config, {})
 
+    def test_load_config_with_filesystem_service(self):
+        """Test configuration loading with injected FileSystemService."""
+        from researcharr.core.services import FileSystemService
+
+        fs = FileSystemService()
+        config_file = self.temp_dir / "test_config.yml"
+
+        config_content = """
+database:
+  path: /custom/db.sqlite
+logging:
+  level: DEBUG
+"""
+
+        fs.write_text(config_file, config_content)
+
+        config = load_config(str(config_file), fs=fs)
+
+        self.assertEqual(config["database"]["path"], "/custom/db.sqlite")
+        self.assertEqual(config["logging"]["level"], "DEBUG")
+
+    def test_load_config_with_mock_filesystem(self):
+        """Test configuration loading with mock filesystem."""
+        from unittest.mock import MagicMock
+
+        mock_fs = MagicMock()
+        mock_fs.exists.return_value = True
+        mock_fs.read_text.return_value = "app:\n  name: mock_app\n  version: 2.0.0"
+
+        config = load_config("/fake/path/config.yml", fs=mock_fs)
+
+        self.assertEqual(config["app"]["name"], "mock_app")
+        self.assertEqual(config["app"]["version"], "2.0.0")
+        mock_fs.exists.assert_called_once_with("/fake/path/config.yml")
+        mock_fs.read_text.assert_called_once_with("/fake/path/config.yml")
+
 
 class TestBackwardsCompatibilityFunctions(unittest.TestCase):
     """Test backwards compatibility functions."""
@@ -611,7 +653,9 @@ class TestBackwardsCompatibilityFunctions(unittest.TestCase):
 
         self.assertTrue(result)
         mock_service.check_radarr_connection.assert_called_once_with(
-            "http://localhost:7878", "test_key", logger  # pragma: allowlist secret
+            "http://localhost:7878",
+            "test_key",
+            logger,  # pragma: allowlist secret
         )
 
     @patch("researcharr.core.services.ConnectivityService")
@@ -628,7 +672,9 @@ class TestBackwardsCompatibilityFunctions(unittest.TestCase):
 
         self.assertTrue(result)
         mock_service.check_sonarr_connection.assert_called_once_with(
-            "http://localhost:8989", "test_key", logger  # pragma: allowlist secret
+            "http://localhost:8989",
+            "test_key",
+            logger,  # pragma: allowlist secret
         )
 
 

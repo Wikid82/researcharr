@@ -8,19 +8,7 @@ repos:
       - id: ruff
         args: ["--fix"]
         stages: [pre-commit]
-
-  - repo: https://github.com/psf/black
-    rev: "25.9.0"
-    hooks:
-      - id: black
-        language_version: python3
-        stages: [pre-commit]
-
-  - repo: https://github.com/PyCQA/isort
-    rev: "7.0.0"
-    hooks:
-      - id: isort
-        name: isort (python)
+      - id: ruff-format
         stages: [pre-commit]
 
   # NOTE: the previous mirrors-mypy hook would create an isolated install of
@@ -72,6 +60,13 @@ repos:
   # Local hooks: shellcheck (system binary) and detect-secrets (Python tool)
   - repo: local
     hooks:
+      - id: pytest-ci-smoke
+        name: pytest (CI-mode smoke)
+        entry: ./scripts/test-ci-smoke.sh
+        language: script
+        pass_filenames: false
+        stages: [pre-commit]
+
       - id: multi-version-test
         name: multi-version Python compatibility test
         entry: scripts/multi-version-test.sh
@@ -102,6 +97,13 @@ repos:
         files: '^(?!tests/|node_modules/).*'
         stages: [pre-commit]
 
+      - id: safety
+        name: safety (vulnerability scan)
+        entry: scripts/run-safety-precommit.sh
+        language: script
+        pass_filenames: false
+        stages: [pre-commit]
+
       - id: basedpyright-system
         name: basedpyright (system)
         # Use a small local wrapper that prefers a local based-pyright/pyright
@@ -126,7 +128,14 @@ repos:
         entry: ./scripts/run-pytest-precommit.sh
         language: script
         pass_filenames: false
-        stages: [pre-commit]
+        stages: [manual]
+
+      - id: pytest-ci-full
+        name: pytest (CI-mode full)
+        entry: ./scripts/test-ci-mode.sh
+        language: script
+        pass_filenames: false
+        stages: [pre-push]
 
       # run local wrapper hooks at the pre-commit stage
       # (keeps behavior equivalent to prior config while using new stage name)

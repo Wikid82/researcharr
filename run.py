@@ -5,6 +5,7 @@ All logic lives in ``researcharr.run``. This module simply re-exports its
 public API so ``from researcharr import run`` and ``import researcharr.run``
 behave identically (same function objects & logging behavior).
 """
+
 from __future__ import annotations
 
 import importlib.util

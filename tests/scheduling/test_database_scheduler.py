@@ -1,10 +1,9 @@
 """Tests for database health monitoring scheduler service."""
 
 from datetime import datetime
-
-from researcharr.compat import UTC
 from unittest.mock import Mock, patch
 
+from researcharr.compat import UTC
 from researcharr.scheduling.database_scheduler import DatabaseSchedulerService
 
 

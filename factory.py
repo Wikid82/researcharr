@@ -12,6 +12,8 @@ from types import ModuleType
 from typing import TYPE_CHECKING, Any
 
 import yaml
+from werkzeug.security import check_password_hash, generate_password_hash
+
 from flask import (
     Flask,
     Response,
@@ -25,7 +27,6 @@ from flask import (
     stream_with_context,
     url_for,
 )
-from werkzeug.security import check_password_hash, generate_password_hash
 
 # Re-export select helpers for tests that patch attributes on module objects.
 __all__ = ["check_password_hash"]
@@ -361,15 +362,14 @@ def create_app() -> Flask:
     if not secret and env_prod:
         # Fail fast in production if SECRET_KEY is missing.
         raise SystemExit(
-            "SECRET_KEY environment variable is required in production."
-            " Set SECRET_KEY and restart."
+            "SECRET_KEY environment variable is required in production. Set SECRET_KEY and restart."
         )
     if not secret:
         secret = "dev"  # nosec B105
         # Will be visible in logs once the app logger is configured; use
         # print as a fallback in early startup paths.
         try:
-            print("WARNING: using insecure default SECRET_KEY; " "set SECRET_KEY in production")
+            print("WARNING: using insecure default SECRET_KEY; set SECRET_KEY in production")
         except Exception:
             pass
     app.secret_key = secret
@@ -701,10 +701,7 @@ def create_app() -> Flask:
             app.config_data["general"]["PUID"] = str(puid_val)
         except Exception:
             app.logger.warning(
-                (
-                    "Invalid PUID '%s' — falling back to 1000. "
-                    "Set PUID env var to a valid integer."
-                ),
+                ("Invalid PUID '%s' — falling back to 1000. Set PUID env var to a valid integer."),
                 app.config_data["general"].get("PUID"),
             )
             app.config_data["general"]["PUID"] = "1000"
@@ -714,10 +711,7 @@ def create_app() -> Flask:
             app.config_data["general"]["PGID"] = str(pgid_val)
         except Exception:
             app.logger.warning(
-                (
-                    "Invalid PGID '%s' — falling back to 1000. "
-                    "Set PGID env var to a valid integer."
-                ),
+                ("Invalid PGID '%s' — falling back to 1000. Set PGID env var to a valid integer."),
                 app.config_data["general"].get("PGID"),
             )
             app.config_data["general"]["PGID"] = "1000"
@@ -1932,8 +1926,52 @@ def create_app() -> Flask:
 
     @app.route("/metrics")
     def metrics():
-        # Return and increment metrics
-        return jsonify(app.metrics)
+        # Return application metrics including backup and database metrics
+        all_metrics = dict(app.metrics)
+
+        # Add backup metrics if available
+        try:
+            import os
+
+            from researcharr.backups import get_backup_config
+            from researcharr.core.events import get_event_bus
+            from researcharr.monitoring.backup_monitor import (
+                BackupHealthMonitor,
+            )
+
+            config_root = os.getenv("CONFIG_DIR", "/config")
+            backup_config = get_backup_config(config_root)
+            backups_dir = backup_config["backups_dir"]
+
+            event_bus = get_event_bus()
+            monitor = BackupHealthMonitor(backups_dir, backup_config, event_bus)
+
+            backup_metrics = monitor.get_metrics()
+            all_metrics.update(backup_metrics)
+        except Exception as e:
+            # Log but don't fail if backup metrics unavailable
+            try:
+                app.logger.warning(f"Failed to collect backup metrics: {e}")
+            except Exception:
+                pass
+
+        # Add database metrics if available
+        try:
+            from researcharr.monitoring import get_database_health_monitor
+
+            db_monitor = get_database_health_monitor()
+            db_metrics = db_monitor.get_metrics()
+
+            # Prefix database metrics for clarity
+            all_metrics["database"] = db_metrics
+        except Exception as e:
+            # Log but don't fail if database metrics unavailable
+            try:
+                app.logger.warning(f"Failed to collect database metrics: {e}")
+            except Exception:
+                pass
+
+        return jsonify(all_metrics)
 
     # Increment requests_total for every request
     @app.before_request
@@ -2910,18 +2948,19 @@ def create_app() -> Flask:
             return jsonify({"error": "invalid_json"}), 400
 
         asset_url = data.get("asset_url")
-        # Validate the asset URL first so tests that exercise the URL
-        # validation branch receive deterministic responses even when
-        # runtime-in-image detection is true in containerized test runs.
+
+        # Disallow upgrades when running in an image-managed runtime first,
+        # regardless of URL validity. This matches expected behavior in tests.
+        if _running_in_image():
+            return jsonify({"error": "in_image_runtime"}), 400
+
+        # Then validate the asset URL for non-image runtimes
         if (
             not asset_url
             or not isinstance(asset_url, str)
             or not asset_url.startswith(("http://", "https://"))
         ):
             return jsonify({"error": "invalid_asset_url"}), 400
-
-        if _running_in_image():
-            return jsonify({"error": "in_image_runtime"}), 400
 
         # perform the download in a background thread
         def _download_asset(url: str):

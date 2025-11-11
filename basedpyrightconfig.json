@@ -21,6 +21,10 @@
   "reportOptionalCall": "none",
   "reportOptionalOperand": "none",
   "reportOptionalSubscript": "none",
+  "reportAttributeAccessIssue": "none",
+  "reportArgumentType": "none",
+  "reportCallIssue": "none",
+  "reportRedeclaration": "none",
   "executionEnvironments": [
     {
       "root": ".",

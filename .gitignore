@@ -122,6 +122,7 @@ static/banner.xcf
 node_modules/
 .tmp_coverage/
 logs/
+.tmp/
 
 # Alembic migrations runtime
 alembic.ini.bak

@@ -15,11 +15,13 @@ PYTEST_OPTS="-q"
 # Stop after N failures (default 1). Use 0 to disable.
 MAXFAIL=0
 # Console output filtering for this script: summary|errors|full
-LOG_LEVEL="summary"
+LOG_LEVEL="full"
 # Optional pytest CLI log level (e.g., DEBUG, INFO, WARNING, ERROR)
-PYTEST_LOG_LEVEL=""
+PYTEST_LOG_LEVEL="DEBUG"
 IMAGE_PREFIX="researcharr:py"
 IMAGE_SUFFIX="-debug"
+# Directory for local logs (repo-local to make them easy to find)
+REPO_TMP_DIR=".tmp"
 
 # Colors for output
 RED='\033[0;31m'
@@ -107,6 +109,10 @@ echo -e "${BLUE}=====================================${NC}"
 echo -e "${BLUE}researcharr Multi-Version CI Runner${NC}"
 echo -e "${BLUE}=====================================${NC}"
 echo ""
+
+# Ensure local log directory exists
+mkdir -p "${REPO_TMP_DIR}"
+echo "Repo-local logs will be written to: ${REPO_TMP_DIR}/"
 echo "Testing Python versions: ${VERSIONS}"
 echo "Skip build: ${SKIP_BUILD}"
 echo "Test target: ${TEST_TARGET}"
@@ -137,12 +143,12 @@ if [[ "${SKIP_BUILD}" == "false" ]]; then
             --target debug \
             --build-arg PY_VERSION="${version}" \
             -t "${image_name}" \
-            . > "/tmp/researcharr-build-${version_short}.log" 2>&1; then
+            . > "${REPO_TMP_DIR}/researcharr-build-${version_short}.log" 2>&1; then
             echo -e "${GREEN}✓ Build succeeded: ${image_name}${NC}"
             BUILD_RESULTS["${version}"]="success"
         else
             echo -e "${RED}✗ Build failed: ${image_name}${NC}"
-            echo "  Check /tmp/researcharr-build-${version_short}.log for details"
+            echo "  Check ${REPO_TMP_DIR}/researcharr-build-${version_short}.log for details"
             BUILD_RESULTS["${version}"]="failed"
             FAILED_VERSIONS+=("${version}")
         fi
@@ -204,12 +210,12 @@ for version in ${VERSIONS}; do
             "${PYTEST_LOG_FLAGS[@]}" \
             "${MF_FLAG[@]}" \
             --disable-warnings \
-            2>&1 | tee "/tmp/researcharr-test-${version_short}.log"; then
+            2>&1 | tee "${REPO_TMP_DIR}/researcharr-test-${version_short}.log"; then
             echo -e "${GREEN}✓ Tests passed: Python ${version}${NC}"
             TEST_RESULTS["${version}"]="success"
         else
             echo -e "${RED}✗ Tests failed: Python ${version}${NC}"
-            echo "  Check /tmp/researcharr-test-${version_short}.log for details"
+            echo "  Check ${REPO_TMP_DIR}/researcharr-test-${version_short}.log for details"
             TEST_RESULTS["${version}"]="failed"
             FAILED_VERSIONS+=("${version}")
         fi
@@ -228,12 +234,12 @@ for version in ${VERSIONS}; do
             "${PYTEST_LOG_FLAGS[@]}" \
             "${MF_FLAG[@]}" \
             --disable-warnings \
-            2>&1 | tee "/tmp/researcharr-test-${version_short}.log" | grep -E "${PATTERN}"; then
+            2>&1 | tee "${REPO_TMP_DIR}/researcharr-test-${version_short}.log" | grep -E "${PATTERN}"; then
             echo -e "${GREEN}✓ Tests passed: Python ${version}${NC}"
             TEST_RESULTS["${version}"]="success"
         else
             echo -e "${RED}✗ Tests failed: Python ${version}${NC}"
-            echo "  Check /tmp/researcharr-test-${version_short}.log for details"
+            echo "  Check ${REPO_TMP_DIR}/researcharr-test-${version_short}.log for details"
             TEST_RESULTS["${version}"]="failed"
             FAILED_VERSIONS+=("${version}")
         fi

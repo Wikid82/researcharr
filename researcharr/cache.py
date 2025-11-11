@@ -147,6 +147,29 @@ def metrics() -> dict[str, int]:
     return dict(_metrics)
 
 
+def reset_metrics() -> None:
+    """Reset in-memory metrics counters for tests or runtime resets.
+
+    Badges and counters (prometheus) are cleared or reset to zero when
+    present. This is safe to call concurrently via the lock.
+    """
+    with _lock:
+        for k in _metrics:
+            _metrics[k] = 0
+        # Try to zero out prometheus counters if present; don't blow up
+        try:
+            for c in _PROM_COUNTERS.values():
+                # Counter's label wrapper exposes `_value` with `.set()`
+                v = getattr(c, "_value", None)
+                if v is not None and hasattr(v, "set"):
+                    try:
+                        v.set(0)
+                    except Exception:  # nosec B110
+                        pass
+        except Exception:  # nosec B110
+            pass
+
+
 def cached(ttl: int, key_builder: Callable[..., tuple[Any, ...]] | None = None):
     """Decorator for caching pure-ish function results.
 
@@ -188,6 +211,7 @@ __all__ = [
     "invalidate",
     "clear_all",
     "metrics",
+    "reset_metrics",
     "cached",
     "_prometheus_enabled",
     "_ensure_prometheus",

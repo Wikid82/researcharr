@@ -1590,7 +1590,7 @@ def create_metrics_app() -> Flask:
             print("--- create_metrics_app CI diagnostics ---")
             print(
                 "CI_ENV:",
-                dict(CI=os.getenv("CI"), RESEARCHARR_CI_DEBUG=os.getenv("RESEARCHARR_CI_DEBUG")),
+                {"CI": os.getenv("CI"), "RESEARCHARR_CI_DEBUG": os.getenv("RESEARCHARR_CI_DEBUG")},
             )
             print("flask_mod:", type(flask_mod), "is_mock:", isinstance(flask_mod, _Mock))
             try:

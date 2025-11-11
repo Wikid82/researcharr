@@ -12,10 +12,7 @@ from researcharr import cache
 def reset_cache():
     """Clear cache between tests."""
     cache.clear_all()
-    cache._metrics["hits"] = 0
-    cache._metrics["misses"] = 0
-    cache._metrics["sets"] = 0
-    cache._metrics["evictions"] = 0
+    cache.reset_metrics()
     yield
     cache.clear_all()
 

@@ -46,12 +46,19 @@ if "create_app" not in globals():
                     return fn()
         except Exception:
             pass
+        # ALWAYS return a minimal Flask app as fallback - NEVER return None.
+        # Tests expect create_app() to return a Flask-like object with test_client().
         try:
             from flask import Flask
 
             return Flask("factory_fallback")
         except Exception:
-            return None  # last resort
+            # If Flask itself is missing, raise ImportError so tests fail fast
+            # with a clear message rather than mysteriously getting None.
+            raise ImportError(
+                "Flask import failed; cannot create fallback app. "
+                "Ensure Flask is installed: pip install flask"
+            )
 
     globals()["create_app"] = create_app
 

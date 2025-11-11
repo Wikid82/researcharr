@@ -1558,9 +1558,11 @@ def create_metrics_app() -> Flask:
     # best-effort and never raise.
     try:  # pragma: no cover - environment-specific fallback
         from unittest.mock import Mock as _Mock
+
         _tc_probe = app.test_client()
         _resp_probe = _tc_probe.get("/metrics") if _tc_probe else None
         if _resp_probe is not None and isinstance(getattr(_resp_probe, "status_code", None), _Mock):
+
             def _stable_test_client():  # type: ignore[override]
                 _inner = app.test_client()
 

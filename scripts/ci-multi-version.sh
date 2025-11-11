@@ -81,11 +81,11 @@ FAILED_VERSIONS=()
 if [[ "${SKIP_BUILD}" == "false" ]]; then
     echo -e "${BLUE}[BUILD PHASE]${NC}"
     echo ""
-    
+
     for version in ${VERSIONS}; do
         version_short=$(echo "${version}" | tr -d '.')
         image_name="${IMAGE_PREFIX}${version_short}${IMAGE_SUFFIX}"
-        
+
         # Check if image already exists
         if docker image inspect "${image_name}" > /dev/null 2>&1; then
             echo -e "${GREEN}✓ Image exists: ${image_name} (skipping build)${NC}"
@@ -93,7 +93,7 @@ if [[ "${SKIP_BUILD}" == "false" ]]; then
             echo ""
             continue
         fi
-        
+
         echo -e "${YELLOW}Building ${image_name}...${NC}"
         if docker build \
             --target debug \
@@ -122,16 +122,16 @@ echo ""
 for version in ${VERSIONS}; do
     version_short=$(echo "${version}" | tr -d '.')
     image_name="${IMAGE_PREFIX}${version_short}${IMAGE_SUFFIX}"
-    
+
     # Skip if build failed
     if [[ "${BUILD_RESULTS[${version}]:-}" == "failed" ]]; then
         echo -e "${YELLOW}⊘ Skipping tests for ${version} (build failed)${NC}"
         TEST_RESULTS["${version}"]="skipped"
         continue
     fi
-    
+
     echo -e "${YELLOW}Testing ${image_name}...${NC}"
-    
+
     # Check if image exists
     if ! docker image inspect "${image_name}" > /dev/null 2>&1; then
         echo -e "${RED}✗ Image not found: ${image_name}${NC}"
@@ -141,7 +141,7 @@ for version in ${VERSIONS}; do
         echo ""
         continue
     fi
-    
+
     # Run pytest in container
     if docker run \
         --rm -t \

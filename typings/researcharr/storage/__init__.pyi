@@ -1,4 +1,3 @@
-from typing import Any
 from . import recovery as recovery
 
 class Base: ...
@@ -12,5 +11,14 @@ class SortStrategy: ...
 class TrackedItem: ...
 
 __all__ = [
-    'Base','AppType','CyclePhase','GlobalSettings','ManagedApp','ProcessingLog','SearchCycle','SortStrategy','TrackedItem','recovery'
+    "Base",
+    "AppType",
+    "CyclePhase",
+    "GlobalSettings",
+    "ManagedApp",
+    "ProcessingLog",
+    "SearchCycle",
+    "SortStrategy",
+    "TrackedItem",
+    "recovery",
 ]

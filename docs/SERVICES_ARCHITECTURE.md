@@ -400,7 +400,7 @@ def test_my_function():
         mock_storage = Mock()
         mock_storage.get_enabled_apps.return_value = []
         mock_container.return_value.resolve.return_value = mock_storage
-        
+
         # Your test code here
         result = my_function()
         assert result is not None

@@ -41,6 +41,7 @@ class _RuntimeConfig:
     Tests can override these methods to control runtime behavior without dealing with
     module identity issues across Python versions.
     """
+
     _running_in_image_override = None
     _webui_override = None
 
@@ -50,8 +51,12 @@ class _RuntimeConfig:
 
         Tests can patch this via: _RuntimeConfig._running_in_image_override = lambda: False
         """
-        if cls._running_in_image_override is not None:
-            return cls._running_in_image_override()
+        override = getattr(cls, "_running_in_image_override", None)
+        if override is not None:
+            try:
+                return bool(override())
+            except Exception:
+                return False
         return _default_running_in_image_check()
 
     @classmethod
@@ -63,6 +68,39 @@ class _RuntimeConfig:
         if cls._webui_override is not None:
             return cls._webui_override
         return None  # Will fall through to _get_webui() logic
+
+    @classmethod
+    def set_webui(cls, obj) -> None:
+        """Set a concrete webui override object for tests.
+
+        Accepts any object that provides save_user_config/load_user_config.
+        """
+        cls._webui_override = obj
+
+    @classmethod
+    def clear_webui(cls) -> None:
+        """Clear any webui override, restoring default resolution."""
+        cls._webui_override = None
+
+    @classmethod
+    def set_running_in_image(cls, value_or_callable) -> None:
+        """Override container detection for tests.
+
+        Accepts a bool or a zero-arg callable returning bool.
+        """
+        if callable(value_or_callable):
+            cls._running_in_image_override = value_or_callable
+            return
+        val = bool(value_or_callable)
+
+        def _override():
+            return val
+
+        cls._running_in_image_override = _override
+
+    @classmethod
+    def clear_running_in_image(cls) -> None:
+        cls._running_in_image_override = None
 
 
 def _default_running_in_image_check() -> bool:
@@ -456,18 +494,16 @@ def create_app() -> Flask:
     # `create_app()` is called. Some import-order shims replace module
     # objects with proxies that may omit this attribute; proactively set
     # it on common module keys used by tests.
+    # Provide a safe reference to render_template for tests without mutating ModuleType attributes
     try:
         import sys as _sys
 
         _m = _sys.modules.get("researcharr.factory") or _sys.modules.get("factory")
-        if _m is not None and not hasattr(_m, "render_template"):
+        if _m is not None and not getattr(_m, "_render_template_ref", None):
             try:
-                _m.__dict__["render_template"] = render_template
+                _m.__dict__["_render_template_ref"] = render_template
             except Exception:
-                try:
-                    _m.render_template = render_template
-                except Exception:
-                    pass
+                pass
     except Exception:
         pass
 
@@ -602,6 +638,15 @@ def create_app() -> Flask:
         # Check for test override first
         override = _RuntimeConfig.get_webui()
         if override is not None:
+            try:
+                import os as _os_dbg
+
+                if _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                    print(
+                        f"[get_webui:return:override] obj_id={id(override)} type={type(override).__name__}"
+                    )
+            except Exception:
+                pass
             return override
 
         try:
@@ -611,24 +656,49 @@ def create_app() -> Flask:
             # Accept modules that provide either both functions or at
             # least a save_user_config for write-only flows (e.g. setup).
             if _cand is not None and (
-                hasattr(_cand, "save_user_config") or (
-                    hasattr(_cand, "load_user_config") and hasattr(_cand, "save_user_config")
-                )
+                hasattr(_cand, "save_user_config")
+                or (hasattr(_cand, "load_user_config") and hasattr(_cand, "save_user_config"))
             ):
+                try:
+                    import os as _os_dbg
+
+                    if _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                        print(
+                            f"[get_webui:return:sys.modules] obj_id={id(_cand)} type={type(_cand).__name__}"
+                        )
+                except Exception:
+                    pass
                 return _cand
         except Exception:
             pass
         try:
             _cand = globals().get("webui")
             if _cand is not None and (
-                hasattr(_cand, "save_user_config") or (
-                    hasattr(_cand, "load_user_config") and hasattr(_cand, "save_user_config")
-                )
+                hasattr(_cand, "save_user_config")
+                or (hasattr(_cand, "load_user_config") and hasattr(_cand, "save_user_config"))
             ):
+                try:
+                    import os as _os_dbg
+
+                    if _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                        print(
+                            f"[get_webui:return:globals] obj_id={id(_cand)} type={type(_cand).__name__}"
+                        )
+                except Exception:
+                    pass
                 return _cand
         except Exception:
             pass
         if _webui is not None:
+            try:
+                import os as _os_dbg
+
+                if _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                    print(
+                        f"[get_webui:return:local] obj_id={id(_webui)} type={type(_webui).__name__}"
+                    )
+            except Exception:
+                pass
             return _webui
 
         class _CfgIO:
@@ -644,6 +714,13 @@ def create_app() -> Flask:
                 except Exception:
                     return None
 
+        try:
+            import os as _os_dbg
+
+            if _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                print("[get_webui:return:fallback_cfgio]")
+        except Exception:
+            pass
         return _CfgIO()
 
     try:
@@ -2029,17 +2106,48 @@ def create_app() -> Flask:
 
     @app.route("/save", methods=["POST"])
     def save():
-        # Simulate saving general settings
-        # Only allow saving of non-runtime fields. Do not overwrite
-        # PUID/PGID/Timezone which are controlled via environment variables.
-        return render_template(
-            "general.html",
-            puid=app.config_data["general"].get("PUID"),
-            pgid=app.config_data["general"].get("PGID"),
-            timezone=app.config_data["general"].get("Timezone"),
-            loglevel=app.config_data["general"].get("LogLevel"),
-            msg="Saved",
-        )
+        try:
+            import os as _os_dbg
+        except Exception:
+            _os_dbg = None  # type: ignore
+
+        webui = _get_webui()
+        if _os_dbg is not None and _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+            try:
+                print(
+                    f"[setup:begin] webui_id={id(webui)} has_save={hasattr(webui, 'save_user_config')} has_load={hasattr(webui, 'load_user_config')}"
+                )
+            except Exception:
+                pass
+
+        data = request.get_json(silent=True) or {}
+        api = data.get("api")
+        token = data.get("token")
+        if not api or not token:
+            return jsonify({"status": "missing_fields"}), 400
+        try:
+            if _os_dbg is not None and _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                try:
+                    print(
+                        f"[setup:save_user_config] api_len={len(api) if isinstance(api, str) else 'na'} token_len={len(token) if isinstance(token, str) else 'na'}"
+                    )
+                except Exception:
+                    pass
+            webui.save_user_config({"api": api, "token": token})
+            app.config["USER_CONFIG_EXISTS"] = True
+            if _os_dbg is not None and _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                try:
+                    print(f"[setup:end] USER_CONFIG_EXISTS={app.config.get('USER_CONFIG_EXISTS')}")
+                except Exception:
+                    pass
+            return jsonify({"status": "ok"})
+        except Exception as _ex:
+            if _os_dbg is not None and _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                try:
+                    print(f"[setup:error] exc={type(_ex).__name__}: {_ex}")
+                except Exception:
+                    pass
+            return jsonify({"status": "error"}), 500
 
     @app.route("/health")
     def health():
@@ -2062,28 +2170,25 @@ def create_app() -> Flask:
         # Add backup metrics if available
         try:
             import os
-
-            from researcharr.backups import get_backup_config
-            from researcharr.core.events import get_event_bus
-            from researcharr.monitoring.backup_monitor import (
-                BackupHealthMonitor,
-            )
+            from researcharr.backups import get_default_backup_config, merge_backup_configs
+            from researcharr.monitoring import BackupHealthMonitor
 
             config_root = os.getenv("CONFIG_DIR", "/config")
-            backup_config = get_backup_config(config_root)
-            backups_dir = backup_config["backups_dir"]
-
-            event_bus = get_event_bus()
-            monitor = BackupHealthMonitor(backups_dir, backup_config, event_bus)
-
-            backup_metrics = monitor.get_metrics()
-            all_metrics.update(backup_metrics)
-        except Exception as e:
-            # Log but don't fail if backup metrics unavailable
+            # Derive backup configuration (simple defaults + env/root path)
+            default_cfg = get_default_backup_config() or {}
+            root_cfg = {"backups_dir": f"{config_root}/backups"}
+            backup_cfg = merge_backup_configs(default_cfg, root_cfg)
+            backups_dir = backup_cfg.get("backups_dir", f"{config_root}/backups")
+            monitor = BackupHealthMonitor(config_dir=config_root)
+            # Ensure backups_dir attribute aligns with resolved path for metrics
             try:
-                app.logger.warning(f"Failed to collect backup metrics: {e}")
+                monitor.backups_dir = type(monitor.backups_dir)(backups_dir)
             except Exception:
                 pass
+            backup_metrics = monitor.get_metrics()
+            all_metrics.update({"backup": backup_metrics})
+        except Exception:
+            pass
 
         # Add database metrics if available
         try:
@@ -3048,9 +3153,10 @@ def create_app() -> Flask:
         effective_in_image = None
         try:
             # 1) RuntimeConfig override has highest precedence
-            if getattr(_RuntimeConfig, "_running_in_image_override", None) is not None:
+            _rt_override = getattr(_RuntimeConfig, "_running_in_image_override", None)
+            if _rt_override is not None:
                 try:
-                    effective_in_image = bool(_RuntimeConfig._running_in_image_override())
+                    effective_in_image = bool(_rt_override())
                 except Exception:
                     effective_in_image = None
             # 2) Next, honor a module-level override if present and distinct

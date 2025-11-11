@@ -24,3 +24,33 @@ def get_user_by_username(username: str) -> Any: ...
 def create_user(username: str, password_hash: str) -> None: ...
 
 __version__: str
+
+# Re-export common submodules so editors/type checkers resolve
+from . import cache as cache
+from . import backups as backups
+from . import factory as factory
+from . import run as run
+from . import webui as webui
+from . import api as api
+from . import core as core
+from . import storage as storage
+from . import repositories as repositories
+from . import plugins as plugins
+from . import monitoring as monitoring
+from . import scheduling as scheduling
+
+# Explicit exported names
+__all__ = [
+    "cache",
+    "backups",
+    "factory",
+    "run",
+    "webui",
+    "api",
+    "core",
+    "storage",
+    "repositories",
+    "plugins",
+    "monitoring",
+    "scheduling",
+]

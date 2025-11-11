@@ -290,9 +290,14 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                     import importlib
 
                     try:
-                        top = importlib.import_module("factory")
+                        # Python 3.14 changed module resolution - check sys.modules first
+                        import sys
+                        top = sys.modules.get("factory")
+                        if top is None:
+                            top = importlib.import_module("factory")
                         f = getattr(top, "create_app", None)
-                        if callable(f) and f is not self:
+                        # In Python 3.14, check if we got a delegate/proxy back
+                        if callable(f) and f is not self and not getattr(f, "_is_delegate", False):
                             return f(*a, **kw)
                     except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass

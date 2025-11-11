@@ -1582,18 +1582,26 @@ def create_metrics_app() -> Flask:
         from unittest.mock import Mock as _Mock
 
         flask_mod = sys.modules.get("flask")
-        print(
-            "DEBUG create_metrics_app: flask_mod=",
-            type(flask_mod),
-            "is_mock=",
-            isinstance(flask_mod, _Mock),
-        )
-        print(
-            "DEBUG create_metrics_app: app.test_client=",
-            type(getattr(app, "test_client", None)),
-            "class.test_client=",
-            type(getattr(app.__class__, "test_client", None)),
-        )
+        # Print concise diagnostics when running under CI or when
+        # `RESEARCHARR_CI_DEBUG` is set. These diagnostics go to stdout so
+        # GitHub Actions captures them in job logs and artifacts.
+        is_ci = os.getenv("CI") == "true" or os.getenv("RESEARCHARR_CI_DEBUG")
+        if is_ci:
+            print("--- create_metrics_app CI diagnostics ---")
+            print("CI_ENV:", dict(CI=os.getenv("CI"), RESEARCHARR_CI_DEBUG=os.getenv("RESEARCHARR_CI_DEBUG")))
+            print("flask_mod:", type(flask_mod), "is_mock:", isinstance(flask_mod, _Mock))
+            try:
+                inst_tc = getattr(app, "test_client", None)
+                class_tc = getattr(app.__class__, "test_client", None)
+                print("app.type:", type(app), "app.repr:", repr(app))
+                print("orig_instance_test_client:", repr(_orig_instance_test_client))
+                print("orig_class_test_client:", repr(_orig_class_test_client))
+                print("current app.test_client:", repr(inst_tc), "type:", type(inst_tc))
+                print("current class.test_client:", repr(class_tc), "type:", type(class_tc))
+            except Exception:
+                # Best-effort diagnostics only
+                pass
+            print("--- end diagnostics ---")
     except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
 

@@ -1,14 +1,13 @@
 """Additional tests for ProcessingLogRepository cleanup edge cases."""
 
+import logging
 from datetime import datetime, timedelta
 
+from researcharr import cache as _cache
 from researcharr.repositories.processing_log import ProcessingLogRepository
+from researcharr.storage import database as _db
 from researcharr.storage.database import get_session, init_db
 from researcharr.storage.models import AppType, ManagedApp, ProcessingLog
-from researcharr import cache as _cache
-from researcharr.storage import database as _db
-import os
-import logging
 
 
 def _setup_session(tmp_path):
@@ -80,6 +79,7 @@ def test_cleanup_old_logs_deletes_expected(tmp_path):
     # previously-registered collectors leaking between tests.
     try:
         from prometheus_client import core as prom_core
+
         try:
             prom_core.REGISTRY = prom_core.CollectorRegistry()
         except Exception:
@@ -145,6 +145,7 @@ def test_cleanup_no_deletes_when_within_window(tmp_path):
         pass
     try:
         from prometheus_client import core as prom_core
+
         try:
             prom_core.REGISTRY = prom_core.CollectorRegistry()
         except Exception:

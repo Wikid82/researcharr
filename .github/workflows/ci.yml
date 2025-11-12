@@ -208,7 +208,7 @@ jobs:
       run: |
         SITE_PACKAGES=$(python -c 'import sysconfig, json; print(sysconfig.get_paths()["purelib"])')
         export PYTHONPATH="$SITE_PACKAGES:$PYTHONPATH"
-        
+
         # Run only tests marked with no_xdist, with parallelization disabled
         pytest tests/ -m no_xdist -n0 -v --disable-warnings || echo "No no_xdist tests or they passed"
 

@@ -11,7 +11,6 @@ except Exception:
 
 import researcharr
 
-
 OUTDIR = pathlib.Path("/tmp/researcharr-bisect")
 OUTDIR.mkdir(parents=True, exist_ok=True)
 
@@ -52,7 +51,9 @@ def dump_logger_state(fp):
         for name in names[:200]:
             entry = lm.loggerDict[name]
             entry_type = type(entry).__name__
-            fp.write(f"{name}: {entry_type} {getattr(entry, 'level', '')} handlers={getattr(entry, 'handlers', None)} propagate={getattr(entry, 'propagate', '')}\n")
+            fp.write(
+                f"{name}: {entry_type} {getattr(entry, 'level', '')} handlers={getattr(entry, 'handlers', None)} propagate={getattr(entry, 'propagate', '')}\n"
+            )
     except Exception:
         fp.write("could not dump loggerDict\n")
         traceback.print_exc(file=fp)
@@ -114,8 +115,10 @@ def test_diagnostics_clean_session():
 def test_diagnostics_after_predecessor():
     """Run this after the identified predecessor test and save diagnostics."""
     write_diagnostics("after_predecessor")
-import logging
+
+
 import inspect
+
 from prometheus_client import core
 
 
@@ -123,17 +126,17 @@ def dump_logger_info(logger):
     try:
         handlers = [type(h).__name__ for h in logger.handlers]
     except Exception:
-        handlers = repr(getattr(logger, 'handlers', None))
+        handlers = repr(getattr(logger, "handlers", None))
     try:
         filters = [type(f).__name__ for f in logger.filters]
     except Exception:
-        filters = repr(getattr(logger, 'filters', None))
+        filters = repr(getattr(logger, "filters", None))
     return {
-        'name': logger.name,
-        'level': logging.getLevelName(logger.level),
-        'propagate': getattr(logger, 'propagate', None),
-        'handlers': handlers,
-        'filters': filters,
+        "name": logger.name,
+        "level": logging.getLevelName(logger.level),
+        "propagate": getattr(logger, "propagate", None),
+        "handlers": handlers,
+        "filters": filters,
     }
 
 
@@ -143,16 +146,16 @@ def dump_manager_sample(limit=100):
     try:
         items = list(mgr.loggerDict.items())
     except Exception:
-        return {'error': 'unable to read loggerDict'}
+        return {"error": "unable to read loggerDict"}
     for name, logger in items[:limit]:
         try:
             out[name] = {
-                'type': type(logger).__name__,
-                'has_handlers': bool(getattr(logger, 'handlers', None)),
-                'level': getattr(logger, 'level', '<no>'),
+                "type": type(logger).__name__,
+                "has_handlers": bool(getattr(logger, "handlers", None)),
+                "level": getattr(logger, "level", "<no>"),
             }
         except Exception as e:
-            out[name] = {'error': str(e)}
+            out[name] = {"error": str(e)}
     return out
 
 
@@ -161,45 +164,45 @@ def dump_prometheus_registry():
     collectors = []
     # Try common internal structures, but be defensive
     try:
-        if hasattr(reg, '_collector_to_names'):
-            for c in getattr(reg, '_collector_to_names').keys():
+        if hasattr(reg, "_collector_to_names"):
+            for c in reg._collector_to_names.keys():
                 collectors.append(type(c).__name__)
-        elif hasattr(reg, 'collectors'):
-            for c in getattr(reg, 'collectors'):
+        elif hasattr(reg, "collectors"):
+            for c in reg.collectors:
                 collectors.append(type(c).__name__)
         else:
             collectors.append(repr(reg))
     except Exception as e:
-        collectors.append(f'ERR:{e}')
-    return {'registry_type': type(reg).__name__, 'collectors_sample': collectors[:50]}
+        collectors.append(f"ERR:{e}")
+    return {"registry_type": type(reg).__name__, "collectors_sample": collectors[:50]}
 
 
 def print_block(title, obj):
-    print('\n' + '=' * 10 + f' {title} ' + '=' * 10)
+    print("\n" + "=" * 10 + f" {title} " + "=" * 10)
     if isinstance(obj, dict):
         for k, v in list(obj.items())[:200]:
-            print(f'{k}: {v}')
+            print(f"{k}: {v}")
     else:
         print(obj)
-    print('\n')
+    print("\n")
 
 
 def test_dump_all():
     import researcharr
 
     root = logging.getLogger()
-    cron = logging.getLogger('researcharr.cron')
+    cron = logging.getLogger("researcharr.cron")
 
-    print_block('ROOT LOGGER', dump_logger_info(root))
-    print_block('RESEARCHARR.CRON', dump_logger_info(cron))
-    print_block('LOGGER MANAGER SAMPLE', dump_manager_sample(limit=200))
-    print_block('PROMETHEUS REGISTRY', dump_prometheus_registry())
+    print_block("ROOT LOGGER", dump_logger_info(root))
+    print_block("RESEARCHARR.CRON", dump_logger_info(cron))
+    print_block("LOGGER MANAGER SAMPLE", dump_manager_sample(limit=200))
+    print_block("PROMETHEUS REGISTRY", dump_prometheus_registry())
 
     # Dump a small sample of module-level callables on researcharr for potential monkeypatches
     sample = {}
     for name, val in inspect.getmembers(researcharr):
-        if name.startswith('_'):
+        if name.startswith("_"):
             continue
         if inspect.isfunction(val) or inspect.ismodule(val) or inspect.isclass(val):
             sample[name] = type(val).__name__
-    print_block('RESEARCHARR ATTRS SAMPLE', sample)
+    print_block("RESEARCHARR ATTRS SAMPLE", sample)

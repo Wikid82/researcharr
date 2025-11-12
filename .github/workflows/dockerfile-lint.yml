@@ -1,26 +1,10 @@
-name: Dockerfile lint (hadolint)
+name: Dockerfile lint (disabled; consolidated into main CI)
 
 on:
-  push:
-    branches: [ main, development ]
-    tags: [ 'v*', '*' ]
-  pull_request:
-    branches: [ main, development ]
+  workflow_dispatch: {}
 
 jobs:
-  hadolint:
-    name: Lint Dockerfiles with hadolint
+  disabled:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-
-      - name: Lint root Dockerfile (hadolint image)
-        run: |
-          docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace hadolint/hadolint:latest hadolint Dockerfile || true
-      - name: Lint Alpine Dockerfile (hadolint image)
-        run: |
-          docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace hadolint/hadolint:latest hadolint Dockerfile.alpine || true
-      - name: Lint Distroless Dockerfile (hadolint image)
-        run: |
-          docker run --rm -v "${{ github.workspace }}":/workspace -w /workspace hadolint/hadolint:latest hadolint Dockerfile.distroless || true
+      - run: echo "Disabled; Dockerfile linting now runs in main CI workflow (ci.yml) via pre-commit hooks."

@@ -524,7 +524,7 @@ class TestRootResearcharrModule(unittest.TestCase):
                     if hasattr(mod, "create_metrics_app"):
                         try:
                             # save original so we can restore later
-                            replaced[name] = getattr(mod, "create_metrics_app")
+                            replaced[name] = mod.create_metrics_app
                             mod.create_metrics_app = _make_factory
                         except Exception:
                             pass
@@ -545,7 +545,7 @@ class TestRootResearcharrModule(unittest.TestCase):
                     if mod is None:
                         continue
                     try:
-                        setattr(mod, "create_metrics_app", original)
+                        mod.create_metrics_app = original
                     except Exception:
                         # best-effort restore; ignore failures
                         pass

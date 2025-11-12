@@ -110,7 +110,7 @@ def test_backups_identity_reconciliation():
                     import importlib as _il
 
                     _pkg = _il.import_module("researcharr")
-                    setattr(_pkg, "backups", orig_ra_backups)
+                    _pkg.backups = orig_ra_backups
                 except Exception:
                     pass
         except Exception:

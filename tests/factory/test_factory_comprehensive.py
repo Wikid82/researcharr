@@ -197,10 +197,26 @@ class TestFactoryRoutes:
         assert "db" in data
         assert "config" in data
 
-    def test_save_route(self, client):
-        """Test save route."""
+    def test_save_route_requires_credentials(self, client):
+        """Test save route rejects empty payload."""
         response = client.post("/save")
-        assert response.status_code == 200
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert data["status"] == "missing_fields"
+
+    def test_save_route_success(self, client):
+        """Test save route with valid API credentials."""
+        with patch("researcharr.factory.webui.save_user_config") as mock_save:
+            mock_save.return_value = None
+            response = client.post(
+                "/save",
+                json={"api": "test_api_key", "token": "test_token"}
+            )
+            assert response.status_code == 200
+            data = json.loads(response.data)
+            assert data["status"] == "ok"
+            # Verify save_user_config was called
+            mock_save.assert_called_once()
 
     def test_reset_password_route_get(self, client):
         """Test reset password GET route."""

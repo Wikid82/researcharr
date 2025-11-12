@@ -101,14 +101,16 @@ def _diagnose_predecessor_module_state(request):
     except Exception:
         nodeid = ""
 
-    target = "tests/package/test_package_shim_reconciliation.py::test_backups_identity_reconciliation"
+    target = (
+        "tests/package/test_package_shim_reconciliation.py::test_backups_identity_reconciliation"
+    )
     if nodeid != target:
         yield
         return
 
     import json as _json
-    import time as _time
     import os as _os
+    import time as _time
 
     outdir = "/tmp/researcharr-bisect/predecessor-diag"
     try:
@@ -128,7 +130,9 @@ def _diagnose_predecessor_module_state(request):
                 "module_id": id(mod) if mod is not None else None,
                 "module_repr": repr(mod) if mod is not None else None,
                 "module_file": getattr(mod, "__file__", None) if mod is not None else None,
-                "module___all__": list(getattr(mod, "__all__", None)) if (mod is not None and hasattr(mod, "__all__")) else None,
+                "module___all__": list(getattr(mod, "__all__", None))
+                if (mod is not None and hasattr(mod, "__all__"))
+                else None,
             }
             # Also collect any sys.modules entries that contain 'backups'
             backups_keys = [k for k in _sys.modules.keys() if "backups" in k]
@@ -140,7 +144,9 @@ def _diagnose_predecessor_module_state(request):
                         "id": id(m) if m is not None else None,
                         "repr": repr(m) if m is not None else None,
                         "file": getattr(m, "__file__", None) if m is not None else None,
-                        "__all__": list(getattr(m, "__all__", None)) if (m is not None and hasattr(m, "__all__")) else None,
+                        "__all__": list(getattr(m, "__all__", None))
+                        if (m is not None and hasattr(m, "__all__"))
+                        else None,
                     }
                 except Exception:
                     backups_map[k] = {"error": "failed to inspect"}
@@ -704,11 +710,12 @@ def pytest_runtest_setup(item):
     # Keep the original diagnostic behavior, but also take a pre-test snapshot
     try:
         import json as _json
-        import os as _os
         import logging as _logging
+        import os as _os
+
         from prometheus_client import core as _core
 
-        _out = '/tmp/researcharr-bisect/logsnap'
+        _out = "/tmp/researcharr-bisect/logsnap"
         try:
             _os.makedirs(_out, exist_ok=True)
         except Exception:
@@ -724,30 +731,30 @@ def pytest_runtest_setup(item):
             for name, logger in items[:200]:
                 try:
                     d[name] = {
-                        'type': type(logger).__name__,
-                        'handlers': [type(h).__name__ for h in getattr(logger, 'handlers', [])],
-                        'level': getattr(logger, 'level', None),
-                        'propagate': getattr(logger, 'propagate', None),
+                        "type": type(logger).__name__,
+                        "handlers": [type(h).__name__ for h in getattr(logger, "handlers", [])],
+                        "level": getattr(logger, "level", None),
+                        "propagate": getattr(logger, "propagate", None),
                     }
                 except Exception as e:
-                    d[name] = {'error': str(e)}
+                    d[name] = {"error": str(e)}
             prom = []
             try:
                 reg = _core.REGISTRY
-                if hasattr(reg, '_collector_to_names'):
-                    prom = [type(c).__name__ for c in getattr(reg, '_collector_to_names').keys()]
-                elif hasattr(reg, 'collectors'):
-                    prom = [type(c).__name__ for c in getattr(reg, 'collectors')]
+                if hasattr(reg, "_collector_to_names"):
+                    prom = [type(c).__name__ for c in reg._collector_to_names.keys()]
+                elif hasattr(reg, "collectors"):
+                    prom = [type(c).__name__ for c in reg.collectors]
                 else:
                     prom = [repr(reg)]
             except Exception as e:
-                prom = [f'ERR:{e}']
-            return {'logger_sample': dict(list(d.items())[:200]), 'prometheus': prom}
+                prom = [f"ERR:{e}"]
+            return {"logger_sample": dict(list(d.items())[:200]), "prometheus": prom}
 
         try:
-            safe = item.nodeid.replace('::', '__').replace('/', '_')
-            p = _os.path.join(_out, f'pre_{safe}.json')
-            with open(p, 'w') as _f:
+            safe = item.nodeid.replace("::", "__").replace("/", "_")
+            p = _os.path.join(_out, f"pre_{safe}.json")
+            with open(p, "w") as _f:
                 _f.write(_json.dumps(_take(), indent=2, default=str))
         except Exception:
             pass
@@ -1099,11 +1106,12 @@ def pytest_runtest_teardown(item, nextitem):
     # Write a post-test snapshot of logger/Prometheus state
     try:
         import json as _json
-        import os as _os
         import logging as _logging
+        import os as _os
+
         from prometheus_client import core as _core
 
-        _out = '/tmp/researcharr-bisect/logsnap'
+        _out = "/tmp/researcharr-bisect/logsnap"
         try:
             _os.makedirs(_out, exist_ok=True)
         except Exception:
@@ -1119,30 +1127,30 @@ def pytest_runtest_teardown(item, nextitem):
             for name, logger in items[:200]:
                 try:
                     d[name] = {
-                        'type': type(logger).__name__,
-                        'handlers': [type(h).__name__ for h in getattr(logger, 'handlers', [])],
-                        'level': getattr(logger, 'level', None),
-                        'propagate': getattr(logger, 'propagate', None),
+                        "type": type(logger).__name__,
+                        "handlers": [type(h).__name__ for h in getattr(logger, "handlers", [])],
+                        "level": getattr(logger, "level", None),
+                        "propagate": getattr(logger, "propagate", None),
                     }
                 except Exception as e:
-                    d[name] = {'error': str(e)}
+                    d[name] = {"error": str(e)}
             prom = []
             try:
                 reg = _core.REGISTRY
-                if hasattr(reg, '_collector_to_names'):
-                    prom = [type(c).__name__ for c in getattr(reg, '_collector_to_names').keys()]
-                elif hasattr(reg, 'collectors'):
-                    prom = [type(c).__name__ for c in getattr(reg, 'collectors')]
+                if hasattr(reg, "_collector_to_names"):
+                    prom = [type(c).__name__ for c in reg._collector_to_names.keys()]
+                elif hasattr(reg, "collectors"):
+                    prom = [type(c).__name__ for c in reg.collectors]
                 else:
                     prom = [repr(reg)]
             except Exception as e:
-                prom = [f'ERR:{e}']
-            return {'logger_sample': dict(list(d.items())[:200]), 'prometheus': prom}
+                prom = [f"ERR:{e}"]
+            return {"logger_sample": dict(list(d.items())[:200]), "prometheus": prom}
 
         try:
-            safe = item.nodeid.replace('::', '__').replace('/', '_')
-            p = _os.path.join(_out, f'post_{safe}.json')
-            with open(p, 'w') as _f:
+            safe = item.nodeid.replace("::", "__").replace("/", "_")
+            p = _os.path.join(_out, f"post_{safe}.json")
+            with open(p, "w") as _f:
                 _f.write(_json.dumps(_take(), indent=2, default=str))
         except Exception:
             pass
@@ -1254,7 +1262,7 @@ def _snapshot_and_restore_small_global_state():
                         pass
                 else:
                     try:
-                        setattr(mod, "__all__", list(val))
+                        mod.__all__ = list(val)
                     except Exception:
                         pass
             except Exception:
@@ -1274,7 +1282,7 @@ def _snapshot_and_restore_small_global_state():
                     else:
                         mod = importlib.import_module(m)
                         try:
-                            setattr(mod, "__all__", list(v))
+                            mod.__all__ = list(v)
                         except Exception:
                             pass
                 except Exception:

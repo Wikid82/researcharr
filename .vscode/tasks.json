@@ -379,6 +379,25 @@
             "problemMatcher": [],
             "detail": "Run basedpyright type checker (uses wrapper script to find based-pyright/pyright/npx)."
         }
+        ,
+        {
+            "label": "Format YAML (Prettier)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-lc",
+                "./scripts/format-yaml.sh"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [],
+            "detail": "Run Prettier to format YAML files"
+        }
 
 
     ],

@@ -82,12 +82,36 @@ def test_create_metrics_app_dispatcher_callable(monkeypatch):
 
 def test_backups_identity_reconciliation():
     # Import top-level backups then access package attribute; identity may differ
-    top = importlib.import_module("backups")
-    import researcharr
+    # Snapshot existing sys.modules mapping so we can restore it after the
+    # test — importing the top-level shim may install itself under the
+    # package-qualified name (e.g. 'researcharr.backups') which pollutes
+    # global import state and affects later tests during the same pytest run.
+    orig_ra_backups = sys.modules.get("researcharr.backups")
+    try:
+        top = importlib.import_module("backups")
+        import researcharr
 
-    pkg_attr = researcharr.backups
-    assert isinstance(pkg_attr, ModuleType)
-    # Must expose expected public API symbol
-    assert hasattr(pkg_attr, "prune_backups")
-    # Ensure canonical mapping exists
-    assert sys.modules.get("researcharr.backups") is pkg_attr
+        pkg_attr = researcharr.backups
+        assert isinstance(pkg_attr, ModuleType)
+        # Must expose expected public API symbol
+        assert hasattr(pkg_attr, "prune_backups")
+        # Ensure canonical mapping exists
+        assert sys.modules.get("researcharr.backups") is pkg_attr
+    finally:
+        # Restore original mapping to avoid polluting other tests that expect
+        # the package implementation to be present under `researcharr.backups`.
+        try:
+            if orig_ra_backups is None:
+                sys.modules.pop("researcharr.backups", None)
+            else:
+                sys.modules["researcharr.backups"] = orig_ra_backups
+                # Also restore attribute on package object if present
+                try:
+                    import importlib as _il
+
+                    _pkg = _il.import_module("researcharr")
+                    setattr(_pkg, "backups", orig_ra_backups)
+                except Exception:
+                    pass
+        except Exception:
+            pass

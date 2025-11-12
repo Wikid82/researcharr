@@ -21,6 +21,15 @@ __path__ = [
     os.path.abspath(os.path.join(os.path.dirname(__file__), "researcharr")),
 ]
 
+# Ensure this module is available as top-level name `entrypoint`.
+# Some tests import or patch `entrypoint` directly (instead of
+# `researcharr.entrypoint`); registering the current module under that
+# name prevents duplicate module objects and avoids mocks being applied
+# to the wrong module object.
+import sys
+
+sys.modules.setdefault("entrypoint", sys.modules.get(__name__))
+
 if "requests" not in globals():
     import requests
 

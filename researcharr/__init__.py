@@ -761,12 +761,13 @@ except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
     except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
-# Deterministic final reconciliation: prefer an existing top-level module
-# object when present and ensure it is also registered under the
-# package-qualified name with a minimal __spec__. This guarantees that
-# importlib.reload() will find the same object under
-# 'researcharr.<name>' and avoids races when tests insert a short-name
-# module into sys.modules before importing the package submodule.
+# Deterministic final reconciliation: ensure package-qualified names map to
+# the most appropriate module object. Prefer an existing package-level
+# implementation (for example the nested package file like
+# `researcharr/backups.py`) when it exists; only register a repo-root
+# top-level module under the package-qualified name if no package-local
+# file is present. This avoids accidentally shadowing package
+# implementations with repo-root shims during test runs.
 try:
     for _mname in ("factory", "run", "webui", "backups", "api", "entrypoint"):
         _top = sys.modules.get(_mname)
@@ -774,11 +775,22 @@ try:
         _pkg = sys.modules.get(_pkg_name)
 
         # If a top-level module exists and is not already the package
-        # module, prefer the top-level module as the canonical object by
-        # registering it under the package-qualified name and giving it
-        # a minimal __spec__ with that name so importlib.reload() will
-        # succeed.
+        # module, only register it under the package-qualified name when
+        # there is no package-local file that should take precedence.
+        try:
+            _here = os.path.abspath(os.path.dirname(__file__))
+            _pkg_local_fp = os.path.join(_here, f"{_mname}.py")
+            _pkg_local_exists = os.path.isfile(_pkg_local_fp)
+        except Exception:
+            _pkg_local_exists = False
+
         if _top is not None and _pkg is not _top:
+            # If a package-local implementation exists, prefer it and do
+            # not overwrite the package-qualified mapping with the
+            # top-level module.
+            if _pkg_local_exists:
+                continue
+
             try:
                 if getattr(_top, "__spec__", None) is None or _top.__spec__.name != _pkg_name:
                     _top.__spec__ = importlib.util.spec_from_loader(_pkg_name, loader=None)

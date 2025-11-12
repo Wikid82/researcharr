@@ -7,6 +7,10 @@ ignore: |
   .tox/**
   site/**
   docs/site/**
+  htmlcov/**
+  backups-scratch/**
+  .secrets.baseline
+  plugins/**
 
 rules:
   # Allow longer lines in workflow files (tags and echo lines are long)

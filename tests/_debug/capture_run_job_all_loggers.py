@@ -1,11 +1,6 @@
 import importlib
 import logging
-import os
 import pathlib
-import sys
-
-import pytest
-
 
 OUTDIR = pathlib.Path("/tmp/researcharr-bisect")
 OUTDIR.mkdir(parents=True, exist_ok=True)

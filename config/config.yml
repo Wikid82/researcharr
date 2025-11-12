@@ -1,3 +1,4 @@
+---
 # researcharr configuration (example)
 #
 # This repository previously included PUID/PGID and timezone fields in
@@ -34,7 +35,6 @@ backups:
   auto_backup_enabled: false
   auto_backup_cron: "0 2 * * *"
   prune_cron: "0 3 * * *"
-
 # Notes for operators:
 # - Plugin instance configuration is stored in the plugins directory under
 #   the configured CONFIG_DIR (default: /config). Example files live at:

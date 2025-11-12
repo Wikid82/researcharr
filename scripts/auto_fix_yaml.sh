@@ -22,7 +22,7 @@ for f in "${files[@]}"; do
 
   # Prepend document start if missing
   if [ -n "$first" ] && [ "${first:0:3}" != "---" ]; then
-    printf '---\n' > "$tmpfile"
+    printf '%s\n' '---' > "$tmpfile"
     cat "$f" >> "$tmpfile"
     mv "$tmpfile" "$f"
     echo "Prepended document start to $f"

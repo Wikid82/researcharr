@@ -1,15 +1,16 @@
+---
 name: CI — Docs linkcheck
 
 on:
   pull_request: {}
   push:
-    branches: [ main, development ]
+    branches: [main, development]
 
 jobs:
   docs-linkcheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5
       - name: Detect docs changes
         id: docs_changed
         run: |

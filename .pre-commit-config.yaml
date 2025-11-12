@@ -1,3 +1,4 @@
+---
 # Pre-commit configuration for development
 # IMPORTANT: Replace the `rev` placeholders below with a specific tag/commit
 # for reproducible installs. See https://pre-commit.com for guidance.
@@ -94,7 +95,7 @@ repos:
         language: script
         # Exclude tests and node_modules from detect-secrets scans here to
         # avoid false positives on test fixtures and locally vendored files.
-        files: '^(?!tests/|node_modules/).*'
+        files: "^(?!tests/|node_modules/).*"
         stages: [pre-commit]
 
       - id: safety
@@ -143,7 +144,6 @@ repos:
       # NOTE: pytest pre-push hook removed; a dedicated git pre-push hook will
       # be installed locally instead to avoid pre-commit re-running formatters
       # and other hooks during the push stage.
-
 # Recommended usage:
 # 1. Replace all <pin-*> placeholders with concrete tag names or commit hashes.
 # 2. Install pre-commit in your environment: `pip install pre-commit`.

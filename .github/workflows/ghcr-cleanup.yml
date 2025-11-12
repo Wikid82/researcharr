@@ -1,18 +1,19 @@
+---
 name: GHCR cleanup
 
 on:
   schedule:
-  - cron: '0 3 * * 0' # every Sunday at 03:00 UTC
+    - cron: "0 3 * * 0"  # every Sunday at 03:00 UTC
   workflow_dispatch:
     inputs:
       days:
-        description: 'Retention days (integer)'
+        description: "Retention days (integer)"
         required: false
-        default: '90'
+        default: "90"
       dry_run:
-        description: 'If true, will not delete (default true)'
+        description: "If true, will not delete (default true)"
         required: false
-        default: 'true'
+        default: "true"
 
 permissions:
   packages: write
@@ -23,12 +24,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5
 
       - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c  # v6
         with:
-          python-version: '3.14'
+          python-version: "3.14"
 
       - name: Install dependencies
         run: |
@@ -53,7 +54,7 @@ jobs:
 
       - name: Upload report artifact
         if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # v5
         with:
           name: ghcr-cleanup-report
           path: ghcr_cleanup_report.json

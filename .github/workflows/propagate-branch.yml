@@ -1,16 +1,17 @@
+---
 name: Propagate branch changes downstream
 
 on:
   workflow_dispatch:
     inputs:
       source:
-        description: 'Source branch to propagate from'
+        description: "Source branch to propagate from"
         required: true
-        default: 'feature/new_user'
+        default: "feature/new_user"
       targets:
-        description: 'Comma-separated list of target branches in order'
+        description: "Comma-separated list of target branches in order"
         required: true
-        default: 'nightly,development,main'
+        default: "nightly,development,main"
 
 permissions:
   contents: write
@@ -21,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Create forward-propagation PRs
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd  # v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -38,7 +39,7 @@ jobs:
                 const title = `Forward propagate ${from} -> ${to}`;
                 const body = `Automated forward-propagation PR from ${from} into ${to} created by workflow.`;
                 const { data: pr } = await github.rest.pulls.create({ owner, repo, title, head: from, base: to, body });
-                core.info(`Created PR #${pr.number}: ${pr.html_url}`);
+                core.info(`Created PR  #${pr.number}: ${pr.html_url}`);
               } catch (err) {
                 core.warning(`Failed to create PR ${from} -> ${to}: ${err.message}`);
               }

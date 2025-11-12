@@ -1,16 +1,17 @@
+---
 name: Sync Issues to Project
 
 on:
   workflow_dispatch:
     inputs:
       issue_numbers:
-        description: 'Comma-separated list of issue numbers to sync (e.g., 80,81,82)'
+        description: "Comma-separated list of issue numbers to sync (e.g., 80,81,82)"
         required: false
-        default: ''
+        default: ""
 
 env:
-    PROJECT_NUMBER: 2
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  PROJECT_NUMBER: 2
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   sync_issues:
@@ -18,12 +19,12 @@ jobs:
     name: Sync Issues to Project Board
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5
 
       - name: Setup Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c  # v6
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
@@ -137,7 +138,7 @@ jobs:
           else:
               issue_numbers = list(range(80, 114))  # Default: all our new issues
 
-          print(f"Syncing {len(issue_numbers)} issues to project #{project_number}")
+          print(f"Syncing {len(issue_numbers)} issues to project  #{project_number}")
 
           project_id = get_project_id(owner, project_number, token)
           if not project_id:
@@ -151,12 +152,12 @@ jobs:
               issue_id = get_issue_id(owner, repo, issue_number, token)
               if issue_id:
                   if add_issue_to_project(project_id, issue_id, token):
-                      print(f"✅ Added issue #{issue_number}")
+                      print(f"✅ Added issue  #{issue_number}")
                       added_count += 1
                   else:
-                      print(f"❌ Failed to add issue #{issue_number}")
+                      print(f"❌ Failed to add issue  #{issue_number}")
               else:
-                  print(f"❌ Issue #{issue_number} not found")
+                  print(f"❌ Issue  #{issue_number} not found")
 
           print(f"Successfully added {added_count}/{len(issue_numbers)} issues")
           EOF

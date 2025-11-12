@@ -1,10 +1,11 @@
-def test_setup_generates_api_and_persists(client, tmp_path, monkeypatch):
+def test_setup_generates_api_and_persists(tmp_path, monkeypatch):
     # ensure CONFIG_DIR is isolated and stub webui
     cfg = tmp_path / "config"
     cfg.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("CONFIG_DIR", str(cfg))
 
     # Use RuntimeConfig to inject webui stub reliably across Python versions
+    # MUST happen BEFORE create_app() is called
     from factory import _RuntimeConfig
 
     class W:
@@ -17,13 +18,19 @@ def test_setup_generates_api_and_persists(client, tmp_path, monkeypatch):
 
     monkeypatch.setattr(_RuntimeConfig, "_webui_override", W())
 
-    # create app via client fixture already done; post to setup
+    # NOW create app after patching (don't use client fixture)
+    from factory import create_app
+    app = create_app()
+    app.config["TESTING"] = True
+    client = app.test_client()
+
+    # post to setup
     rv = client.post(
         "/setup", data={"username": "u", "password": "longpass", "confirm": "longpass"}
     )
     # success path renders a template (200)
     assert rv.status_code == 200
-    assert client.application.config.get("USER_CONFIG_EXISTS") is True
+    assert app.config.get("USER_CONFIG_EXISTS") is True
 
 
 def test_reset_password_flow(client, tmp_path, monkeypatch):

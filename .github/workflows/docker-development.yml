@@ -52,7 +52,6 @@ jobs:
           cache-to: type=gha,mode=max
 
 
-
   commit-notification:
     runs-on: ubuntu-latest
     needs: [ docker-build-develop, trivy-scan ]

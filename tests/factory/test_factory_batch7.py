@@ -20,6 +20,7 @@ def test_setup_generates_api_and_persists(tmp_path, monkeypatch):
 
     # NOW create app after patching (don't use client fixture)
     from factory import create_app
+
     app = create_app()
     app.config["TESTING"] = True
     client = app.test_client()

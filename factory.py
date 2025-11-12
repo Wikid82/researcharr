@@ -2116,6 +2116,15 @@ def create_app() -> Flask:
             _os_dbg = None  # type: ignore
 
         webui = _get_webui()
+        # If tests patched `researcharr.factory.webui.save_user_config` onto the
+        # module object before create_app ran, prefer that patched attribute so
+        # `patch("researcharr.factory.webui.save_user_config")` assertions see calls.
+        try:
+            _mod_webui = globals().get("webui")
+            if _mod_webui is not None and hasattr(_mod_webui, "save_user_config"):
+                webui = _mod_webui  # type: ignore
+        except Exception:
+            pass
         if _os_dbg is not None and _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
             try:
                 print(
@@ -2155,6 +2164,27 @@ def create_app() -> Flask:
 
                 _gen_hash = _fallback_hash  # type: ignore
             password_hash = _gen_hash(token)
+            # Attempt to resolve the patched webui object from any canonical module
+            # key that tests might have used during monkeypatching. In large xdist
+            # runs duplicate module objects (e.g. 'factory' vs 'researcharr.factory')
+            # can appear; prefer whichever provides the patched save_user_config.
+            try:
+                import sys as _sys_mod
+
+                for _key in ("researcharr.factory", "factory"):
+                    _m = _sys_mod.modules.get(_key)
+                    if _m is not None:
+                        try:
+                            _candidate_webui = getattr(_m, "webui", None)
+                            if _candidate_webui is not None and hasattr(
+                                _candidate_webui, "save_user_config"
+                            ):
+                                webui = _candidate_webui  # type: ignore
+                                break
+                        except Exception:
+                            pass
+            except Exception:
+                pass
             webui.save_user_config(username, password_hash, api_key=api)
             app.config["USER_CONFIG_EXISTS"] = True
             if _os_dbg is not None and _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":

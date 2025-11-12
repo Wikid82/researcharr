@@ -1,5 +1,4 @@
 [tool.pytest.ini_options]
-version = "9.0.0"
 # TEMP: lower coverage gate to allow CI to pass while we stabilize the consolidated tests.
 # Raise this back to 85 (or higher) once the suite is green and expanded.
 # Enable pytest-xdist for parallel execution with process isolation to prevent

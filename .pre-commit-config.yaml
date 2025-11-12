@@ -26,7 +26,7 @@ repos:
         # Only run yamllint on repository config and workflow files to
         # reduce noise from vendored/package files. Adjust this regex as
         # needed to expand or contract the scope of the hook.
-        files: '^(\.github/workflows/|config/|\.pre-commit-config.yaml$|^mkdocs\.yml$|^\.yamllint$|^docs/).*'
+        files: '^(\.github/workflows/|config/|\.pre-commit-config.yaml$|^mkdocs\.yml$|^\.yamllint$|^docs/|^researcharr/).*'
         stages: [pre-commit]
 
   # Security linting with bandit

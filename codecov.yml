@@ -45,3 +45,10 @@ ignore:
   - "**/test_utils/**"
   - "static/**"
   - "templates/**"
+
+  # Bisect/replay artifacts produced during flaky-test triage
+  - "**/replay_*.xml"
+  - "**/replay_*.log"
+  - "**/pairwise_bisect_*.xml"
+  - "**/random_*.xml"
+  - "**/researcharr-bisect/**"

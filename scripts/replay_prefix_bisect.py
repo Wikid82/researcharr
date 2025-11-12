@@ -8,9 +8,9 @@ randomized run.
 
 Writes per-run junit xml and logs to the specified output directory.
 """
+
 import argparse
 import os
-import shlex
 import subprocess
 import sys
 import sysconfig
@@ -70,10 +70,12 @@ def run_pytest(prefix_files, culprit_nodeid, out_dir, idx):
 
     # Prepend site-packages so subprocess has access to installed deps
     site_packages = sysconfig.get_paths()["purelib"]
-    env["PYTHONPATH"] = site_packages + (":" + env.get("PYTHONPATH", "") if env.get("PYTHONPATH") else "")
+    env["PYTHONPATH"] = site_packages + (
+        ":" + env.get("PYTHONPATH", "") if env.get("PYTHONPATH") else ""
+    )
 
     with open(log_path, "wb") as logf:
-        proc = subprocess.run(args, stdout=logf, stderr=logf, env=env)
+        proc = subprocess.run(args, check=False, stdout=logf, stderr=logf, env=env)
 
     return proc.returncode, xml_path, log_path
 
@@ -104,7 +106,7 @@ def main():
     out = args.out
     os.makedirs(out, exist_ok=True)
 
-    with open(args.shuffled, "r") as f:
+    with open(args.shuffled) as f:
         files = [line.strip() for line in f.readlines() if line.strip()]
 
     # If culprit is a nodeid with path, prefer preserving that nodeid; but tests list contains file paths.
@@ -117,7 +119,7 @@ def main():
 
     while left < right:
         mid = (left + right) // 2
-        prefix = files[: mid]
+        prefix = files[:mid]
         idx = mid
         print(f"running prefix len {mid} -> xml={out}/replay_prefix_{idx}.xml", flush=True)
         rc, xml_path, log_path = run_pytest(prefix, culprit_nodeid, out, idx)

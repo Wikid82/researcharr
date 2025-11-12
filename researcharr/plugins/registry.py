@@ -16,7 +16,9 @@ work is reworked in a follow-up issue.
 from __future__ import annotations
 
 import os as _os
+
 if _os.getenv("RESEARCHARR_DISABLE_PLUGINS") in ("1", "true", "True"):
+
     class PluginRegistry:
         def __init__(self) -> None:
             return
@@ -174,6 +176,5 @@ else:
 
                 def list_plugins(self) -> list[str]:
                     return list(self._plugins.keys())
-
 
         __all__ = ["PluginRegistry"]

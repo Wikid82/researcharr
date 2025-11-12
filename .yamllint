@@ -1,5 +1,7 @@
 extends: default
 
+---
+
 rules:
   # Allow longer lines in workflow files (tags and echo lines are long)
   line-length:

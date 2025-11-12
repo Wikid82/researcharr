@@ -465,6 +465,10 @@ def create_app() -> Flask:
         "WEBUI_DEV_ENABLE_DEBUG_ENDPOINT", os.getenv("WEBUI_DEV_DEBUG", "false")
     )
 
+    # Feature flag to enable/disable Web UI endpoints while under development.
+    # Defaults to enabled to preserve behavior unless explicitly turned off.
+    app.config["WEBUI_ENABLED"] = _env_bool("WEBUI_ENABLED", "true")
+
     # SECRET_KEY must be provided in production. In development/test the
     # default 'dev' key is used but a warning is emitted. Use an
     # environment variable to supply a strong secret in production.
@@ -2120,9 +2124,17 @@ def create_app() -> Flask:
             except Exception:
                 pass
 
+        if not app.config.get("WEBUI_ENABLED", True):
+            return jsonify({"status": "disabled"}), 503
+
         data = request.get_json(silent=True) or {}
+        # Accept credentials payload; legacy tests supply only 'api' and 'token'.
+        # Map these to the underlying webui.save_user_config signature which expects
+        # (username, password_hash, api_key|api_key_hash). For now treat 'token' as
+        # a password and hash it; use a default username when one is not provided.
         api = data.get("api")
-        token = data.get("token")
+        token = data.get("token")  # legacy name for password/API token
+        username = data.get("username") or "user"
         if not api or not token:
             return jsonify({"status": "missing_fields"}), 400
         try:
@@ -2133,7 +2145,17 @@ def create_app() -> Flask:
                     )
                 except Exception:
                     pass
-            webui.save_user_config({"api": api, "token": token})
+            # Adapter: perform hashing of the supplied token to align with webui.save_user_config
+            try:
+                from werkzeug.security import generate_password_hash as _gen_hash
+            except Exception:  # pragma: no cover - defensive import fallback
+
+                def _fallback_hash(v):  # type: ignore
+                    return v
+
+                _gen_hash = _fallback_hash  # type: ignore
+            password_hash = _gen_hash(token)
+            webui.save_user_config(username, password_hash, api_key=api)
             app.config["USER_CONFIG_EXISTS"] = True
             if _os_dbg is not None and _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
                 try:

@@ -139,3 +139,4 @@ docs/_build/
 *.swo
 *~
 .DS_Store
+.github/agents/Pytest.agent.md

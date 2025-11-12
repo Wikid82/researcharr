@@ -22,8 +22,6 @@ Docker Usage:
 from __future__ import annotations
 
 import argparse
-import importlib
-from researcharr import run as _run_module
 import json
 import os
 import sys
@@ -32,6 +30,7 @@ from pathlib import Path
 
 import yaml
 
+from researcharr import run as _run_module
 from researcharr.backups import (
     create_backup_file,
     get_backup_info,

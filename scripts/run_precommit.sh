@@ -40,4 +40,13 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 
 echo "pre-commit completed with no changes."
+
+# Optional: run tests with coverage when --with-tests is supplied.
+if [[ "${1:-}" == "--with-tests" ]]; then
+  echo "Running test suite with coverage (optional step)..."
+  SITE_PACKAGES=$(python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])")
+  export PYTHONPATH="$SITE_PACKAGES:$PYTHONPATH"
+  python -m pytest tests/ --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml || exit 1
+fi
+
 exit 0

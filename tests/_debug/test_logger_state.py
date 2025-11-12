@@ -23,7 +23,9 @@ def test_debug_subprocess_capture(tmp_path):
 
     script = tmp_path / "dbg_script.py"
     script.write_text("print('PKG_STDOUT')\nprint('PKG_STDERR', file=__import__('sys').stderr)\n")
-    proc = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+    proc = subprocess.run(
+        [sys.executable, str(script)], check=False, capture_output=True, text=True
+    )
     print("DBG: child returncode:", proc.returncode)
     print("DBG: child stdout repr:", repr(proc.stdout))
     print("DBG: child stderr repr:", repr(proc.stderr))
@@ -31,8 +33,8 @@ def test_debug_subprocess_capture(tmp_path):
 
 def test_debug_invoke_run_job_and_dump_caplog(tmp_path, caplog):
     import importlib.util
-    import sys
     import os
+    import sys
 
     # Create script
     script = tmp_path / "dbg_script2.py"
@@ -44,6 +46,7 @@ def test_debug_invoke_run_job_and_dump_caplog(tmp_path, caplog):
 
     # Force-load run module like the test does
     import researcharr
+
     path = os.path.join(os.path.dirname(researcharr.__file__), "run.py")
     sys.modules.pop("researcharr.run", None)
     spec = importlib.util.spec_from_file_location("researcharr.run", path)

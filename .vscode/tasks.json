@@ -84,7 +84,7 @@
             "command": "bash",
             "args": [
                 "-c",
-                "SITE_PACKAGES=$(python -c 'import sysconfig; print(sysconfig.get_paths()[\"purelib\"])') && export PYTHONPATH=\"$SITE_PACKAGES:$PYTHONPATH\" && python -m pytest tests/ --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml"
+                "SITE_PACKAGES=$(python -c \"import sysconfig; print(sysconfig.get_paths()['purelib'])\") && export PYTHONPATH=\"$SITE_PACKAGES:$PYTHONPATH\" && python -m pytest tests/ --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml"
             ],
             "group": {
                 "kind": "test",
@@ -121,7 +121,7 @@
             "command": "bash",
             "args": [
                 "-c",
-                "SITE_PACKAGES=$(python -c 'import sysconfig; print(sysconfig.get_paths()[\"purelib\"])') && export PYTHONPATH=\"$SITE_PACKAGES:$PYTHONPATH\" && python -m pytest ${file} --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml"
+                "SITE_PACKAGES=$(python -c \"import sysconfig; print(sysconfig.get_paths()['purelib'])\") && export PYTHONPATH=\"$SITE_PACKAGES:$PYTHONPATH\" && python -m pytest ${file} --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml"
             ],
             "group": "test",
             "presentation": {
@@ -275,10 +275,7 @@
             "label": "Pre-commit + Coverage (CI Mode)",
             "type": "shell",
             "command": "bash",
-            "args": [
-                "-c",
-                "source ${workspaceFolder}/.venv/bin/activate && pre-commit run --all-files && SITE_PACKAGES=$(python -c 'import sysconfig; print(sysconfig.get_paths()[\"purelib\"])') && export PYTHONPATH=\"$SITE_PACKAGES:$PYTHONPATH\" && python -m pytest tests/ --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml"
-            ],
+            "args": ["scripts/run_precommit.sh", "--with-tests"],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -288,7 +285,7 @@
                 "panel": "dedicated"
             },
             "problemMatcher": [],
-            "detail": "Run pre-commit + pytest with CI PYTHONPATH (tests installed package, 4 known failures)."
+            "detail": "Run pre-commit + pytest with CI-like PYTHONPATH via wrapper script (robust quoting)."
         }
         ,
         {

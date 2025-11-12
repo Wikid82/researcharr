@@ -263,5 +263,3 @@ jobs:
       - name: No-op pytests placeholder
         run: |
           echo "pytest placeholder - all build jobs passed"
-
-

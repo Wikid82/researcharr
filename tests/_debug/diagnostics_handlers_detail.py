@@ -7,7 +7,7 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 
 def _repr_handler(h):
-    return f"{type(h).__name__} level={getattr(h,'level',None)} filters={len(getattr(h,'filters',[]) or [])} formatter={getattr(h,'formatter',None)}"
+    return f"{type(h).__name__} level={getattr(h, 'level', None)} filters={len(getattr(h, 'filters', []) or [])} formatter={getattr(h, 'formatter', None)}"
 
 
 def test_dump_handler_details():
@@ -22,7 +22,9 @@ def test_dump_handler_details():
         for i, h in enumerate(root.handlers):
             f.write(f"root.handler[{i}]={_repr_handler(h)}\n")
         cron = logging.getLogger("researcharr.cron")
-        f.write(f"researcharr.cron.level={cron.level} propagate={cron.propagate} disabled={cron.disabled}\n")
+        f.write(
+            f"researcharr.cron.level={cron.level} propagate={cron.propagate} disabled={cron.disabled}\n"
+        )
         f.write(f"researcharr.cron.handlers_count={len(cron.handlers)}\n")
         for i, h in enumerate(cron.handlers):
             f.write(f"cron.handler[{i}]={_repr_handler(h)}\n")

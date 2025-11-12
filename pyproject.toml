@@ -5,7 +5,7 @@ version = "9.0.0"
 # Enable pytest-xdist for parallel execution with process isolation to prevent
 # logging state pollution between tests. -n auto uses CPU count, --dist=loadfile
 # keeps tests from the same file together to minimize overhead.
-addopts = "-v --log-file=pytest.log --log-file-mode=a -n auto --dist=loadfile"
+addopts = "-v --log-file=pytest.log --log-file-mode=a -n auto --dist=loadfile -m 'not webui'"
 testpaths = [
     "tests",
 ]
@@ -25,6 +25,7 @@ markers = [
     "unit: marks tests as unit tests",
     "logging: marks tests that manipulate logging state (may need isolation)",
     "no_xdist: marks tests that must run without pytest-xdist parallelization",
+    "webui: marks tests that require the Web UI (disabled by default)",
 ]
 filterwarnings = [
     "ignore::DeprecationWarning",

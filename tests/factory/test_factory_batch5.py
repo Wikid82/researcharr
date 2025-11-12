@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_backups_download_and_delete_variants(client, login, tmp_path, monkeypatch):
     cfg = tmp_path / "config"
     cfg.mkdir(parents=True, exist_ok=True)
@@ -31,6 +34,7 @@ def test_backups_download_and_delete_variants(client, login, tmp_path, monkeypat
     assert rv5.status_code == 404
 
 
+@pytest.mark.no_xdist
 def test_updates_upgrade_in_image_and_invalid_url(client, login, monkeypatch):
     # when running in image, upgrade is disallowed
     # Use RuntimeConfig singleton for reliable patching across Python versions

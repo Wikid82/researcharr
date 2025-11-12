@@ -24,6 +24,7 @@ def app_with_override(monkeypatch):
     os.environ.pop("FACTORY_DEBUG_SETUP", None)
 
 
+@pytest.mark.no_xdist
 def test_setup_route_sets_flag(app_with_override, client):
     # Ensure override is active before client app creation; post to /setup form
     resp = client.post(

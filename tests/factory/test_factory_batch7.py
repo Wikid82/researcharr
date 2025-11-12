@@ -1,3 +1,7 @@
+import pytest
+
+
+@pytest.mark.no_xdist
 def test_setup_generates_api_and_persists(tmp_path, monkeypatch):
     # ensure CONFIG_DIR is isolated and stub webui
     cfg = tmp_path / "config"

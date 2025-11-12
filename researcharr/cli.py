@@ -636,7 +636,9 @@ def cmd_run_job(args: argparse.Namespace) -> int:
 
         # Debug: show both ids to aid triage when duplicates occur
         try:
-            print(f"DEBUG: _run_module id={id(_run_module)} module(researcharr.run) id={id(sys.modules.get('researcharr.run'))}")
+            print(
+                f"DEBUG: _run_module id={id(_run_module)} module(researcharr.run) id={id(sys.modules.get('researcharr.run'))}"
+            )
         except Exception:
             pass
 

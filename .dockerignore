@@ -50,6 +50,13 @@ tmp_*.py
 test_*.tmp
  .tmp/
 
+# Bisect/replay artifacts
+replay_*.log
+replay_*.xml
+pairwise_bisect_*.xml
+random_*.xml
+researcharr-bisect/
+
 # Local files (ignore specific generated runtime artifacts, but keep repo config files)
 ## webui user file removed; DB-backed users in sqlite
 # config/webui_user.yml

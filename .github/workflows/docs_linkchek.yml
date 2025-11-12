@@ -1,5 +1,5 @@
 ---
-name: CI — Docs linkcheck
+name: Docs linkcheck
 
 on:
   pull_request: {}

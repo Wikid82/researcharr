@@ -27,7 +27,7 @@ echo "Running pytest with coverage (CI-like)..."
 # Prepend site-packages so pytest prefers the installed package over top-level modules
 SITE_PACKAGES=$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
 echo "Using site-packages: $SITE_PACKAGES"
-export PYTHONPATH="$SITE_PACKAGES:$PYTHONPATH"
+export PYTHONPATH="$SITE_PACKAGES:${PYTHONPATH:-}"
 
 pytest tests/ \
   --maxfail=3 --disable-warnings -v \

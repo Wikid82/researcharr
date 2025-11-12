@@ -22,6 +22,7 @@ Docker Usage:
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import os
 import sys
@@ -611,10 +612,18 @@ def cmd_run_job(args: argparse.Namespace) -> int:
     print("Running scheduled job...")
 
     try:
-        # Import and run the job
-        from researcharr.run import run_job  # noqa: PLC0415
+        # Import and run the job. Use the module object so tests that patch
+        # `researcharr.run` (or use a top-level `run` shim) are respected.
+        # Check `sys.modules` first to preserve any patched instance.
+        mod = sys.modules.get("researcharr.run")
+        if mod is None:
+            mod = importlib.import_module("researcharr.run")
 
-        run_job()
+        run_fn = getattr(mod, "run_job", None)
+        if not callable(run_fn):
+            raise Exception("run_job not found on researcharr.run")
+
+        run_fn()
         print("✓ Job completed successfully")
         return 0
 

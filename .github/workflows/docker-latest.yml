@@ -1,5 +1,5 @@
 ---
-name: Docker development Build
+name: Docker Latest Build
 
 on:
   workflow_run:
@@ -11,14 +11,14 @@ permissions:
   packages: write
 
 jobs:
-  docker-build-development:
-    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'development' }}
+  docker-build-latest:
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Check Out Repo
         uses: actions/checkout@v5
         with:
-          ref: development
+          ref: latest
 
       - name: Login to GitHub Container Registry (GHCR)
         uses: docker/login-action@v3
@@ -43,16 +43,16 @@ jobs:
           context: ./
           file: ./Dockerfile
           build-args: |
-            "BRANCH_NAME=development"
+            "BRANCH_NAME=main"
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: ghcr.io/${{ github.repository }}:development
+          tags: ghcr.io/${{ github.repository }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   commit-notification:
     runs-on: ubuntu-latest
-    needs: [docker-build-development, trivy-scan]
+    needs: [docker-build-latest, trivy-scan]
     if: ${{ success() }}
     steps:
       - name: Get recent commits
@@ -62,15 +62,15 @@ jobs:
           git log -n 5 --pretty=format:"- %s (%an)" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      # Notify Discord on successful development-branch builds
+      # Notify Discord on successful latest-branch builds
       - name: Discord Success Notification
-        if: success() && github.ref == 'refs/heads/development'
+        if: success() && github.ref == 'refs/heads/main'
         run: |
-          if [ -z "${{ secrets.DISCORD_DEV_WEBHOOK }}" ]; then
+          if [ -z "${{ secrets.DISCORD_LATEST_WEBHOOK }}" ]; then
             echo "No Discord webhook configured; skipping notification."
             exit 0
           fi
-          CONTENT="Development branch build succeeded!
+          CONTENT="latest branch build succeeded!
           ${{ steps.commits.outputs.commits }}
           Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           ESCAPED_CONTENT=$(printf '%s' "$CONTENT" | sed 's/"/\\"/g')
@@ -78,7 +78,7 @@ jobs:
 
   trivy-scan:
     runs-on: ubuntu-latest
-    needs: [docker-build-development]
+    needs: [docker-build-latest]
     steps:
       - name: Login to GHCR for scanning
         uses: docker/login-action@v3
@@ -93,6 +93,6 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -e TRIVY_NON_INTERACTIVE=true \
             aquasec/trivy:latest image \
-            --exit-code 1 --severity HIGH,CRITICAL ghcr.io/${{ github.repository }}:development
+            --exit-code 1 --severity HIGH,CRITICAL ghcr.io/${{ github.repository }}:latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

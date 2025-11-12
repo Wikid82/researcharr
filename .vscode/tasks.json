@@ -208,7 +208,11 @@
             "type": "shell",
             "command": "./scripts/ci-multi-version.sh",
             "options": {
-                "cwd": "${workspaceFolder}"
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "GITHUB_ACTIONS": "true",
+                    "CI": "true"
+                }
             },
             "group": "test",
             "presentation": {

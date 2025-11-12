@@ -613,6 +613,20 @@ def cmd_run_job(args: argparse.Namespace) -> int:
     print("Running scheduled job...")
 
     try:
+        # Debug: emit module identity information so we can verify tests patch
+        # the exact module object the CLI is calling. This helps diagnose
+        # intermittent failures where the test's mock isn't observing calls.
+        try:
+            mod_obj = sys.modules.get("researcharr.run")
+            print(
+                f"DEBUG: _run_module id={id(_run_module)} module(researcharr.run) id={id(mod_obj)}"
+            )
+            run_attr = getattr(_run_module, "run_job", None)
+            print(f"DEBUG: run_job attr id={id(run_attr)} callable={callable(run_attr)}")
+        except Exception:
+            # Defensive: don't fail the CLI if debug printing has issues
+            pass
+
         # Call the run_job attribute from the imported package module so
         # tests that patch `researcharr.run.run_job` observe the call.
         run_fn = getattr(_run_module, "run_job", None)

@@ -117,6 +117,13 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      - id: auto-fix-yaml
+        name: auto-fix YAML (local)
+        entry: ./scripts/auto_fix_yaml.sh
+        language: script
+        pass_filenames: false
+        stages: [manual]
+
       # Run pytest in the developer environment. We use `language: system`
       # so the hook invokes the pytest installed in the developer's venv
       # (this avoids needing to replicate the entire test environment in

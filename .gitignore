@@ -180,3 +180,6 @@ artifacts/pairwise/bisect_final.xml
 artifacts/pairwise/bisect_run.xml
 artifacts/pairwise/random_1.xml
 .gitignore
+bisect**
+junit**
+**junit**

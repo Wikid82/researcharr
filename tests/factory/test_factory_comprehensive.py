@@ -208,10 +208,7 @@ class TestFactoryRoutes:
         """Test save route with valid API credentials."""
         with patch("researcharr.factory.webui.save_user_config") as mock_save:
             mock_save.return_value = None
-            response = client.post(
-                "/save",
-                json={"api": "test_api_key", "token": "test_token"}
-            )
+            response = client.post("/save", json={"api": "test_api_key", "token": "test_token"})
             assert response.status_code == 200
             data = json.loads(response.data)
             assert data["status"] == "ok"

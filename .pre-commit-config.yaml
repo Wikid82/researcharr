@@ -97,9 +97,10 @@ repos:
         name: detect-secrets (local wrapper)
         entry: scripts/run-detect-secrets.sh
         language: script
-        # Exclude tests and node_modules from detect-secrets scans here to
-        # avoid false positives on test fixtures and locally vendored files.
-        files: "^(?!tests/|node_modules/).*"
+        # Restrict detect-secrets to scanning repository source and config files
+        # to avoid baseline churn caused by vendor/venv/generated files.
+        files: '^(researcharr/|config/|templates/|\.github/|\.pre-commit-config.yaml$|^mkdocs\.yml$|^\.yamllint$|^docs/|.*\.(py|yml|yaml|ini|cfg|env|json)$)'
+        exclude: '(^|/)(\.venv|\.tox|site|node_modules|dist|build)/'
         stages: [pre-commit]
 
       - id: safety

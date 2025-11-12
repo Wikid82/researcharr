@@ -1,5 +1,12 @@
 extends: default
 
+# Ignore vendored and generated YAML to avoid noisy warnings from site-packages
+# and tox/.venv copies. Keep checks for repository-owned config files.
+ignore: |
+  .venv/**
+  .tox/**
+  site/**
+  docs/site/**
 
 rules:
   # Allow longer lines in workflow files (tags and echo lines are long)
@@ -7,9 +14,11 @@ rules:
     max: 200
     level: warning
 
-  # Keep document-start rule enabled (we add '---' at top of our CI file)
+  # Do not require a global document-start for all YAML files. We prefer to
+  # allow repo files that are single-document (configs, templates) and only
+  # add '---' where it's actually needed for multi-document files.
   document-start:
-    present: true
+    present: false
 
   # The repository's workflow files use GitHub Actions idioms that sometimes
   # conflict with strict yamllint rules (e.g. step list indentation and

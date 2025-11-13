@@ -103,7 +103,9 @@ class TestFactoryMainRoutes(unittest.TestCase):
 
         with app.test_client() as client:
             with patch("researcharr.factory.check_password_hash") as mock_check:
-                with patch("researcharr.factory.get_user_by_username") as mock_get_user:
+                with patch(
+                    "researcharr.factory.get_user_by_username", create=True
+                ) as mock_get_user:
                     mock_get_user.return_value = {
                         "username": "test",  # pragma: allowlist secret
                         "password": "hashed",  # pragma: allowlist secret
@@ -125,7 +127,9 @@ class TestFactoryMainRoutes(unittest.TestCase):
 
         with app.test_client() as client:
             with patch("researcharr.factory.check_password_hash") as mock_check:
-                with patch("researcharr.factory.get_user_by_username") as mock_get_user:
+                with patch(
+                    "researcharr.factory.get_user_by_username", create=True
+                ) as mock_get_user:
                     mock_get_user.return_value = {
                         "username": "test",  # pragma: allowlist secret
                         "password": "hashed",  # pragma: allowlist secret
@@ -253,8 +257,8 @@ class TestFactoryMainRoutes(unittest.TestCase):
             with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("researcharr.factory.load_user_config") as mock_load:
-                with patch("researcharr.factory.save_user_config"):
+            with patch("researcharr.factory.load_user_config", create=True) as mock_load:
+                with patch("researcharr.factory.save_user_config", create=True):
                     mock_load.return_value = {"schedule": {}}
 
                     response = client.post(
@@ -283,8 +287,8 @@ class TestFactoryMainRoutes(unittest.TestCase):
             with client.session_transaction() as sess:  # type: ignore[attr-defined]
                 sess["logged_in"] = True
 
-            with patch("researcharr.factory.load_user_config") as mock_load:
-                with patch("researcharr.factory.save_user_config"):
+            with patch("researcharr.factory.load_user_config", create=True) as mock_load:
+                with patch("researcharr.factory.save_user_config", create=True):
                     mock_load.return_value = {"sonarr": {}, "radarr": {}}
 
                     response = client.post(

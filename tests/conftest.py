@@ -46,8 +46,8 @@ if not _VERBOSE_FACTORY_HELPER and _ORIG_STDERR_WRITE is not None:
                 return self._orig.writelines(lines)
             except Exception:
                 # best-effort; don't break tests if writelines isn't present
-                for l in lines:
-                    self.write(l)
+                for line in lines:
+                    self.write(line)
 
         def flush(self):
             try:

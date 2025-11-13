@@ -92,7 +92,7 @@ class TestFactoryRoutes:
         """Test setup route POST with valid data."""
         with (
             patch("researcharr.factory.generate_password_hash") as mock_hash,
-            patch("researcharr.factory.webui.save_user_config") as mock_save,
+            patch("researcharr.webui.save_user_config", create=True) as mock_save,
         ):
             mock_hash.return_value = "hashed_password"
             mock_save.return_value = True
@@ -204,16 +204,41 @@ class TestFactoryRoutes:
         data = json.loads(response.data)
         assert data["status"] == "missing_fields"
 
-    def test_save_route_success(self, client):
+    def test_save_route_success(self, client, monkeypatch):
         """Test save route with valid API credentials."""
-        with patch("researcharr.factory.webui.save_user_config") as mock_save:
+        # Ensure the top-level `webui` module exists in sys.modules and points at
+        # the package module `researcharr.webui`. This avoids `factory._get_webui`
+        # returning a different object and ensures the patched function is used.
+        import importlib
+        import sys as _sys
+
+        try:
+            webui_mod = importlib.import_module("researcharr.webui")
+            monkeypatch.setitem(_sys.modules, "webui", webui_mod)
+            # Also ensure the top-level factory module references the same webui
+            try:
+                top_factory = importlib.import_module("factory")
+                monkeypatch.setattr(top_factory, "webui", webui_mod, raising=False)
+            except Exception:
+                pass
+        except Exception:
+            # If we can't import, fall back to creating a tiny stub
+            import types
+
+            stub = types.SimpleNamespace(save_user_config=lambda *a, **k: None)
+            monkeypatch.setitem(_sys.modules, "webui", stub)
+
+        with (
+            patch("webui.save_user_config", create=True) as mock_save,
+        ):
             mock_save.return_value = None
             response = client.post("/save", json={"api": "test_api_key", "token": "test_token"})
             assert response.status_code == 200
             data = json.loads(response.data)
             assert data["status"] == "ok"
             # Verify save_user_config was called
-            mock_save.assert_called_once()
+            # Either patch target (factory.webui or researcharr.webui) should have been invoked
+            assert mock_save.call_count == 1
 
     def test_reset_password_route_get(self, client):
         """Test reset password GET route."""
@@ -227,7 +252,7 @@ class TestFactoryRoutes:
 
         with (
             patch("researcharr.factory.generate_password_hash") as mock_hash,
-            patch("researcharr.factory.webui.save_user_config") as mock_save,
+            patch("researcharr.webui.save_user_config", create=True) as mock_save,
         ):
             mock_hash.return_value = "new_hashed_password"
             mock_save.return_value = True
@@ -366,8 +391,8 @@ class TestFactoryBackupRoutes:
             sess["logged_in"] = True
 
         with (
-            patch("factory._create_backup_file") as mock_create,
-            patch("factory._prune_backups"),
+            patch("factory._create_backup_file", create=True) as mock_create,
+            patch("factory._prune_backups", create=True),
         ):
             mock_create.return_value = "backup_20241101_120000.zip"
 

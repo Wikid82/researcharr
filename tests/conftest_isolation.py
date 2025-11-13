@@ -99,7 +99,7 @@ def isolate_factory_state() -> Generator[None]:
     Cleans up module-level attributes that might be set during tests to
     prevent state leakage. This is particularly important for factory tests
     that check for specific attributes.
-    
+
     Also resets the _RuntimeConfig singleton that is used by tests to patch
     runtime behavior.
     """
@@ -133,7 +133,7 @@ def isolate_factory_state() -> Generator[None]:
                     except (AttributeError, TypeError):
                         # Some attributes might be read-only or not deletable
                         pass
-    
+
     # Reset _RuntimeConfig singleton state
     # This is critical for tests that patch _RuntimeConfig behavior
     for mod_name in factory_modules:

@@ -1,0 +1,87 @@
+name: Build Wheels and Test (wheelhouse consumer)
+
+on:
+  push:
+    branches: [ main, 'ci/**' ]
+  pull_request:
+
+jobs:
+  build-wheels:
+    name: Build wheels
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-name: wheelhouse
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install cibuildwheel==2.3.0
+      - name: Build wheels
+        run: |
+          cibuildwheel --output-dir wheelhouse
+      - name: Upload wheelhouse (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheelhouse
+          path: wheelhouse
+
+      - name: Publish wheels to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install twine
+          # Use GitHub Packages Python repository. Username can be the actor and
+          # password is the GITHUB_TOKEN. This publishes the built wheels to
+          # the repository's package registry (owner: ${GITHUB_REPOSITORY_OWNER}).
+          REPO_OWNER=${{ github.repository_owner }}
+          echo "Uploading wheels to GH Packages for owner: ${REPO_OWNER}"
+          TWINE_REPO_URL="https://upload.pypi.github.com/legacy/"
+          twine upload --repository-url ${TWINE_REPO_URL} -u "${{ github.actor }}" -p "${{ secrets.GITHUB_TOKEN }}" wheelhouse/* || true
+
+  test-matrix:
+    name: Test using wheelhouse
+    needs: build-wheels
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [ '3.10', '3.11', '3.12' ]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prefer GitHub Packages index
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OWNER=${{ github.repository_owner }}
+          # Configure pip to prefer GitHub Packages for this repository as the
+          # primary index. We set PIP_INDEX_URL so pip will query GH Packages
+          # first and then fall back to the public PyPI.
+          echo "PIP_INDEX_URL=https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@pypi.pkg.github.com/${OWNER}/simple" >> $GITHUB_ENV
+          echo "PIP_EXTRA_INDEX_URL=https://pypi.org/simple" >> $GITHUB_ENV
+          mkdir -p ./wheelhouse || true
+      - name: Download wheelhouse (artifact, fallback)
+        uses: actions/download-artifact@v4
+        with:
+          name: wheelhouse
+          path: ./wheelhouse
+      - name: Set up Docker (ensure docker build works)
+        uses: docker/setup-buildx-action@v2
+      - name: Set env defaults
+        run: |
+          echo "PYTHONHASHSEED=0" >> $GITHUB_ENV
+          echo "LANG=C.UTF-8" >> $GITHUB_ENV
+          echo "LC_ALL=C.UTF-8" >> $GITHUB_ENV
+          echo "TZ=UTC" >> $GITHUB_ENV
+          echo "TMPDIR=/tmp/ci" >> $GITHUB_ENV
+          echo "XDG_CACHE_HOME=/tmp/ci/.cache" >> $GITHUB_ENV
+      - name: Run multi-version script (uses wheelhouse)
+        env:
+          VERSIONS: ${{ matrix.python }}
+        run: |
+          # CI workspace contains ./wheelhouse produced by previous job
+          ./scripts/ci-multi-version.sh --versions "${{ matrix.python }}" --log-level summary

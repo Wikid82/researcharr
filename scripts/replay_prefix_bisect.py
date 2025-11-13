@@ -11,7 +11,7 @@ Writes per-run junit xml and logs to the specified output directory.
 
 import argparse
 import os
-import subprocess
+import subprocess  # nosec: B404 -- invoked with a sanitized arg list; no shell=True is used
 import sys
 import sysconfig
 import tempfile
@@ -83,8 +83,7 @@ def run_pytest(prefix_files, culprit_nodeid, out_dir, idx):
     )
 
     with open(log_path, "wb") as logf:
-        # nosec: B603 -- we pass a sanitized list of arguments and do not use shell=True.
-        proc = subprocess.run(args, check=False, stdout=logf, stderr=logf, env=env)
+        proc = subprocess.run(args, check=False, stdout=logf, stderr=logf, env=env)  # nosec: B603 -- sanitized args; shell=False
 
     return proc.returncode, xml_path, log_path
 

@@ -4,6 +4,18 @@ on:
   push:
     branches:
       - '**'
+    # Only trigger push workflows when code or packaging files change to avoid
+    # unnecessary wheel builds on documentation or site changes.
+    paths:
+      - 'researcharr/**'
+      - 'pyproject.toml'
+      - 'setup.cfg'
+      - 'setup.py'
+      - 'requirements.txt'
+      - 'requirements-dev.txt'
+      - 'scripts/**'
+      - 'Dockerfile'
+      - '.github/workflows/**'
   pull_request:
 
 jobs:
@@ -59,16 +71,44 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           REPO_OWNER=${{ github.repository_owner }}
           echo "Uploading wheels to GH Packages for owner: ${REPO_OWNER}"
           TWINE_REPO_URL="https://upload.pypi.github.com/legacy/"
+          echo "Twine version (python -m twine):"; python -m twine --version || true
+          echo "Wheelhouse contents:"
+          find wheelhouse -type f -name "*.whl" -ls || true
           # Use --skip-existing to avoid failing when the same wheel version is already present.
           # If the twine version doesn't support --skip-existing, this will be ignored by older twine.
-          twine upload --repository-url ${TWINE_REPO_URL} -u "${{ github.actor }}" -p "${{ secrets.GITHUB_TOKEN }}" --skip-existing wheelhouse/* || true
+          # Only upload actual wheel files - artifact folders are created per-matrix
+          # and must be globbed to the files inside (e.g. wheelhouse-3.10/*.whl).
+          # Use find to discover all wheel files under the artifact directory
+          # and upload only those files. This prevents twine from trying to
+          # interpret artifact directory names as distributions.
+          echo "== Wheel files to upload: =="
+          find wheelhouse -type f -name "*.whl" -ls || echo "No wheel files found"
+
+          UPLOAD_CMD='find wheelhouse -type f -name "*.whl" -print0 | xargs -0 -r -n 100 python -m twine upload --repository-url "'"${TWINE_REPO_URL}"'" -u "'"${{ github.actor }}"'" -p "'"${{ secrets.GITHUB_TOKEN }}"'"'
+
+          echo "== Attempt upload with --skip-existing =="
+          if bash -lc "${UPLOAD_CMD} --skip-existing"; then
+            echo "Upload succeeded with --skip-existing"
+          else
+            echo "Upload with --skip-existing failed -> retrying without the option for compatibility fallback"
+            if bash -lc "${UPLOAD_CMD}"; then
+              echo "Upload succeeded without --skip-existing"
+            else
+              echo "Upload failed even without --skip-existing (see logs above). Continuing without failing the job."
+            fi
+          fi
 
   test-matrix:
     name: Test using wheelhouse
-    needs: publish-wheels
+    # Tests don't need the publish step to complete; they only require the
+    # built wheelhouse artifacts produced by the build matrix. The publish
+    # step is gated to run on push to main/development/tags only and is not
+    # required for PR-based testing.
+    needs: build-wheels
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -90,6 +130,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ./wheelhouse
+      - name: Flatten wheelhouse artifacts
+        run: |
+          # Move all .whl files from nested artifact dirs into ./wheelhouse
+          find ./wheelhouse -type f -name "*.whl" -print0 | xargs -0 -I {} bash -lc 'cp "{}" ./wheelhouse/ || true'
+          # Remove nested artifact directories to leave a clean wheelhouse root
+          find ./wheelhouse -maxdepth 1 -type d -name "wheelhouse-*" -print0 | xargs -0 -r rm -rf || true
       - name: Create TMPDIR
         run: |
           mkdir -p /tmp/ci/.cache

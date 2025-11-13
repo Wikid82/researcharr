@@ -102,10 +102,14 @@ jobs:
       - name: List log files (debug)
         if: always()
         run: |
+          echo "=== Checking for log files ==="
+          echo "Current directory: $(pwd)"
           echo "Contents of .tmp directory:"
-          ls -la .tmp/ || echo "No .tmp directory found"
-          echo "Looking for log files:"
-          find . -name "*.log" -type f || echo "No log files found"
+          ls -laR .tmp/ || echo "No .tmp directory found"
+          echo "All log files in workspace:"
+          find . -name "*.log" -type f -ls || echo "No log files found"
+          echo "Disk usage of .tmp:"
+          du -sh .tmp/ 2>/dev/null || echo ".tmp not found"
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -113,6 +117,7 @@ jobs:
           name: test-logs-${{ matrix.python }}
           path: .tmp/
           retention-days: 7
+          if-no-files-found: error
 
 
             # Lightweight placeholder job to satisfy external/legacy required status contexts

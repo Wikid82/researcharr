@@ -20,6 +20,7 @@ except Exception:
     _VERBOSE_FACTORY_HELPER = False
 
 if not _VERBOSE_FACTORY_HELPER and _ORIG_STDERR_WRITE is not None:
+
     class _FilteredStderr:
         """Wrap the original stderr to filter the factory helper logs.
 
@@ -160,54 +161,54 @@ def _restore_run_job_if_mock():
     except Exception:
         pass
 
+
 @_pytest.fixture(autouse=True)
 def _suppress_factory_helper_logs(monkeypatch):
-        """Silently drop noisy factory-helper lines from stderr unless explicitly enabled.
+    """Silently drop noisy factory-helper lines from stderr unless explicitly enabled.
 
-        These helper logs can make test output noisy. By default we suppress them
-        in the test run; set RESEARCHARR_VERBOSE_FACTORY_HELPER=1 to opt into
-        seeing the helper logs for troubleshooting.
-        """
+    These helper logs can make test output noisy. By default we suppress them
+    in the test run; set RESEARCHARR_VERBOSE_FACTORY_HELPER=1 to opt into
+    seeing the helper logs for troubleshooting.
+    """
+    try:
+        verbose = os.environ.get("RESEARCHARR_VERBOSE_FACTORY_HELPER", "0") == "1"
+    except Exception:
+        verbose = False
+    if verbose:
+        yield
+        return
+    # Patch sys.stderr.write to filter the factory helper and pkg-attr logs.
+    orig_write = sys.stderr.write
+
+    def _filtered_write(s):
         try:
-            verbose = os.environ.get("RESEARCHARR_VERBOSE_FACTORY_HELPER", "0") == "1"
-        except Exception:
-            verbose = False
-        if verbose:
-            yield
-            return
-        # Patch sys.stderr.write to filter the factory helper and pkg-attr logs.
-        orig_write = sys.stderr.write
-
-        def _filtered_write(s):
-            try:
-                if isinstance(s, str) and (
-                    "[factory-helper-access]" in s or "[pkg-attr-access]" in s
-                ):
-                    # mimic sys.stderr.write return of number of written chars
-                    return len(s)
-            except Exception:
-                pass
-            return orig_write(s)
-
-        monkeypatch.setattr(sys.stderr, "write", _filtered_write)
-        try:
-            yield
-        finally:
-            monkeypatch.setattr(sys.stderr, "write", orig_write)
-
-def pytest_unconfigure(config):
-        """Restore original stderr.write when tests complete.
-
-        This ensures we don't leave the patched write globally changed after the
-        test run completes (useful when running tests in interactive sessions).
-        """
-        # Restore the original sys.stderr object so interactive sessions or
-        # other test harnesses are not left with our wrapper.
-        try:
-            if globals().get("_ORIG_STDERR") is not None:
-                sys.stderr = globals().get("_ORIG_STDERR")
+            if isinstance(s, str) and ("[factory-helper-access]" in s or "[pkg-attr-access]" in s):
+                # mimic sys.stderr.write return of number of written chars
+                return len(s)
         except Exception:
             pass
+        return orig_write(s)
+
+    monkeypatch.setattr(sys.stderr, "write", _filtered_write)
+    try:
+        yield
+    finally:
+        monkeypatch.setattr(sys.stderr, "write", orig_write)
+
+
+def pytest_unconfigure(config):
+    """Restore original stderr.write when tests complete.
+
+    This ensures we don't leave the patched write globally changed after the
+    test run completes (useful when running tests in interactive sessions).
+    """
+    # Restore the original sys.stderr object so interactive sessions or
+    # other test harnesses are not left with our wrapper.
+    try:
+        if globals().get("_ORIG_STDERR") is not None:
+            sys.stderr = globals().get("_ORIG_STDERR")
+    except Exception:
+        pass
 
 
 @pytest.fixture(autouse=True)

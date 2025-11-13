@@ -1,4 +1,5 @@
 import os
+
 ORDER_F='ordering_nodeids_window.txt'
 if os.path.exists(ORDER_F):
     ordering=[l.strip() for l in open(ORDER_F).read().splitlines() if l.strip()]

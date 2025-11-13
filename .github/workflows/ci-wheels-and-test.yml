@@ -98,7 +98,11 @@ jobs:
           VERSIONS: ${{ matrix.python }}
         run: |
           # CI workspace contains ./wheelhouse produced by previous job
+          echo "PWD before script: $(pwd)"
+          ls -la .tmp/ 2>/dev/null && echo ".tmp exists before script" || echo ".tmp does NOT exist before script"
           ./scripts/ci-multi-version.sh --versions "${{ matrix.python }}" --log-level summary
+          echo "PWD after script: $(pwd)"
+          ls -la .tmp/ 2>/dev/null && echo ".tmp exists after script with $(ls .tmp/ | wc -l) files" || echo ".tmp does NOT exist after script"
       - name: List log files (debug)
         if: always()
         run: |

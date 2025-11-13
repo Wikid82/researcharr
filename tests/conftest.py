@@ -293,15 +293,30 @@ def _reset_logger_levels_before_and_after_test():
     # Reset BEFORE the test
     try:
         import logging
+        mgr = logging.root.manager
+        # Reset any logger that belongs to the researcharr hierarchy so
+        # tests cannot permanently disable them (which breaks pytest caplog).
+        try:
+            for name, lg in list(mgr.loggerDict.items()):
+                if not isinstance(name, str):
+                    continue
+                if name.startswith("researcharr"):
+                    try:
+                        real_logger = logging.getLogger(name)
+                        real_logger.setLevel(logging.NOTSET)
+                        real_logger.propagate = True
+                        real_logger.disabled = False
+                    except Exception:
+                        # best-effort
+                        pass
+        except Exception:
+            # fallback to resetting the most critical researcharr loggers
+            logger = logging.getLogger("researcharr.cron")
+            logger.setLevel(logging.NOTSET)
+            logger.propagate = True
+            logger.disabled = False
 
-        # Reset the researcharr.cron logger specifically
-        logger = logging.getLogger("researcharr.cron")
-        logger.setLevel(logging.NOTSET)
-        logger.propagate = True
-        logger.disabled = False
-        # Don't clear handlers - that breaks caplog!
-
-        # Reset the researcharr.core.lifecycle logger
+        # Reset the researcharr.core.lifecycle logger explicitly as a safety-net
         lifecycle_logger = logging.getLogger("researcharr.core.lifecycle")
         lifecycle_logger.setLevel(logging.NOTSET)
         lifecycle_logger.propagate = True
@@ -314,10 +329,25 @@ def _reset_logger_levels_before_and_after_test():
     try:
         import logging
 
-        logger = logging.getLogger("researcharr.cron")
-        logger.setLevel(logging.NOTSET)
-        logger.propagate = True
-        logger.disabled = False
+        mgr = logging.root.manager
+        try:
+            for name, lg in list(mgr.loggerDict.items()):
+                if not isinstance(name, str):
+                    continue
+                if name.startswith("researcharr"):
+                    try:
+                        real_logger = logging.getLogger(name)
+                        real_logger.setLevel(logging.NOTSET)
+                        real_logger.propagate = True
+                        real_logger.disabled = False
+                    except Exception:
+                        pass
+        except Exception:
+            # best-effort fallback
+            logger = logging.getLogger("researcharr.cron")
+            logger.setLevel(logging.NOTSET)
+            logger.propagate = True
+            logger.disabled = False
 
         lifecycle_logger = logging.getLogger("researcharr.core.lifecycle")
         lifecycle_logger.setLevel(logging.NOTSET)

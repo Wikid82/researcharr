@@ -9,7 +9,7 @@ import os
 import tempfile
 
 import defusedxml
-import defusedxml.ElementTree as ElementTree
+from defusedxml import ElementTree
 
 # Ensure stdlib XML parsers are defused before any parsing occurs.
 defusedxml.defuse_stdlib()

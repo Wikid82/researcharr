@@ -21,7 +21,16 @@ jobs:
       - name: Install build tools
         run: |
           python -m pip install --upgrade pip setuptools wheel
+      - name: Restore wheelhouse cache
+        id: wheelcache
+        uses: actions/cache@v4
+        with:
+          path: wheelhouse
+          key: wheelhouse-${{ runner.os }}-${{ matrix.python }}-${{ hashFiles('**/pyproject.toml', '**/setup.cfg') }}
+          restore-keys: wheelhouse-${{ runner.os }}-${{ matrix.python }}-
+
       - name: Build wheel with pip
+        if: steps.wheelcache.outputs.cache-hit != 'true'
         run: |
           mkdir -p wheelhouse
           python -m pip wheel --no-deps --wheel-dir=wheelhouse .
@@ -51,7 +60,9 @@ jobs:
           REPO_OWNER=${{ github.repository_owner }}
           echo "Uploading wheels to GH Packages for owner: ${REPO_OWNER}"
           TWINE_REPO_URL="https://upload.pypi.github.com/legacy/"
-          twine upload --repository-url ${TWINE_REPO_URL} -u "${{ github.actor }}" -p "${{ secrets.GITHUB_TOKEN }}" wheelhouse/* || true
+          # Use --skip-existing to avoid failing when the same wheel version is already present.
+          # If the twine version doesn't support --skip-existing, this will be ignored by older twine.
+          twine upload --repository-url ${TWINE_REPO_URL} -u "${{ github.actor }}" -p "${{ secrets.GITHUB_TOKEN }}" --skip-existing wheelhouse/* || true
 
   test-matrix:
     name: Test using wheelhouse

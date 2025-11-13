@@ -10,7 +10,15 @@ def test_setup_generates_api_and_persists(tmp_path, monkeypatch):
 
     # Use RuntimeConfig to inject webui stub reliably across Python versions
     # MUST happen BEFORE create_app() is called
-    from factory import _RuntimeConfig
+    # Load the real factory.py to access _RuntimeConfig (bypasses module reconciliation)
+    import importlib.util
+    import pathlib
+
+    factory_py = pathlib.Path(__file__).parent.parent.parent / "factory.py"
+    spec = importlib.util.spec_from_file_location("_real_factory", factory_py)
+    real_factory = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(real_factory)
+    _RuntimeConfig = real_factory._RuntimeConfig
 
     class W:
         def save_user_config(self, *a, **k):
@@ -20,7 +28,8 @@ def test_setup_generates_api_and_persists(tmp_path, monkeypatch):
         def load_user_config(self):
             return {}
 
-    monkeypatch.setattr(_RuntimeConfig, "_webui_override", W())
+    # Use the helper method to set the webui override
+    _RuntimeConfig.set_webui(W())
 
     # NOW create app after patching (don't use client fixture)
     from factory import create_app

@@ -4,6 +4,12 @@
 # and runs the lightweight smoke tests to catch packaging/import issues fast.
 set -euo pipefail
 
+# Clear developer triage env vars so the smoke hook behaves like CI
+# Some developer workflows export these to disable pytest plugins for
+# isolated debugging; unset them here so the pre-commit hook loads
+# plugins (xdist, etc.) as CI expects.
+unset PYTEST_DISABLE_PLUGIN_AUTOLOAD RESEARCHARR_DISABLE_PLUGINS || true
+
 # Resolve a Python interpreter robustly across environments
 PY="${PYTHON:-}"
 if [[ -z "${PY}" ]]; then

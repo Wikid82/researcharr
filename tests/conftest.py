@@ -30,6 +30,36 @@ _ORIGINAL_GETLOGGER = getattr(_logging, "getLogger", None)
 
 from researcharr import factory
 
+# Record an early snapshot of sys.modules for a few sensitive module names.
+# Capturing this at conftest import time preserves the pre-collection module
+# identities (before test modules are imported/collected) so we can restore
+# the original module objects if tests later replace or inject alternative
+# module objects during collection or test execution.
+_EARLY_ORIGINAL_MODULES = {}
+try:
+    for _m in ("researcharr", "researcharr.backups"):
+        _EARLY_ORIGINAL_MODULES[_m] = sys.modules.get(_m)
+except Exception:
+    _EARLY_ORIGINAL_MODULES = {}
+
+# Also capture early values for __all__ on the same modules so we can restore
+# their public export lists if tests mutate them at runtime.
+_EARLY_ORIGINAL_ALLS = {}
+try:
+    import importlib as _il
+
+    for _m in ("researcharr", "researcharr.backups"):
+        try:
+            _mod = _il.import_module(_m)
+            if hasattr(_mod, "__all__"):
+                _EARLY_ORIGINAL_ALLS[_m] = list(getattr(_mod, "__all__", None))
+            else:
+                _EARLY_ORIGINAL_ALLS[_m] = None
+        except Exception:
+            _EARLY_ORIGINAL_ALLS[_m] = None
+except Exception:
+    _EARLY_ORIGINAL_ALLS = {}
+
 
 @_pytest.fixture(autouse=True)
 def _restore_run_job_if_mock():
@@ -42,6 +72,8 @@ def _restore_run_job_if_mock():
                 _top_run.run_job = real
     except Exception:
         pass
+    # allow test to run, then perform teardown to restore package-level run_job
+    yield
     try:
         import researcharr as _pkg
 
@@ -52,7 +84,88 @@ def _restore_run_job_if_mock():
                 _pkg_run.run_job = real2
     except Exception:
         pass
+
+
+@pytest.fixture(autouse=True)
+def _diagnose_predecessor_module_state(request):
+    """If running the known predecessor test, dump a before/after snapshot of
+    `sys.modules['researcharr.backups']` and related details to /tmp so we can
+    see exactly when and how the mapping or its `__all__` is changed.
+
+    This triggers only when the test nodeid matches the predecessor:
+    `tests/package/test_package_shim_reconciliation.py::test_backups_identity_reconciliation`.
+    """
+    try:
+        node = getattr(request, "node", None)
+        nodeid = getattr(node, "nodeid", "")
+    except Exception:
+        nodeid = ""
+
+    target = (
+        "tests/package/test_package_shim_reconciliation.py::test_backups_identity_reconciliation"
+    )
+    if nodeid != target:
+        yield
+        return
+
+    import json as _json
+    import os as _os
+    import time as _time
+
+    outdir = "/tmp/researcharr-bisect/predecessor-diag"
+    try:
+        _os.makedirs(outdir, exist_ok=True)
+    except Exception:
+        pass
+
+    def _snap(kind: str):
+        try:
+            import sys as _sys
+
+            mod = _sys.modules.get("researcharr.backups")
+            info = {
+                "time": _time.time(),
+                "nodeid": nodeid,
+                "module_present": mod is not None,
+                "module_id": id(mod) if mod is not None else None,
+                "module_repr": repr(mod) if mod is not None else None,
+                "module_file": getattr(mod, "__file__", None) if mod is not None else None,
+                "module___all__": list(getattr(mod, "__all__", None))
+                if (mod is not None and hasattr(mod, "__all__"))
+                else None,
+            }
+            # Also collect any sys.modules entries that contain 'backups'
+            backups_keys = [k for k in _sys.modules.keys() if "backups" in k]
+            backups_map = {}
+            for k in backups_keys:
+                try:
+                    m = _sys.modules.get(k)
+                    backups_map[k] = {
+                        "id": id(m) if m is not None else None,
+                        "repr": repr(m) if m is not None else None,
+                        "file": getattr(m, "__file__", None) if m is not None else None,
+                        "__all__": list(getattr(m, "__all__", None))
+                        if (m is not None and hasattr(m, "__all__"))
+                        else None,
+                    }
+                except Exception:
+                    backups_map[k] = {"error": "failed to inspect"}
+            info["backups_modules_map"] = backups_map
+        except Exception as _e:
+            info = {"error": str(_e)}
+
+        try:
+            p = f"{outdir}/{kind}.json"
+            with open(p, "w") as _f:
+                _f.write(_json.dumps(info, indent=2, default=str))
+        except Exception:
+            pass
+
+    # take before snapshot
+    _snap("before")
     yield
+    # take after snapshot
+    _snap("after")
 
 
 @_pytest.fixture(autouse=True)
@@ -146,6 +259,32 @@ def _preserve_root_logger_handlers():
 
 
 @_pytest.fixture(autouse=True, scope="function")
+def _clear_researcharr_cron_handlers():
+    """Ensure `researcharr.cron` has no persistent handlers during each test.
+
+    Some tests add handlers directly to `researcharr.cron` and don't restore
+    them. That prevents pytest's caplog from reliably capturing messages.
+    Clear handlers before the test and restore them afterwards.
+    """
+    try:
+        import logging
+
+        logger = logging.getLogger("researcharr.cron")
+        saved = list(logger.handlers)
+        logger.handlers[:] = []
+    except Exception:
+        saved = None
+    try:
+        yield
+    finally:
+        try:
+            if saved is not None:
+                logger.handlers[:] = saved
+        except Exception:
+            pass
+
+
+@_pytest.fixture(autouse=True, scope="function")
 def _reset_logger_levels_before_and_after_test():
     """Reset all logger levels before and after each test to prevent pollution.
 
@@ -155,13 +294,30 @@ def _reset_logger_levels_before_and_after_test():
     try:
         import logging
 
-        # Reset the researcharr.cron logger specifically
-        logger = logging.getLogger("researcharr.cron")
-        logger.setLevel(logging.NOTSET)
-        logger.propagate = True
-        # Don't clear handlers - that breaks caplog!
+        mgr = logging.root.manager
+        # Reset any logger that belongs to the researcharr hierarchy so
+        # tests cannot permanently disable them (which breaks pytest caplog).
+        try:
+            for name, lg in list(mgr.loggerDict.items()):
+                if not isinstance(name, str):
+                    continue
+                if name.startswith("researcharr"):
+                    try:
+                        real_logger = logging.getLogger(name)
+                        real_logger.setLevel(logging.NOTSET)
+                        real_logger.propagate = True
+                        real_logger.disabled = False
+                    except Exception:
+                        # best-effort
+                        pass
+        except Exception:
+            # fallback to resetting the most critical researcharr loggers
+            logger = logging.getLogger("researcharr.cron")
+            logger.setLevel(logging.NOTSET)
+            logger.propagate = True
+            logger.disabled = False
 
-        # Reset the researcharr.core.lifecycle logger
+        # Reset the researcharr.core.lifecycle logger explicitly as a safety-net
         lifecycle_logger = logging.getLogger("researcharr.core.lifecycle")
         lifecycle_logger.setLevel(logging.NOTSET)
         lifecycle_logger.propagate = True
@@ -174,9 +330,25 @@ def _reset_logger_levels_before_and_after_test():
     try:
         import logging
 
-        logger = logging.getLogger("researcharr.cron")
-        logger.setLevel(logging.NOTSET)
-        logger.propagate = True
+        mgr = logging.root.manager
+        try:
+            for name, lg in list(mgr.loggerDict.items()):
+                if not isinstance(name, str):
+                    continue
+                if name.startswith("researcharr"):
+                    try:
+                        real_logger = logging.getLogger(name)
+                        real_logger.setLevel(logging.NOTSET)
+                        real_logger.propagate = True
+                        real_logger.disabled = False
+                    except Exception:
+                        pass
+        except Exception:
+            # best-effort fallback
+            logger = logging.getLogger("researcharr.cron")
+            logger.setLevel(logging.NOTSET)
+            logger.propagate = True
+            logger.disabled = False
 
         lifecycle_logger = logging.getLogger("researcharr.core.lifecycle")
         lifecycle_logger.setLevel(logging.NOTSET)
@@ -506,6 +678,23 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
     def patched_open(file, mode="r", *args, **kwargs):
         if str(file) == "/config/config.yml":
             return real_open(config_path, mode, *args, **kwargs)
+        # Ensure parent directories exist when opening for write/append/create
+        try:
+            import os as _os
+
+            if isinstance(file, (str, bytes)) or hasattr(file, "__fspath__"):
+                # Only attempt to create parent dir for filesystem paths
+                if any(m in mode for m in ("w", "a", "x")):
+                    try:
+                        parent = _os.path.dirname(str(file))
+                        if parent:
+                            _os.makedirs(parent, exist_ok=True)
+                    except Exception:
+                        # Best-effort: do not fail open if directory creation fails
+                        pass
+        except Exception:
+            pass
+
         return real_open(file, mode, *args, **kwargs)
 
     monkeypatch.setattr("builtins.open", patched_open)
@@ -566,8 +755,61 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
 
 
 def pytest_runtest_setup(item):
-    # Debug hook removed; no-op to keep pytest hook signature available.
-    yield
+    # Keep the original diagnostic behavior, but also take a pre-test snapshot
+    try:
+        import json as _json
+        import logging as _logging
+        import os as _os
+
+        from prometheus_client import core as _core
+
+        _out = "/tmp/researcharr-bisect/logsnap"
+        try:
+            _os.makedirs(_out, exist_ok=True)
+        except Exception:
+            pass
+
+        def _take():
+            mgr = _logging.root.manager
+            d = {}
+            try:
+                items = list(mgr.loggerDict.items())
+            except Exception:
+                items = []
+            for name, logger in items[:200]:
+                try:
+                    d[name] = {
+                        "type": type(logger).__name__,
+                        "handlers": [type(h).__name__ for h in getattr(logger, "handlers", [])],
+                        "level": getattr(logger, "level", None),
+                        "propagate": getattr(logger, "propagate", None),
+                    }
+                except Exception as e:
+                    d[name] = {"error": str(e)}
+            prom = []
+            try:
+                reg = _core.REGISTRY
+                if hasattr(reg, "_collector_to_names"):
+                    prom = [type(c).__name__ for c in reg._collector_to_names.keys()]
+                elif hasattr(reg, "collectors"):
+                    prom = [type(c).__name__ for c in reg.collectors]
+                else:
+                    prom = [repr(reg)]
+            except Exception as e:
+                prom = [f"ERR:{e}"]
+            return {"logger_sample": dict(list(d.items())[:200]), "prometheus": prom}
+
+        try:
+            safe = item.nodeid.replace("::", "__").replace("/", "_")
+            p = _os.path.join(_out, f"pre_{safe}.json")
+            with open(p, "w") as _f:
+                _f.write(_json.dumps(_take(), indent=2, default=str))
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+    # Existing flask-pollution diagnostic (post-test actions remain below via hook)
     try:
         import sys as _sys
         from unittest.mock import Mock as _Mock
@@ -622,6 +864,8 @@ def pytest_runtest_setup(item):
     except Exception:
         # Never let this diagnostic break tests
         pass
+
+    # Also take a post-test snapshot in teardown hook; pytest will call pytest_runtest_teardown separately
 
 
 @pytest.fixture
@@ -904,3 +1148,194 @@ def pytest_ignore_collect(path, config):
     if p.endswith("tests/researcharr/test_webui_shim.py"):
         return True
     return False
+
+
+def pytest_runtest_teardown(item, nextitem):
+    # Write a post-test snapshot of logger/Prometheus state
+    try:
+        import json as _json
+        import logging as _logging
+        import os as _os
+
+        from prometheus_client import core as _core
+
+        _out = "/tmp/researcharr-bisect/logsnap"
+        try:
+            _os.makedirs(_out, exist_ok=True)
+        except Exception:
+            pass
+
+        def _take():
+            mgr = _logging.root.manager
+            d = {}
+            try:
+                items = list(mgr.loggerDict.items())
+            except Exception:
+                items = []
+            for name, logger in items[:200]:
+                try:
+                    d[name] = {
+                        "type": type(logger).__name__,
+                        "handlers": [type(h).__name__ for h in getattr(logger, "handlers", [])],
+                        "level": getattr(logger, "level", None),
+                        "propagate": getattr(logger, "propagate", None),
+                    }
+                except Exception as e:
+                    d[name] = {"error": str(e)}
+            prom = []
+            try:
+                reg = _core.REGISTRY
+                if hasattr(reg, "_collector_to_names"):
+                    prom = [type(c).__name__ for c in reg._collector_to_names.keys()]
+                elif hasattr(reg, "collectors"):
+                    prom = [type(c).__name__ for c in reg.collectors]
+                else:
+                    prom = [repr(reg)]
+            except Exception as e:
+                prom = [f"ERR:{e}"]
+            return {"logger_sample": dict(list(d.items())[:200]), "prometheus": prom}
+
+        try:
+            safe = item.nodeid.replace("::", "__").replace("/", "_")
+            p = _os.path.join(_out, f"post_{safe}.json")
+            with open(p, "w") as _f:
+                _f.write(_json.dumps(_take(), indent=2, default=str))
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+
+@_pytest.fixture(autouse=True)
+def _snapshot_and_restore_small_global_state():
+    """Autouse fixture to snapshot and restore a small set of global
+    registries/attrs that tests commonly mutate and which cause cascading
+    flakes when left mutated.
+
+    This is intentionally narrow: it snapshots/restores:
+    - `prometheus_client.core.REGISTRY` (CollectorRegistry)
+    - `__all__` on a small set of `researcharr` submodules (backups,
+      researcharr top-level) if present
+
+    Keep this as a short-term safety-net while we continue surgical
+    fixes for polluter tests.
+    """
+    # Snapshot
+    prom_snapshot = None
+    all_snapshot = {}
+    # Prefer an early snapshot captured at conftest import time so we can
+    # restore module objects that may have been replaced during collection.
+    try:
+        module_snapshot = dict(_EARLY_ORIGINAL_MODULES) if _EARLY_ORIGINAL_MODULES else {}
+    except Exception:
+        module_snapshot = {}
+    try:
+        from prometheus_client import core as _prom_core
+
+        try:
+            prom_snapshot = getattr(_prom_core, "REGISTRY", None)
+        except Exception:
+            prom_snapshot = None
+    except Exception:
+        _prom_core = None
+
+    try:
+        import importlib
+
+        mods = ["researcharr", "researcharr.backups"]
+        for m in mods:
+            try:
+                # Snapshot the module object (may be None) so we can restore exact
+                # mappings in sys.modules after the test. Some tests replace the
+                # module object (e.g. inject a top-level shim) which breaks
+                # assumptions in later tests unless we restore the original
+                # module object.
+                module_snapshot[m] = sys.modules.get(m)
+                mod = importlib.import_module(m)
+                if hasattr(mod, "__all__"):
+                    all_snapshot[m] = list(getattr(mod, "__all__", None))
+            except Exception:
+                # ignore import errors; fixture is best-effort
+                pass
+    except Exception:
+        pass
+
+    yield
+
+    # Restore
+    try:
+        if _prom_core is not None and prom_snapshot is not None:
+            try:
+                _prom_core.REGISTRY = prom_snapshot
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    try:
+        import importlib
+
+        # First, restore module objects in sys.modules to their original
+        # identities. This ensures that package-qualified names point back at
+        # the original module object if a test replaced them.
+        for m, orig in module_snapshot.items():
+            try:
+                if orig is None:
+                    # If it didn't exist originally, remove any test-added module
+                    sys.modules.pop(m, None)
+                else:
+                    sys.modules[m] = orig
+                    # If this is a submodule of the package, also restore the
+                    # attribute on the package object so attribute access like
+                    # `researcharr.backups` resolves to the original module.
+                    if m.startswith("researcharr."):
+                        try:
+                            pkg = importlib.import_module("researcharr")
+                            attr = m.split(".", 1)[1]
+                            setattr(pkg, attr, orig)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+        # Then restore __all__ values for modules we snapped earlier.
+        for m, val in all_snapshot.items():
+            try:
+                mod = importlib.import_module(m)
+                # restore __all__ (if it existed originally)
+                if val is None:
+                    try:
+                        delattr(mod, "__all__")
+                    except Exception:
+                        pass
+                else:
+                    try:
+                        mod.__all__ = list(val)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        # Also ensure we restore any early-captured __all__ values for modules
+        # that had a stable export list at conftest-import time.
+        try:
+            for m, v in _EARLY_ORIGINAL_ALLS.items():
+                try:
+                    if v is None:
+                        # remove __all__ if early snapshot had none
+                        mod = importlib.import_module(m)
+                        try:
+                            delattr(mod, "__all__")
+                        except Exception:
+                            pass
+                    else:
+                        mod = importlib.import_module(m)
+                        try:
+                            mod.__all__ = list(v)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    except Exception:
+        pass

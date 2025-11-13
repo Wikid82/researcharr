@@ -1,3 +1,4 @@
+---
 name: Project Board Automation
 
 on:
@@ -23,7 +24,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "🔄 Attempting to add issue #${{ github.event.issue.number }} to project..."
+          echo "🔄 Attempting to add issue  #${{ github.event.issue.number }} to project..."
 
           # Get project ID
           PROJECT_RESULT=$(gh api graphql -f query='
@@ -38,7 +39,7 @@ jobs:
           PROJECT_ID=$(echo $PROJECT_RESULT | jq -r '.data.user.projectV2.id // "null"')
 
           if [ "$PROJECT_ID" = "null" ]; then
-            echo "❌ Could not find project #${{ env.PROJECT_NUMBER }}"
+            echo "❌ Could not find project  #${{ env.PROJECT_NUMBER }}"
             echo "📍 Manual action required: Add issue to project at https://github.com/users/${{ github.repository_owner }}/projects/${{ env.PROJECT_NUMBER }}"
             exit 0
           fi
@@ -63,7 +64,7 @@ jobs:
             echo "⚠️  Automation limitation: $ERROR_MSG"
             echo "📍 Manual action required:"
             echo "   1. Visit: https://github.com/users/${{ github.repository_owner }}/projects/${{ env.PROJECT_NUMBER }}"
-            echo "   2. Click '+' to add issue #${{ github.event.issue.number }}"
+            echo "   2. Click '+' to add issue  #${{ github.event.issue.number }}"
             echo "   3. Move to 'Backlog' column"
             echo ""
             echo "💡 This is a known GitHub API limitation with fine-grained PATs."
@@ -71,7 +72,7 @@ jobs:
           else
             ITEM_ID=$(echo "$ADD_RESULT" | jq -r '.data.addProjectV2ItemById.item.id // "null"')
             if [ "$ITEM_ID" != "null" ]; then
-              echo "🎉 Successfully added issue #${{ github.event.issue.number }} to project!"
+              echo "🎉 Successfully added issue  #${{ github.event.issue.number }} to project!"
             else
               echo "⚠️  Issue may already be in project or automation needs manual attention"
             fi

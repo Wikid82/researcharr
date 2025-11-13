@@ -163,6 +163,14 @@ def run_job() -> None:
             pass
     timeout = _get_job_timeout()
 
+    # Debug: emit module/function identity so we can confirm that tests
+    # patch the same function object the runtime will call.
+    try:
+        logger.info("DEBUG: run module id=%s name=%s", id(sys.modules.get(__name__)), __name__)
+        logger.info("DEBUG: run_job function id=%s", id(run_job))
+    except Exception:
+        pass
+
     # Ensure there is something to execute
     if not script:  # empty string, None, or other falsy value
         logger.error("No SCRIPT configured for run_job")

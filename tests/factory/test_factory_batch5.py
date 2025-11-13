@@ -37,10 +37,23 @@ def test_backups_download_and_delete_variants(client, login, tmp_path, monkeypat
 @pytest.mark.no_xdist
 def test_updates_upgrade_in_image_and_invalid_url(client, login, monkeypatch):
     # when running in image, upgrade is disallowed
-    # Use RuntimeConfig singleton for reliable patching across Python versions
-    from factory import _RuntimeConfig
+    # Use RuntimeConfig singleton for reliable patching across Python versions.
+    # Patch both possible module identities so this test is resilient to
+    # import-order variations that can leave `factory` and
+    # `researcharr.factory` as distinct module objects during a run.
+    try:
+        from factory import _RuntimeConfig as _RT1
+    except Exception:
+        _RT1 = None
+    try:
+        from researcharr.factory import _RuntimeConfig as _RT2
+    except Exception:
+        _RT2 = None
 
-    monkeypatch.setattr(_RuntimeConfig, "_running_in_image_override", lambda: True)
+    if _RT1 is not None:
+        monkeypatch.setattr(_RT1, "_running_in_image_override", lambda: True)
+    if _RT2 is not None:
+        monkeypatch.setattr(_RT2, "_running_in_image_override", lambda: True)
 
     login()
     rv = client.post("/api/updates/upgrade", json={"asset_url": "https://example.com/asset.zip"})
@@ -48,8 +61,11 @@ def test_updates_upgrade_in_image_and_invalid_url(client, login, monkeypatch):
     data = rv.get_json()
     assert data.get("error") == "in_image_runtime"
 
-    # invalid asset URL - force not-in-image for URL validation branch
-    monkeypatch.setattr(_RuntimeConfig, "_running_in_image_override", lambda: False)
+    # invalid asset URL - force not-in-image for URL validation branch.
+    if _RT1 is not None:
+        monkeypatch.setattr(_RT1, "_running_in_image_override", lambda: False)
+    if _RT2 is not None:
+        monkeypatch.setattr(_RT2, "_running_in_image_override", lambda: False)
 
     rv2 = client.post("/api/updates/upgrade", json={"asset_url": "ftp://bad"})
     assert rv2.status_code == 400

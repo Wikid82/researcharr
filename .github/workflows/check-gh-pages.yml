@@ -1,11 +1,12 @@
+---
 name: Check gh-pages for .nojekyll
 
 on:
   pull_request:
     # Run checks for PRs targeting main so merges don't accidentally keep .nojekyll
-    branches: [ main ]
+    branches: [main]
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   nojekyll-check:

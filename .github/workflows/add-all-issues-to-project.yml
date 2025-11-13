@@ -1,16 +1,17 @@
+---
 name: Add All Issues to Project
 
 on:
   workflow_dispatch:
     inputs:
       start_issue:
-        description: 'Start issue number (default: 80)'
+        description: "Start issue number (default: 80)"
         required: false
-        default: '80'
+        default: "80"
       end_issue:
-        description: 'End issue number (default: 113)'
+        description: "End issue number (default: 113)"
         required: false
-        default: '113'
+        default: "113"
 
 env:
   PROJECT_NUMBER: 2
@@ -24,7 +25,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "🚀 Adding issues ${{ github.event.inputs.start_issue || '80' }} to ${{ github.event.inputs.end_issue || '113' }} to project #${{ env.PROJECT_NUMBER }}"
+          echo "🚀 Adding issues ${{ github.event.inputs.start_issue || '80' }} to ${{ github.event.inputs.end_issue || '113' }} to project  #${{ env.PROJECT_NUMBER }}"
 
           # Get project ID
           PROJECT_DATA=$(gh api graphql -f query='
@@ -51,7 +52,7 @@ jobs:
           PROJECT_ID=$(echo $PROJECT_DATA | jq -r '.data.user.projectV2.id')
 
           if [ "$PROJECT_ID" = "null" ]; then
-            echo "❌ Could not find project #${{ env.PROJECT_NUMBER }}"
+            echo "❌ Could not find project  #${{ env.PROJECT_NUMBER }}"
             exit 1
           fi
 
@@ -70,14 +71,14 @@ jobs:
           ADDED_COUNT=0
 
           for issue_num in $(seq $START_ISSUE $END_ISSUE); do
-            echo "Processing issue #$issue_num..."
+            echo "Processing issue  #$issue_num..."
 
             # Get issue node ID
             ISSUE_DATA=$(gh api repos/${{ github.repository }} issues/$issue_num 2>/dev/null || echo '{"node_id": null}')
             ISSUE_NODE_ID=$(echo $ISSUE_DATA | jq -r '.node_id')
 
             if [ "$ISSUE_NODE_ID" = "null" ]; then
-              echo "⚠️  Issue #$issue_num not found"
+              echo "⚠️  Issue  #$issue_num not found"
               continue
             fi
 
@@ -97,7 +98,7 @@ jobs:
             ITEM_ID=$(echo $ADD_RESULT | jq -r '.data.addProjectV2ItemByContentId.item.id')
 
             if [ "$ITEM_ID" != "null" ]; then
-              echo "✅ Added issue #$issue_num to project"
+              echo "✅ Added issue  #$issue_num to project"
               ADDED_COUNT=$((ADDED_COUNT + 1))
 
               # Set to Backlog status if we have the field IDs
@@ -115,10 +116,10 @@ jobs:
                       }
                     }
                   }' -f projectId=$PROJECT_ID -f itemId=$ITEM_ID -f fieldId=$STATUS_FIELD_ID -f value="{\"singleSelectOptionId\":\"$BACKLOG_ID\"}" > /dev/null 2>&1
-                echo "📋 Set issue #$issue_num to Backlog status"
+                echo "📋 Set issue  #$issue_num to Backlog status"
               fi
             else
-              echo "❌ Failed to add issue #$issue_num (may already be in project)"
+              echo "❌ Failed to add issue  #$issue_num (may already be in project)"
             fi
 
             # Small delay to avoid rate limits

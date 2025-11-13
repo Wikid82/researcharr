@@ -1,10 +1,11 @@
+---
 name: Create Beta Issues
 
 on:
   workflow_dispatch:
     inputs:
       create_issues:
-        description: 'Create beta tracking issues'
+        description: "Create beta tracking issues"
         type: boolean
         required: true
         default: true
@@ -15,12 +16,12 @@ jobs:
     if: ${{ github.event.inputs.create_issues == 'true' }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5
 
       - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c  # v6
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
@@ -57,7 +58,7 @@ jobs:
               ISSUE_ID=$(echo $issue | jq -r '.id')
               ISSUE_NUMBER=$(echo $issue | jq -r '.number')
 
-              echo "Adding issue #$ISSUE_NUMBER to project..."
+              echo "Adding issue  #$ISSUE_NUMBER to project..."
 
               gh api graphql -f query='
                 mutation($project:ID!, $contentId:ID!) {
@@ -68,6 +69,6 @@ jobs:
                   }
                 }' -f project=$PROJECT_ID -f contentId=$ISSUE_ID
 
-              echo "Issue #$ISSUE_NUMBER added to project board"
+              echo "Issue  #$ISSUE_NUMBER added to project board"
             fi
           done

@@ -24,6 +24,9 @@
     ],
     "[github-actions-workflow]": {
       "yaml.validate": false
-    }
+    },
+    "github-actions.workflows.pinned.workflows": [
+      ".github/workflows/multi_version_tests.yml"
+    ]
   }
 }

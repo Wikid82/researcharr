@@ -1,10 +1,11 @@
+---
 name: Sync Issues to Project
 
 on:
   workflow_dispatch:
     inputs:
       sync_existing:
-        description: 'Sync existing issues and PRs to project'
+        description: "Sync existing issues and PRs to project"
         type: boolean
         required: true
         default: true
@@ -51,7 +52,7 @@ jobs:
 
           PROJECT_ID=$(jq -r '.data.organization.projectV2.id // empty' project_data.json)
           if [ -z "$PROJECT_ID" ]; then
-            echo "Could not find project #${PROJECT_NUMBER} in organization ${ORGANIZATION}; aborting sync."
+            echo "Could not find project  #${PROJECT_NUMBER} in organization ${ORGANIZATION}; aborting sync."
             exit 0
           fi
           echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
@@ -80,7 +81,7 @@ jobs:
             ISSUE_STATE=$(echo $issue | jq -r '.state')
             ASSIGNEE=$(echo $issue | jq -r '.assignee')
 
-            echo "Adding issue #$ISSUE_NUMBER to project..."
+            echo "Adding issue  #$ISSUE_NUMBER to project..."
 
             # Add to project
             ITEM_RESPONSE=$(gh api graphql -f query='
@@ -97,7 +98,7 @@ jobs:
             # Set status based on issue state and assignment
             STATUS_FIELD_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .id // empty' project_data.json)
             if [ -z "$STATUS_FIELD_ID" ]; then
-              echo "Status field not found in project data; skipping status update for issue #$ISSUE_NUMBER"
+              echo "Status field not found in project data; skipping status update for issue  #$ISSUE_NUMBER"
               continue
             fi
 
@@ -111,7 +112,7 @@ jobs:
 
             STATUS_OPTION_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "'$STATUS'") | .id // empty' project_data.json)
             if [ -z "$STATUS_OPTION_ID" ]; then
-              echo "Status option '$STATUS' not found for project; skipping status update for issue #$ISSUE_NUMBER"
+              echo "Status option '$STATUS' not found for project; skipping status update for issue  #$ISSUE_NUMBER"
             else
 
               # Update status
@@ -131,7 +132,7 @@ jobs:
                 }
               }' -f project=$PROJECT_ID -f item=$ITEM_ID -f field=$STATUS_FIELD_ID -f value=$STATUS_OPTION_ID
 
-              echo "Issue #$ISSUE_NUMBER added with status: $STATUS"
+              echo "Issue  #$ISSUE_NUMBER added with status: $STATUS"
             fi
 
           done < <(cat issues.json | jq -c '.')
@@ -147,7 +148,7 @@ jobs:
             IS_DRAFT=$(echo $pr | jq -r '.draft')
             IS_MERGED=$(echo $pr | jq -r '.merged')
 
-            echo "Adding PR #$PR_NUMBER to project..."
+            echo "Adding PR  #$PR_NUMBER to project..."
 
             # Add to project
             ITEM_RESPONSE=$(gh api graphql -f query='
@@ -164,7 +165,7 @@ jobs:
             # Set status based on PR state
             STATUS_FIELD_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .id // empty' project_data.json)
             if [ -z "$STATUS_FIELD_ID" ]; then
-              echo "Status field not found in project data; skipping status update for PR #$PR_NUMBER"
+              echo "Status field not found in project data; skipping status update for PR  #$PR_NUMBER"
               continue
             fi
 
@@ -178,7 +179,7 @@ jobs:
 
             STATUS_OPTION_ID=$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "'$STATUS'") | .id // empty' project_data.json)
             if [ -z "$STATUS_OPTION_ID" ]; then
-              echo "Status option '$STATUS' not found for project; skipping status update for PR #$PR_NUMBER"
+              echo "Status option '$STATUS' not found for project; skipping status update for PR  #$PR_NUMBER"
             else
               # Update status
               gh api graphql -f query='
@@ -197,7 +198,7 @@ jobs:
                 }
               }' -f project=$PROJECT_ID -f item=$ITEM_ID -f field=$STATUS_FIELD_ID -f value=$STATUS_OPTION_ID
 
-              echo "PR #$PR_NUMBER added with status: $STATUS"
+              echo "PR  #$PR_NUMBER added with status: $STATUS"
             fi
 
           done < <(cat prs.json | jq -c '.')

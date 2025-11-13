@@ -23,6 +23,16 @@ IMAGE_SUFFIX="-debug"
 # Directory for local logs (repo-local to make them easy to find)
 REPO_TMP_DIR=".tmp"
 
+# Normalize CI/dev environment to reduce cross-runner variability
+# These can be overridden in the environment when invoking the script
+: ${PYTHONHASHSEED:=0}
+: ${LANG:=C.UTF-8}
+: ${LC_ALL:=C.UTF-8}
+: ${TZ:=UTC}
+: ${TMPDIR:=/tmp/ci}
+: ${XDG_CACHE_HOME:=/tmp/ci/.cache}
+export PYTHONHASHSEED LANG LC_ALL TZ TMPDIR XDG_CACHE_HOME
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -198,42 +208,66 @@ for version in ${VERSIONS}; do
     if [[ -n "${PYTEST_LOG_LEVEL}" ]]; then
         PYTEST_LOG_FLAGS=("--log-cli-level" "${PYTEST_LOG_LEVEL}" "-o" "log_cli=true")
     fi
+    # Override pytest log_file to write to writable TMPDIR instead of /app
+    PYTEST_LOG_FLAGS+=("-o" "log_file=${TMPDIR}/pytest.log")
 
     # Choose console filtering based on LOG_LEVEL
     if [[ "${LOG_LEVEL}" == "full" ]]; then
+        # Build command string that first installs from a local wheelhouse if present,
+        # then runs pytest. We mount the repo into /app so CI-produced wheelhouse can
+        # be provided as an artifact and extracted next to the repo before this script
+        # is invoked.
+        INSTALL_CMD='mkdir -p ${TMPDIR}; if [ -d /app/wheelhouse ]; then python -m pip install --no-index --find-links=/app/wheelhouse -r requirements.txt || true; fi;'
+        CMD_STR="${INSTALL_CMD} pytest ${PYTEST_OPTS} ${TEST_TARGET} ${PYTEST_LOG_FLAGS[*]} ${MF_FLAG[*]} --disable-warnings"
+
         if docker run \
-            --rm -t \
-            --entrypoint pytest \
-            -w /app \
-            "${image_name}" \
-            "${PYTEST_OPTS}" "${TEST_TARGET}" \
-            "${PYTEST_LOG_FLAGS[@]}" \
-            "${MF_FLAG[@]}" \
-            --disable-warnings \
-            2>&1 | tee "${REPO_TMP_DIR}/researcharr-test-${version_short}.log"; then
-            echo -e "${GREEN}✓ Tests passed: Python ${version}${NC}"
-            TEST_RESULTS["${version}"]="success"
-        else
-            echo -e "${RED}✗ Tests failed: Python ${version}${NC}"
-            echo "  Check ${REPO_TMP_DIR}/researcharr-test-${version_short}.log for details"
-            TEST_RESULTS["${version}"]="failed"
-            FAILED_VERSIONS+=("${version}")
-        fi
+                --rm -t \
+                -e PYTHONHASHSEED="${PYTHONHASHSEED}" \
+                -e LANG="${LANG}" \
+                -e LC_ALL="${LC_ALL}" \
+                -e TZ="${TZ}" \
+                -e TMPDIR="${TMPDIR}" \
+                -e XDG_CACHE_HOME="${XDG_CACHE_HOME}" \
+                -e PYTEST_ADDOPTS="-v --log-file=${TMPDIR}/pytest.log --log-file-mode=a -n auto --dist=loadfile -m 'not webui'" \
+                -v "$(pwd)":/app \
+                --entrypoint bash \
+                -w /app \
+                "${image_name}" \
+                -c "${CMD_STR}" \
+                2>&1 | tee "${REPO_TMP_DIR}/researcharr-test-${version_short}.log"; then
+                echo -e "${GREEN}✓ Tests passed: Python ${version}${NC}"
+                TEST_RESULTS["${version}"]="success"
+            else
+                echo -e "${RED}✗ Tests failed: Python ${version}${NC}"
+                echo "  Check ${REPO_TMP_DIR}/researcharr-test-${version_short}.log for details"
+                TEST_RESULTS["${version}"]="failed"
+                FAILED_VERSIONS+=("${version}")
+            fi
     else
         # summary/errors modes use grep to reduce console noise
         PATTERN="passed|failed|ERROR"
         if [[ "${LOG_LEVEL}" == "errors" ]]; then
             PATTERN="FAILED|ERROR|E\\s+"
         fi
+        # Same behavior as the "full" branch but reduce console noise by grepping
+        # for errors/passing indicators. Install from wheelhouse if present.
+        INSTALL_CMD='mkdir -p ${TMPDIR}; if [ -d /app/wheelhouse ]; then python -m pip install --no-index --find-links=/app/wheelhouse -r requirements.txt || true; fi;'
+        CMD_STR="${INSTALL_CMD} pytest ${PYTEST_OPTS} ${TEST_TARGET} ${PYTEST_LOG_FLAGS[*]} ${MF_FLAG[*]} --disable-warnings"
+
         if docker run \
             --rm -t \
-            --entrypoint pytest \
+            -e PYTHONHASHSEED="${PYTHONHASHSEED}" \
+            -e LANG="${LANG}" \
+            -e LC_ALL="${LC_ALL}" \
+            -e TZ="${TZ}" \
+            -e TMPDIR="${TMPDIR}" \
+            -e XDG_CACHE_HOME="${XDG_CACHE_HOME}" \
+            -e PYTEST_ADDOPTS="-v --log-file=${TMPDIR}/pytest.log --log-file-mode=a -n auto --dist=loadfile -m 'not webui'" \
+            -v "$(pwd)":/app \
+            --entrypoint bash \
             -w /app \
             "${image_name}" \
-            "${PYTEST_OPTS}" "${TEST_TARGET}" \
-            "${PYTEST_LOG_FLAGS[@]}" \
-            "${MF_FLAG[@]}" \
-            --disable-warnings \
+            -c "${CMD_STR}" \
             2>&1 | tee "${REPO_TMP_DIR}/researcharr-test-${version_short}.log" | grep -E "${PATTERN}"; then
             echo -e "${GREEN}✓ Tests passed: Python ${version}${NC}"
             TEST_RESULTS["${version}"]="success"

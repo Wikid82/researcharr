@@ -1,3 +1,4 @@
+---
 # Example Lidarr plugin instances.
 # The Plugins UI/API manages files under /config/plugins/<plugin>.yml and
 # expects a YAML list of instance objects. Keep this file as a list.

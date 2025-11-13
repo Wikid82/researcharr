@@ -1,3 +1,4 @@
+---
 # Pre-commit configuration for development
 # IMPORTANT: Replace the `rev` placeholders below with a specific tag/commit
 # for reproducible installs. See https://pre-commit.com for guidance.
@@ -22,6 +23,10 @@ repos:
     rev: v1.37.1
     hooks:
       - id: yamllint
+        # Only run yamllint on repository config and workflow files to
+        # reduce noise from vendored/package files. Adjust this regex as
+        # needed to expand or contract the scope of the hook.
+        files: '^(\.github/workflows/|config/|\.pre-commit-config.yaml$|^mkdocs\.yml$|^\.yamllint$|^docs/|^researcharr/).*'
         stages: [pre-commit]
 
   # Security linting with bandit
@@ -92,9 +97,10 @@ repos:
         name: detect-secrets (local wrapper)
         entry: scripts/run-detect-secrets.sh
         language: script
-        # Exclude tests and node_modules from detect-secrets scans here to
-        # avoid false positives on test fixtures and locally vendored files.
-        files: '^(?!tests/|node_modules/).*'
+        # Restrict detect-secrets to scanning repository source and config files
+        # to avoid baseline churn caused by vendor/venv/generated files.
+        files: '^(researcharr/|config/|templates/|\.github/|\.pre-commit-config.yaml$|^mkdocs\.yml$|^\.yamllint$|^docs/|.*\.(py|yml|yaml|ini|cfg|env|json)$)'
+        exclude: '(^|/)(\.venv|\.tox|site|node_modules|dist|build)/'
         stages: [pre-commit]
 
       - id: safety
@@ -115,6 +121,13 @@ repos:
         language: script
         pass_filenames: false
         stages: [pre-commit]
+
+      - id: auto-fix-yaml
+        name: auto-fix YAML (local)
+        entry: ./scripts/auto_fix_yaml.sh
+        language: script
+        pass_filenames: false
+        stages: [manual]
 
       # Run pytest in the developer environment. We use `language: system`
       # so the hook invokes the pytest installed in the developer's venv
@@ -137,13 +150,12 @@ repos:
         pass_filenames: false
         stages: [pre-push]
 
-      # run local wrapper hooks at the pre-commit stage
-      # (keeps behavior equivalent to prior config while using new stage name)
+    # run local wrapper hooks at the pre-commit stage
+    # (keeps behavior equivalent to prior config while using new stage name)
 
-      # NOTE: pytest pre-push hook removed; a dedicated git pre-push hook will
-      # be installed locally instead to avoid pre-commit re-running formatters
-      # and other hooks during the push stage.
-
+    # NOTE: pytest pre-push hook removed; a dedicated git pre-push hook will
+    # be installed locally instead to avoid pre-commit re-running formatters
+    # and other hooks during the push stage.
 # Recommended usage:
 # 1. Replace all <pin-*> placeholders with concrete tag names or commit hashes.
 # 2. Install pre-commit in your environment: `pip install pre-commit`.

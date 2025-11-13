@@ -517,24 +517,40 @@ class TestRootResearcharrModule(unittest.TestCase):
         def _make_factory():
             return mock_app
 
-        replaced = []
-        for name, mod in list(_sys.modules.items()):
-            try:
-                if hasattr(mod, "create_metrics_app"):
+        replaced = {}
+        try:
+            for name, mod in list(_sys.modules.items()):
+                try:
+                    if hasattr(mod, "create_metrics_app"):
+                        try:
+                            # save original so we can restore later
+                            replaced[name] = mod.create_metrics_app
+                            mod.create_metrics_app = _make_factory
+                        except Exception:
+                            pass
+                except Exception:
+                    continue
+
+            # Call serve; whichever module object it uses will now return our
+            # mock_app and we can assert run() was invoked.
+            researcharr.serve()
+
+            # Verify the returned mock app's run() was called
+            mock_app.run.assert_called_once_with(host="0.0.0.0", port=2929)
+        finally:
+            # Restore any replaced attributes to avoid leaking mocks to other tests
+            for name, original in replaced.items():
+                try:
+                    mod = _sys.modules.get(name)
+                    if mod is None:
+                        continue
                     try:
-                        mod.create_metrics_app = _make_factory
-                        replaced.append(name)
+                        mod.create_metrics_app = original
                     except Exception:
+                        # best-effort restore; ignore failures
                         pass
-            except Exception:
-                continue
-
-        # Call serve; whichever module object it uses will now return our
-        # mock_app and we can assert run() was invoked.
-        researcharr.serve()
-
-        # Verify the returned mock app's run() was called
-        mock_app.run.assert_called_once_with(host="0.0.0.0", port=2929)
+                except Exception:
+                    continue
 
     @patch("researcharr.sys.argv", ["researcharr.py", "serve"])
     @patch("researcharr.serve")

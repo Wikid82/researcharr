@@ -1,3 +1,4 @@
+---
 services:
   researcharr:
     # Use the developer image (includes shell & dev tooling). The alpine
@@ -8,7 +9,7 @@ services:
     # Map the app ports so you can browse the UI from the host
     ports:
       - "2929:2929"
-      - "5678:5678" # optional debug port for debugpy
+      - "5678:5678"  # optional debug port for debugpy
     environment:
       - PYTHONUNBUFFERED=1
       - FLASK_ENV=development
@@ -51,7 +52,6 @@ services:
       options:
         max-size: "50m"
         max-file: "5"
-
 # Usage tips:
 # - Start in the foreground to stream logs: docker compose -f docker-compose.dev.yml up --build
 # - Follow logs from another terminal: docker compose -f docker-compose.dev.yml logs -f researcharr

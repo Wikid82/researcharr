@@ -30,6 +30,7 @@ from pathlib import Path
 
 import yaml
 
+from researcharr import run as _run_module
 from researcharr.backups import (
     create_backup_file,
     get_backup_info,
@@ -611,10 +612,41 @@ def cmd_run_job(args: argparse.Namespace) -> int:
     print("Running scheduled job...")
 
     try:
-        # Import and run the job
-        from researcharr.run import run_job  # noqa: PLC0415
+        # Debug: emit module identity information so we can verify tests patch
+        # the exact module object the CLI is calling. This helps diagnose
+        # intermittent failures where the test's mock isn't observing calls.
+        try:
+            mod_obj = sys.modules.get("researcharr.run")
+            print(
+                f"DEBUG: _run_module id={id(_run_module)} module(researcharr.run) id={id(mod_obj)}"
+            )
+            run_attr = getattr(_run_module, "run_job", None)
+            print(f"DEBUG: run_job attr id={id(run_attr)} callable={callable(run_attr)}")
+        except Exception:
+            # Defensive: don't fail the CLI if debug printing has issues
+            pass
 
-        run_job()
+        # Resolve the `researcharr.run` module from sys.modules at call time
+        # so that tests which patch `researcharr.run.run_job` will be
+        # observed even if there are multiple module objects loaded.
+        mod_obj = sys.modules.get("researcharr.run")
+        if mod_obj is None:
+            # fall back to the module object cached at import time
+            mod_obj = _run_module
+
+        # Debug: show both ids to aid triage when duplicates occur
+        try:
+            print(
+                f"DEBUG: _run_module id={id(_run_module)} module(researcharr.run) id={id(sys.modules.get('researcharr.run'))}"
+            )
+        except Exception:
+            pass
+
+        run_fn = getattr(mod_obj, "run_job", None)
+        if not callable(run_fn):
+            raise Exception("run_job not found on researcharr.run")
+
+        run_fn()
         print("✓ Job completed successfully")
         return 0
 

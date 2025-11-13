@@ -1,3 +1,38 @@
+# Python and environment
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Test and coverage artifacts
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+coverage.json
+
+# Local bisect/replay artifacts
+/tmp/researcharr-bisect/
+researcharr-bisect/
+replay_*.log
+replay_*.xml
+pairwise_bisect_*.xml
+random_*.xml
+
+# IDE/editor
+.vscode/
+.idea/
+
+# Misc
+.mypy_cache/
+.ruff_cache/
+.tox/
+*.egg-info/
+node_modules/
 # Feature branch compose files (ignore user-specific or experimental compose variants)
 docker-compose.feat.yml
 .venv/
@@ -123,6 +158,7 @@ node_modules/
 .tmp_coverage/
 logs/
 .tmp/
+artifacts/pairwise
 
 # Alembic migrations runtime
 alembic.ini.bak
@@ -140,3 +176,10 @@ docs/_build/
 *~
 .DS_Store
 .github/agents/Pytest.agent.md
+artifacts/pairwise/bisect_final.xml
+artifacts/pairwise/bisect_run.xml
+artifacts/pairwise/random_1.xml
+.gitignore
+bisect**
+junit**
+**junit**

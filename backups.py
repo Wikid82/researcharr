@@ -136,7 +136,13 @@ try:
     _sp = globals().get("__spec__", None)
     _nm = getattr(_sp, "name", None) or __name__
     _mod = _sys.modules.get(__name__)
-    if _mod is not None and _nm:
+    # Only install this module under the package-qualified name when the
+    # resolved name is actually a researcharr package submodule. Avoid
+    # aggressively overwriting `sys.modules` entries when this shim is
+    # imported as a top-level module during tests or by legacy imports,
+    # because doing so can replace the package implementation object and
+    # pollute global state for other tests.
+    if _mod is not None and _nm and _nm.startswith("researcharr.") and _nm != __name__:
         _sys.modules[_nm] = _mod
 except Exception:
     pass

@@ -1,3 +1,4 @@
+---
 #
 services:
   researcharr:
@@ -5,7 +6,7 @@ services:
     container_name: researcharr
     restart: unless-stopped
     ports:
-      - "2929:2929" # Expose web UI on port 2929
+      - "2929:2929"  # Expose web UI on port 2929
     environment:
       - PUID=1000
       - PGID=1000

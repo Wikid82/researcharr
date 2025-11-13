@@ -96,6 +96,13 @@ jobs:
         run: |
           # CI workspace contains ./wheelhouse produced by previous job
           ./scripts/ci-multi-version.sh --versions "${{ matrix.python }}" --log-level summary
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ matrix.python }}
+          path: .tmp/*.log
+          retention-days: 7
 
 
             # Lightweight placeholder job to satisfy external/legacy required status contexts

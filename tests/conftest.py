@@ -7,6 +7,28 @@ from unittest.mock import Mock as _Mock
 
 import pytest
 
+# Suppress the helper helper logs written early during import (e.g., during
+# package proxy initialization). We do this at module import time so logs from
+# `researcharr._factory_proxy` that fire during import/collection are filtered
+# before any autouse fixtures run. Use RESEARCHARR_VERBOSE_FACTORY_HELPER=1 to
+# opt-into seeing those logs.
+_ORIG_STDERR_WRITE = getattr(sys.stderr, "write", None)
+try:
+    _VERBOSE_FACTORY_HELPER = os.environ.get("RESEARCHARR_VERBOSE_FACTORY_HELPER", "0") == "1"
+except Exception:
+    _VERBOSE_FACTORY_HELPER = False
+
+if not _VERBOSE_FACTORY_HELPER and _ORIG_STDERR_WRITE is not None:
+    def _global_filtered_write(s):
+        try:
+            if isinstance(s, str) and ("[factory-helper-access]" in s or "[pkg-attr-access]" in s):
+                return len(s)
+        except Exception:
+            pass
+        return _ORIG_STDERR_WRITE(s)
+
+    sys.stderr.write = _global_filtered_write
+
 # Ensure repository root is on sys.path so top-level shim modules
 # like `entrypoint`, `run`, and `backups` remain importable after the
 # test directory reorganization.
@@ -84,6 +106,53 @@ def _restore_run_job_if_mock():
                 _pkg_run.run_job = real2
     except Exception:
         pass
+
+
+    @_pytest.fixture(autouse=True)
+    def _suppress_factory_helper_logs(monkeypatch):
+        """Silently drop noisy factory-helper lines from stderr unless explicitly enabled.
+
+        These helper logs can make test output noisy. By default we suppress them
+        in the test run; set RESEARCHARR_VERBOSE_FACTORY_HELPER=1 to opt into
+        seeing the helper logs for troubleshooting.
+        """
+        try:
+            verbose = os.environ.get("RESEARCHARR_VERBOSE_FACTORY_HELPER", "0") == "1"
+        except Exception:
+            verbose = False
+        if verbose:
+            yield
+            return
+        # Patch sys.stderr.write to filter the factory helper and pkg-attr logs.
+        orig_write = sys.stderr.write
+
+        def _filtered_write(s):
+            try:
+                if isinstance(s, str) and ("[factory-helper-access]" in s or "[pkg-attr-access]" in s):
+                    # mimic sys.stderr.write return of number of written chars
+                    return len(s)
+            except Exception:
+                pass
+            return orig_write(s)
+
+        monkeypatch.setattr(sys.stderr, "write", _filtered_write)
+        try:
+            yield
+        finally:
+            monkeypatch.setattr(sys.stderr, "write", orig_write)
+
+
+    def pytest_unconfigure(config):
+        """Restore original stderr.write when tests complete.
+
+        This ensures we don't leave the patched write globally changed after the
+        test run completes (useful when running tests in interactive sessions).
+        """
+        try:
+            if globals().get("_ORIG_STDERR_WRITE") is not None:
+                sys.stderr.write = globals().get("_ORIG_STDERR_WRITE")
+        except Exception:
+            pass
 
 
 @pytest.fixture(autouse=True)

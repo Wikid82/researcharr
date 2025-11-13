@@ -99,6 +99,9 @@ def isolate_factory_state() -> Generator[None]:
     Cleans up module-level attributes that might be set during tests to
     prevent state leakage. This is particularly important for factory tests
     that check for specific attributes.
+    
+    Also resets the _RuntimeConfig singleton that is used by tests to patch
+    runtime behavior.
     """
     # Modules that might have state set during tests
     factory_modules = [
@@ -130,6 +133,16 @@ def isolate_factory_state() -> Generator[None]:
                     except (AttributeError, TypeError):
                         # Some attributes might be read-only or not deletable
                         pass
+    
+    # Reset _RuntimeConfig singleton state
+    # This is critical for tests that patch _RuntimeConfig behavior
+    for mod_name in factory_modules:
+        if mod_name in sys.modules:
+            mod = sys.modules[mod_name]
+            if hasattr(mod, "_RuntimeConfig"):
+                # Reset the class-level override attributes
+                mod._RuntimeConfig._running_in_image_override = None
+                mod._RuntimeConfig._webui_override = None
 
 
 @pytest.fixture(autouse=True, scope="function")

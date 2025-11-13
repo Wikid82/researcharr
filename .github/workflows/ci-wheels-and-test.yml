@@ -22,6 +22,9 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install cibuildwheel==2.3.0
       - name: Build wheels
+        env:
+          # Skip PyPy, Python 2.7 and older unsupported CPython versions (e.g. 3.6/3.7)
+          CIBW_SKIP: 'pp* cp27* cp36* cp37*'
         run: |
           cibuildwheel --output-dir wheelhouse
       - name: Upload wheelhouse (artifact)

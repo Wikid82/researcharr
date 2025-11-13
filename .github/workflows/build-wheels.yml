@@ -26,7 +26,8 @@ jobs:
 
       - name: Build wheels (cibuildwheel)
         env:
-          CIBW_SKIP: 'pp* cp27*'
+          # Skip PyPy, Python 2.7 and older unsupported CPython versions (e.g. 3.6/3.7)
+          CIBW_SKIP: 'pp* cp27* cp36* cp37*'
         run: |
           # build wheels for all supported interpreters; output to wheelhouse/
           cibuildwheel --output-dir wheelhouse

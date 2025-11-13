@@ -12,6 +12,7 @@ import pytest
 # `researcharr._factory_proxy` that fire during import/collection are filtered
 # before any autouse fixtures run. Use RESEARCHARR_VERBOSE_FACTORY_HELPER=1 to
 # opt-into seeing those logs.
+_ORIG_STDERR = sys.stderr
 _ORIG_STDERR_WRITE = getattr(sys.stderr, "write", None)
 try:
     _VERBOSE_FACTORY_HELPER = os.environ.get("RESEARCHARR_VERBOSE_FACTORY_HELPER", "0") == "1"
@@ -19,16 +20,67 @@ except Exception:
     _VERBOSE_FACTORY_HELPER = False
 
 if not _VERBOSE_FACTORY_HELPER and _ORIG_STDERR_WRITE is not None:
+    class _FilteredStderr:
+        """Wrap the original stderr to filter the factory helper logs.
 
-    def _global_filtered_write(s):
-        try:
-            if isinstance(s, str) and ("[factory-helper-access]" in s or "[pkg-attr-access]" in s):
-                return len(s)
-        except Exception:
-            pass
-        return _ORIG_STDERR_WRITE(s)
+        We proxy the common file-like methods so external libraries that call
+        `sys.stderr.write`/`writelines`/`flush` continue to operate normally.
+        """
 
-    sys.stderr.write = _global_filtered_write
+        def __init__(self, orig):
+            self._orig = orig
+
+        def write(self, s):
+            try:
+                if isinstance(s, str) and (
+                    "[factory-helper-access]" in s or "[pkg-attr-access]" in s
+                ):
+                    return len(s)
+            except Exception:
+                pass
+            return self._orig.write(s)
+
+        def writelines(self, lines):
+            try:
+                return self._orig.writelines(lines)
+            except Exception:
+                # best-effort; don't break tests if writelines isn't present
+                for l in lines:
+                    self.write(l)
+
+        def flush(self):
+            try:
+                return self._orig.flush()
+            except Exception:
+                pass
+
+        def fileno(self):
+            try:
+                return self._orig.fileno()
+            except Exception:
+                raise
+
+        @property
+        def encoding(self):
+            return getattr(self._orig, "encoding", None)
+
+        @property
+        def errors(self):
+            return getattr(self._orig, "errors", None)
+
+        def isatty(self):
+            try:
+                return self._orig.isatty()
+            except Exception:
+                return False
+
+    # Swap out the global stderr object for our wrapper so import-time writes
+    # performed by early module initialization are filtered too.
+    try:
+        sys.stderr = _FilteredStderr(sys.stderr)
+    except Exception:
+        # Best-effort: if we can't swap, continue without filtering.
+        pass
 
 # Ensure repository root is on sys.path so top-level shim modules
 # like `entrypoint`, `run`, and `backups` remain importable after the
@@ -108,8 +160,8 @@ def _restore_run_job_if_mock():
     except Exception:
         pass
 
-    @_pytest.fixture(autouse=True)
-    def _suppress_factory_helper_logs(monkeypatch):
+@_pytest.fixture(autouse=True)
+def _suppress_factory_helper_logs(monkeypatch):
         """Silently drop noisy factory-helper lines from stderr unless explicitly enabled.
 
         These helper logs can make test output noisy. By default we suppress them
@@ -143,15 +195,17 @@ def _restore_run_job_if_mock():
         finally:
             monkeypatch.setattr(sys.stderr, "write", orig_write)
 
-    def pytest_unconfigure(config):
+def pytest_unconfigure(config):
         """Restore original stderr.write when tests complete.
 
         This ensures we don't leave the patched write globally changed after the
         test run completes (useful when running tests in interactive sessions).
         """
+        # Restore the original sys.stderr object so interactive sessions or
+        # other test harnesses are not left with our wrapper.
         try:
-            if globals().get("_ORIG_STDERR_WRITE") is not None:
-                sys.stderr.write = globals().get("_ORIG_STDERR_WRITE")
+            if globals().get("_ORIG_STDERR") is not None:
+                sys.stderr = globals().get("_ORIG_STDERR")
         except Exception:
             pass
 

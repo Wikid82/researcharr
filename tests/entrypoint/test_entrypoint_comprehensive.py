@@ -226,10 +226,10 @@ class TestEntrypointModule(unittest.TestCase):
         logger = Mock()
         mock_response = Mock()
         mock_response.status_code = 200
-        
+
         with patch.object(entrypoint.requests, "get", return_value=mock_response) as mock_get:
             result = entrypoint.check_radarr_connection("http://example.com", "api_key", logger)
-            
+
             self.assertTrue(result)
             logger.info.assert_called_with("Radarr connection successful.")
 
@@ -238,10 +238,10 @@ class TestEntrypointModule(unittest.TestCase):
         logger = Mock()
         mock_response = Mock()
         mock_response.status_code = 404
-        
+
         with patch.object(entrypoint.requests, "get", return_value=mock_response) as mock_get:
             result = entrypoint.check_radarr_connection("http://example.com", "api_key", logger)
-            
+
             self.assertFalse(result)
             logger.error.assert_called_with("Radarr connection failed with status %s", 404)
 
@@ -249,10 +249,10 @@ class TestEntrypointModule(unittest.TestCase):
         """Test Radarr connection with request exception."""
         logger = Mock()
         error = Exception("Connection error")
-        
+
         with patch.object(entrypoint.requests, "get", side_effect=error) as mock_get:
             result = entrypoint.check_radarr_connection("http://example.com", "api_key", logger)
-            
+
             self.assertFalse(result)
             logger.error.assert_called_with("Radarr connection failed: %s", error)
 
@@ -279,10 +279,10 @@ class TestEntrypointModule(unittest.TestCase):
         logger = Mock()
         mock_response = Mock()
         mock_response.status_code = 200
-        
+
         with patch.object(entrypoint.requests, "get", return_value=mock_response) as mock_get:
             result = entrypoint.check_sonarr_connection("http://example.com", "api_key", logger)
-            
+
             self.assertTrue(result)
             logger.info.assert_called_with("Sonarr connection successful.")
 
@@ -291,10 +291,10 @@ class TestEntrypointModule(unittest.TestCase):
         logger = Mock()
         mock_response = Mock()
         mock_response.status_code = 500
-        
+
         with patch.object(entrypoint.requests, "get", return_value=mock_response) as mock_get:
             result = entrypoint.check_sonarr_connection("http://example.com", "api_key", logger)
-            
+
             self.assertFalse(result)
             logger.error.assert_called_with("Sonarr connection failed with status %s", 500)
 
@@ -302,10 +302,10 @@ class TestEntrypointModule(unittest.TestCase):
         """Test Sonarr connection with request exception."""
         logger = Mock()
         error = Exception("Network error")
-        
+
         with patch.object(entrypoint.requests, "get", side_effect=error) as mock_get:
             result = entrypoint.check_sonarr_connection("http://example.com", "api_key", logger)
-            
+
             self.assertFalse(result)
             logger.error.assert_called_with("Sonarr connection failed: %s", error)
 
@@ -317,10 +317,14 @@ class TestEntrypointModule(unittest.TestCase):
     def test_load_config_valid_file(self):
         """Test loading valid config file."""
         with patch.object(entrypoint.os.path, "exists", return_value=True) as mock_exists:
-            with patch("builtins.open", mock_open(read_data="key: value\nother: data")) as mock_file:
-                with patch.object(entrypoint.yaml, "safe_load", return_value={"key": "value", "other": "data"}) as mock_yaml:
+            with patch(
+                "builtins.open", mock_open(read_data="key: value\nother: data")
+            ) as mock_file:
+                with patch.object(
+                    entrypoint.yaml, "safe_load", return_value={"key": "value", "other": "data"}
+                ) as mock_yaml:
                     result = entrypoint.load_config("test.yml")
-                    
+
                     self.assertEqual(result, {"key": "value", "other": "data"})
                     mock_file.assert_called_with("test.yml")
 
@@ -330,7 +334,7 @@ class TestEntrypointModule(unittest.TestCase):
             with patch("builtins.open", mock_open(read_data="")) as mock_file:
                 with patch.object(entrypoint.yaml, "safe_load", return_value=None) as mock_yaml:
                     result = entrypoint.load_config("empty.yml")
-                    
+
                     self.assertEqual(result, {})
 
     def test_create_metrics_app(self):

@@ -208,6 +208,8 @@ for version in ${VERSIONS}; do
     if [[ -n "${PYTEST_LOG_LEVEL}" ]]; then
         PYTEST_LOG_FLAGS=("--log-cli-level" "${PYTEST_LOG_LEVEL}" "-o" "log_cli=true")
     fi
+    # Override pytest log_file to write to writable TMPDIR instead of /app
+    PYTEST_LOG_FLAGS+=("-o" "log_file=${TMPDIR}/pytest.log")
 
     # Choose console filtering based on LOG_LEVEL
     if [[ "${LOG_LEVEL}" == "full" ]]; then

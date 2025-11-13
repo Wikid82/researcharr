@@ -55,7 +55,7 @@ def test_webui_save_user_config_hashes_and_delegates(monkeypatch):
             saved.update(
                 {
                     "username": username,
-                    "password_hash": password_hash,
+                    "password_hash": password_hash,  # pragma: allowlist secret
                     "api_key_hash": api_key_hash,
                 }
             )
@@ -67,7 +67,7 @@ def test_webui_save_user_config_hashes_and_delegates(monkeypatch):
     result = webui.save_user_config("user", "dummy_pw_hash", api_key="example_test_api_key")
     # Password hash is passed through unchanged, api key is hashed (prefix 'scrypt' typical)
     assert result["username"] == "user"
-    assert result["password_hash"] == "dummy_pw_hash"
+    assert result["password_hash"] == "dummy_pw_hash"  # pragma: allowlist secret
     assert result["api_key_hash"].startswith("scrypt")
     assert saved["username"] == "user"
     assert saved["api_key_hash"].startswith("scrypt")

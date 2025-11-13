@@ -2,9 +2,11 @@
 # TEMP: lower coverage gate to allow CI to pass while we stabilize the consolidated tests.
 # Raise this back to 85 (or higher) once the suite is green and expanded.
 # Enable pytest-xdist for parallel execution with process isolation to prevent
-# logging state pollution between tests. -n auto uses CPU count, --dist=loadfile
-# keeps tests from the same file together to minimize overhead.
-addopts = "-v --log-file=pytest.log --log-file-mode=a -n auto --dist=loadfile -m 'not webui'"
+# logging state pollution between tests. -n auto uses CPU count, --dist=loadgroup
+# groups tests by file for better isolation.
+# Added --randomly-seed=42 for deterministic test execution order
+# Added --randomly-dont-reorganize to keep test methods within classes together
+addopts = "-v --log-file=pytest.log --log-file-mode=a -n auto --dist=loadgroup --randomly-seed=42 --randomly-dont-reorganize -m 'not webui'"
 testpaths = [
     "tests",
 ]

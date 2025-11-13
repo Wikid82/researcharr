@@ -45,7 +45,8 @@ echo "pre-commit completed with no changes."
 if [[ "${1:-}" == "--with-tests" ]]; then
   echo "Running test suite with coverage (optional step)..."
   SITE_PACKAGES=$(python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])")
-  export PYTHONPATH="$SITE_PACKAGES:$PYTHONPATH"
+  # Ensure PYTHONPATH defaults to empty if not set (avoid 'unbound variable')
+  export PYTHONPATH="$SITE_PACKAGES:${PYTHONPATH:-}"
   python -m pytest tests/ --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml || exit 1
 fi
 

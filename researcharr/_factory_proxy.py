@@ -526,11 +526,19 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                                 "type": type(self).__name__,
                                             }
                                             try:
-                                                _sys.stderr.write(
-                                                    "[factory-helper-access] "
-                                                    + _json.dumps(_snap)
-                                                    + "\n"
-                                                )
+                                                import os
+
+                                                if (
+                                                    os.environ.get(
+                                                        "RESEARCHARR_VERBOSE_FACTORY_HELPER", "0"
+                                                    )
+                                                    == "1"
+                                                ):
+                                                    _sys.stderr.write(
+                                                        "[factory-helper-access] "
+                                                        + _json.dumps(_snap)
+                                                        + "\n"
+                                                    )
                                             except Exception:  # nosec B110 -- intentional broad except for resilience
                                                 pass
                                         except Exception:  # nosec B110 -- intentional broad except for resilience
@@ -680,10 +688,17 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
             except Exception:  # nosec B110 -- intentional broad except for resilience
                 _snap["modules"][_k] = {"error": True}
         try:
-            # Print to stderr so test runner captures it with -s or live logs.
-            import sys as _sys2
+            # Only emit diagnostics when explicitly enabled by the environment
+            # (RESEARCHARR_VERBOSE_FACTORY_HELPER=1). This reduces noisy output in
+            # CI and during normal test runs while optionally allowing debugging.
+            if os.environ.get("RESEARCHARR_VERBOSE_FACTORY_HELPER", "0") == "1":
+                try:
+                    # Print to stderr so test runner captures it with -s or live logs.
+                    import sys as _sys2
 
-            _sys2.stderr.write("[factory-helper-snapshot] " + _json.dumps(_snap) + "\n")
+                    _sys2.stderr.write("[factory-helper-snapshot] " + _json.dumps(_snap) + "\n")
+                except Exception:  # nosec B110 -- intentional broad except for resilience
+                    pass
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
     except Exception:  # nosec B110 -- intentional broad except for resilience

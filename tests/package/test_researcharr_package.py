@@ -371,9 +371,10 @@ class TestResearcharrIntegration(unittest.TestCase):
 
     def test_database_integration(self):
         """Test database integration across modules."""
-        with patch("researcharr.db.get_connection") as mock_get_conn:
-            mock_connection = MagicMock()
-            mock_get_conn.return_value = mock_connection
+        # Mock sqlite3.connect to avoid file permission issues in CI
+        with patch("sqlite3.connect") as mock_connect:
+            mock_db = MagicMock()
+            mock_connect.return_value = mock_db
 
             # Test that different modules can use the database
             try:
@@ -384,6 +385,8 @@ class TestResearcharrIntegration(unittest.TestCase):
                 init_db()
 
                 self.assertIsNotNone(connection)
+                # Verify sqlite3.connect was called (database was accessed)
+                self.assertTrue(mock_connect.called)
             except ImportError:
                 # Functions might not exist, that's okay
                 self.assertTrue(True)

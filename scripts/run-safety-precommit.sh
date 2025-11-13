@@ -21,20 +21,31 @@ done
 # Try modern Safety v3+ command first; fall back to deprecated 'check'.
 # Exit non-zero on vulnerabilities so pre-commit can block the commit.
 if "$PY" -m safety --help >/dev/null 2>&1; then
-  if "$PY" -m safety scan --non-interactive --full-report; then
+  # Use a timeout wrapper to prevent indefinite stalls. Default: 15m
+  TIMEOUT_CMD=""
+  if command -v timeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="timeout 15m"
+  fi
+  echo "Running safety scan with timeout="$TIMEOUT_CMD""
+  if eval "$TIMEOUT_CMD $PY -m safety scan --non-interactive --full-report"; then
     exit 0
   else
-    echo "Safety scan reported vulnerabilities." >&2
+    echo "Safety scan reported vulnerabilities or failed/stalled." >&2
     exit 1
   fi
 fi
 
 # Fallback for environments where module invocation differs
 if command -v safety >/dev/null 2>&1; then
-  if safety scan --non-interactive --full-report; then
+  TIMEOUT_CMD=""
+  if command -v timeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="timeout 15m"
+  fi
+  echo "Running safety CLI with timeout="$TIMEOUT_CMD""
+  if eval "$TIMEOUT_CMD safety scan --non-interactive --full-report"; then
     exit 0
   else
-    echo "Safety scan reported vulnerabilities." >&2
+    echo "Safety scan reported vulnerabilities or failed/stalled." >&2
     exit 1
   fi
 fi

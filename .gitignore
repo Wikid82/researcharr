@@ -183,3 +183,5 @@ artifacts/pairwise/random_1.xml
 bisect**
 junit**
 **junit**
+# Local actions artifacts from triage script
+actions-artifacts/

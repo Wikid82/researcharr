@@ -38,9 +38,13 @@ try:  # pragma: no cover - complex module reconciliation for import edge cases
                     # DEBUG: trace attribute access for reconciliation
                     # (left intentionally lightweight for local diagnostics)
                     try:
+                        import os as _os
                         import sys as _sys
 
-                        _sys.stderr.write(f"[pkg-attr-access] {name}\n")
+                        # Only emit diagnostics when explicitly enabled; this
+                        # reduces noise in normal test runs and CI.
+                        if _os.environ.get("RESEARCHARR_VERBOSE_FACTORY_HELPER", "0") == "1":
+                            _sys.stderr.write(f"[pkg-attr-access] {name}\n")
                     except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
                     _top = sys.modules.get(name)

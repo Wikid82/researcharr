@@ -77,6 +77,7 @@ jobs:
           curl -H "Content-Type: application/json" -d "{\"username\":\"CI Bot\",\"content\":\"$ESCAPED_CONTENT\"}" "${{ secrets.DISCORD_DEV_WEBHOOK }}"
 
   trivy-scan:
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     needs: [docker-build-latest]
     steps:

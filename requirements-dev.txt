@@ -4,6 +4,7 @@ bandit==1.8.6
 pre-commit==4.4.0
 pytest==9.0.0
 pytest-cov==7.0.0
+pytest-randomly==3.16.0
 types-requests==2.32.4.20250913
 types-PyYAML==6.0.3
 types-Markdown==3.10.0.20251106
@@ -17,16 +18,15 @@ prometheus-client==0.23.1
 setuptools_scm==9.2.2
 python-json-logger==4.0.0
 debugpy==1.6.7
-# Unpinned ruff invocation below removed (already pinned above)
-ipython==9.7.0
+# ipython 9.x requires Python >=3.11, use 8.x for Python 3.10 compatibility
+ipython>=8.12.0,<9.0; python_version < "3.11"
+ipython>=9.0,<10.0; python_version >= "3.11"
 ipdb==0.13.9
 tox==4.32.0
 pip-tools==7.5.1
-bandit==1.8.6
 safety==3.7.0
 pytest-xdist==3.8.0
 detect-secrets==1.5.0
 # Documentation tooling
 mkdocs==1.5.2
 mkdocs-material==9.1.13
-pip-tools==7.5.1

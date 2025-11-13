@@ -8,6 +8,7 @@ on:
       - development
       - feature/**
       - fix/**
+      - test/**
 
 jobs:
   build-wheels:

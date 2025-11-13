@@ -2,7 +2,7 @@ name: Build Wheels and Test (wheelhouse consumer)
 
 on:
   push:
-    branches: [ main, development, 'ci/**', 'fix/**' ]
+    branches: [ main, development, 'ci/**', 'fix/**', 'test/**' ]
   pull_request:
 
 jobs:

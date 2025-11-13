@@ -1,5 +1,6 @@
 """Comprehensive tests for entrypoint.py module to maximize coverage."""
 
+import importlib.util
 import logging
 import os
 import sqlite3
@@ -13,8 +14,13 @@ import pytest
 
 from flask import Flask
 
-# Import the module under test (package import to avoid CWD issues in CI)
-from researcharr import entrypoint
+# Import the module under test using importlib to bypass module reconciliation in CI
+# This avoids issues with the _FallbackModule proxy blocking access to functions
+_REPO_ROOT = Path(__file__).parent.parent.parent
+_ENTRYPOINT_PATH = _REPO_ROOT / "entrypoint.py"
+_spec = importlib.util.spec_from_file_location("entrypoint", _ENTRYPOINT_PATH)
+entrypoint = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(entrypoint)
 
 # Import test utilities for logging isolation
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -366,7 +372,8 @@ class TestEntrypointModule(unittest.TestCase):
         """Test health endpoint when database connection fails."""
         app = entrypoint.create_metrics_app()
 
-        with patch("entrypoint.sqlite3.connect", side_effect=Exception("DB Error")):
+        # Patch sqlite3.connect at the module level since entrypoint was loaded via importlib
+        with patch.object(entrypoint.sqlite3, "connect", side_effect=Exception("DB Error")):
             with app.test_client() as client:
                 response = client.get("/health")
 

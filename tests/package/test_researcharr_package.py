@@ -381,7 +381,12 @@ class TestResearcharrIntegration(unittest.TestCase):
                 from researcharr.researcharr import init_db
 
                 connection = get_connection()
-                init_db()
+
+                # Mock sqlite3.connect to avoid file permission issues in CI
+                with patch("sqlite3.connect") as mock_connect:
+                    mock_db = MagicMock()
+                    mock_connect.return_value = mock_db
+                    init_db()
 
                 self.assertIsNotNone(connection)
             except ImportError:

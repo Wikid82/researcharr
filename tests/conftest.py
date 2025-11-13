@@ -993,6 +993,42 @@ def pytest_runtest_setup(item):
     # Also take a post-test snapshot in teardown hook; pytest will call pytest_runtest_teardown separately
 
 
+@pytest.fixture(autouse=True)
+def detect_flask_class_mutation(request):
+    """Autouse fixture: snapshot `flask.Flask` identity and detect changes.
+
+    This prints a concise diagnostic when the `Flask` class object changes
+    between the start and end of a test so we can identify the test that
+    mutates the class or replaces the module with a Mock.
+    """
+    import sys as _sys
+
+    try:
+        fm = _sys.modules.get("flask")
+        before = getattr(fm, "Flask", None) if fm is not None else None
+        before_id = id(before) if before is not None else None
+    except Exception:
+        before = None
+        before_id = None
+
+    yield
+
+    try:
+        fm2 = _sys.modules.get("flask")
+        after = getattr(fm2, "Flask", None) if fm2 is not None else None
+        after_id = id(after) if after is not None else None
+        if before_id != after_id:
+            try:
+                print(
+                    f"FLASK_CLASS_MUTATED after {request.node.nodeid}: before_id={before_id} after_id={after_id} type(before)={type(before)} type(after)={type(after)}"
+                )
+            except Exception:
+                print("FLASK_CLASS_MUTATED: (failed to format nodeid)")
+    except Exception:
+        # Do not let diagnostic break tests
+        pass
+
+
 @pytest.fixture
 def login(client):
     def _login(username: str = "admin", password: str = "password"):

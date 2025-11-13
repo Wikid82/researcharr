@@ -1,0 +1,13 @@
+version: 1.0
+change-template: |
+  - $TITLE @$AUTHOR
+labels:
+  feature: "Features"
+  fix: "Bug Fixes"
+  documentation: "Documentation Changes"
+  enhancement: "Enhancements"
+  breaking: "Breaking Changes"
+  chore: "Chores"
+  performance: "Performance Improvements"
+  security: "Security Fixes"
+  refactor: "Refactoring"

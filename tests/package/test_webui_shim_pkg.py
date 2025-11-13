@@ -61,7 +61,9 @@ def test_webui_save_user_config_hashes_and_delegates(monkeypatch):
             )
 
     webui.rdb = DummyRDB()  # type: ignore
-    result = webui.save_user_config("user", "pw_hash", api_key="secret")
+    # `detect-secrets` can flag the literal string below as a false positive.
+    # Allowlist the instance here so pre-commit doesn't fail on test data.
+    result = webui.save_user_config("user", "pw_hash", api_key="secret")  # pragma: allowlist secret
     # Password hash is passed through unchanged, api key is hashed (prefix 'scrypt' typical)
     assert result["username"] == "user"
     assert result["password_hash"] == "pw_hash"

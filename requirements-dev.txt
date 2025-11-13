@@ -4,6 +4,7 @@ bandit==1.8.6
 pre-commit==4.4.0
 pytest==9.0.0
 pytest-cov==7.0.0
+pytest-randomly==3.16.0
 types-requests==2.32.4.20250913
 types-PyYAML==6.0.3
 types-Markdown==3.10.0.20251106

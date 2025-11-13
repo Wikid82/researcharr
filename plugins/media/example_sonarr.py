@@ -1,7 +1,6 @@
-from typing import Any, Dict
+from typing import Any
 
 from flask import Blueprint, jsonify, request
-
 from plugins.base import BasePlugin
 
 PLUGIN_NAME = "sonarr"
@@ -13,14 +12,14 @@ class Plugin(BasePlugin):
     description = "Example Sonarr plugin (read/search test harness)"
     docs_url = "https://sonarr.video/"
 
-    def validate(self) -> Dict[str, Any]:
+    def validate(self) -> dict[str, Any]:
         url = self.config.get("url")
         api_key = self.config.get("api_key")
         if not url or not api_key:
             return {"success": False, "msg": "Missing url or api_key"}
         return {"success": True}
 
-    def sync(self) -> Dict[str, Any]:
+    def sync(self) -> dict[str, Any]:
         # Read-only: fetch series list from Sonarr
         url = self.config.get("url")
         api_key = self.config.get("api_key")
@@ -44,7 +43,7 @@ class Plugin(BasePlugin):
             ],
         }
 
-    def health(self) -> Dict[str, Any]:
+    def health(self) -> dict[str, Any]:
         url = self.config.get("url")
         api_key = self.config.get("api_key")
         if not url or not api_key:

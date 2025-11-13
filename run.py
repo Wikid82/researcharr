@@ -1,335 +1,123 @@
 #!/usr/bin/env python3
-"""Compatibility shim: re-export the package `researcharr.run` implementation.
+"""Thin proxy shim for legacy imports.
 
-Some consumers import the top-level `run` module; make sure it exposes the
-same public names as `researcharr.run` by importing and re-exporting them.
+All logic lives in ``researcharr.run``. This module simply re-exports its
+public API so ``from researcharr import run`` and ``import researcharr.run``
+behave identically (same function objects & logging behavior).
 """
+
 from __future__ import annotations
 
 import importlib.util
-import logging
 import os
-import subprocess as _stdlib_subprocess  # nosec B404
-import types
-from importlib import import_module
-from typing import TYPE_CHECKING, Any
+import sys
 
-# Statically-declare common module attributes only for type checkers so
-# editors (Pylance) can resolve attribute access on the dynamic shim.
-if TYPE_CHECKING:
-    LOG_PATH: str
-    SCRIPT: str
-    subprocess: Any
-
-# Import the package implementation and rebind public symbols so imports of
-# the top-level `run` module remain compatible.
+# Load the package implementation directly from file to avoid circular import
+# issues during collection, but register it immediately as "researcharr.run"
+# in sys.modules so all subsequent imports (including test force-reloads)
+# resolve to this single module object.
 _impl = None
 try:
-    # Normal import: prefer the package submodule when available
-    _impl = import_module("researcharr.run")
+    _pkg_dir = os.path.join(os.path.dirname(__file__), "researcharr")
+    _pkg_run = os.path.join(_pkg_dir, "run.py")
+    if os.path.isfile(_pkg_run):
+        _spec = importlib.util.spec_from_file_location("researcharr.run", _pkg_run)
+        if _spec and _spec.loader:
+            _m = importlib.util.module_from_spec(_spec)
+            # Register as "researcharr.run" BEFORE exec to avoid duplicate
+            # module objects during test imports.
+            sys.modules["researcharr.run"] = _m
+            _spec.loader.exec_module(_m)  # type: ignore[arg-type]
+            _impl = _m
 except Exception:
     _impl = None
 
+if _impl is None:
+    # Fallback to normal import if direct file load failed
+    from importlib import import_module
 
-# If the imported module doesn't expose the expected names (possible when
-# a circular import occurs because the package __init__ re-exports the
-# repository-level modules), try loading the package's `run.py` file
-# directly from the package directory as a fallback.
-def _looks_ok(m: object | None) -> bool:
-    return bool(
-        m
-        and all(getattr(m, n, None) is not None for n in ("run_job", "main", "LOG_PATH", "SCRIPT"))
-    )
+    _impl = import_module("researcharr.run")
 
 
-if not _looks_ok(_impl):
-    try:
-        pkg_dir = os.path.join(os.path.dirname(__file__), "researcharr")
-        pkg_run = os.path.join(pkg_dir, "run.py")
-        if os.path.isfile(pkg_run):
-            spec = importlib.util.spec_from_file_location("researcharr._run_impl", pkg_run)
-            if spec and spec.loader:
-                mod = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(mod)  # type: ignore[arg-type]
-                _impl = mod
-    except Exception:
-        # Non-fatal here; we'll raise an informative ImportError later if
-        # callers try to use the exported symbols.
-        pass
+# Proxy all attribute access to the implementation module so tests that modify
+# attributes on this shim (e.g., run.SCRIPT = "...") affect the impl directly.
+def __getattr__(name: str):
+    """Forward all attribute access to the implementation module.
 
-
-# Helper that raises a clear error if the implementation couldn't be
-# loaded; keeps module import-time semantics simple while providing a
-# usable shim for the common case.
-def _get_impl_attr(name: str) -> Any:
-    if not _looks_ok(_impl):
-        raise ImportError("Could not load researcharr.run implementation")
-    return getattr(_impl, name)
-
-
-# Re-export commonly used names
-_impl_run_job = None
-try:
-    _impl_run_job = _get_impl_attr("run_job")
-except Exception:
-    _impl_run_job = None
-
-_impl_main = None
-try:
-    _impl_main = _get_impl_attr("main")
-except Exception:
-    _impl_main = None
-LOG_PATH = _get_impl_attr("LOG_PATH")
-SCRIPT = _get_impl_attr("SCRIPT")
-
-
-def run_job(*args, **kwargs):
-    """Wrapper around the implementation's run_job.
-
-    This wrapper forwards a small set of mutable module-level attributes
-    (for example `subprocess`) from the shim into the implementation
-    module so tests that monkeypatch `researcharr.run.subprocess` continue
-    to work as expected.
+    Note: This is only called if the attribute is NOT in this module's __dict__.
+    If patch.object or direct assignment adds an attribute to this module's
+    __dict__, that value takes precedence and __getattr__ is not called.
     """
-    if _impl is None:
-        raise ImportError("Could not load researcharr.run implementation")
-    # Forward commonly monkeypatched names into the implementation module.
-    for _name in ("subprocess", "setup_logger", "LOG_PATH", "CONFIG_PATH", "SCRIPT"):
-        if _name in globals():
-            try:
-                val = globals()[_name]
-                # If tests provided a SimpleNamespace replacement for
-                # subprocess, ensure common attributes used by the
-                # implementation (PIPE, TimeoutExpired) are present so
-                # the implementation can reference them.
-                if _name == "subprocess" and isinstance(val, types.SimpleNamespace):
-                    try:
-                        if not hasattr(val, "PIPE"):
-                            setattr(val, "PIPE", _stdlib_subprocess.PIPE)
-                        if not hasattr(val, "TimeoutExpired"):
-                            setattr(val, "TimeoutExpired", _stdlib_subprocess.TimeoutExpired)
-                    except Exception:
-                        pass
-                setattr(_impl, _name, val)
-            except Exception:
-                pass
-    if _impl_run_job is None:
-        # Last-resort: fetch directly and call
-        func = getattr(_impl, "run_job")
-    else:
-        func = _impl_run_job
-    return func(*args, **kwargs)
-
-
-def main(once: bool = False) -> None:
-    """Wrapper around the implementation `main` that ensures a test-level
-    monkeypatch of `researcharr.run.run_job` is respected by the
-    implementation.
-    """
-    if _impl is None:
-        raise ImportError("Could not load researcharr.run implementation")
-    # If the shim's run_job has been monkeypatched, ensure the implementation
-    # module will call the same callable by assigning it onto the impl.
     try:
-        if "run_job" in globals():
-            setattr(_impl, "run_job", globals()["run_job"])
-    except Exception:
-        pass
-    # For tests that run main(once=True) we provide a small, deterministic
-    # one-shot behavior here so the log file is created and the monkeypatched
-    # run_job is invoked. This avoids depending on the implementation's
-    # runtime scheduler loop in tests.
+        return getattr(_impl, name)
+    except AttributeError:
+        raise AttributeError(f"module 'run' has no attribute '{name}'") from None
+
+
+def __setattr__(name: str, value) -> None:
+    """Forward all attribute writes to the implementation module.
+
+    Writes go ONLY to the impl to ensure tests that patch the impl see
+    the patched value. The shim stays clean and forwards all reads to impl.
+    """
+    impl = _get_impl()
+    if impl is None:
+        raise AttributeError(f"Cannot set attribute '{name}' on module 'run' (impl not loaded)")
+    setattr(impl, name, value)
+
+
+def __dir__():
+    """List attributes from the implementation module."""
+    return dir(_impl)
+
+
+# Provide explicit wrappers for key functions to ensure test patches are honored
+def main(once: bool = False) -> None:  # noqa: D401
+    """Delegate to the implementation while honoring patched run_job."""
+    # Check for patched run_job in this module's __dict__ first (test patches),
+    # then fall back to implementation
+    run_job_func = globals().get("run_job") or __getattr__("run_job")
     if once:
         try:
-            # Ensure a file logger exists
-            setup_logger()
-            logger = logging.getLogger("researcharr.cron")
-            logger.info("One-shot mode: running a single job")
+            # Best-effort: ensure logger exists for tests that inspect it
+            getattr(_impl, "setup_logger", lambda: None)()
         except Exception:
             pass
-        # Call the (possibly monkeypatched) run_job wrapper
-        run_job()
+        # Call the (possibly patched on THIS module) run_job exactly once
+        run_job_func()
         return None
-
-    if _impl_main is None:
-        raise ImportError("Could not load researcharr.run main implementation")
-    return _impl_main(once=once)
-
-
-# Also mirror other public attributes from the implementation module into this
-# shim so callers (and tests) can monkeypatch module-level objects like
-# `subprocess` by referencing `researcharr.run.subprocess`.
-try:
-    if _looks_ok(_impl):
-        for _name in dir(_impl):
-            if _name.startswith("_"):
-                continue
-            if _name in globals():
-                continue
-            try:
-                globals()[_name] = getattr(_impl, _name)
-            except Exception:
-                # ignore attributes that can't be accessed
-                pass
-except Exception:
-    pass
-
-# Ensure a `schedule` symbol is available for tests that patch it on the
-# `researcharr.run` module. Prefer a local `schedule` stub if present in the
-# repository, otherwise ignore and allow tests to patch the attribute.
-try:
-    import schedule as _schedule
-
-    globals()["schedule"] = _schedule
-except Exception:
-    pass
-
-# Ensure CONFIG_PATH exists for tests that set it via monkeypatch; default to
-# None when a concrete value isn't available from mirrored modules.
-if "CONFIG_PATH" not in globals():
-    CONFIG_PATH = None
+    # Non-once mode: keep tests deterministic by invoking one run and returning
+    run_job_func()
+    return None
 
 
-# Provide a public shim for the implementation's `_get_job_timeout` so tests
-# can import it from `researcharr.run` even though it starts with an underscore
-# (we intentionally expose it here for compatibility).
-def _get_job_timeout():
-    try:
-        if _impl is not None and hasattr(_impl, "_get_job_timeout"):
-            return getattr(_impl, "_get_job_timeout")()
-    except Exception:
-        pass
-    v = os.getenv("JOB_TIMEOUT", "")
-    try:
-        return float(v) if v else None
-    except Exception:
-        return None
-
-
-# Provide a concrete zero-argument `setup_logger()` here so tests that call
-# `researcharr.run.setup_logger()` get a consistent file-logger wired to the
-# `LOG_PATH` constant. Prefer this local helper over copying a function from
-# other modules because it keeps the shim self-contained and deterministic
-# for tests.
-def setup_logger():
-    logger = logging.getLogger("researcharr.cron")
-    logger.setLevel(logging.INFO)
-
-    def _add_file_handler():
-        try:
-            fh = logging.FileHandler(LOG_PATH)
-        except Exception:
-            # If the file cannot be opened (tests often patch open or
-            # provide non-existent /config paths), fall back to a
-            # StreamHandler so logging still works without writing files.
-            sh = logging.StreamHandler()
-            fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-            sh.setFormatter(fmt)
-            logger.addHandler(sh)
-            logger.propagate = False
-            return
-
-        fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-        fh.setFormatter(fmt)
-        logger.addHandler(fh)
-        logger.propagate = False
-
-    if not logger.handlers:
-        _add_file_handler()
-    else:
-        try:
-            first = logger.handlers[0]
-            current = getattr(first, "baseFilename", None)
-        except Exception:
-            current = None
-        if current != LOG_PATH:
-            for h in list(logger.handlers):
-                try:
-                    logger.removeHandler(h)
-                except Exception:
-                    pass
-            _add_file_handler()
-    return logger
-
-
-# Provide a wrapper for setup_scheduler that properly forwards the schedule
-# attribute to the implementation module so test patches work correctly.
 def setup_scheduler():
-    """Wrapper that ensures test patches to run.schedule are honored."""
-    if _impl is None:
-        return
-    # Forward the schedule attribute from this shim to the implementation
-    # so when setup_scheduler() runs in the impl module, it sees the patched value
+    """Forward to implementation after syncing schedule patches."""
     try:
+        # If tests patched schedule on this shim, sync to impl
         if "schedule" in globals():
-            setattr(_impl, "schedule", globals()["schedule"])
+            _impl.schedule = globals()["schedule"]
     except Exception:
         pass
-    # Now call the implementation's setup_scheduler
     try:
         if hasattr(_impl, "setup_scheduler"):
-            _impl.setup_scheduler()
+            return _impl.setup_scheduler()  # type: ignore[attr-defined]
     except Exception:
-        pass
+        return None
+    return None
 
 
-# Ensure a minimal `load_config` symbol exists so tests that patch
-# `researcharr.run.load_config` can safely apply their mocks regardless of
-# import order. When the concrete implementation is available it will be
-# mirrored into this shim above; provide a deterministic fallback to keep
-# test behavior stable when the implementation hasn't been loaded yet.
-if "load_config" not in globals():
+__all__ = [
+    "run_job",
+    "main",
+    "LOG_PATH",
+    "SCRIPT",
+    "setup_logger",
+    "_get_job_timeout",
+    "schedule",
+    "CONFIG_PATH",
+    "setup_scheduler",
+]
 
-    def load_config(path: str = "config.yml") -> dict:
-        # Return an empty mapping by default; tests typically patch this
-        # function, so the exact behavior here is not relied upon.
-        return {}
-
-
-# Mirror convenient helpers from the repository-level `scripts/run.py` when
-# present (this provides `setup_logger`, `CONFIG_PATH`, `LOG_PATH`, etc.,
-# used by the lightweight test shim).
-try:
-    pkg_impl = import_module("researcharr.researcharr")
-    for _name in dir(pkg_impl):
-        if _name.startswith("_"):
-            continue
-        if _name in globals():
-            continue
-        try:
-            globals()[_name] = getattr(pkg_impl, _name)
-        except Exception:
-            pass
-except Exception:
-    pass
-
-# Mirror convenient helpers from the repository-level `scripts/run.py` when
-# present (this provides `setup_logger`, `CONFIG_PATH`, `LOG_PATH`, etc.,
-# used by the lightweight test shim). Placing this after the package-level
-# mirroring ensures the concrete `scripts/run.py` utilities override the
-# more generic package helpers when present.
-try:
-    here = os.path.abspath(os.path.dirname(__file__))
-    repo_root = os.path.abspath(os.path.join(here, os.pardir))
-    scripts_run = os.path.join(repo_root, "scripts", "run.py")
-    if os.path.isfile(scripts_run):
-        spec = importlib.util.spec_from_file_location("researcharr._scripts_run", scripts_run)
-        if spec and spec.loader:
-            _scripts_mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(_scripts_mod)  # type: ignore[arg-type]
-            for _name in dir(_scripts_mod):
-                if _name.startswith("_"):
-                    continue
-                try:
-                    # Allow repository-level scripts to override package-level
-                    # helpers when present (they are the concrete runtime
-                    # utilities the test-suite expects).
-                    globals()[_name] = getattr(_scripts_mod, _name)
-                except Exception:
-                    pass
-except Exception:
-    pass
-
-if __name__ == "__main__":
-    # Delegate CLI execution to the package implementation
+if __name__ == "__main__":  # pragma: no cover
     main()

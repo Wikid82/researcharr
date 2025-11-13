@@ -151,7 +151,33 @@ def create_metrics_app():
 
     @app.route("/metrics")
     def metrics_endpoint():
-        return jsonify(app.metrics)
+        data = dict(app.metrics or {})
+        try:
+            from researcharr.cache import (
+                metrics as cache_metrics,  # type: ignore
+            )
+
+            c = cache_metrics() or {}
+            data["cache_hits"] = int(c.get("hits", 0))
+            data["cache_misses"] = int(c.get("misses", 0))
+            data["cache_sets"] = int(c.get("sets", 0))
+            data["cache_evictions"] = int(c.get("evictions", 0))
+        except Exception:
+            pass
+        return jsonify(data)
+
+    @app.route("/metrics.prom")
+    def metrics_prometheus():
+        try:
+            from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+            from prometheus_client import REGISTRY as _DEFAULT_REGISTRY
+        except Exception:
+            return jsonify({"error": "prometheus_client not installed"}), 501
+
+        output = generate_latest(_DEFAULT_REGISTRY)
+        from flask import Response as _Response
+
+        return _Response(output, content_type=CONTENT_TYPE_LATEST)
 
     @app.errorhandler(404)
     @app.errorhandler(500)

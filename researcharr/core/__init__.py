@@ -1,3 +1,10 @@
+from researcharr.core.config_validator import (
+    ConfigValidator,
+    apply_config_defaults,
+    get_validator,
+    validate_config,
+)
+
 """Core Application Architecture.
 
 This module provides the foundational architecture components for the
@@ -41,17 +48,18 @@ from .services import (
     HealthService,
     LoggingService,
     MetricsService,
+    MonitoringService,
+    SchedulerService,
+    StorageService,
     check_radarr_connection,
     check_sonarr_connection,
     create_metrics_app,
     has_valid_url_and_key,
     init_db,
-)
-from .services import load_config as load_config_legacy
-from .services import (
     serve,
     setup_logger,
 )
+from .services import load_config as load_config_legacy
 
 __all__ = [
     # Service Container
@@ -66,6 +74,8 @@ __all__ = [
     "subscribe",
     # Lifecycle Management
     "ApplicationLifecycle",
+    "apply_config_defaults",
+    "ConfigValidator",
     "ApplicationState",
     "get_lifecycle",
     "add_startup_hook",
@@ -83,6 +93,9 @@ __all__ = [
     "ConnectivityService",
     "HealthService",
     "MetricsService",
+    "SchedulerService",
+    "MonitoringService",
+    "StorageService",
     "create_metrics_app",
     "serve",
     # Backwards Compatibility Functions
@@ -96,6 +109,8 @@ __all__ = [
     "core_api_blueprint",
     # Application Factory
     "CoreApplicationFactory",
+    "get_validator",
+    "validate_config",
     "create_core_app",
     "integrate_with_web_app",
 ]

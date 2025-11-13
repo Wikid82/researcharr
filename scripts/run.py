@@ -5,6 +5,7 @@ Starts the Flask app (from `factory.create_app`) and an
 APScheduler BackgroundScheduler that invokes `/app/scripts/researcharr.py` on a
 cron schedule. Scheduled runs log to `/config/cron.log`.
 """
+
 import argparse
 import importlib
 import importlib.util

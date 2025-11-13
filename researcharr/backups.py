@@ -27,10 +27,9 @@ else:
     # Fallback implementation: keep logical name mapping out-of-band since
     # str instances are immutable and cannot have attributes assigned.
     import weakref
-    from typing import Dict
 
-    _name_map: Dict[int, str] = {}
-    _finalizer_map: Dict[int, weakref.finalize] = {}
+    _name_map: dict[int, str] = {}
+    _finalizer_map: dict[int, weakref.finalize] = {}
 
     class BackupPath(str):  # type: ignore[override]
         def __new__(cls, fullpath: str, name: str):

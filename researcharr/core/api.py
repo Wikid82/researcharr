@@ -6,6 +6,8 @@ api.py file, integrated with the new core architecture components.
 
 from functools import wraps
 
+from werkzeug.security import check_password_hash
+
 from flask import (
     Blueprint,
     current_app,
@@ -13,7 +15,6 @@ from flask import (
     render_template_string,
     request,
 )
-from werkzeug.security import check_password_hash
 
 from .container import get_container
 from .events import Events, get_event_bus

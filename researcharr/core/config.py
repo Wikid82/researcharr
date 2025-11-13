@@ -6,10 +6,11 @@ extending the existing factory.py patterns with clean architecture principles.
 
 import logging
 import threading
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any
 
 import yaml
 
@@ -23,8 +24,8 @@ class ConfigSource:
     """Represents a configuration source."""
 
     name: str
-    path: Optional[Path] = None
-    data: Optional[Dict[str, Any]] = None
+    path: Path | None = None
+    data: dict[str, Any] | None = None
     priority: int = 100  # Lower numbers have higher priority
     required: bool = False
     watch: bool = False  # Watch for file changes
@@ -42,14 +43,14 @@ class ConfigValidationError:
 class ConfigurationManager:
     """Enhanced configuration manager with validation and change notification."""
 
-    def __init__(self, base_config_dir: Optional[Union[str, Path]] = None):
-        self._config: Dict[str, Any] = {}
-        self._sources: List[ConfigSource] = []
+    def __init__(self, base_config_dir: str | Path | None = None):
+        self._config: dict[str, Any] = {}
+        self._sources: list[ConfigSource] = []
         self._lock = threading.RLock()
         self._event_bus = get_event_bus()
-        self._watchers: Dict[str, Any] = {}  # File watchers
-        self._validation_errors: List[ConfigValidationError] = []
-        self._change_callbacks: List[Callable[[str, Any, Any], None]] = []
+        self._watchers: dict[str, Any] = {}  # File watchers
+        self._validation_errors: list[ConfigValidationError] = []
+        self._change_callbacks: list[Callable[[str, Any, Any], None]] = []
 
         # Set base configuration directory
         if base_config_dir:
@@ -65,7 +66,7 @@ class ConfigurationManager:
         return self._base_config_dir
 
     @property
-    def validation_errors(self) -> List[ConfigValidationError]:
+    def validation_errors(self) -> list[ConfigValidationError]:
         """Get current validation errors."""
         with self._lock:
             return self._validation_errors.copy()
@@ -73,14 +74,14 @@ class ConfigurationManager:
     def add_source(
         self,
         name: str,
-        path: Optional[Union[str, Path]] = None,
-        data: Optional[Dict[str, Any]] = None,
+        path: str | Path | None = None,
+        data: dict[str, Any] | None = None,
         priority: int = 100,
         required: bool = False,
         watch: bool = False,
     ) -> None:
         """Add a configuration source."""
-        source_path: Optional[Path] = None
+        source_path: Path | None = None
         if path:
             source_path = Path(path)
             if not source_path.is_absolute():
@@ -113,7 +114,7 @@ class ConfigurationManager:
                 return True
 
             old_config = deepcopy(self._config) if self._config else {}
-            new_config: Dict[str, Any] = {}
+            new_config: dict[str, Any] = {}
             self._validation_errors.clear()
 
             # Load from each source in priority order
@@ -154,7 +155,7 @@ class ConfigurationManager:
             LOGGER.info("Configuration loaded successfully from %d sources", len(self._sources))
             return True
 
-    def _load_source(self, source: ConfigSource) -> Optional[Dict[str, Any]]:
+    def _load_source(self, source: ConfigSource) -> dict[str, Any] | None:
         """Load configuration from a single source."""
         if source.data:
             # In-memory data source
@@ -162,7 +163,7 @@ class ConfigurationManager:
 
         if source.path and source.path.exists():
             # File-based source
-            with open(source.path, "r", encoding="utf-8") as f:
+            with open(source.path, encoding="utf-8") as f:
                 if source.path.suffix.lower() in (".yml", ".yaml"):
                     return yaml.safe_load(f)
                 elif source.path.suffix.lower() == ".json":
@@ -177,7 +178,7 @@ class ConfigurationManager:
 
         return None
 
-    def _merge_config(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    def _merge_config(self, base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
         """Recursively merge configuration dictionaries."""
         result = deepcopy(base)
 
@@ -189,7 +190,7 @@ class ConfigurationManager:
 
         return result
 
-    def _validate_config(self, config: Dict[str, Any]) -> bool:
+    def _validate_config(self, config: dict[str, Any]) -> bool:
         """Validate the merged configuration."""
         # Basic validation - can be extended with schema validation
         errors = []
@@ -224,7 +225,7 @@ class ConfigurationManager:
         return len(errors) == 0
 
     def _notify_config_changes(
-        self, old_config: Dict[str, Any], new_config: Dict[str, Any]
+        self, old_config: dict[str, Any], new_config: dict[str, Any]
     ) -> None:
         """Notify about configuration changes."""
         changes = self._find_config_changes(old_config, new_config)
@@ -245,10 +246,10 @@ class ConfigurationManager:
             )
 
     def _find_config_changes(
-        self, old_config: Dict[str, Any], new_config: Dict[str, Any], path: str = ""
-    ) -> List[tuple[str, Any, Any]]:
+        self, old_config: dict[str, Any], new_config: dict[str, Any], path: str = ""
+    ) -> list[tuple[str, Any, Any]]:
         """Find changes between two configuration dictionaries."""
-        changes: List[tuple[str, Any, Any]] = []
+        changes: list[tuple[str, Any, Any]] = []
 
         # Check for added or changed keys
         for key, new_value in new_config.items():
@@ -325,7 +326,7 @@ class ConfigurationManager:
         """Check if a configuration key exists."""
         return self.get(key, object()) is not object()
 
-    def get_section(self, section: str) -> Dict[str, Any]:
+    def get_section(self, section: str) -> dict[str, Any]:
         """Get an entire configuration section."""
         value = self.get(section, {})
         return value if isinstance(value, dict) else {}
@@ -344,7 +345,7 @@ class ConfigurationManager:
             except ValueError:
                 return False
 
-    def save_config(self, path: Optional[Union[str, Path]] = None) -> bool:
+    def save_config(self, path: str | Path | None = None) -> bool:
         """Save current configuration to file."""
         if not path:
             path = self._base_config_dir / "config.yml"
@@ -370,7 +371,7 @@ class ConfigurationManager:
             LOGGER.exception("Failed to save configuration to: %s", path)
             return False
 
-    def get_all(self) -> Dict[str, Any]:
+    def get_all(self) -> dict[str, Any]:
         """Get the entire configuration dictionary."""
         with self._lock:
             return deepcopy(self._config)
@@ -384,7 +385,7 @@ class ConfigurationManager:
 
 
 # Global configuration manager instance
-_config_manager: Optional[ConfigurationManager] = None
+_config_manager: ConfigurationManager | None = None
 _config_lock = threading.Lock()
 
 
@@ -426,6 +427,6 @@ def load_config(reload: bool = False) -> bool:
     return get_config_manager().load_config(reload)
 
 
-def save_config(path: Optional[Union[str, Path]] = None) -> bool:
+def save_config(path: str | Path | None = None) -> bool:
     """Save current configuration from the global manager."""
     return get_config_manager().save_config(path)

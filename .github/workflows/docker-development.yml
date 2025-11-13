@@ -1,0 +1,104 @@
+name: Docker Develop Build
+
+on:
+  workflow_run:
+    workflows: ["Multi-Version Tests"]
+    types: [completed]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+
+  docker-build-develop:
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'development' }}
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Check Out Repo
+        uses: actions/checkout@v5
+        with:
+          ref: develop
+
+      - name: Login to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: all
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push
+        id: docker_build
+        uses: docker/build-push-action@v6
+        with:
+          context: ./
+          file: ./Dockerfile
+          build-args: |
+            "BRANCH_NAME=develop"
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: ghcr.io/${{ github.repository }}:develop
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+
+
+  commit-notification:
+    runs-on: ubuntu-latest
+    needs: [ docker-build-develop, trivy-scan ]
+    if: ${{ success() }}
+    steps:
+
+    - name: Get recent commits
+      id: commits
+      run: |
+        echo "commits<<EOF" >> $GITHUB_OUTPUT
+        git log -n 5 --pretty=format:"- %s (%an)" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    # Notify Discord on successful development-branch builds
+    - name: Discord Success Notification
+      if: success() && github.ref == 'refs/heads/development'
+      run: |
+        if [ -z "${{ secrets.DISCORD_DEV_WEBHOOK }}" ]; then
+          echo "No Discord webhook configured; skipping notification."
+          exit 0
+        fi
+        CONTENT="Development branch build succeeded!
+        ${{ steps.commits.outputs.commits }}
+        Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        ESCAPED_CONTENT=$(printf '%s' "$CONTENT" | sed 's/"/\\"/g')
+        curl -H "Content-Type: application/json" -d "{\"username\":\"CI Bot\",\"content\":\"$ESCAPED_CONTENT\"}" "${{ secrets.DISCORD_DEV_WEBHOOK }}"
+
+
+  trivy-scan:
+    runs-on: ubuntu-latest
+    needs: [ docker-build-develop ]
+    steps:
+
+      - name: Login to GHCR for scanning
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Scan pushed image with Trivy (docker)
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -e TRIVY_NON_INTERACTIVE=true \
+            aquasec/trivy:latest image \
+            --exit-code 1 --severity HIGH,CRITICAL ghcr.io/${{ github.repository }}:develop
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

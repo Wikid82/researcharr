@@ -1,7 +1,6 @@
-from typing import Any, Dict, List
+from typing import Any
 
 from flask import Blueprint, jsonify, request
-
 from plugins.base import BasePlugin
 
 PLUGIN_NAME = "apprise"
@@ -13,7 +12,7 @@ class Plugin(BasePlugin):
     description = "Apprise notification integration (uses 'apprise' package)"
     docs_url = "https://github.com/caronc/apprise"
 
-    def _get_urls(self) -> List[str]:
+    def _get_urls(self) -> list[str]:
         # Config may provide 'urls' (list) or 'url' (single string)
         urls = self.config.get("urls") or self.config.get("url")
         if isinstance(urls, str):
@@ -22,7 +21,7 @@ class Plugin(BasePlugin):
             return urls
         return []
 
-    def validate(self) -> Dict[str, Any]:
+    def validate(self) -> dict[str, Any]:
         urls = self._get_urls()
         if not urls:
             return {
@@ -53,7 +52,7 @@ class Plugin(BasePlugin):
         except Exception as exc:
             return {"success": False, "msg": f"validation error: {exc}"}
 
-    def sync(self) -> Dict[str, Any]:
+    def sync(self) -> dict[str, Any]:
         """Send a test notification if 'test' is true in config or called via
         the blueprint.
 
@@ -88,7 +87,7 @@ class Plugin(BasePlugin):
         except Exception as exc:
             return {"success": False, "msg": f"send error: {exc}"}
 
-    def health(self) -> Dict[str, Any]:
+    def health(self) -> dict[str, Any]:
         # Lightweight health: same as validate but without raising on ImportError
         urls = self._get_urls()
         if not urls:

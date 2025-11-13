@@ -1,4 +1,21 @@
 {
     "git.branchProtectionPrompt": "alwaysCommit",
-    "chat.agent.maxRequests": 250
+    "chat.agent.maxRequests": 250,
+    // Exclude GitHub workflows from Pylance/Pyright analysis to avoid false context warnings
+    "python.analysis.exclude": [
+        ".github/workflows"
+    ],
+    // Ensure imports resolve within workspace
+    "python.analysis.extraPaths": [
+        "researcharr"
+    ],
+    // Suppress GitHub Actions schema warnings for secrets context access
+    "github-actions.workflows.pinned.refresh": false,
+    "yaml.customTags": [
+        "!secrets"
+    ],
+    // Disable validation warnings for GitHub Actions expressions
+    "github-actions.workflows.pinned.uses.cache": "off",
+    // Disable GitHub Actions workflow validation to prevent false positives
+    "github-actions.workflows.validation": false
 }

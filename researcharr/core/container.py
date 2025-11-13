@@ -9,7 +9,8 @@ Provides a lightweight dependency injection container that supports:
 
 import logging
 import threading
-from typing import Any, Callable, Dict, Optional, Type, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 
@@ -27,9 +28,9 @@ class ServiceContainer:
     """
 
     def __init__(self):
-        self._services: Dict[str, Any] = {}
-        self._factories: Dict[str, Callable[[], Any]] = {}
-        self._singletons: Dict[str, Any] = {}
+        self._services: dict[str, Any] = {}
+        self._factories: dict[str, Callable[[], Any]] = {}
+        self._singletons: dict[str, Any] = {}
         self._lock = threading.RLock()
         self._resolving: set = set()
 
@@ -45,7 +46,7 @@ class ServiceContainer:
             self._factories[name] = factory
             LOGGER.debug("Registered factory service: %s", name)
 
-    def register_class(self, name: str, cls: Type[T], singleton: bool = True) -> None:
+    def register_class(self, name: str, cls: type[T], singleton: bool = True) -> None:
         """Register a class constructor, optionally as singleton."""
 
         def factory():
@@ -102,7 +103,7 @@ class ServiceContainer:
         with self._lock:
             return name in self._singletons or name in self._factories
 
-    def list_services(self) -> Dict[str, str]:
+    def list_services(self) -> dict[str, str]:
         """List all registered services and their types."""
         with self._lock:
             services = {}
@@ -124,7 +125,7 @@ class ServiceContainer:
 
 
 # Global container instance for application use
-_container: Optional[ServiceContainer] = None
+_container: ServiceContainer | None = None
 _container_lock = threading.Lock()
 
 
@@ -156,7 +157,7 @@ def register_factory(name: str, factory: Callable[[], Any]) -> None:
     get_container().register_factory(name, factory)
 
 
-def register_class(name: str, cls: Type[T], singleton: bool = True) -> None:
+def register_class(name: str, cls: type[T], singleton: bool = True) -> None:
     """Register a class in the global container."""
     get_container().register_class(name, cls, singleton)
 

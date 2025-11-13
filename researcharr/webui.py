@@ -16,7 +16,7 @@ import importlib
 import importlib.util
 import os
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
 from unittest.mock import Mock as _Mock
 
 from werkzeug.security import generate_password_hash
@@ -31,7 +31,7 @@ try:
     _impl = sys.modules.get("webui")
     if _impl is None:
         _impl = importlib.import_module("webui")
-except Exception:
+except Exception:  # pragma: no cover - defensive fallback for test isolation
     # Fall back to loading by file path from the repo root
     try:
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
@@ -41,7 +41,7 @@ except Exception:
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)  # type: ignore
             _impl = mod
-    except Exception:
+    except Exception:  # pragma: no cover
         _impl = None
 
 # Defensive: if a test injected a Mock as the underlying implementation
@@ -52,12 +52,12 @@ if isinstance(_impl, _Mock):
     _impl = None
 # Module-level `rdb` that tests can patch (monkeypatch sets this on
 # `researcharr.webui` to control DB behavior). Default to None.
-rdb: Optional[Any] = None
+rdb: Any | None = None
 
 # USER_CONFIG_PATH: prefer underlying impl value when available and
 # when the implementation originates from a different file. If the impl
 # is the repository root module we leave the path unset (None).
-USER_CONFIG_PATH: Optional[str] = None
+USER_CONFIG_PATH: str | None = None
 if _impl is not None:
     try:
         _impl_file = getattr(_impl, "__file__", None)
@@ -66,7 +66,7 @@ if _impl is not None:
         )
         if _impl_file and os.path.abspath(str(_impl_file)) != repo_candidate:
             USER_CONFIG_PATH = getattr(_impl, "USER_CONFIG_PATH", None)
-    except Exception:
+    except Exception:  # pragma: no cover - defensive path resolution
         USER_CONFIG_PATH = None
 
 
@@ -76,7 +76,7 @@ def _env_bool(name: str, default: str = "false") -> bool:
     return str(v).lower() in ("1", "true", "yes")
 
 
-def load_user_config() -> Optional[Dict[str, Optional[str]]]:
+def load_user_config() -> dict[str, str | None] | None:
     """Return persisted web UI user dict or None.
 
     Prefer the shim `rdb` if present; otherwise delegate to the
@@ -92,16 +92,16 @@ def load_user_config() -> Optional[Dict[str, Optional[str]]]:
 
     try:
         return rdb.load_user()
-    except Exception:
+    except Exception:  # pragma: no cover - defensive DB error handling
         return None
 
 
 def save_user_config(
     username: str,
     password_hash: str,
-    api_key: Optional[str] = None,
-    api_key_hash: Optional[str] = None,
-) -> Dict[str, Optional[str]]:
+    api_key: str | None = None,
+    api_key_hash: str | None = None,
+) -> dict[str, str | None]:
     """Persist user credentials via the shim `rdb`.
 
     If `rdb` is not available raise RuntimeError (tests expect this).

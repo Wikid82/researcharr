@@ -5,6 +5,7 @@ The canonical implementation remains at the repository root (`researcharr.py`) a
 the `researcharr/` package. This shim ensures any callers that execute
 `scripts/researcharr.py` still import the canonical module.
 """
+
 from importlib import import_module
 
 

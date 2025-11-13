@@ -3,6 +3,7 @@
 
 Usage: run from repo root with the project's venv (the task will run it).
 """
+
 import shlex
 import subprocess
 import sys
@@ -14,7 +15,10 @@ TIMEOUT = 60  # seconds per test
 def collect_tests():
     print("Collecting tests...")
     proc = subprocess.run(
-        shlex.split(PYTEST + " --collect-only -q tests/"), capture_output=True, text=True
+        shlex.split(PYTEST + " --collect-only -q tests/"),
+        check=False,
+        capture_output=True,
+        text=True,
     )
     if proc.returncode != 0:
         print("pytest --collect-only failed:\n", proc.stdout, proc.stderr)
@@ -28,7 +32,7 @@ def run_test(nodeid):
     cmd = shlex.split(PYTEST + " -q " + shlex.quote(nodeid))
     print("\n=== Running:", nodeid)
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=TIMEOUT)
+        proc = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=TIMEOUT)
         print(proc.stdout)
         if proc.returncode == 0:
             print("RESULT: PASS")

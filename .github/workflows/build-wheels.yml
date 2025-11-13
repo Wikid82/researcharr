@@ -7,6 +7,7 @@ on:
       - 'ci/**'
       - development
       - feature/**
+      - fix/**
 
 jobs:
   build-wheels:

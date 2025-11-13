@@ -34,7 +34,9 @@ def test_backups_create_and_import_and_restore(client, login, tmp_path, monkeypa
     # Monkeypatch the underlying create_backup_file to a simple stub
     from researcharr import factory
 
-    monkeypatch.setattr(factory, "create_backup_file", lambda a, b, prefix="": "test-backup.zip")
+    monkeypatch.setattr(
+        factory, "create_backup_file", lambda a, b, prefix="": "test-backup.zip", raising=False
+    )
 
     # create should return ok and a basename
     rv = client.post("/api/backups/create")
@@ -68,7 +70,7 @@ def test_backups_create_and_import_and_restore(client, login, tmp_path, monkeypa
         zf.writestr("config/config.yml", "restored: yes")
 
     # avoid pre-restore creation by stubbing create_backup_file to None
-    monkeypatch.setattr(factory, "create_backup_file", lambda a, b, prefix="": None)
+    monkeypatch.setattr(factory, "create_backup_file", lambda a, b, prefix="": None, raising=False)
     rv4 = client.post(f"/api/backups/restore/{fname}")
     assert rv4.status_code == 200
     jr = rv4.get_json()

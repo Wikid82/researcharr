@@ -1203,6 +1203,7 @@ except Exception:  # nosec B110 -- intentional broad except for resilience
 # succeeds even if another test removed or replaced the mapping.
 try:
     import importlib as _il
+
     # Avoid double-wrapping importlib.reload in long test runs which can
     # lead to recursion errors. Record whether we've already applied the
     # patch (using a flag on the importlib module) and store the original

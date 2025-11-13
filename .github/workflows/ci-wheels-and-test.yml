@@ -110,8 +110,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-logs-${{ matrix.python }}
-          path: .tmp/*.log
+          name: test-logs-${{ matrix.python-version }}
+          path: |
+            .tmp/*-test-*.log
+            .tmp/*-build-*.log
           retention-days: 7
 
 

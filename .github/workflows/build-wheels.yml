@@ -7,7 +7,7 @@ on:
       - 'ci/**'
       - development
       - feature/**
-      
+
 jobs:
   build-wheels:
     name: Build pure-Python wheels (matrix)

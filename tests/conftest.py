@@ -678,6 +678,23 @@ def patch_config_and_loggers(tmp_path_factory, monkeypatch):
     def patched_open(file, mode="r", *args, **kwargs):
         if str(file) == "/config/config.yml":
             return real_open(config_path, mode, *args, **kwargs)
+        # Ensure parent directories exist when opening for write/append/create
+        try:
+            import os as _os
+
+            if isinstance(file, (str, bytes)) or hasattr(file, "__fspath__"):
+                # Only attempt to create parent dir for filesystem paths
+                if any(m in mode for m in ("w", "a", "x")):
+                    try:
+                        parent = _os.path.dirname(str(file))
+                        if parent:
+                            _os.makedirs(parent, exist_ok=True)
+                    except Exception:
+                        # Best-effort: do not fail open if directory creation fails
+                        pass
+        except Exception:
+            pass
+
         return real_open(file, mode, *args, **kwargs)
 
     monkeypatch.setattr("builtins.open", patched_open)

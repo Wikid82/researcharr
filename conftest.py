@@ -2,7 +2,7 @@ import os
 
 ORDER_F='ordering_nodeids_window.txt'
 if os.path.exists(ORDER_F):
-    ordering=[l.strip() for l in open(ORDER_F).read().splitlines() if l.strip()]
+    ordering=[line.strip() for line in open(ORDER_F).read().splitlines() if line.strip()]
 else:
     ordering=[]
 order_index={node:i for i,node in enumerate(ordering)}

@@ -98,11 +98,14 @@ jobs:
           VERSIONS: ${{ matrix.python }}
         run: |
           # CI workspace contains ./wheelhouse produced by previous job
+          set +e  # Allow commands to continue even if script fails
           echo "PWD before script: $(pwd)"
           ls -la .tmp/ 2>/dev/null && echo ".tmp exists before script" || echo ".tmp does NOT exist before script"
           ./scripts/ci-multi-version.sh --versions "${{ matrix.python }}" --log-level summary
+          EXIT_CODE=$?
           echo "PWD after script: $(pwd)"
           ls -la .tmp/ 2>/dev/null && echo ".tmp exists after script with $(ls .tmp/ | wc -l) files" || echo ".tmp does NOT exist after script"
+          exit $EXIT_CODE  # Preserve the original exit code
       - name: List log files (debug)
         if: always()
         run: |

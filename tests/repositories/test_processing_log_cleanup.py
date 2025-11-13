@@ -52,11 +52,11 @@ def test_cleanup_old_logs_deletes_expected(tmp_path):
     # Reset researcharr and logging manager state so caplog works
     try:
         # Clear researcharr.cron handlers and restore propagation/level
-        l = logging.getLogger("researcharr.cron")
-        l.handlers[:] = []
-        l.filters[:] = [] if getattr(l, "filters", None) is not None else []
-        l.propagate = True
-        l.setLevel(logging.NOTSET)
+        cron_logger = logging.getLogger("researcharr.cron")
+        cron_logger.handlers[:] = []
+        cron_logger.filters[:] = [] if getattr(cron_logger, "filters", None) is not None else []
+        cron_logger.propagate = True
+        cron_logger.setLevel(logging.NOTSET)
         # For any logger under the researcharr namespace, clear handlers/filters
         lm = logging.root.manager
         for name, entry in list(lm.loggerDict.items()):
@@ -121,11 +121,11 @@ def test_cleanup_no_deletes_when_within_window(tmp_path):
     except Exception:
         pass
     try:
-        l = logging.getLogger("researcharr.cron")
-        l.handlers[:] = []
-        l.filters[:] = [] if getattr(l, "filters", None) is not None else []
-        l.propagate = True
-        l.setLevel(logging.NOTSET)
+        cron_logger = logging.getLogger("researcharr.cron")
+        cron_logger.handlers[:] = []
+        cron_logger.filters[:] = [] if getattr(cron_logger, "filters", None) is not None else []
+        cron_logger.propagate = True
+        cron_logger.setLevel(logging.NOTSET)
         lm = logging.root.manager
         for name, entry in list(lm.loggerDict.items()):
             if not isinstance(name, str):

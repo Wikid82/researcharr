@@ -65,9 +65,9 @@ def isolate_logging():
     # Save original state
     original_level = logging.root.level
     original_handlers = logging.root.handlers[:]
-    
+
     yield
-    
+
     # Restore original state
     logging.root.setLevel(original_level)
     for handler in logging.root.handlers[:]:
@@ -80,9 +80,9 @@ def isolate_prometheus():
     """Clean up Prometheus collectors between tests."""
     # Get list of collectors before test
     before = set(REGISTRY._collector_to_names.keys())
-    
+
     yield
-    
+
     # Remove collectors added during test
     after = set(REGISTRY._collector_to_names.keys())
     for collector in after - before:
@@ -98,15 +98,15 @@ def isolate_factory_state():
         'researcharr.factory',
         'factory',
     ]
-    
+
     # Save module state
     saved_modules = {}
     for mod_name in factory_modules:
         if mod_name in sys.modules:
             saved_modules[mod_name] = sys.modules[mod_name]
-    
+
     yield
-    
+
     # Restore or clean up modules
     for mod_name in factory_modules:
         if mod_name in saved_modules:
@@ -122,7 +122,7 @@ def isolate_factory_state():
 # Add explicit cleanup in test
 def test_setup_generates_api_and_persists():
     # ... existing test code ...
-    
+
     # Explicit cleanup
     if hasattr(researcharr.factory, '_api_generated'):
         delattr(researcharr.factory, '_api_generated')
@@ -136,7 +136,7 @@ def test_updates_upgrade_in_image_and_invalid_url():
     for attr in ['_running_in_image', '_upgrade_available']:
         if hasattr(researcharr.factory, attr):
             delattr(researcharr.factory, attr)
-    
+
     # ... existing test code ...
 ```
 

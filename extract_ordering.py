@@ -4,14 +4,15 @@ This tool is only used during triage. It uses defusedxml to avoid
 vulnerable stdlib XML parsing (Bandit B405/B314) and writes its output
 into the system temp directory.
 """
-import defusedxml
-
-defusedxml.defuse_stdlib()
 import logging
 import os
 import tempfile
 
+import defusedxml
 import defusedxml.ElementTree as ET
+
+# Ensure stdlib XML parsers are defused before any parsing occurs.
+defusedxml.defuse_stdlib()
 
 logging.basicConfig(level=logging.INFO)
 

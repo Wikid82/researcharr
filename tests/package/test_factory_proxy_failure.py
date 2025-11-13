@@ -46,7 +46,7 @@ def test_factory_proxy_placeholder_raises():
                 # restore package attribute if package loaded
                 try:
                     _pkg = importlib.import_module("researcharr")
-                    setattr(_pkg, "factory", orig_pkg)
+                    _pkg.factory = orig_pkg
                 except Exception:
                     pass
         except Exception:
@@ -114,7 +114,7 @@ def test_factory_delegate_invocation_without_impl_raises_importerror_or_handles(
                 sys.modules["researcharr.factory"] = orig_pkg
                 try:
                     _pkg = importlib.import_module("researcharr")
-                    setattr(_pkg, "factory", orig_pkg)
+                    _pkg.factory = orig_pkg
                 except Exception:
                     pass
         except Exception:

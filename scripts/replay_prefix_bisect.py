@@ -16,7 +16,7 @@ import sys
 import sysconfig
 import tempfile
 
-import defusedxml.ElementTree as ET
+from defusedxml import ElementTree
 
 
 def parse_args():
@@ -93,8 +93,8 @@ def xml_shows_culprit_failure(xml_path, culprit_nodeid):
     if not os.path.exists(xml_path):
         return False
     try:
-        tree = ET.parse(xml_path)
-    except ET.ParseError:
+        tree = ElementTree.parse(xml_path)
+    except ElementTree.ParseError:
         return False
     root = tree.getroot()
     mod, name = nodeid_to_classname_and_name(culprit_nodeid)

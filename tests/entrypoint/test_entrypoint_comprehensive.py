@@ -73,7 +73,7 @@ class TestEntrypointModule(unittest.TestCase):
 
     def test_init_db_default_path(self):
         """Test database initialization with default path."""
-        with patch("entrypoint.sqlite3.connect") as mock_connect:
+        with patch.object(entrypoint.sqlite3, "connect") as mock_connect:
             mock_conn = Mock()
             mock_cursor = Mock()
             mock_connect.return_value = mock_conn
@@ -91,7 +91,7 @@ class TestEntrypointModule(unittest.TestCase):
         """Test database initialization with custom path."""
         custom_path = "/custom/path/test.db"
 
-        with patch("entrypoint.sqlite3.connect") as mock_connect:
+        with patch.object(entrypoint.sqlite3, "connect") as mock_connect:
             mock_conn = Mock()
             mock_cursor = Mock()
             mock_connect.return_value = mock_conn
@@ -221,42 +221,40 @@ class TestEntrypointModule(unittest.TestCase):
         self.assertFalse(result)
         logger.warning.assert_called_with("Missing Radarr URL or API key")
 
-    @patch("entrypoint.requests.get")
-    def test_check_radarr_connection_success(self, mock_get):
+    def test_check_radarr_connection_success(self):
         """Test successful Radarr connection."""
         logger = Mock()
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_get.return_value = mock_response
+        
+        with patch.object(entrypoint.requests, "get", return_value=mock_response) as mock_get:
+            result = entrypoint.check_radarr_connection("http://example.com", "api_key", logger)
+            
+            self.assertTrue(result)
+            logger.info.assert_called_with("Radarr connection successful.")
 
-        result = entrypoint.check_radarr_connection("http://example.com", "api_key", logger)
-
-        self.assertTrue(result)
-        logger.info.assert_called_with("Radarr connection successful.")
-
-    @patch("entrypoint.requests.get")
-    def test_check_radarr_connection_non_200_status(self, mock_get):
+    def test_check_radarr_connection_non_200_status(self):
         """Test Radarr connection with non-200 status."""
         logger = Mock()
         mock_response = Mock()
         mock_response.status_code = 404
-        mock_get.return_value = mock_response
+        
+        with patch.object(entrypoint.requests, "get", return_value=mock_response) as mock_get:
+            result = entrypoint.check_radarr_connection("http://example.com", "api_key", logger)
+            
+            self.assertFalse(result)
+            logger.error.assert_called_with("Radarr connection failed with status %s", 404)
 
-        result = entrypoint.check_radarr_connection("http://example.com", "api_key", logger)
-
-        self.assertFalse(result)
-        logger.error.assert_called_with("Radarr connection failed with status %s", 404)
-
-    @patch("entrypoint.requests.get")
-    def test_check_radarr_connection_exception(self, mock_get):
+    def test_check_radarr_connection_exception(self):
         """Test Radarr connection with request exception."""
         logger = Mock()
-        mock_get.side_effect = Exception("Connection error")
-
-        result = entrypoint.check_radarr_connection("http://example.com", "api_key", logger)
-
-        self.assertFalse(result)
-        logger.error.assert_called_with("Radarr connection failed: %s", mock_get.side_effect)
+        error = Exception("Connection error")
+        
+        with patch.object(entrypoint.requests, "get", side_effect=error) as mock_get:
+            result = entrypoint.check_radarr_connection("http://example.com", "api_key", logger)
+            
+            self.assertFalse(result)
+            logger.error.assert_called_with("Radarr connection failed: %s", error)
 
     def test_check_sonarr_connection_missing_url(self):
         """Test Sonarr connection check with missing URL."""
@@ -276,74 +274,64 @@ class TestEntrypointModule(unittest.TestCase):
         self.assertFalse(result)
         logger.warning.assert_called_with("Missing Sonarr URL or API key")
 
-    @patch("entrypoint.requests.get")
-    def test_check_sonarr_connection_success(self, mock_get):
+    def test_check_sonarr_connection_success(self):
         """Test successful Sonarr connection."""
         logger = Mock()
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_get.return_value = mock_response
+        
+        with patch.object(entrypoint.requests, "get", return_value=mock_response) as mock_get:
+            result = entrypoint.check_sonarr_connection("http://example.com", "api_key", logger)
+            
+            self.assertTrue(result)
+            logger.info.assert_called_with("Sonarr connection successful.")
 
-        result = entrypoint.check_sonarr_connection("http://example.com", "api_key", logger)
-
-        self.assertTrue(result)
-        logger.info.assert_called_with("Sonarr connection successful.")
-
-    @patch("entrypoint.requests.get")
-    def test_check_sonarr_connection_non_200_status(self, mock_get):
+    def test_check_sonarr_connection_non_200_status(self):
         """Test Sonarr connection with non-200 status."""
         logger = Mock()
         mock_response = Mock()
         mock_response.status_code = 500
-        mock_get.return_value = mock_response
+        
+        with patch.object(entrypoint.requests, "get", return_value=mock_response) as mock_get:
+            result = entrypoint.check_sonarr_connection("http://example.com", "api_key", logger)
+            
+            self.assertFalse(result)
+            logger.error.assert_called_with("Sonarr connection failed with status %s", 500)
 
-        result = entrypoint.check_sonarr_connection("http://example.com", "api_key", logger)
-
-        self.assertFalse(result)
-        logger.error.assert_called_with("Sonarr connection failed with status %s", 500)
-
-    @patch("entrypoint.requests.get")
-    def test_check_sonarr_connection_exception(self, mock_get):
+    def test_check_sonarr_connection_exception(self):
         """Test Sonarr connection with request exception."""
         logger = Mock()
-        mock_get.side_effect = Exception("Network error")
-
-        result = entrypoint.check_sonarr_connection("http://example.com", "api_key", logger)
-
-        self.assertFalse(result)
-        logger.error.assert_called_with("Sonarr connection failed: %s", mock_get.side_effect)
+        error = Exception("Network error")
+        
+        with patch.object(entrypoint.requests, "get", side_effect=error) as mock_get:
+            result = entrypoint.check_sonarr_connection("http://example.com", "api_key", logger)
+            
+            self.assertFalse(result)
+            logger.error.assert_called_with("Sonarr connection failed: %s", error)
 
     def test_load_config_missing_file(self):
         """Test loading config with missing file."""
         with self.assertRaises(FileNotFoundError):
             entrypoint.load_config("nonexistent.yml")
 
-    @patch("builtins.open", new_callable=mock_open, read_data="key: value\nother: data")
-    @patch("entrypoint.os.path.exists")
-    def test_load_config_valid_file(self, mock_exists, mock_file):
+    def test_load_config_valid_file(self):
         """Test loading valid config file."""
-        mock_exists.return_value = True
+        with patch.object(entrypoint.os.path, "exists", return_value=True) as mock_exists:
+            with patch("builtins.open", mock_open(read_data="key: value\nother: data")) as mock_file:
+                with patch.object(entrypoint.yaml, "safe_load", return_value={"key": "value", "other": "data"}) as mock_yaml:
+                    result = entrypoint.load_config("test.yml")
+                    
+                    self.assertEqual(result, {"key": "value", "other": "data"})
+                    mock_file.assert_called_with("test.yml")
 
-        with patch("entrypoint.yaml.safe_load") as mock_yaml:
-            mock_yaml.return_value = {"key": "value", "other": "data"}
-
-            result = entrypoint.load_config("test.yml")
-
-            self.assertEqual(result, {"key": "value", "other": "data"})
-            mock_file.assert_called_with("test.yml")
-
-    @patch("builtins.open", new_callable=mock_open, read_data="")
-    @patch("entrypoint.os.path.exists")
-    def test_load_config_empty_file(self, mock_exists, mock_file):
+    def test_load_config_empty_file(self):
         """Test loading empty config file."""
-        mock_exists.return_value = True
-
-        with patch("entrypoint.yaml.safe_load") as mock_yaml:
-            mock_yaml.return_value = None
-
-            result = entrypoint.load_config("empty.yml")
-
-            self.assertEqual(result, {})
+        with patch.object(entrypoint.os.path, "exists", return_value=True) as mock_exists:
+            with patch("builtins.open", mock_open(read_data="")) as mock_file:
+                with patch.object(entrypoint.yaml, "safe_load", return_value=None) as mock_yaml:
+                    result = entrypoint.load_config("empty.yml")
+                    
+                    self.assertEqual(result, {})
 
     def test_create_metrics_app(self):
         """Test creating metrics Flask app."""

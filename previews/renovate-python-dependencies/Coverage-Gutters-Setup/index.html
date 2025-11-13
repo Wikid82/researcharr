@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="researcharr contributors" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Coverage Gutters Setup - researcharr</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/css/researcharr.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Coverage Gutters Setup";
+        var mkdocs_page_input_path = "Coverage-Gutters-Setup.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> researcharr
+        </a>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">researcharr documentation — Day One</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../API/">ResearchArr API (v1)</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Backup-and-Recovery/">Backup and Recovery Procedures</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CI-and-Development/">CI and Development</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CLI-Usage/">CLI Usage Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CONFIGURATION/">Configuration Reference</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Changelog/">Changelog</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Contributing/">Contributing to researcharr</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-CI-Local-Differences/">Coverage Differences: CI vs Local</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Example-Comparison/">Coverage Gutters Example Structure</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Quick-Reference/">Coverage Gutters - Quick Reference Card</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Quick-Start/">Coverage Gutters - Visual Quick Start Guide</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Coverage Gutters Setup</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#quick-start">Quick Start</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#vs-code-tasks">VS Code Tasks</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#extension-features">Extension Features</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#visual-indicators">Visual Indicators</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#commands">Commands</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#status-bar">Status Bar</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#tips">Tips</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#color-customization">Color Customization</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#references">References</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEV/">DEV</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Deployment-and-Resources/">Deployment and Resource Recommendations</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Environment-Variables/">Environment variables</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../FAQ/">FAQ</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Getting-Started/">Getting Started</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Health-and-Metrics/">Health and Metrics Endpoints</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Integrations/">Integrations</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Logs/">Logs and Live Streaming</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Packaging-and-Distribution/">Packaging and Distribution</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Plugins/">Plugins and instance configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Recent-Changes/">Recent Changes</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Renovate-Configuration/">Renovate Bot Configuration Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Roadmap/">Roadmap</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../SERVICES_ARCHITECTURE/">Services Architecture</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Status-and-Warnings/">System status warnings and how to fix them</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Versioning/">Versioning &amp; Releases</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../WHEELHOUSE/">Wheelhouse (built wheels) workflow</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">researcharr</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Coverage Gutters Setup</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="coverage-gutters-setup">Coverage Gutters Setup</h1>
+<p>This project is configured to work with the <a href="https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters">Coverage Gutters</a> VS Code extension.</p>
+<h2 id="quick-start">Quick Start</h2>
+<ol>
+<li><strong>Install the Extension</strong> (if not already installed):</li>
+<li>Search for "Coverage Gutters" in VS Code Extensions</li>
+<li>
+<p>Or install via CLI: <code>code --install-extension ryanluker.vscode-coverage-gutters</code></p>
+</li>
+<li>
+<p><strong>Generate Coverage</strong>:</p>
+</li>
+<li>Run tests via the test task: <code>Ctrl+Shift+P</code> → "Tasks: Run Test Task"</li>
+<li>Or manually: <code>python -m pytest tests/ --cov=. --cov-report=xml</code></li>
+<li>
+<p>This creates <code>coverage.xml</code> in the project root</p>
+</li>
+<li>
+<p><strong>View Coverage in Editor</strong>:</p>
+</li>
+<li>Click "Watch" in the VS Code status bar (bottom), or</li>
+<li>Use command palette: <code>Coverage Gutters: Display Coverage</code></li>
+<li>
+<p>Green/red indicators will appear in the gutter and on lines</p>
+</li>
+<li>
+<p><strong>Preview HTML Report</strong>:</p>
+</li>
+<li>Command: <code>Coverage Gutters: Preview Coverage Report</code></li>
+<li>Opens <code>htmlcov/index.html</code> in browser</li>
+</ol>
+<h2 id="configuration">Configuration</h2>
+<p>The project is pre-configured with:</p>
+<ul>
+<li><strong>Coverage file</strong>: <code>coverage.xml</code> (auto-generated by pytest)</li>
+<li><strong>HTML report</strong>: <code>htmlcov/index.html</code></li>
+<li><strong>Gutter icons</strong>: Green (covered), Red (uncovered), Yellow (partial)</li>
+<li><strong>Line highlighting</strong>: Enabled with subtle colors</li>
+</ul>
+<h3 id="vs-code-tasks">VS Code Tasks</h3>
+<p>Use <code>Ctrl+Shift+P</code> → "Tasks: Run Task":</p>
+<ul>
+<li><strong>Run Tests with Coverage</strong> (default test task) - Full suite with coverage</li>
+<li><strong>Run Tests (Quick)</strong> - Fast run without coverage</li>
+<li><strong>Run Current Test File with Coverage</strong> - Test only the open file</li>
+</ul>
+<h2 id="extension-features">Extension Features</h2>
+<h3 id="visual-indicators">Visual Indicators</h3>
+<ul>
+<li><strong>Gutter icons</strong>: Green/red/yellow bars in the left margin</li>
+<li><strong>Line highlighting</strong>: Background colors on code lines</li>
+<li><strong>Ruler marks</strong>: Small colored marks in the scrollbar</li>
+</ul>
+<h3 id="commands">Commands</h3>
+<p>Access via <code>Ctrl+Shift+P</code>:</p>
+<ul>
+<li><code>Coverage Gutters: Display Coverage</code> - Show coverage</li>
+<li><code>Coverage Gutters: Watch</code> - Auto-refresh when coverage file changes</li>
+<li><code>Coverage Gutters: Remove Coverage</code> - Hide coverage</li>
+<li><code>Coverage Gutters: Preview Coverage Report</code> - Open HTML report</li>
+</ul>
+<h3 id="status-bar">Status Bar</h3>
+<p>Click the coverage indicator in the bottom status bar to toggle coverage display.</p>
+<h2 id="tips">Tips</h2>
+<ol>
+<li><strong>Enable Watch Mode</strong>: Click "Watch" so coverage updates automatically after running tests</li>
+<li><strong>Focus on Files</strong>: The extension shows coverage for the currently open file</li>
+<li><strong>Multiple Formats</strong>: Configured to look for <code>coverage.xml</code>, <code>cov.xml</code>, and <code>lcov.info</code></li>
+<li><strong>HTML Reports</strong>: Use the preview command to see full detailed coverage tables</li>
+</ol>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<p>If coverage doesn't appear:</p>
+<ol>
+<li>Ensure <code>coverage.xml</code> exists in the project root</li>
+<li>Click "Watch" in the status bar</li>
+<li>Try <code>Coverage Gutters: Display Coverage</code> command</li>
+<li>Check the Output panel (select "Coverage Gutters" from dropdown)</li>
+</ol>
+<h2 id="color-customization">Color Customization</h2>
+<p>Edit <code>.vscode/settings.json</code> to customize highlight colors:</p>
+<pre><code class="language-json">{
+  &quot;coverage-gutters.highlightdark&quot;: &quot;rgba(20, 200, 20, 0.3)&quot;,      // Green for covered
+  &quot;coverage-gutters.noHighlightDark&quot;: &quot;rgba(200, 20, 20, 0.3)&quot;,    // Red for uncovered
+  &quot;coverage-gutters.partialHighlightDark&quot;: &quot;rgba(200, 200, 20, 0.3)&quot; // Yellow for partial
+}
+</code></pre>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://github.com/ryanluker/vscode-coverage-gutters">Extension Documentation</a></li>
+<li><a href="https://github.com/ryanluker/vscode-coverage-gutters/tree/main/example/python">Python Example</a></li>
+<li><a href="./pyproject.toml">Our Coverage Config</a> - See <code>[tool.coverage.*]</code> sections</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../Coverage-Gutters-Quick-Start/" class="btn btn-neutral float-left" title="Coverage Gutters - Visual Quick Start Guide"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../DEV/" class="btn btn-neutral float-right" title="DEV">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="None" class="fa fa-code-fork" style="color: #fcfcfc"> Wikid82/researcharr</a>
+        </span>
+    
+    
+      <span><a href="../Coverage-Gutters-Quick-Start/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../DEV/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

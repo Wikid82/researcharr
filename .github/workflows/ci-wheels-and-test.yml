@@ -111,6 +111,7 @@ jobs:
     needs: build-wheels
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python: [ '3.10', '3.11', '3.12', '3.13', '3.14' ]
     steps:
@@ -128,6 +129,7 @@ jobs:
           mkdir -p ./wheelhouse || true
       - name: Download wheelhouse (artifact, fallback)
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           path: ./wheelhouse
       - name: Flatten wheelhouse artifacts

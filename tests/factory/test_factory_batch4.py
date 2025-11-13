@@ -149,10 +149,13 @@ def test_general_settings_regen_api(client, login, monkeypatch):
     from researcharr import factory
 
     # stub webui.save_user_config so it doesn't perform IO
+    # Allow setting `webui` even when the attribute is not present on the
+    # module (ModuleProxy behavior in CI can leave some attributes missing).
     monkeypatch.setattr(
         factory,
         "webui",
         type("W", (), {"save_user_config": lambda *a, **k: None, "load_user_config": lambda: {}}),
+        raising=False,
     )
     login()
     rv = client.post("/settings/general", data={"regen_api": "1"})

@@ -1,9 +1,0 @@
----
-title: researcharr
-# For GitHub project pages the site is served under /<repo-name>/ so set
-# baseurl to the repository name. This ensures `{{ site.baseurl }}` is
-# populated and links generated with it resolve correctly on GitHub Pages.
-baseurl: "/researcharr"
-theme: null
-# You can add other site-wide variables here, for example:
-# logo: /static/logo.jpg

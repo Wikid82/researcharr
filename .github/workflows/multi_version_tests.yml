@@ -1,14 +1,17 @@
 ---
 name: Multi-Version Tests
 
+# Temporarily disabled - using ci-wheels-and-test.yml instead
+# To re-enable, remove this comment block and restore the 'on:' triggers below
 on:
-  pull_request: {}
-  push:
-    branches:
-      - main
-      - development
-      - nightly
-      - feature/**
+  workflow_dispatch: {}
+  # pull_request: {}
+  # push:
+  #   branches:
+  #     - main
+  #     - development
+  #     - nightly
+  #     - feature/**
 
 # When set to 'true' skip Docker build/publish and image scans. This allows
 # the repository to focus on fast test & lint feedback while Docker tasks

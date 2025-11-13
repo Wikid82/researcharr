@@ -19,6 +19,7 @@ except Exception:
     _VERBOSE_FACTORY_HELPER = False
 
 if not _VERBOSE_FACTORY_HELPER and _ORIG_STDERR_WRITE is not None:
+
     def _global_filtered_write(s):
         try:
             if isinstance(s, str) and ("[factory-helper-access]" in s or "[pkg-attr-access]" in s):
@@ -107,7 +108,6 @@ def _restore_run_job_if_mock():
     except Exception:
         pass
 
-
     @_pytest.fixture(autouse=True)
     def _suppress_factory_helper_logs(monkeypatch):
         """Silently drop noisy factory-helper lines from stderr unless explicitly enabled.
@@ -128,7 +128,9 @@ def _restore_run_job_if_mock():
 
         def _filtered_write(s):
             try:
-                if isinstance(s, str) and ("[factory-helper-access]" in s or "[pkg-attr-access]" in s):
+                if isinstance(s, str) and (
+                    "[factory-helper-access]" in s or "[pkg-attr-access]" in s
+                ):
                     # mimic sys.stderr.write return of number of written chars
                     return len(s)
             except Exception:
@@ -140,7 +142,6 @@ def _restore_run_job_if_mock():
             yield
         finally:
             monkeypatch.setattr(sys.stderr, "write", orig_write)
-
 
     def pytest_unconfigure(config):
         """Restore original stderr.write when tests complete.

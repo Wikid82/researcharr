@@ -117,12 +117,19 @@ jobs:
           find . -name "*.log" -type f -ls || echo "No log files found"
           echo "Disk usage of .tmp:"
           du -sh .tmp/ 2>/dev/null || echo ".tmp not found"
+      - name: Copy logs to accessible location
+        if: always()
+        run: |
+          # Copy logs to a simpler path without dots
+          cp .tmp/researcharr-build-*.log test-build.log 2>/dev/null || touch test-build.log
+          cp .tmp/researcharr-test-*.log test-results.log 2>/dev/null || touch test-results.log
+          ls -lh test-*.log
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-logs-${{ matrix.python }}
-          path: .tmp/*.log
+          path: test-*.log
           retention-days: 7
           if-no-files-found: error
 

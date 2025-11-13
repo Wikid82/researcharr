@@ -217,7 +217,7 @@ for version in ${VERSIONS}; do
         # then runs pytest. We mount the repo into /app so CI-produced wheelhouse can
         # be provided as an artifact and extracted next to the repo before this script
         # is invoked.
-        INSTALL_CMD='if [ -d /app/wheelhouse ]; then python -m pip install --no-index --find-links=/app/wheelhouse -r requirements.txt || true; fi;'
+        INSTALL_CMD='mkdir -p ${TMPDIR}; if [ -d /app/wheelhouse ]; then python -m pip install --no-index --find-links=/app/wheelhouse -r requirements.txt || true; fi;'
         CMD_STR="${INSTALL_CMD} pytest ${PYTEST_OPTS} ${TEST_TARGET} ${PYTEST_LOG_FLAGS[*]} ${MF_FLAG[*]} --disable-warnings"
 
         if docker run \
@@ -228,6 +228,7 @@ for version in ${VERSIONS}; do
                 -e TZ="${TZ}" \
                 -e TMPDIR="${TMPDIR}" \
                 -e XDG_CACHE_HOME="${XDG_CACHE_HOME}" \
+                -e PYTEST_ADDOPTS="-v --log-file=${TMPDIR}/pytest.log --log-file-mode=a -n auto --dist=loadfile -m 'not webui'" \
                 -v "$(pwd)":/app \
                 --entrypoint bash \
                 -w /app \
@@ -250,7 +251,7 @@ for version in ${VERSIONS}; do
         fi
         # Same behavior as the "full" branch but reduce console noise by grepping
         # for errors/passing indicators. Install from wheelhouse if present.
-        INSTALL_CMD='if [ -d /app/wheelhouse ]; then python -m pip install --no-index --find-links=/app/wheelhouse -r requirements.txt || true; fi;'
+        INSTALL_CMD='mkdir -p ${TMPDIR}; if [ -d /app/wheelhouse ]; then python -m pip install --no-index --find-links=/app/wheelhouse -r requirements.txt || true; fi;'
         CMD_STR="${INSTALL_CMD} pytest ${PYTEST_OPTS} ${TEST_TARGET} ${PYTEST_LOG_FLAGS[*]} ${MF_FLAG[*]} --disable-warnings"
 
         if docker run \
@@ -261,6 +262,7 @@ for version in ${VERSIONS}; do
             -e TZ="${TZ}" \
             -e TMPDIR="${TMPDIR}" \
             -e XDG_CACHE_HOME="${XDG_CACHE_HOME}" \
+            -e PYTEST_ADDOPTS="-v --log-file=${TMPDIR}/pytest.log --log-file-mode=a -n auto --dist=loadfile -m 'not webui'" \
             -v "$(pwd)":/app \
             --entrypoint bash \
             -w /app \

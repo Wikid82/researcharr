@@ -88,8 +88,19 @@ class TestFactoryRoutes:
         assert response.status_code == 200
         assert b"setup" in response.data.lower()
 
-    def test_setup_route_post_valid(self, app, client):
+    def test_setup_route_post_valid(self, app, client, monkeypatch):
         """Test setup route POST with valid data."""
+        import importlib
+        import sys as _sys
+
+        try:
+            webui_mod = importlib.import_module("researcharr.webui")
+            monkeypatch.setitem(_sys.modules, "webui", webui_mod)
+        except Exception:
+            import types
+
+            monkeypatch.setitem(_sys.modules, "webui", types.SimpleNamespace())
+
         with (
             patch("researcharr.factory.generate_password_hash") as mock_hash,
             patch("researcharr.webui.save_user_config", create=True) as mock_save,
@@ -245,10 +256,21 @@ class TestFactoryRoutes:
         response = client.get("/reset-password")
         assert response.status_code == 200
 
-    def test_reset_password_route_post(self, app, client):
+    def test_reset_password_route_post(self, app, client, monkeypatch):
         """Test reset password POST route."""
         with client.session_transaction() as sess:  # type: ignore[attr-defined]
             sess["logged_in"] = True
+
+        import importlib
+        import sys as _sys
+
+        try:
+            webui_mod = importlib.import_module("researcharr.webui")
+            monkeypatch.setitem(_sys.modules, "webui", webui_mod)
+        except Exception:
+            import types
+
+            monkeypatch.setitem(_sys.modules, "webui", types.SimpleNamespace())
 
         with (
             patch("researcharr.factory.generate_password_hash") as mock_hash,

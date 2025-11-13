@@ -14,18 +14,23 @@ import os
 import subprocess
 import sys
 import sysconfig
-import xml.etree.ElementTree as ET
+import tempfile
+
+import defusedxml.ElementTree as ET
 
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--shuffled", default="/tmp/shuffled_files.txt")
+    p.add_argument(
+        "--shuffled",
+        default=os.path.join(tempfile.gettempdir(), "shuffled_files.txt"),
+    )
     p.add_argument(
         "--culprit",
         required=True,
         help="Culprit nodeid (file::testname or file path).",
     )
-    p.add_argument("--out", default="/tmp/researcharr-bisect")
+    p.add_argument("--out", default=os.path.join(tempfile.gettempdir(), "researcharr-bisect"))
     return p.parse_args()
 
 
@@ -46,6 +51,9 @@ def run_pytest(prefix_files, culprit_nodeid, out_dir, idx):
     venv_py = os.path.join(os.getcwd(), ".venv", "bin", "python")
     py_exec = venv_py if os.path.exists(venv_py) else sys.executable
 
+    # sanitize prefix file paths: normalize paths and drop empties
+    safe_prefix = [os.path.normpath(str(p)) for p in prefix_files if p]
+
     args = [
         py_exec,
         "-m",
@@ -59,7 +67,7 @@ def run_pytest(prefix_files, culprit_nodeid, out_dir, idx):
         "--disable-warnings",
     ]
     # pass culprit last so the prefix order is preserved
-    args.extend(prefix_files)
+    args.extend(safe_prefix)
     args.append(culprit_nodeid)
 
     env = os.environ.copy()
@@ -75,6 +83,7 @@ def run_pytest(prefix_files, culprit_nodeid, out_dir, idx):
     )
 
     with open(log_path, "wb") as logf:
+        # nosec: B603 -- we pass a sanitized list of arguments and do not use shell=True.
         proc = subprocess.run(args, check=False, stdout=logf, stderr=logf, env=env)
 
     return proc.returncode, xml_path, log_path

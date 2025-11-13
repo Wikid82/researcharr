@@ -90,12 +90,22 @@ jobs:
           echo "TZ=UTC" >> $GITHUB_ENV
           echo "TMPDIR=/tmp/ci" >> $GITHUB_ENV
           echo "XDG_CACHE_HOME=/tmp/ci/.cache" >> $GITHUB_ENV
+      - name: Create log directory
+        run: |
+          mkdir -p .tmp
       - name: Run multi-version script (uses wheelhouse)
         env:
           VERSIONS: ${{ matrix.python }}
         run: |
           # CI workspace contains ./wheelhouse produced by previous job
           ./scripts/ci-multi-version.sh --versions "${{ matrix.python }}" --log-level summary
+      - name: List log files (debug)
+        if: always()
+        run: |
+          echo "Contents of .tmp directory:"
+          ls -la .tmp/ || echo "No .tmp directory found"
+          echo "Looking for log files:"
+          find . -name "*.log" -type f || echo "No log files found"
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v4

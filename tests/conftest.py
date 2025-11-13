@@ -293,6 +293,7 @@ def _reset_logger_levels_before_and_after_test():
     # Reset BEFORE the test
     try:
         import logging
+
         mgr = logging.root.manager
         # Reset any logger that belongs to the researcharr hierarchy so
         # tests cannot permanently disable them (which breaks pytest caplog).

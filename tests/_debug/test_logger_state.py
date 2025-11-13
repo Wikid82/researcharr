@@ -2,15 +2,15 @@ import logging
 
 
 def test_dump_researcharr_cron_logger_state():
-    l = logging.getLogger("researcharr.cron")
+    cron_logger = logging.getLogger("researcharr.cron")
     root = logging.getLogger()
-    print("DBG: researcharr.cron handlers:", len(l.handlers))
-    print("DBG: researcharr.cron propagate:", l.propagate)
-    print("DBG: researcharr.cron level:", l.level)
+    print("DBG: researcharr.cron handlers:", len(cron_logger.handlers))
+    print("DBG: researcharr.cron propagate:", cron_logger.propagate)
+    print("DBG: researcharr.cron level:", cron_logger.level)
     print("DBG: root handlers:", len(root.handlers))
     # show names of handlers
     try:
-        names = [getattr(h, "__class__", type(h)).__name__ for h in l.handlers]
+        names = [getattr(h, "__class__", type(h)).__name__ for h in cron_logger.handlers]
         print("DBG: researcharr.cron handler types:", names)
     except Exception:
         pass

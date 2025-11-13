@@ -9,7 +9,7 @@ import os
 import tempfile
 
 import defusedxml
-import defusedxml.ElementTree as ET
+import defusedxml.ElementTree as ElementTree
 
 # Ensure stdlib XML parsers are defused before any parsing occurs.
 defusedxml.defuse_stdlib()
@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO)
 P = 'artifacts/pairwise/random_12.xml'
 
 def main(xml_path: str = P) -> str:
-    tree = ET.parse(xml_path)
+    tree = ElementTree.parse(xml_path)
     root = tree.getroot()
     files = []
     for tc in root.findall('.//testcase'):

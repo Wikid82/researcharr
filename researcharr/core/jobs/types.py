@@ -73,6 +73,8 @@ class JobDefinition:
 
     # Dependencies (Phase 3)
     depends_on: list[UUID] = field(default_factory=list)
+    # Scheduling (UTC timestamp when job becomes eligible). None => immediate.
+    scheduled_at: datetime | None = None
 
     def __post_init__(self):
         """Validate job definition."""
@@ -103,6 +105,8 @@ class JobDefinition:
         data["priority"] = self.priority.value
         data["created_at"] = self.created_at.isoformat()
         data["depends_on"] = [str(dep_id) for dep_id in self.depends_on]
+        if self.scheduled_at:
+            data["scheduled_at"] = self.scheduled_at.isoformat()
         return data
 
     @classmethod
@@ -117,6 +121,11 @@ class JobDefinition:
         # Convert args list to tuple
         if "args" in data and isinstance(data["args"], list):
             data["args"] = tuple(data["args"])
+        if data.get("scheduled_at"):
+            try:
+                data["scheduled_at"] = datetime.fromisoformat(data["scheduled_at"])
+            except Exception:
+                data["scheduled_at"] = None
         return cls(**data)
 
     def to_json(self) -> str:

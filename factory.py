@@ -2598,14 +2598,19 @@ def create_app() -> Flask:
         if job_service is not None:
             try:
                 import asyncio
-                job_id = asyncio.run(job_service.submit_job("backup.create", kwargs={"prefix": prefix}))
+
+                job_id = asyncio.run(
+                    job_service.submit_job("backup.create", kwargs={"prefix": prefix})
+                )
                 return jsonify({"result": "queued", "job_id": str(job_id), "mode": "job"})
             except Exception:
                 pass
         if background_mgr is not None:
             try:
                 # background task returns only task id; result polled separately
-                tid = background_mgr.submit_backup_create(_create_backup_file, config_root, backups_dir, prefix)  # type: ignore[arg-type]
+                tid = background_mgr.submit_backup_create(
+                    _create_backup_file, config_root, backups_dir, prefix
+                )  # type: ignore[arg-type]
                 return jsonify({"result": "queued", "task_id": tid, "mode": "background"})
             except Exception:
                 pass
@@ -2812,7 +2817,12 @@ def create_app() -> Flask:
         if job_service is not None:
             try:
                 import asyncio
-                job_id = asyncio.run(job_service.submit_job("backup.restore", args=(name,), kwargs={"create_pre_backup": True}))
+
+                job_id = asyncio.run(
+                    job_service.submit_job(
+                        "backup.restore", args=(name,), kwargs={"create_pre_backup": True}
+                    )
+                )
                 return jsonify({"result": "queued", "job_id": str(job_id), "mode": "job"})
             except Exception:
                 pass
@@ -2823,6 +2833,7 @@ def create_app() -> Flask:
                     return jsonify({"error": "not_found"}), 404
                 # Use implementation restore for background async
                 from researcharr.backups_impl import restore_backup as _restore
+
                 tid = background_mgr.submit_backup_restore(_restore, fpath, config_root)  # type: ignore[arg-type]
                 return jsonify({"result": "queued", "task_id": tid, "mode": "background"})
             except Exception:

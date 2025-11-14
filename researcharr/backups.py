@@ -73,7 +73,7 @@ def create_backup_file(config_root, backups_dir, prefix: str = ""):
     if cfg is not None and not cfg.exists() and not prefix:
         # Preserve legacy behaviour: raise when the config root does not
         # exist and no prefix supplied.
-        raise Exception(f"Config root does not exist: {config_root}")
+        raise FileNotFoundError(f"Config root does not exist: {config_root}")
 
     # Delegate to implementation then normalize the return type to our
     # public BackupPath wrapper to ensure consistent behaviour across

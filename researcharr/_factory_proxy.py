@@ -199,11 +199,11 @@ def create_proxies(repo_root: str | None = None) -> None:
             # tests import the top-level 'backups' module and expect its legacy
             # semantics. Leaving the short name free ensures the real top-level
             # module is imported when requested.
-            if _short != "backups":
-                if sys.modules.get(_short) is None or isinstance(
-                    sys.modules.get(_short), _ModuleProxy
-                ):
-                    sys.modules.setdefault(_short, _proxy)
+            _existing_short = sys.modules.get(_short)
+            if _short != "backups" and (
+                _existing_short is None or isinstance(_existing_short, _ModuleProxy)
+            ):
+                sys.modules.setdefault(_short, _proxy)
             try:
                 pkg_mod = sys.modules.get("researcharr")
                 if pkg_mod is not None:

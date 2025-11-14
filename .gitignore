@@ -188,3 +188,4 @@ actions-artifacts/
 reports/sourcery-priority.json
 sourcery-report.json
 sourcery-report.csv
+.secrets.baseline

@@ -96,7 +96,7 @@ def check_radarr_connection(*args, **kwargs):
             url = rad.get("url")
             api_key = rad.get("api_key")
     else:
-        if len(args) >= 1:
+        if args:
             url = args[0]
         if len(args) >= 2:
             api_key = args[1]
@@ -124,7 +124,7 @@ def check_radarr_connection(*args, **kwargs):
 
     from unittest import mock as _mock
 
-    if _requests is None or isinstance(_requests, _mock.Mock) is False:
+    if _requests is None or not isinstance(_requests, _mock.Mock):
         # First, check obvious module slots where tests often attach the
         # patched `get` callable: `researcharr.requests` and the real
         # top-level `requests` module. Prefer a module whose `get`
@@ -141,37 +141,37 @@ def check_radarr_connection(*args, **kwargs):
             except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                 continue
 
-        if _requests is None:
-            for mod in list(sys.modules.values()):
-                try:
-                    if mod is None:
-                        continue
-                    cand = getattr(mod, "requests", None)
-                    if cand is None:
-                        continue
-                    # Debugging aid: reveal candidate origin when debugging enabled
-                    try:
-                        if os.environ.get("RESEARCHARR_SHIM_DEBUG2"):
-                            print(
-                                f"SHIMDBG_RADARR: inspecting module {getattr(mod, '__name__', None)} id={id(mod)} cand={repr(cand)} get={repr(getattr(cand, 'get', None))}"
-                            )
-                    except Exception:  # nosec B110 -- intentional broad except for resilience
-                        pass
-                    # If tests patched the `get` attribute on a requests-like
-                    # object (e.g. monkeypatch.setattr('researcharr.requests.get', ...))
-                    # the `get` attribute will often be a Mock/MagicMock. Prefer
-                    # any requests-like object whose .get is a Mock or whose
-                    # implementation originates from test modules.
-                    _get = getattr(cand, "get", None)
-                    if isinstance(_get, _mock.Mock):
-                        _requests = cand
-                        break
-                    _modname = getattr(_get, "__module__", "") if _get is not None else ""
-                    if isinstance(_modname, str) and _modname.startswith("tests"):
-                        _requests = cand
-                        break
-                except Exception:  # nosec B110, B112 -- intentional broad except for resilience
+    if _requests is None:
+        for mod in list(sys.modules.values()):
+            try:
+                if mod is None:
                     continue
+                cand = getattr(mod, "requests", None)
+                if cand is None:
+                    continue
+                # Debugging aid: reveal candidate origin when debugging enabled
+                try:
+                    if os.environ.get("RESEARCHARR_SHIM_DEBUG2"):
+                        print(
+                            f"SHIMDBG_RADARR: inspecting module {getattr(mod, '__name__', None)} id={id(mod)} cand={repr(cand)} get={repr(getattr(cand, 'get', None))}"
+                        )
+                except Exception:  # nosec B110 -- intentional broad except for resilience
+                    pass
+                # If tests patched the `get` attribute on a requests-like
+                # object (e.g. monkeypatch.setattr('researcharr.requests.get', ...))
+                # the `get` attribute will often be a Mock/MagicMock. Prefer
+                # any requests-like object whose .get is a Mock or whose
+                # implementation originates from test modules.
+                _get = getattr(cand, "get", None)
+                if isinstance(_get, _mock.Mock):
+                    _requests = cand
+                    break
+                _modname = getattr(_get, "__module__", "") if _get is not None else ""
+                if isinstance(_modname, str) and _modname.startswith("tests"):
+                    _requests = cand
+                    break
+            except Exception:  # nosec B110, B112 -- intentional broad except for resilience
+                continue
 
     if _requests is None:
         logger.warning("requests not available in this environment")
@@ -199,7 +199,7 @@ def check_sonarr_connection(*args, **kwargs):
             url = son.get("url")
             api_key = son.get("api_key")
     else:
-        if len(args) >= 1:
+        if args:
             url = args[0]
         if len(args) >= 2:
             api_key = args[1]
@@ -225,7 +225,7 @@ def check_sonarr_connection(*args, **kwargs):
 
     from unittest import mock as _mock
 
-    if _requests is None or isinstance(_requests, _mock.Mock) is False:
+    if _requests is None or not isinstance(_requests, _mock.Mock):
         for mod in list(sys.modules.values()):
             try:
                 if mod is None:

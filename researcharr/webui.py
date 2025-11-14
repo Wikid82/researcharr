@@ -113,11 +113,7 @@ def save_user_config(
     if rdb is None:
         raise RuntimeError("DB backend not available for saving webui user")
 
-    if api_key is None:
-        api_hash = api_key_hash
-    else:
-        api_hash = generate_password_hash(api_key)
-
+    api_hash = api_key_hash if api_key is None else generate_password_hash(api_key)
     # Delegate to the provided rdb object
     rdb.save_user(username, password_hash, api_hash)
     return {"username": username, "password_hash": password_hash, "api_key_hash": api_hash}

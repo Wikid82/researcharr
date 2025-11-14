@@ -72,8 +72,6 @@ def serve():
                     if mod is None:
                         continue
                     cand = getattr(mod, "create_metrics_app", None)
-                    if cand is not None:
-                        pass
                     if isinstance(cand, _mock.Mock):
                         create = cand
                         break

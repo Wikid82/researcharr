@@ -50,7 +50,10 @@ def create_backup_file(
 
     try:
         tmpf = tempfile.NamedTemporaryFile(
-            prefix=name + ".", suffix=".tmp", dir=str(backups_dir), delete=False
+            prefix=f"{name}.",
+            suffix=".tmp",
+            dir=str(backups_dir),
+            delete=False,
         )
         tmpf.close()
         tmp_path = Path(tmpf.name)

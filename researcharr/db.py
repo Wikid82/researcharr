@@ -66,8 +66,7 @@ def load_user() -> dict[str, str | None] | None:
         cur.execute(
             "SELECT username, password_hash, api_key_hash FROM webui_users ORDER BY id LIMIT 1"
         )
-        row = cur.fetchone()
-        if row:
+        if row := cur.fetchone():
             return {
                 "username": row["username"],
                 "password_hash": row["password_hash"],

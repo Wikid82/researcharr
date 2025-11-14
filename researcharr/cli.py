@@ -170,8 +170,7 @@ def cmd_restore(args: argparse.Namespace) -> int:
         print("\nBackup Information:")
         print(f"  Version: {meta.get('app_version', 'unknown')}")
         print(f"  Schema:  {meta.get('alembic_revision', 'unknown')}")
-        suggested_tag = suggest_image_tag_from_meta(meta)
-        if suggested_tag:
+        if suggested_tag := suggest_image_tag_from_meta(meta):
             print(f"  Suggested image: {suggested_tag}")
 
     # Check schema compatibility
@@ -307,9 +306,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
     print(f"Validating: {backup_path.name}")
 
     try:
-        is_valid = validate_backup_file(backup_path)
-
-        if is_valid:
+        if is_valid := validate_backup_file(backup_path):
             print("✓ Backup is valid")
             return 0
         else:
@@ -350,19 +347,15 @@ def cmd_info(args: argparse.Namespace) -> int:
         for key, value in meta.items():
             print(f"  {key}: {value}")
 
-        files = info.get("files", [])
-        if files:
+        if files := info.get("files", []):
             print(f"\nContents ({len(files)} files):")
             for file_info in files[:20]:  # Show first 20 files
                 print(f"  {file_info}")
             if len(files) > 20:
                 print(f"  ... and {len(files) - 20} more")
 
-        # Additional compatibility info
-        meta_dict = read_backup_meta(backup_path)
-        if meta_dict:
-            suggested_tag = suggest_image_tag_from_meta(meta_dict)
-            if suggested_tag:
+        if meta_dict := read_backup_meta(backup_path):
+            if suggested_tag := suggest_image_tag_from_meta(meta_dict):
                 print("\nCompatibility:")
                 print(f"  Suggested image: {suggested_tag}")
 
@@ -396,8 +389,7 @@ def cmd_health(args: argparse.Namespace) -> int:
         print(f"Status: {health['status'].upper()}")
         print(f"Timestamp: {health.get('timestamp', 'N/A')}")
 
-        components = health.get("components", {})
-        if components:
+        if components := health.get("components", {}):
             print("\nComponents:")
             for name, info in components.items():
                 status = info.get("status", "unknown")
@@ -485,11 +477,6 @@ def cmd_db_health(args: argparse.Namespace) -> int:
                 if check_name == "connection":
                     if "latency_ms" in check_data:
                         print(f"    Latency: {check_data['latency_ms']}ms")
-                elif check_name == "storage":
-                    if "db_size_mb" in check_data:
-                        print(f"    Database Size: {check_data['db_size_mb']}MB")
-                    if "wal_size_mb" in check_data:
-                        print(f"    WAL Size: {check_data['wal_size_mb']}MB")
                 elif check_name == "performance":
                     if "query_latency_ms" in check_data:
                         print(f"    Query Latency: {check_data['query_latency_ms']}ms")
@@ -501,6 +488,11 @@ def cmd_db_health(args: argparse.Namespace) -> int:
                             f"    Migrations: {'current' if check_data['migration_current'] else 'pending'}"
                         )
 
+                elif check_name == "storage":
+                    if "db_size_mb" in check_data:
+                        print(f"    Database Size: {check_data['db_size_mb']}MB")
+                    if "wal_size_mb" in check_data:
+                        print(f"    WAL Size: {check_data['wal_size_mb']}MB")
                 if "error" in check_data:
                     print(f"    Error: {check_data['error']}")
                 if "message" in check_data:

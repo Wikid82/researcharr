@@ -71,7 +71,10 @@ def create_backup_file(
 
     try:
         tf = tempfile.NamedTemporaryFile(
-            prefix=name + ".", suffix=".tmp", dir=str(backups_dir), delete=False
+            prefix=f"{name}.",
+            suffix=".tmp",
+            dir=str(backups_dir),
+            delete=False,
         )
         tf.close()
         with zipfile.ZipFile(tf.name, "w") as zf:
@@ -137,9 +140,7 @@ def list_backups(backups_dir: str | Path) -> list[dict]:
 def restore_backup(backup_path: str | Path, restore_dir: str | Path) -> bool:
     # Conservative implementation: don't overwrite, just return False if not present
     p = Path(backup_path)
-    if not p.exists() or not p.is_file():
-        return False
-    return True
+    return p.is_file()
 
 
 def validate_backup_file(backup_path: str | Path) -> bool:

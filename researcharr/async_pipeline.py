@@ -52,9 +52,7 @@ def _callable_to_stage(fn: Callable[[Any], Any] | Callable[[Any], Awaitable[Any]
     class _FnStage(Stage):
         async def process(self, item: Any) -> Any:
             res = fn(item)
-            if asyncio.iscoroutine(res):
-                return await res
-            return res
+            return await res if asyncio.iscoroutine(res) else res
 
     return _FnStage()
 
@@ -129,17 +127,16 @@ class Pipeline:
 
     def get_status(self) -> dict:
         """Return a snapshot of pipeline status and per-stage metrics."""
-        stages = []
-        for idx, spec in enumerate(self._stage_specs):
-            stages.append(
-                {
-                    "index": idx,
-                    "class": f"{spec.stage.__class__.__module__}.{spec.stage.__class__.__qualname__}",
-                    "concurrency": spec.concurrency,
-                    "queue_size": self._queues[idx].qsize() if self._queues else 0,
-                    "metrics": dict(spec.metrics) if spec.metrics is not None else {},
-                }
-            )
+        stages = [
+            {
+                "index": idx,
+                "class": f"{spec.stage.__class__.__module__}.{spec.stage.__class__.__qualname__}",
+                "concurrency": spec.concurrency,
+                "queue_size": self._queues[idx].qsize() if self._queues else 0,
+                "metrics": dict(spec.metrics) if spec.metrics is not None else {},
+            }
+            for idx, spec in enumerate(self._stage_specs)
+        ]
         return {"started": self._started, "closed": self._closed, "stages": stages}
 
     def get_metrics(self) -> dict:
@@ -606,9 +603,7 @@ class Pipeline:
                 val = os.environ.get(name)
                 if val is not None:
                     return val
-                if has_default:
-                    return default or ""
-                return ""
+                return default or "" if has_default else ""
 
             return env_pattern.sub(_repl, s2)
 

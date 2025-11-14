@@ -122,8 +122,7 @@ def restore_with_rollback(
             )
             errors.append(warning)
 
-            suggested_tag = suggest_image_tag_from_meta(meta)
-            if suggested_tag:
+            if suggested_tag := suggest_image_tag_from_meta(meta):
                 errors.append(f"Consider using image: {suggested_tag}")
 
             # Allow proceeding but record the warning
@@ -274,5 +273,5 @@ def restore_with_rollback(
         success=True,
         message="Restore completed successfully",
         backup_path=backup_path,
-        snapshot_path=snapshot_path if not cleanup_snapshot else None,
+        snapshot_path=None if cleanup_snapshot else snapshot_path,
     )

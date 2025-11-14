@@ -236,9 +236,7 @@ def __getattr__(name: str):
             impl_create_app = getattr(current_impl, "create_app", None)
             if callable(impl_create_app):
                 return impl_create_app
-        # Fallback to the safe wrapper if _impl doesn't have create_app
-        fallback = globals().get("create_app", _fallback_create_app)
-        return fallback
+        return globals().get("create_app", _fallback_create_app)
     # For other attributes, delegate to _impl or raise AttributeError.
     # Provide a defensive fallback for `render_template` so tests that
     # patch `researcharr.factory.render_template` can reliably find the

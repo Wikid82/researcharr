@@ -52,8 +52,7 @@ class _ModuleProxy(ModuleType):
             if short is not None and short is not self:
                 object.__setattr__(self, "_target", short)
                 return short
-            repo_fp = object.__getattribute__(self, "_repo_fp")
-            if repo_fp:
+            if repo_fp := object.__getattribute__(self, "_repo_fp"):
                 try:
                     _spec = importlib_util.spec_from_file_location(
                         object.__getattribute__(self, "_short_name"), repo_fp
@@ -494,11 +493,6 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                         try:
                             from types import ModuleType as _MT
 
-                            # Small diagnostic subclass to observe attribute
-                            # access to `create_app` on the wrapper module. This
-                            # helps detect cases where hasattr()/getattr() may
-                            # be observing a module that lacks the delegated
-                            # attribute at assertion time.
                             class _LoggedModule(_MT):
                                 def __getattribute__(self, name: str):
                                     # Log accesses to `create_app` at attribute
@@ -516,7 +510,7 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                                             try:
                                                 d = object.__getattribute__(self, "__dict__")
                                                 _cur = d.get("create_app")
-                                                has_create = bool(_cur is not None)
+                                                has_create = _cur is not None
                                             except Exception:  # nosec B110 -- intentional broad except for resilience
                                                 has_create = False
 
@@ -684,7 +678,7 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                 _m = _sys.modules.get(_k)
                 _snap["modules"][_k] = {
                     "id": id(_m) if _m is not None else None,
-                    "has_create_app": bool(getattr(_m, "create_app", None) is not None),
+                    "has_create_app": getattr(_m, "create_app", None) is not None,
                     "type": type(_m).__name__ if _m is not None else None,
                 }
             except Exception:  # nosec B110 -- intentional broad except for resilience
@@ -698,7 +692,7 @@ def install_create_app_helpers(repo_root: str | None = None) -> None:
                     # Print to stderr so test runner captures it with -s or live logs.
                     import sys as _sys2
 
-                    _sys2.stderr.write("[factory-helper-snapshot] " + _json.dumps(_snap) + "\n")
+                    _sys2.stderr.write(f"[factory-helper-snapshot] {_json.dumps(_snap)}" + "\n")
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
         except Exception:  # nosec B110 -- intentional broad except for resilience

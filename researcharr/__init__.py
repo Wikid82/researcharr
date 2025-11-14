@@ -302,9 +302,7 @@ def _load_impl() -> ModuleType | None:
     )
 
     def _looks_complete(m: ModuleType | None) -> bool:
-        if m is None:
-            return False
-        return all(hasattr(m, name) for name in required)
+        return False if m is None else all(hasattr(m, name) for name in required)
 
     # 1) Try normal import first
     try:
@@ -353,9 +351,7 @@ def _load_impl() -> ModuleType | None:
     # earlier (mod) or the package-local one as a last resort.
     if mod is not None:
         return mod
-    if os.path.isfile(pkg_local):
-        return _load_from_path(pkg_local)
-    return None
+    return _load_from_path(pkg_local) if os.path.isfile(pkg_local) else None
 
 
 impl = _load_impl()
@@ -675,8 +671,6 @@ try:
     except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
 except Exception:  # nosec B110 -- intentional broad except for resilience
-    pass
-
     # Ensure the runtime create_app helpers are installed so `researcharr.factory`
     # exposes a stable `create_app` symbol even when proxies or import-order
     # variations occur. This is best-effort and must not raise during import.
@@ -709,7 +703,7 @@ except Exception:  # nosec B110 -- intentional broad except for resilience
             # If only a top-level module exists, synthesize a package-qualified
             # alias by registering the same object under the package name and
             # ensuring it has a minimal spec so importlib.reload() will accept it.
-            if _pkg is None and _top is not None:
+            if _pkg is None:
                 try:
                     # Ensure the package-qualified name points to the top-level
                     # module object so imports like `import researcharr.webui`
@@ -732,7 +726,7 @@ except Exception:  # nosec B110 -- intentional broad except for resilience
             # module (it typically has a proper spec/loader), and overlay any
             # public attributes from the top-level module so test-injected names
             # remain accessible.
-            if _pkg is not None and _top is not None and _pkg is not _top:
+            if _top is not None and _pkg is not _top:
                 try:
                     for _attr in dir(_top):
                         if _attr.startswith("__"):

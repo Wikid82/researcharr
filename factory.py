@@ -2586,28 +2586,28 @@ def create_app() -> Flask:
             return jsonify({"error": "unauthorized"}), 401
         config_root = os.getenv("CONFIG_DIR", "/config")
         backups_dir = os.path.join(config_root, "backups")
-        # If job queue available, submit an asynchronous backup.create job
+        # Prefer job queue; otherwise fallback to background task manager
         job_service = getattr(app, "job_service", None)
+        background_mgr = getattr(app, "background_tasks", None)
+        prefix = ""
+        try:
+            data = request.get_json(silent=True) or {}
+            prefix = data.get("prefix", "") or ""
+        except Exception:
+            prefix = ""
         if job_service is not None:
             try:
                 import asyncio
-
-                prefix = ""
-                try:
-                    data = request.get_json(silent=True) or {}
-                    prefix = data.get("prefix", "") or ""
-                except Exception:
-                    prefix = ""
-                job_id = asyncio.run(
-                    job_service.submit_job(
-                        "backup.create",
-                        kwargs={"prefix": prefix},
-                        priority=None,
-                    )
-                )
-                return jsonify({"result": "queued", "job_id": str(job_id)})
+                job_id = asyncio.run(job_service.submit_job("backup.create", kwargs={"prefix": prefix}))
+                return jsonify({"result": "queued", "job_id": str(job_id), "mode": "job"})
             except Exception:
-                # Fall back to legacy synchronous path if queuing fails
+                pass
+        if background_mgr is not None:
+            try:
+                # background task returns only task id; result polled separately
+                tid = background_mgr.submit_backup_create(_create_backup_file, config_root, backups_dir, prefix)  # type: ignore[arg-type]
+                return jsonify({"result": "queued", "task_id": tid, "mode": "background"})
+            except Exception:
                 pass
         try:
             # Call the local delegator first. The delegator resolves the
@@ -2677,7 +2677,7 @@ def create_app() -> Flask:
                 # If anything goes wrong normalising, fall back to the raw
                 # value so we don't swallow the underlying error.
                 pass
-            return jsonify({"result": "ok", "name": name})
+            return jsonify({"result": "ok", "name": name, "mode": "sync"})
         except Exception as e:
             app.logger.exception("Failed to create backup: %s", e)
             return jsonify({"error": "create_failed"}), 500
@@ -2806,22 +2806,26 @@ def create_app() -> Flask:
         config_root = os.getenv("CONFIG_DIR", "/config")
         backups_dir = os.path.join(config_root, "backups")
         fpath = os.path.join(backups_dir, name)
-        # If job queue available, submit restore job
+        # Prefer job queue; else use background task manager
         job_service = getattr(app, "job_service", None)
+        background_mgr = getattr(app, "background_tasks", None)
         if job_service is not None:
             try:
                 import asyncio
-
-                job_id = asyncio.run(
-                    job_service.submit_job(
-                        "backup.restore",
-                        args=(name,),
-                        kwargs={"create_pre_backup": True},
-                    )
-                )
-                return jsonify({"result": "queued", "job_id": str(job_id)})
+                job_id = asyncio.run(job_service.submit_job("backup.restore", args=(name,), kwargs={"create_pre_backup": True}))
+                return jsonify({"result": "queued", "job_id": str(job_id), "mode": "job"})
             except Exception:
-                # Fall back to legacy synchronous path on failure
+                pass
+        if background_mgr is not None:
+            try:
+                # Minimal pre-check before scheduling
+                if not os.path.exists(fpath):
+                    return jsonify({"error": "not_found"}), 404
+                # Use implementation restore for background async
+                from researcharr.backups_impl import restore_backup as _restore
+                tid = background_mgr.submit_backup_restore(_restore, fpath, config_root)  # type: ignore[arg-type]
+                return jsonify({"result": "queued", "task_id": tid, "mode": "background"})
+            except Exception:
                 pass
         try:
             if not os.path.realpath(fpath).startswith(os.path.realpath(backups_dir)):
@@ -2923,7 +2927,7 @@ def create_app() -> Flask:
                         pass
             except Exception:
                 pass
-            return jsonify(resp)
+            return jsonify({**resp, "mode": "sync"})
         except Exception as e:
             app.logger.exception("Failed to restore backup: %s", e)
             return jsonify({"error": "restore_failed"}), 500
@@ -3006,6 +3010,22 @@ def create_app() -> Flask:
         except Exception as e:
             app.logger.exception("Failed to validate backup: %s", e)
             return jsonify({"error": "validate_failed"}), 500
+
+    @app.route("/api/background/tasks/<task_id>", methods=["GET"])
+    def api_background_task_status(task_id: str):
+        """Return status for an in-process background task.
+
+        Only available when job queue is disabled and in-process background
+        tasks manager is active.
+        """
+        mgr = getattr(app, "background_tasks", None)
+        if mgr is None:
+            return jsonify({"error": "background_disabled"}), 404
+        data = mgr.serialize(task_id)
+        if data is None:
+            return jsonify({"error": "not_found"}), 404
+        # Align with job queue schema; add type marker
+        return jsonify(data)
 
     @app.route("/api/backups/settings", methods=["GET", "POST"])
     def api_backups_settings():

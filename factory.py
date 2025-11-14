@@ -2928,6 +2928,85 @@ def create_app() -> Flask:
             app.logger.exception("Failed to restore backup: %s", e)
             return jsonify({"error": "restore_failed"}), 500
 
+    @app.route("/api/backups/prune", methods=["POST"])
+    def api_backups_prune():
+        """Prune backups according to retention settings or explicit payload.
+
+        Queues a job if the job queue is available, otherwise performs a
+        synchronous prune. Payload may include retain_count, retain_days,
+        pre_restore_keep_days.
+        """
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        backups_dir = os.path.join(config_root, "backups")
+        job_service = getattr(app, "job_service", None)
+        retain_count = retain_days = pre_restore_keep_days = None
+        try:
+            data = request.get_json(silent=True) or {}
+            retain_count = data.get("retain_count")
+            retain_days = data.get("retain_days")
+            pre_restore_keep_days = data.get("pre_restore_keep_days")
+        except Exception:
+            pass
+        if job_service is not None:
+            try:
+                import asyncio
+
+                job_id = asyncio.run(
+                    job_service.submit_job(
+                        "backup.prune",
+                        kwargs={
+                            "retain_count": retain_count,
+                            "retain_days": retain_days,
+                            "pre_restore_keep_days": pre_restore_keep_days,
+                        },
+                    )
+                )
+                return jsonify({"result": "queued", "job_id": str(job_id)})
+            except Exception:
+                pass
+        try:
+            cfg = {
+                "retain_count": retain_count,
+                "retain_days": retain_days,
+                "pre_restore_keep_days": pre_restore_keep_days,
+            }
+            prune_backups(backups_dir, cfg)
+            return jsonify({"result": "ok"})
+        except Exception as e:
+            app.logger.exception("Failed to prune backups: %s", e)
+            return jsonify({"error": "prune_failed"}), 500
+
+    @app.route("/api/backups/validate/<path:name>", methods=["POST"])
+    def api_backups_validate(name: str):
+        """Validate a backup archive (zip structure)."""
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        backups_dir = os.path.join(config_root, "backups")
+        fpath = os.path.join(backups_dir, name)
+        job_service = getattr(app, "job_service", None)
+        if job_service is not None:
+            try:
+                import asyncio
+
+                job_id = asyncio.run(job_service.submit_job("backup.validate", args=(name,)))
+                return jsonify({"result": "queued", "job_id": str(job_id)})
+            except Exception:
+                pass
+        try:
+            if not os.path.realpath(fpath).startswith(os.path.realpath(backups_dir)):
+                return jsonify({"error": "invalid_name"}), 400
+            if not os.path.exists(fpath):
+                return jsonify({"error": "not_found"}), 404
+            from researcharr.backups_impl import validate_backup_file as _validate
+
+            return jsonify({"result": "ok", "valid": bool(_validate(fpath))})
+        except Exception as e:
+            app.logger.exception("Failed to validate backup: %s", e)
+            return jsonify({"error": "validate_failed"}), 500
+
     @app.route("/api/backups/settings", methods=["GET", "POST"])
     def api_backups_settings():
         if not is_logged_in():

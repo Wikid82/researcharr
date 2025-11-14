@@ -35,6 +35,8 @@ class BackgroundTask:
     error: Optional[str] = None
     started: Optional[float] = None
     finished: Optional[float] = None
+    cancel_requested: bool = False
+    _cancel_event: Optional[threading.Event] = None  # internal cooperative flag
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize task similar to JobResult schema for UI consistency."""
@@ -49,6 +51,8 @@ class BackgroundTask:
             "worker_id": "background",
             "duration": (self.finished - self.started) if self.started and self.finished else None,
             "type": "background",
+            "cancel_requested": self.cancel_requested,
+            "cancellable": self.status in ("pending", "running"),
         }
 
 
@@ -66,6 +70,7 @@ class BackgroundTaskManager:
     def __init__(self, max_workers: int = 4, *, event_bus: Any | None = None, ttl_seconds: int | None = None):
         self._executor = _futures.ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="bg-task")
         self._tasks: Dict[str, BackgroundTask] = {}
+        self._futures: Dict[str, _futures.Future] = {}
         self._lock = threading.Lock()
         self._event_bus = event_bus
         # TTL for terminal tasks (completed/failed); default from env or 300s
@@ -84,9 +89,25 @@ class BackgroundTaskManager:
             task.status = "running"
             self._emit("background.task.started", task)
             try:
+                # Cooperative cancellation support: if function accepts cancel_event kw
+                import inspect
+                sig = None
+                try:
+                    sig = inspect.signature(fn)
+                except Exception:
+                    sig = None
+                if sig and "cancel_event" in sig.parameters:
+                    task._cancel_event = threading.Event()
+                    kwargs = dict(kwargs)
+                    kwargs.setdefault("cancel_event", task._cancel_event)
                 task.result = fn(*args, **kwargs)
-                task.status = "completed"
-                self._emit("background.task.completed", task)
+                if task.cancel_requested and task._cancel_event and task._cancel_event.is_set():
+                    # Function returned after seeing cancellation; treat as cancelled
+                    task.status = "cancelled"
+                    self._emit("background.task.cancelled", task)
+                else:
+                    task.status = "completed"
+                    self._emit("background.task.completed", task)
             except Exception as e:  # pragma: no cover - broad resilience
                 task.error = f"{type(e).__name__}: {e}"
                 task.status = "failed"
@@ -97,7 +118,8 @@ class BackgroundTaskManager:
                 with self._lock:
                     self._prune_expired_locked()
 
-        self._executor.submit(_run)
+        fut = self._executor.submit(_run)
+        self._futures[tid] = fut
         return tid
 
     def get(self, task_id: str) -> Optional[BackgroundTask]:
@@ -151,5 +173,36 @@ class BackgroundTaskManager:
     def serialize(self, task_id: str) -> Dict[str, Any] | None:
         t = self.get(task_id)
         return t.to_dict() if t else None
+
+    # Cancellation ------------------------------------------------------
+    def cancel(self, task_id: str) -> bool:
+        """Attempt to cancel a task.
+
+        Returns True if cancellation succeeded or was requested. Pending
+        tasks are cancelled immediately. Running tasks set a cooperative
+        flag if supported; otherwise we mark cancel_requested and allow
+        normal completion.
+        """
+        with self._lock:
+            task = self._tasks.get(task_id)
+            if task is None:
+                return False
+            # Pending: attempt future cancellation
+            if task.status == "pending":
+                fut = self._futures.get(task_id)
+                if fut and fut.cancel():
+                    task.status = "cancelled"
+                    task.finished = time.time()
+                    self._emit("background.task.cancelled", task)
+                    return True
+                # If cannot cancel (already running), fall through
+            if task.status == "running":
+                task.cancel_requested = True
+                if task._cancel_event:
+                    task._cancel_event.set()
+                self._emit("background.task.cancel.requested", task)
+                return True
+            # Already terminal
+            return False
 
 __all__ = ["BackgroundTaskManager", "BackgroundTask"]

@@ -116,9 +116,7 @@ class BaseRepository(ABC, Generic[T]):
         """
         if not entities:
             return entities
-        merged: list[T] = []
-        for e in entities:
-            merged.append(self.session.merge(e))  # type: ignore[arg-type]
+        merged: list[T] = [self.session.merge(e) for e in entities]
         self.session.flush()
         return merged
 

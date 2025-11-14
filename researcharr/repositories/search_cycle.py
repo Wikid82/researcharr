@@ -42,8 +42,7 @@ class SearchCycleRepository(BaseRepository[SearchCycle]):
 
     def delete(self, id: int) -> bool:
         """Delete search cycle by ID."""
-        cycle = self.get_by_id(id)
-        if cycle:
+        if cycle := self.get_by_id(id):
             self.session.delete(cycle)
             self.session.flush()
             return True

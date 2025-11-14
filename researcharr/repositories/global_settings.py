@@ -34,8 +34,7 @@ class GlobalSettingsRepository(BaseRepository[GlobalSettings]):
 
     def delete(self, id: int) -> bool:
         """Delete settings (not recommended for singleton)."""
-        settings = self.get_by_id(id)
-        if settings:
+        if settings := self.get_by_id(id):
             self.session.delete(settings)
             self.session.flush()
             return True

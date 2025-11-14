@@ -53,9 +53,6 @@ class UnitOfWork(AbstractContextManager["UnitOfWork"]):
             finally:
                 self._ctx = None
                 self._session = None
-        else:
-            # External session: leave commit/rollback to caller
-            pass
 
     # Session access
     @property

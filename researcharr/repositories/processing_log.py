@@ -42,8 +42,7 @@ class ProcessingLogRepository(BaseRepository[ProcessingLog]):
 
     def delete(self, id: int) -> bool:
         """Delete processing log by ID."""
-        log = self.get_by_id(id)
-        if log:
+        if log := self.get_by_id(id):
             self.session.delete(log)
             self.session.flush()
             return True
@@ -179,11 +178,7 @@ class ProcessingLogRepository(BaseRepository[ProcessingLog]):
         Cached with small TTL; since timestamp is bucketed to 60s to limit key churn.
         """
         bucket: int | str
-        if since is not None:
-            # floor to minute boundaries for key stability
-            bucket = int(since.timestamp() // 60)
-        else:
-            bucket = "all"
+        bucket = int(since.timestamp() // 60) if since is not None else "all"
         key = make_key(("ProcessingLog", "counts", app_id, bucket))
         cached = cache_get(key)
         if cached is not None:
@@ -204,10 +199,7 @@ class ProcessingLogRepository(BaseRepository[ProcessingLog]):
         Cached using same 60s bucket strategy as event counts.
         """
         bucket: int | str
-        if since is not None:
-            bucket = int(since.timestamp() // 60)
-        else:
-            bucket = "all"
+        bucket = int(since.timestamp() // 60) if since is not None else "all"
         key = make_key(("ProcessingLog", "success_rate", app_id, bucket))
         cached = cache_get(key)
         if cached is not None:

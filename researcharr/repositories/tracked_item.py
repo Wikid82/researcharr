@@ -50,8 +50,7 @@ class TrackedItemRepository(BaseRepository[TrackedItem]):
 
     def delete(self, id: int) -> bool:
         """Delete tracked item by ID."""
-        item = self.get_by_id(id)
-        if item:
+        if item := self.get_by_id(id):
             self.session.delete(item)
             self.session.flush()
             return True

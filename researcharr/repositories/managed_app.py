@@ -67,8 +67,7 @@ class ManagedAppRepository(BaseRepository[ManagedApp]):
 
     def delete(self, id: int) -> bool:
         """Delete app by ID."""
-        app = self.get_by_id(id)
-        if app:
+        if app := self.get_by_id(id):
             self.session.delete(app)
             self.session.flush()
             cache_invalidate("ManagedApp:")

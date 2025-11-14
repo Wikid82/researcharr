@@ -492,12 +492,9 @@ class RedisJobQueue(JobQueue):
         else:
             job_ids = list(status_map.keys())
 
-        # Apply pagination
-        job_ids = job_ids[offset : offset + limit]
-
         # Get job data
         jobs = []
-        if job_ids:
+        if job_ids := job_ids[offset : offset + limit]:
             job_data_list = await self._redis.hmget(self._key("data"), *job_ids)
             for job_data in job_data_list:
                 if job_data:
@@ -660,14 +657,12 @@ class RedisJobQueue(JobQueue):
 
         # Get status counts
         status_map = await self._redis.hgetall(self._key("status"))
-        status_counts = {}
-        for status in JobStatus:
-            status_counts[status.value] = sum(
-                1
-                for s in status_map.values()
-                if (s.decode("utf-8") if isinstance(s, bytes) else s) == status.value
-            )
-
+        status_counts = {
+            status.value: sum(bool((s.decode("utf-8") if isinstance(s, bytes) else s)
+                                          == status.value)
+                          for s in status_map.values())
+            for status in JobStatus
+        }
         # Get lifetime counters
         metrics_keys = [
             "metrics:submitted",

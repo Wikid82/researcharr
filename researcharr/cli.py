@@ -643,7 +643,7 @@ def cmd_run_job(args: argparse.Namespace) -> int:
 
         run_fn = getattr(mod_obj, "run_job", None)
         if not callable(run_fn):
-            raise Exception("run_job not found on researcharr.run")
+            raise RuntimeError("run_job not found on researcharr.run")
 
         run_fn()
         print("✓ Job completed successfully")

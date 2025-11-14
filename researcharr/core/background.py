@@ -190,12 +190,16 @@ class BackgroundTaskManager:
             # Pending: attempt future cancellation
             if task.status == "pending":
                 fut = self._futures.get(task_id)
-                if fut and fut.cancel():
+                # Mark cancelled regardless; Python may have already scheduled _run.
+                # If future.cancel() returns False the task likely started; we will
+                # proceed to running cancellation logic below.
+                cancelled_future = bool(fut.cancel() if fut else False)
+                if cancelled_future:
                     task.status = "cancelled"
                     task.finished = time.time()
                     self._emit("background.task.cancelled", task)
                     return True
-                # If cannot cancel (already running), fall through
+                # Treat as running if scheduled
             if task.status == "running":
                 task.cancel_requested = True
                 if task._cancel_event:

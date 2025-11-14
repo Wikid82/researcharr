@@ -113,9 +113,7 @@ class TestRestoreWithRollbackValidation:
 
         assert result.success is False
         assert "validation failed" in result.message.lower()
-        monitor_instance.record_backup_restored.assert_called_once_with(
-            backup, success=False
-        )
+        monitor_instance.record_backup_restored.assert_called_once_with(backup, success=False)
 
     @patch("researcharr.backup_restore.read_backup_meta")
     @patch("researcharr.backup_restore.get_alembic_head_revision")
@@ -208,9 +206,7 @@ class TestRestoreWithRollbackSnapshots:
 
         assert result.success is False
         assert "snapshot" in result.message.lower()
-        monitor_instance.record_backup_restored.assert_called_once_with(
-            backup, success=False
-        )
+        monitor_instance.record_backup_restored.assert_called_once_with(backup, success=False)
 
     @patch("researcharr.backup_restore.validate_backup_file")
     @patch("researcharr.backup_restore.snapshot_sqlite")
@@ -276,9 +272,7 @@ class TestRestoreWithRollbackRestoreProcess:
         assert result.success is True
         assert "successfully" in result.message.lower()
         mock_restore.assert_called_once_with(backup, config_dir)
-        monitor_instance.record_backup_restored.assert_called_once_with(
-            backup, success=True
-        )
+        monitor_instance.record_backup_restored.assert_called_once_with(backup, success=True)
 
     @patch("researcharr.backup_restore.validate_backup_file")
     @patch("researcharr.backup_restore.snapshot_sqlite")

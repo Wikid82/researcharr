@@ -328,9 +328,7 @@ class TestJobQuerying:
         """Test listing jobs filtered by status."""
         await job_service.list_jobs(status=JobStatus.RUNNING)
 
-        mock_queue.list_jobs.assert_called_once_with(
-            status=JobStatus.RUNNING, limit=100, offset=0
-        )
+        mock_queue.list_jobs.assert_called_once_with(status=JobStatus.RUNNING, limit=100, offset=0)
 
     async def test_list_jobs_with_pagination(self, job_service, mock_queue):
         """Test listing jobs with pagination."""
@@ -490,8 +488,6 @@ class TestWorkerManagement:
         workers = await job_service.get_workers()
 
         assert workers == expected_workers
-
-
 
 
 class TestMetrics:

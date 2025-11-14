@@ -73,7 +73,10 @@ async def test_backup_restore_job(job_service, temp_config_root):
         await asyncio.sleep(0.1)
     restore_res = await job_service.get_job_result(restore_id)
     # Restore may fail or succeed depending on DB state
-    assert restore_res is not None or await job_service.get_job_status(restore_id) == JobStatus.DEAD_LETTER
+    assert (
+        restore_res is not None
+        or await job_service.get_job_status(restore_id) == JobStatus.DEAD_LETTER
+    )
     assert restore_res.status == JobStatus.COMPLETED
     assert settings_path.exists()
 

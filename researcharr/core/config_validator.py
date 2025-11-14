@@ -238,10 +238,9 @@ class ConfigValidator:
 
         # Check type
         expected_type = schema.get("type")
-        if expected_type:
-            if not self._check_type(value, expected_type):
-                errors.append(f"{path}: expected type {expected_type}, got {type(value).__name__}")
-                return errors  # Can't validate further if type is wrong
+        if expected_type and not self._check_type(value, expected_type):
+            errors.append(f"{path}: expected type {expected_type}, got {type(value).__name__}")
+            return errors  # Can't validate further if type is wrong
 
         # For nested objects, recurse
         if expected_type == "object" and isinstance(value, dict):
@@ -257,12 +256,10 @@ class ConfigValidator:
                 errors.append(f"{path}: value {value} is greater than maximum {schema['maximum']}")
 
         # Check string patterns (basic validation)
-        if expected_type == "string":
-            if "pattern" in schema:
-                if not re.match(schema["pattern"], value):
-                    errors.append(
-                        f"{path}: value '{value}' does not match pattern {schema['pattern']}"
-                    )
+        if expected_type == "string" and "pattern" in schema and not re.match(
+            schema["pattern"], value
+        ):
+            errors.append(f"{path}: value '{value}' does not match pattern {schema['pattern']}")
 
         return errors
 

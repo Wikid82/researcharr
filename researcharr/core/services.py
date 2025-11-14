@@ -697,11 +697,11 @@ class MonitoringService:
         }
 
         # Ensure monitors are initialized
-        if (self._backup_monitor is None or self._database_monitor is None) and not self.initialize():
+        if (
+            self._backup_monitor is None or self._database_monitor is None
+        ) and not self.initialize():
             results["status"] = "error"
-            results["alerts"].append(
-                {"level": "error", "message": "Monitoring not initialized"}
-            )
+            results["alerts"].append({"level": "error", "message": "Monitoring not initialized"})
             return results
 
         # Check backup health

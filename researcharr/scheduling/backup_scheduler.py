@@ -94,14 +94,11 @@ class BackupSchedulerService:
             backup_config = self._config.get("backups", {})
             backups_dir = backup_config.get("backups_dir", os.path.join(config_root, "backups"))
 
-            # Create backup
-            backup_file = create_backup_file(
+            if backup_file := create_backup_file(
                 config_root=config_root,
                 backups_dir=backups_dir,
                 prefix="auto",
-            )
-
-            if backup_file:
+            ):
                 logger.info(f"Scheduled backup created: {backup_file}")
 
                 # Publish backup created event

@@ -136,11 +136,15 @@ class RedisJobQueue(JobQueue):
             # Store job status
             await pipe.hset(self._key("status"), job_id_str, JobStatus.PENDING.value)
 
-            # Add to priority queue (sorted set with score = priority * 1e9 - timestamp)
-            # This ensures: higher priority first, then FIFO within same priority
-            score = job.priority.value * 1e9 - job.created_at.timestamp()
-            priority_queue_key = self._key(f"queue:p{job.priority.value}")
-            await pipe.zadd(priority_queue_key, {job_id_str: score})
+            # If scheduled_at in future, enqueue into scheduled set; else ready queue
+            if job.scheduled_at and job.scheduled_at.timestamp() > datetime.now(UTC).timestamp():
+                # Score = scheduled timestamp; separate ZSET for scheduled jobs
+                await pipe.zadd(self._key("scheduled"), {job_id_str: job.scheduled_at.timestamp()})
+            else:
+                # Add to priority queue (score = priority * 1e9 - created_ts) for ordering
+                score = job.priority.value * 1e9 - job.created_at.timestamp()
+                priority_queue_key = self._key(f"queue:p{job.priority.value}")
+                await pipe.zadd(priority_queue_key, {job_id_str: score})
 
             # Increment submitted counter
             await pipe.incr(self._key("metrics:submitted"))
@@ -161,6 +165,9 @@ class RedisJobQueue(JobQueue):
         """
         if not self._redis:
             raise ConnectionError("Redis connection not initialized")
+
+        # Promote due scheduled jobs before checking ready queues
+        await self._promote_scheduled()
 
         # Check priority queues from highest to lowest
         for priority in reversed(list(JobPriority)):
@@ -201,6 +208,38 @@ class RedisJobQueue(JobQueue):
                 return job
 
         return None
+
+    async def _promote_scheduled(self, batch: int = 100) -> None:
+        """Move due scheduled jobs into ready priority queues.
+
+        Args:
+            batch: Maximum number of due jobs to promote per invocation.
+        """
+        if not self._redis:
+            return None
+        now_ts = datetime.now(UTC).timestamp()
+        # Fetch due job IDs
+        due = await self._redis.zrangebyscore(self._key("scheduled"), 0, now_ts, start=0, num=batch)
+        if not due:
+            return None
+        async with self._redis.pipeline(transaction=True) as pipe:
+            for raw_id in due:
+                job_id_str = raw_id.decode("utf-8") if isinstance(raw_id, bytes) else raw_id
+                # Remove from scheduled set
+                await pipe.zrem(self._key("scheduled"), job_id_str)
+                # Load job priority
+                job_data = await self._redis.hget(self._key("data"), job_id_str)
+                if not job_data:
+                    continue
+                if isinstance(job_data, bytes):
+                    job_data = job_data.decode("utf-8")
+                try:
+                    job = JobDefinition.from_json(job_data)
+                except Exception:
+                    continue
+                score = job.priority.value * 1e9 - datetime.now(UTC).timestamp()
+                await pipe.zadd(self._key(f"queue:p{job.priority.value}"), {job_id_str: score})
+            await pipe.execute()
 
     async def complete(self, job_id: UUID, result: JobResult) -> None:
         """Mark job as completed with result.

@@ -200,7 +200,8 @@ class BackgroundTaskManager:
                     self._emit("background.task.cancelled", task)
                     return True
                 # Treat as running if scheduled
-            if task.status == "running":
+            # Re-read status in case task transitioned while we held lock
+            if task.status in ("running", "pending"):
                 task.cancel_requested = True
                 if task._cancel_event:
                     task._cancel_event.set()

@@ -9,7 +9,8 @@ from researcharr.core.jobs import JobPriority, JobService, JobStatus
 
 
 @pytest.mark.asyncio
-async def test_immediate_priority_order(redis_url="redis://localhost:6379/16"):
+async def test_immediate_priority_order(redis_url="redis://localhost:6379/10"):
+    """Test that jobs with higher priority execute first when all immediate."""
     svc = JobService(redis_url=redis_url)
     await svc.initialize()
 
@@ -45,7 +46,7 @@ async def test_immediate_priority_order(redis_url="redis://localhost:6379/16"):
 
 
 @pytest.mark.asyncio
-async def test_future_scheduling(redis_url="redis://localhost:6379/16"):
+async def test_future_scheduling(redis_url="redis://localhost:6379/11"):
     svc = JobService(redis_url=redis_url)
     await svc.initialize()
 

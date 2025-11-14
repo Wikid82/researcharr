@@ -993,7 +993,7 @@ try:
         _needs_fix = _cur is None or not callable(_cur)
         if _needs_fix:
             try:
-                _delegate = globals().get("_create_app_delegate", None)
+                _delegate = globals().get("_create_app_delegate")
                 if _delegate is not None:
                     try:
                         _pf.__dict__["create_app"] = _delegate
@@ -1015,7 +1015,7 @@ except Exception:  # nosec B110 -- intentional broad except for resilience
 # short/package-qualified sys.modules entries unconditionally when they lack a
 # callable or expose a different implementation. Best-effort; never raises.
 try:
-    _delegate = globals().get("_create_app_delegate", None)
+    _delegate = globals().get("_create_app_delegate")
     if _delegate is not None and callable(_delegate):
         _pkg_mod = sys.modules.get("researcharr")
         _factory_attr = getattr(_pkg_mod, "factory", None) if _pkg_mod else None

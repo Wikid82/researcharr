@@ -372,8 +372,13 @@ def test_install_dispatcher_handles_missing_modules():
     """Test dispatcher installation handles missing modules."""
     from researcharr import _package_helpers
 
-    with patch.dict(sys.modules, {}, clear=True):
-        # Should not raise even with no modules
+    # Avoid clearing sys.modules entirely (breaks stdlib under coverage).
+    # Instead, ensure relevant modules are absent/unavailable.
+    with patch.dict(
+        sys.modules,
+        {"researcharr": None, "researcharr.researcharr": None},
+        clear=False,
+    ):
         _package_helpers.install_create_metrics_dispatcher()
 
 

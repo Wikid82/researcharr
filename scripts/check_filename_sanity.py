@@ -6,7 +6,7 @@ import unicodedata
 # Policy values (conservative; adjust as needed)
 MAX_COMPONENT_LEN = 120
 # Reject control characters, newlines, and likely-accidental quoting in names
-FORBIDDEN_CHARS = {'\n', '\r', '\t', '\x00'}
+FORBIDDEN_CHARS = {"\n", "\r", "\t", "\x00"}
 
 # Heuristic: filenames that start or end with quotes are suspicious
 SUSPICIOUS_EDGES = ('"', "'", "`")
@@ -19,7 +19,7 @@ EXCESSIVE_BACKSLASH_THRESHOLD = 8
 def is_weird_component(comp: str) -> str | None:
     # Control chars / newlines
     for ch in comp:
-        if ch in FORBIDDEN_CHARS or unicodedata.category(ch)[0] == 'C':
+        if ch in FORBIDDEN_CHARS or unicodedata.category(ch)[0] == "C":
             return f"contains control/newline char U+{ord(ch):04X}"
 
     # Leading/trailing quotes
@@ -27,7 +27,7 @@ def is_weird_component(comp: str) -> str | None:
         return "starts/ends with quote character"
 
     # Excessive backslashes
-    if comp.count('\\') >= EXCESSIVE_BACKSLASH_THRESHOLD:
+    if comp.count("\\") >= EXCESSIVE_BACKSLASH_THRESHOLD:
         return "contains excessive backslashes"
 
     # Overlong component
@@ -63,7 +63,9 @@ def main(argv: list[str]) -> int:
 
     if errors:
         print("Filename sanity check failed:\n" + "\n".join(f"  - {e}" for e in errors))
-        print("\nTip: rename files to avoid control characters, quotes at edges, and very long path components.")
+        print(
+            "\nTip: rename files to avoid control characters, quotes at edges, and very long path components."
+        )
         return 1
     return 0
 

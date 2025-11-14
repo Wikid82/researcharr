@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 import os
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
@@ -120,6 +121,7 @@ class JobService:
         args: tuple[Any, ...] = (),
         kwargs: dict[str, Any] | None = None,
         priority: JobPriority = JobPriority.NORMAL,
+        scheduled_at: datetime | None = None,
         **options: Any,
     ) -> UUID:
         """Submit a job for execution.
@@ -151,6 +153,7 @@ class JobService:
             args=args,
             kwargs=kwargs or {},
             priority=priority,
+            scheduled_at=scheduled_at,
             **options,
         )
 
@@ -162,6 +165,7 @@ class JobService:
                 "job_id": str(job_id),
                 "handler": handler,
                 "priority": priority.value,
+                "scheduled_at": job.scheduled_at.isoformat() if job.scheduled_at else None,
             })
 
         logger.debug(f"Job {job_id} submitted (handler={handler}, priority={priority.name})")

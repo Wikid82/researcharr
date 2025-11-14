@@ -572,9 +572,10 @@ class CoreApplicationFactory:
             # When job queue disabled, provide lightweight background task manager
             try:
                 from .background import BackgroundTaskManager
+                from .events import get_event_bus
 
                 if getattr(app, "background_tasks", None) is None:
-                    app.background_tasks = BackgroundTaskManager()  # type: ignore[attr-defined]
+                    app.background_tasks = BackgroundTaskManager(event_bus=get_event_bus())  # type: ignore[attr-defined]
             except Exception:
                 pass
             return None

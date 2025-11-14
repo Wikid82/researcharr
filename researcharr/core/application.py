@@ -197,8 +197,7 @@ class CoreApplicationFactory:
             config_dir,
         )
         try:
-            errors = self.config_manager.validation_errors
-            if errors:
+            if errors := self.config_manager.validation_errors:
                 LOGGER.warning("Config validation errors: %s", errors)
         except Exception:  # pragma: no cover - best effort logging only
             pass
@@ -372,15 +371,12 @@ class CoreApplicationFactory:
                 else:
                     webui = None
 
-            webui_module: ModuleType | None = webui
-
-            if webui_module:
+            if webui_module := webui:
                 try:
                     ucfg = webui_module.load_user_config()
                     if isinstance(ucfg, dict):
                         if "password_hash" in ucfg:
-                            password_hash = ucfg.get("password_hash")
-                            if password_hash:
+                            if password_hash := ucfg.get("password_hash"):
                                 user_config["password_hash"] = password_hash
 
                         # Handle API key migration
@@ -389,9 +385,7 @@ class CoreApplicationFactory:
                                 "general.api_key_hash", ucfg.get("api_key_hash")
                             )
                         elif "api_key" in ucfg:
-                            # Migrate plaintext API key to hash
-                            api_key_val = ucfg.get("api_key")  # pragma: allowlist secret
-                            if api_key_val:
+                            if api_key_val := ucfg.get("api_key"):
                                 hashed = generate_password_hash(str(api_key_val))
                                 webui_module.save_user_config(
                                     ucfg.get("username", user_config["username"]),
@@ -636,7 +630,7 @@ def integrate_with_web_app(app: Any, config_dir: str = "/config") -> Any:
         from .api import bp as core_api_bp
 
         # Check if already registered
-        if not any(bp.name == "api_v1" for bp in app.blueprints.values()):
+        if all(bp.name != "api_v1" for bp in app.blueprints.values()):
             app.register_blueprint(core_api_bp, url_prefix="/api/v1")
     except Exception:  # nosec B110 -- intentional broad except for resilience
         pass

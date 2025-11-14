@@ -253,8 +253,7 @@ class AsyncWorker:
         try:
             module_path, func_name = handler_name.rsplit(".", 1)
             module = importlib.import_module(module_path)
-            handler = getattr(module, func_name)
-            return handler
+            return getattr(module, func_name)
         except (ValueError, ImportError, AttributeError) as e:
             raise ValueError(f"Handler not found: {handler_name}") from e
 
@@ -427,8 +426,7 @@ class AsyncWorkerPool(WorkerPool):
         Args:
             worker_id: Worker identifier
         """
-        worker = self._workers.get(worker_id)
-        if worker:
+        if worker := self._workers.get(worker_id):
             worker.info.last_heartbeat = datetime.now(UTC)
 
     async def get_metrics(self) -> dict[str, Any]:
@@ -440,9 +438,12 @@ class AsyncWorkerPool(WorkerPool):
         workers = await self.get_workers()
 
         total = len(workers)
-        idle = sum(1 for w in workers if w.status == WorkerStatus.IDLE)
-        busy = sum(1 for w in workers if w.status == WorkerStatus.BUSY)
-        healthy = sum(1 for w in workers if w.is_healthy)
+        idle = sum(bool(w.status == WorkerStatus.IDLE)
+               for w in workers)
+        busy = sum(bool(w.status == WorkerStatus.BUSY)
+               for w in workers)
+        healthy = sum(bool(w.is_healthy)
+                  for w in workers)
         unhealthy = total - healthy
 
         total_completed = sum(w.jobs_completed for w in workers)

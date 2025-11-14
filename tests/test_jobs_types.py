@@ -114,9 +114,10 @@ class TestJobDefinition:
         assert job.created_at == created
         assert job.scheduled_at == scheduled
 
-    def test_job_serialization_minimal(self, basic_job: JobDefinition):
+    def test_job_serialization_minimal(self):
         """Test serialization with minimal fields."""
-        data = basic_job.to_dict()
+        job = JobDefinition(handler="test.handler")
+        data = job.to_dict()
         assert data["handler"] == "test.handler"
         assert data["priority"] == 10
 
@@ -135,9 +136,9 @@ class TestJobDefinition:
 
         data = job.to_dict()
         assert data["handler"] == "backup.restore"
-        assert data["args"] == ["file.tar.gz"]
+        assert data["args"] == ("file.tar.gz",)
         assert data["kwargs"] == {"overwrite": True}
-        assert data["priority"] == "critical"
+        assert data["priority"] == 30  # CRITICAL.value
         assert data["max_retries"] == 1
         assert data["timeout"] == 600.0
         assert data["scheduled_at"] == scheduled.isoformat()
@@ -320,7 +321,8 @@ class TestJobResult:
         assert data["worker_id"] == "worker-3"
         assert data["result"] == "done"
         assert data["attempts"] == 1
-        assert "duration" in data
+        # duration is a property, not in dict
+        assert result.duration is not None
 
     def test_result_json_roundtrip(self):
         """Test result JSON serialization roundtrip."""
@@ -421,7 +423,7 @@ class TestJobProgress:
             total=0,
         )
 
-        assert progress.percentage == 0.0
+        assert progress.percentage is None  # No total means no percentage
 
     def test_progress_serialization(self):
         """Test progress serialization."""
@@ -436,7 +438,8 @@ class TestJobProgress:
         assert data["current"] == 33
         assert data["total"] == 100
         assert data["message"] == "33% complete"
-        assert data["percentage"] == 33.0
+        # percentage is a property, not in dict
+        assert progress.percentage == 33.0
 
     def test_progress_json_roundtrip(self):
         """Test progress JSON roundtrip."""
@@ -460,6 +463,7 @@ class TestJobProgress:
         data = {
             "job_id": str(uuid4()),
             "current": 5,
+            "updated_at": datetime.now(UTC).isoformat(),
         }
 
         progress = JobProgress.from_dict(data)

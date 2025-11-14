@@ -69,7 +69,7 @@ def create_backup_file(
             except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
 
-            if config_root.exists() and config_root.is_dir():
+            if config_root.is_dir():
                 for p in sorted(config_root.rglob("*")):
                     if p.is_file():
                         try:

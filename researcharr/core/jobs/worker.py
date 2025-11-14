@@ -6,8 +6,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from uuid import UUID, uuid4
 from typing import Any
+from uuid import UUID, uuid4
 
 
 class WorkerStatus(str, Enum):

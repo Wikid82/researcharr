@@ -142,7 +142,13 @@ async def submit_job():
             timeout=timeout,
         )
 
-        return jsonify({"job_id": str(job_id), "status": "submitted", "scheduled_at": scheduled_at.isoformat() if scheduled_at else None}), 201
+        return jsonify(
+            {
+                "job_id": str(job_id),
+                "status": "submitted",
+                "scheduled_at": scheduled_at.isoformat() if scheduled_at else None,
+            }
+        ), 201
 
     except KeyError as e:
         return jsonify({"error": f"Invalid priority: {e}"}), 400

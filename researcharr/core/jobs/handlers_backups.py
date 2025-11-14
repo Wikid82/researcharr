@@ -115,7 +115,11 @@ async def backup_restore(job: JobDefinition, progress):
         await progress(1, 5, "Creating pre-restore backup")
         try:
             await asyncio.to_thread(create_backup_file, config_root, backups_dir, pre_prefix)
-            await asyncio.to_thread(prune_backups, backups_dir, {"retain_count": int(os.getenv("BACKUP_RETAIN_COUNT", "10"))})
+            await asyncio.to_thread(
+                prune_backups,
+                backups_dir,
+                {"retain_count": int(os.getenv("BACKUP_RETAIN_COUNT", "10"))},
+            )
         except Exception:
             pass
     else:
@@ -162,6 +166,7 @@ def register_backup_handlers(job_service: Any) -> None:
     except Exception:
         # Intentionally swallow to avoid breaking application startup.
         pass
+
 
 __all__ = [
     "backup_create",

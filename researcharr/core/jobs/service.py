@@ -161,12 +161,15 @@ class JobService:
 
         # Publish event
         if self._events:
-            await self._publish_event("job.submitted", {
-                "job_id": str(job_id),
-                "handler": handler,
-                "priority": priority.value,
-                "scheduled_at": job.scheduled_at.isoformat() if job.scheduled_at else None,
-            })
+            await self._publish_event(
+                "job.submitted",
+                {
+                    "job_id": str(job_id),
+                    "handler": handler,
+                    "priority": priority.value,
+                    "scheduled_at": job.scheduled_at.isoformat() if job.scheduled_at else None,
+                },
+            )
 
         logger.debug(f"Job {job_id} submitted (handler={handler}, priority={priority.name})")
         return job_id
@@ -264,10 +267,13 @@ class JobService:
         """
         count = await self._queue.purge(status=status)
         if self._events:
-            await self._publish_event("jobs.purged", {
-                "count": count,
-                "status": status.value if status else "all",
-            })
+            await self._publish_event(
+                "jobs.purged",
+                {
+                    "count": count,
+                    "status": status.value if status else "all",
+                },
+            )
         return count
 
     async def get_metrics(self) -> dict[str, Any]:
@@ -296,9 +302,12 @@ class JobService:
         await self._workers.start(count)
 
         if self._events:
-            await self._publish_event("job_service.workers_started", {
-                "count": count,
-            })
+            await self._publish_event(
+                "job_service.workers_started",
+                {
+                    "count": count,
+                },
+            )
 
         logger.info(f"Started {count} workers")
 
@@ -324,9 +333,12 @@ class JobService:
         await self._workers.scale(target_count)
 
         if self._events:
-            await self._publish_event("job_service.workers_scaled", {
-                "target_count": target_count,
-            })
+            await self._publish_event(
+                "job_service.workers_scaled",
+                {
+                    "target_count": target_count,
+                },
+            )
 
         logger.info(f"Scaled workers to {target_count}")
 

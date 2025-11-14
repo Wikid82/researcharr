@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
 import importlib
+import inspect
 import logging
 import os
 import traceback
@@ -153,12 +153,15 @@ class AsyncWorker:
         logger.info(f"Worker {self.worker_id} executing job {job.id} ({job.handler})")
 
         # Publish job started event
-        await self._emit("job.started", {
-            "job_id": str(job.id),
-            "worker_id": self.worker_id,
-            "handler": job.handler,
-            "attempt": result.attempts + 1,
-        })
+        await self._emit(
+            "job.started",
+            {
+                "job_id": str(job.id),
+                "worker_id": self.worker_id,
+                "handler": job.handler,
+                "attempt": result.attempts + 1,
+            },
+        )
 
         try:
             # Get handler
@@ -192,16 +195,17 @@ class AsyncWorker:
 
             self.info.jobs_completed += 1
 
-            logger.info(
-                f"Worker {self.worker_id} completed job {job.id} in {result.duration:.2f}s"
-            )
+            logger.info(f"Worker {self.worker_id} completed job {job.id} in {result.duration:.2f}s")
 
             # Publish job completed event
-            await self._emit("job.completed", {
-                "job_id": str(job.id),
-                "duration": result.duration,
-                "worker_id": self.worker_id,
-            })
+            await self._emit(
+                "job.completed",
+                {
+                    "job_id": str(job.id),
+                    "duration": result.duration,
+                    "worker_id": self.worker_id,
+                },
+            )
 
         except TimeoutError:
             error_msg = f"Job timed out after {job.timeout}s"
@@ -210,11 +214,14 @@ class AsyncWorker:
             await self.queue.fail(job.id, error_msg, retry=True)
             self.info.jobs_failed += 1
 
-            await self._emit("job.failed", {
-                "job_id": str(job.id),
-                "error": error_msg,
-                "will_retry": True,
-            })
+            await self._emit(
+                "job.failed",
+                {
+                    "job_id": str(job.id),
+                    "error": error_msg,
+                    "will_retry": True,
+                },
+            )
 
         except Exception as e:
             error_msg = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
@@ -223,11 +230,14 @@ class AsyncWorker:
             await self.queue.fail(job.id, error_msg, retry=True)
             self.info.jobs_failed += 1
 
-            await self._emit("job.failed", {
-                "job_id": str(job.id),
-                "error": str(e),
-                "will_retry": True,
-            })
+            await self._emit(
+                "job.failed",
+                {
+                    "job_id": str(job.id),
+                    "error": str(e),
+                    "will_retry": True,
+                },
+            )
 
         finally:
             self.info.status = WorkerStatus.IDLE
@@ -438,12 +448,9 @@ class AsyncWorkerPool(WorkerPool):
         workers = await self.get_workers()
 
         total = len(workers)
-        idle = sum(bool(w.status == WorkerStatus.IDLE)
-               for w in workers)
-        busy = sum(bool(w.status == WorkerStatus.BUSY)
-               for w in workers)
-        healthy = sum(bool(w.is_healthy)
-                  for w in workers)
+        idle = sum(bool(w.status == WorkerStatus.IDLE) for w in workers)
+        busy = sum(bool(w.status == WorkerStatus.BUSY) for w in workers)
+        healthy = sum(bool(w.is_healthy) for w in workers)
         unhealthy = total - healthy
 
         total_completed = sum(w.jobs_completed for w in workers)

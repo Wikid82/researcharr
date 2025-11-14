@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import random
 from datetime import UTC, datetime
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 try:
@@ -56,8 +56,7 @@ class RedisJobQueue(JobQueue):
         """
         if redis is None:
             raise ImportError(
-                "redis package is required for RedisJobQueue. "
-                "Install with: pip install redis"
+                "redis package is required for RedisJobQueue. Install with: pip install redis"
             )
 
         self.redis_url = redis_url
@@ -201,13 +200,9 @@ class RedisJobQueue(JobQueue):
 
                 # Update status to RUNNING
                 async with self._redis.pipeline(transaction=True) as pipe:
-                    pipe.hset(
-                        self._key("status"), job_id_str, JobStatus.RUNNING.value
-                    )
+                    pipe.hset(self._key("status"), job_id_str, JobStatus.RUNNING.value)
                     pipe.hset(self._key("worker"), job_id_str, worker_id)
-                    pipe.hset(
-                        self._key("started"), job_id_str, datetime.now(UTC).isoformat()
-                    )
+                    pipe.hset(self._key("started"), job_id_str, datetime.now(UTC).isoformat())
                     await pipe.execute()
 
                 logger.debug(f"Job {job_id_str} assigned to worker {worker_id}")
@@ -344,9 +339,7 @@ class RedisJobQueue(JobQueue):
             # Move to dead letter queue
             async with self._redis.pipeline(transaction=True) as pipe:
                 # Update status to DEAD_LETTER
-                pipe.hset(
-                    self._key("status"), job_id_str, JobStatus.DEAD_LETTER.value
-                )
+                pipe.hset(self._key("status"), job_id_str, JobStatus.DEAD_LETTER.value)
 
                 # Store final error
                 pipe.hset(self._key("error"), job_id_str, error)
@@ -433,7 +426,9 @@ class RedisJobQueue(JobQueue):
         if not status_bytes:
             return None
 
-        status_str = status_bytes.decode("utf-8") if isinstance(status_bytes, bytes) else status_bytes
+        status_str = (
+            status_bytes.decode("utf-8") if isinstance(status_bytes, bytes) else status_bytes
+        )
         return JobStatus(status_str)
 
     async def get_result(self, job_id: UUID) -> JobResult | None:
@@ -498,7 +493,9 @@ class RedisJobQueue(JobQueue):
             job_data_list = await self._redis.hmget(self._key("data"), *job_ids)
             for job_data in job_data_list:
                 if job_data:
-                    decoded_data = job_data.decode("utf-8") if isinstance(job_data, bytes) else job_data
+                    decoded_data = (
+                        job_data.decode("utf-8") if isinstance(job_data, bytes) else job_data
+                    )
                     jobs.append(JobDefinition.from_json(decoded_data))
 
         return jobs
@@ -524,7 +521,9 @@ class RedisJobQueue(JobQueue):
             job_data_list = await self._redis.hmget(self._key("data"), *job_ids)
             for job_data in job_data_list:
                 if job_data:
-                    decoded_data = job_data.decode("utf-8") if isinstance(job_data, bytes) else job_data
+                    decoded_data = (
+                        job_data.decode("utf-8") if isinstance(job_data, bytes) else job_data
+                    )
                     jobs.append(JobDefinition.from_json(decoded_data))
 
         return jobs
@@ -658,9 +657,10 @@ class RedisJobQueue(JobQueue):
         # Get status counts
         status_map = await self._redis.hgetall(self._key("status"))
         status_counts = {
-            status.value: sum(bool((s.decode("utf-8") if isinstance(s, bytes) else s)
-                                          == status.value)
-                          for s in status_map.values())
+            status.value: sum(
+                bool((s.decode("utf-8") if isinstance(s, bytes) else s) == status.value)
+                for s in status_map.values()
+            )
             for status in JobStatus
         }
         # Get lifetime counters

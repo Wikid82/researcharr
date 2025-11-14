@@ -41,7 +41,7 @@ __all__ = [
     "WorkerStatus",
     # Service
     "JobService",
-     # API
-     "jobs_bp",
+    # API
+    "jobs_bp",
     "register_backup_job_handlers",
 ]

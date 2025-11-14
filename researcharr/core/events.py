@@ -201,9 +201,17 @@ class Events:
 
     # Jobs and tasks
     JOB_QUEUED = "job.queued"
+    JOB_SUBMITTED = "job.submitted"
     JOB_STARTED = "job.started"
+    JOB_PROGRESS = "job.progress"
     JOB_COMPLETED = "job.completed"
     JOB_FAILED = "job.failed"
+    JOB_CANCELLED = "job.cancelled"
+    JOB_REQUEUED = "job.requeued"
+    JOBS_PURGED = "jobs.purged"
+    JOB_SERVICE_WORKERS_STARTED = "job_service.workers_started"
+    JOB_SERVICE_WORKERS_STOPPED = "job_service.workers_stopped"
+    JOB_SERVICE_WORKERS_SCALED = "job_service.workers_scaled"
 
     # Health and monitoring
     HEALTH_CHECK = "health.check"

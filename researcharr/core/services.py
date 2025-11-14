@@ -428,8 +428,7 @@ class HealthService:
 
         # Check database with detailed monitoring
         try:
-            db_monitor = self._get_db_health_monitor()
-            if db_monitor:
+            if db_monitor := self._get_db_health_monitor():
                 # Use comprehensive database health check
                 db_health = db_monitor.check_database_health()
                 health_status["components"]["database"] = {
@@ -1909,11 +1908,7 @@ def load_config(path: str = "config.yml", fs: FileSystemService | None = None) -
     config = globals()["yaml"].safe_load(content)
     # If the file is empty or evaluates to None, return an empty dict so
     # callers/tests can handle missing values gracefully.
-    if not config:
-        return {}
-    # Don't raise on missing fields; return whatever is present. Tests
-    # expect partial configs to be accepted.
-    return config
+    return config or {}
 
 
 # Backwards compatibility functions (for existing code that imports these directly)

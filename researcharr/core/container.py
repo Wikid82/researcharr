@@ -106,9 +106,7 @@ class ServiceContainer:
     def list_services(self) -> dict[str, str]:
         """List all registered services and their types."""
         with self._lock:
-            services = {}
-            for name in self._singletons:
-                services[name] = "singleton"
+            services = dict.fromkeys(self._singletons, "singleton")
             for name in self._factories:
                 if name not in services:  # Don't override singleton type
                     services[name] = "factory"

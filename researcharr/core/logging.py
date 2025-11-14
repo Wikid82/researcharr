@@ -83,10 +83,10 @@ class LoggerFactory:
     def _has_file_handler(self, logger: logging.Logger, log_file: str | Path) -> bool:
         """Check if logger already has a FileHandler for the specified file."""
         log_file_str = str(log_file)
-        for handler in logger.handlers:
-            if isinstance(handler, logging.FileHandler) and handler.baseFilename == log_file_str:
-                return True
-        return False
+        return any(
+            isinstance(handler, logging.FileHandler) and handler.baseFilename == log_file_str
+            for handler in logger.handlers
+        )
 
     def reset_logger(self, name: str) -> None:
         """Reset a logger by removing it from the registry.

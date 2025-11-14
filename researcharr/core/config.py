@@ -120,8 +120,7 @@ class ConfigurationManager:
             # Load from each source in priority order
             for source in self._sources:
                 try:
-                    source_config = self._load_source(source)
-                    if source_config:
+                    if source_config := self._load_source(source):
                         new_config = self._merge_config(new_config, source_config)
                         LOGGER.debug("Loaded config from source: %s", source.name)
                 except Exception as e:
@@ -192,17 +191,13 @@ class ConfigurationManager:
 
     def _validate_config(self, config: dict[str, Any]) -> bool:
         """Validate the merged configuration."""
-        # Basic validation - can be extended with schema validation
-        errors = []
-
         # Check for required top-level keys
         required_keys = ["app", "logging"]  # Based on existing factory.py patterns
-        for key in required_keys:
-            if key not in config:
-                errors.append(
-                    ConfigValidationError(key, f"Required configuration key missing: {key}")
-                )
-
+        errors = [
+            ConfigValidationError(key, f"Required configuration key missing: {key}")
+            for key in required_keys
+            if key not in config
+        ]
         # Validate logging configuration
         if "logging" in config:
             logging_config = config["logging"]
@@ -222,7 +217,7 @@ class ConfigurationManager:
                     )
 
         self._validation_errors.extend(errors)
-        return len(errors) == 0
+        return not errors
 
     def _notify_config_changes(
         self, old_config: dict[str, Any], new_config: dict[str, Any]
@@ -347,11 +342,7 @@ class ConfigurationManager:
 
     def save_config(self, path: str | Path | None = None) -> bool:
         """Save current configuration to file."""
-        if not path:
-            path = self._base_config_dir / "config.yml"
-        else:
-            path = Path(path)
-
+        path = Path(path) if path else self._base_config_dir / "config.yml"
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
 

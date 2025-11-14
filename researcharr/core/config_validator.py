@@ -189,7 +189,7 @@ class ConfigValidator:
                     )
                     errors.extend(section_errors)
 
-        return len(errors) == 0, errors
+        return not errors, errors
 
     def _validate_section(
         self, config: dict[str, Any], schema: dict[str, Any], section_name: str
@@ -285,10 +285,7 @@ class ConfigValidator:
         }
 
         expected = type_map.get(expected_type)
-        if expected is None:
-            return True  # Unknown type, accept anything
-
-        return isinstance(value, expected)
+        return True if expected is None else isinstance(value, expected)
 
     def apply_defaults(
         self, config: dict[str, Any], schema_name: str | None = None

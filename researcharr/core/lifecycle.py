@@ -223,11 +223,6 @@ class ApplicationLifecycle:
         try:
             LOGGER.debug("Executing %s hook: %s", phase, hook.name)
 
-            if hook.timeout:
-                # TODO: Implement timeout handling with threading.Timer
-                # For now, execution remains direct.
-                pass
-
             hook.callback()
 
             LOGGER.debug("Successfully executed %s hook: %s", phase, hook.name)

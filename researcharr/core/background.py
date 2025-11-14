@@ -62,20 +62,27 @@ def _iso(ts: float | None) -> str | None:  # pragma: no cover - trivial
         return None
     try:
         from datetime import UTC, datetime
+
         return datetime.fromtimestamp(ts, UTC).isoformat()
     except Exception:
         return None
 
 
 class BackgroundTaskManager:
-    def __init__(self, max_workers: int = 4, *, event_bus: Any | None = None, ttl_seconds: int | None = None):
-        self._executor = _futures.ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="bg-task")
+    def __init__(
+        self, max_workers: int = 4, *, event_bus: Any | None = None, ttl_seconds: int | None = None
+    ):
+        self._executor = _futures.ThreadPoolExecutor(
+            max_workers=max_workers, thread_name_prefix="bg-task"
+        )
         self._tasks: dict[str, BackgroundTask] = {}
         self._futures: dict[str, _futures.Future] = {}
         self._lock = threading.Lock()
         self._event_bus = event_bus
         # TTL for terminal tasks (completed/failed); default from env or 300s
-        self._ttl = ttl_seconds if ttl_seconds is not None else int(os.getenv("BACKGROUND_TASK_TTL", "300"))
+        self._ttl = (
+            ttl_seconds if ttl_seconds is not None else int(os.getenv("BACKGROUND_TASK_TTL", "300"))
+        )
 
     def submit(self, fn: Callable[..., Any], *args, **kwargs) -> str:
         tid = uuid.uuid4().hex
@@ -92,6 +99,7 @@ class BackgroundTaskManager:
             try:
                 # Cooperative cancellation support: if function accepts cancel_event kw
                 import inspect
+
                 sig = None
                 try:
                     sig = inspect.signature(fn)
@@ -142,10 +150,14 @@ class BackgroundTaskManager:
         self._executor.shutdown(wait=wait, cancel_futures=False)
 
     # Convenience wrapper mirroring job queue style for backups
-    def submit_backup_create(self, create_fn: Callable[..., Any], config_root: str, backups_dir: str, prefix: str = "") -> str:
+    def submit_backup_create(
+        self, create_fn: Callable[..., Any], config_root: str, backups_dir: str, prefix: str = ""
+    ) -> str:
         return self.submit(create_fn, config_root, backups_dir, prefix)
 
-    def submit_backup_restore(self, restore_fn: Callable[..., Any], backup_path: str, config_root: str) -> str:
+    def submit_backup_restore(
+        self, restore_fn: Callable[..., Any], backup_path: str, config_root: str
+    ) -> str:
         return self.submit(restore_fn, backup_path, config_root)
 
     # Internal helpers -------------------------------------------------
@@ -163,9 +175,12 @@ class BackgroundTaskManager:
             return None
         remove: list[str] = []
         for tid, t in self._tasks.items():
-            if t.status in ("completed", "failed", "cancelled") and t.finished:
-                if (now - t.finished) > self._ttl:
-                    remove.append(tid)
+            if (
+                t.status in ("completed", "failed", "cancelled")
+                and t.finished
+                and (now - t.finished) > self._ttl
+            ):
+                remove.append(tid)
         for tid in remove:
             self._tasks.pop(tid, None)
 
@@ -208,7 +223,9 @@ class BackgroundTaskManager:
             # Re-read status in case task transitioned while we held lock
             if task.status in ("running", "pending"):
                 try:
-                    print(f"DEBUG: cancelling task {task_id} status={task.status} cancel_event={bool(task._cancel_event)}")
+                    print(
+                        f"DEBUG: cancelling task {task_id} status={task.status} cancel_event={bool(task._cancel_event)}"
+                    )
                 except Exception:
                     pass
                 task.cancel_requested = True
@@ -222,5 +239,6 @@ class BackgroundTaskManager:
             except Exception:
                 pass
             return False
+
 
 __all__ = ["BackgroundTaskManager", "BackgroundTask"]

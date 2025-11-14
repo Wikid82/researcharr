@@ -586,7 +586,12 @@ class CoreApplicationFactory:
                 # Use CPU count default; minimal floor of 1
                 try:
                     import os as _os
-                    count = max(1, len(os.sched_getaffinity(0))) if hasattr(os, "sched_getaffinity") else (_os.cpu_count() or 1)
+
+                    count = (
+                        max(1, len(os.sched_getaffinity(0)))
+                        if hasattr(os, "sched_getaffinity")
+                        else (_os.cpu_count() or 1)
+                    )
                 except Exception:
                     count = 1
                 await svc.start_workers(count=count)

@@ -151,6 +151,16 @@ class CoreApplicationFactory:
             "tasks": {},
         }
 
+        managed_sources = {"default_config", "tasks_config", "general_config"}
+        try:
+            sources = getattr(self.config_manager, "_sources", None)
+            if isinstance(sources, list):
+                self.config_manager._sources = [  # type: ignore[attr-defined]
+                    src for src in sources if getattr(src, "name", None) not in managed_sources
+                ]
+        except Exception:  # nosec B110 -- best-effort cleanup only
+            pass
+
         # Add configuration sources
         self.config_manager.add_source(
             "default_config",
@@ -174,7 +184,7 @@ class CoreApplicationFactory:
         )
 
         try:
-            success = self.config_manager.load_config()
+            success = self.config_manager.load_config(reload=True)
         except Exception:  # pragma: no cover - defensive guard
             LOGGER.exception("Configuration manager raised during load; using fallback defaults")
             success = False

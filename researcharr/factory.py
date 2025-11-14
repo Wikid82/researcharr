@@ -243,15 +243,25 @@ def __getattr__(name: str):
     # Provide a defensive fallback for `render_template` so tests that
     # patch `researcharr.factory.render_template` can reliably find the
     # attribute even when the implementation module doesn't re-export it.
-    if name == "render_template":
+    if name in {"render_template", "check_password_hash", "generate_password_hash"}:
         try:
-            from flask import render_template as _rt
+            if name == "render_template":
+                from flask import render_template as _fallback  # type: ignore[attr-defined]
+            else:
+                from werkzeug.security import (  # type: ignore[attr-defined]
+                    check_password_hash as _check,
+                )
+                from werkzeug.security import (
+                    generate_password_hash as _gen,
+                )
+
+                _fallback = _check if name == "check_password_hash" else _gen
 
             try:
-                globals()["render_template"] = _rt
+                globals()[name] = _fallback
             except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
-            return _rt
+            return _fallback
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
 

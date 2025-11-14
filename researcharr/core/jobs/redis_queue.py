@@ -5,13 +5,18 @@ from __future__ import annotations
 import logging
 import random
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from uuid import UUID
 
 try:
     import redis.asyncio as redis
 except ImportError:
     redis = None  # type: ignore
+
+if TYPE_CHECKING:
+    from redis.asyncio import Redis as RedisClient  # type: ignore
+else:
+    RedisClient = Any  # type: ignore
 
 from .queue import JobQueue
 from .types import JobDefinition, JobPriority, JobResult, JobStatus
@@ -58,7 +63,7 @@ class RedisJobQueue(JobQueue):
         self.redis_url = redis_url
         self.key_prefix = key_prefix
         self.max_dead_letters = max_dead_letters
-        self._redis: redis.Redis | None = None
+        self._redis: RedisClient | None = None
         self._initialized = False
 
     def _key(self, suffix: str) -> str:

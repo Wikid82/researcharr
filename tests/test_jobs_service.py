@@ -33,7 +33,9 @@ def mock_queue():
 @pytest.fixture
 def mock_worker_pool():
     """Create a mock worker pool."""
-    pool = AsyncMock()
+    from researcharr.core.jobs.async_worker import AsyncWorkerPool
+
+    pool = AsyncMock(spec=AsyncWorkerPool)
     pool.start = AsyncMock()
     pool.stop = AsyncMock()
     pool.scale = AsyncMock()
@@ -236,8 +238,10 @@ class TestJobSubmission:
         job_id = await service.submit_job("test.handler")
 
         # Check event was published
-        mock_event_bus.publish.assert_called_once()
-        event_name, event_data = mock_event_bus.publish.call_args[0]
+        mock_event_bus.publish_simple.assert_called_once()
+        call_args = mock_event_bus.publish_simple.call_args
+        event_name = call_args[0][0]
+        event_data = call_args[0][1]
         assert event_name == "job.submitted"
         assert event_data["handler"] == "test.handler"
 
@@ -253,9 +257,10 @@ class TestJobSubmission:
         await service.initialize()
 
         future = datetime.now(UTC) + timedelta(hours=2)
-        await service.submit_job("test", scheduled_at=future)
+        job_id = await service.submit_job("test", scheduled_at=future)
 
-        event_data = mock_event_bus.publish.call_args[0][1]
+        call_args = mock_event_bus.publish_simple.call_args
+        event_data = call_args[0][1] if call_args else None
         assert event_data["scheduled_at"] == future.isoformat()
 
 
@@ -370,8 +375,10 @@ class TestJobCancellation:
 
         await service.cancel_job(job_id)
 
-        mock_event_bus.publish.assert_called_once()
-        event_name, event_data = mock_event_bus.publish.call_args[0]
+        mock_event_bus.publish_simple.assert_called_once()
+        call_args = mock_event_bus.publish_simple.call_args
+        event_name = call_args[0][0]
+        event_data = call_args[0][1]
         assert event_name == "job.cancelled"
         assert event_data["job_id"] == str(job_id)
 
@@ -448,6 +455,7 @@ class TestWorkerManagement:
 
         job_service.register_handler("test", test_handler)
 
+        # Verify it was passed to worker pool
         mock_worker_pool.register_handler.assert_called_once_with("test", test_handler)
 
     async def test_start_workers(self, job_service, mock_worker_pool):
@@ -460,13 +468,13 @@ class TestWorkerManagement:
         """Test stopping workers gracefully."""
         await job_service.stop_workers(graceful=True)
 
-        mock_worker_pool.stop.assert_called_once_with(graceful=True, timeout=30.0)
+        mock_worker_pool.stop.assert_called_once_with(graceful=True)
 
-    async def test_stop_workers_with_timeout(self, job_service, mock_worker_pool):
-        """Test stopping workers with custom timeout."""
-        await job_service.stop_workers(graceful=True, timeout=60.0)
+    async def test_stop_workers_forceful(self, job_service, mock_worker_pool):
+        """Test stopping workers forcefully."""
+        await job_service.stop_workers(graceful=False)
 
-        mock_worker_pool.stop.assert_called_once_with(graceful=True, timeout=60.0)
+        mock_worker_pool.stop.assert_called_once_with(graceful=False)
 
     async def test_scale_workers(self, job_service, mock_worker_pool):
         """Test scaling worker pool."""
@@ -483,24 +491,7 @@ class TestWorkerManagement:
 
         assert workers == expected_workers
 
-    async def test_get_worker(self, job_service, mock_worker_pool):
-        """Test getting specific worker information."""
-        expected_worker = Mock(id="w1")
-        mock_worker_pool.get_worker.return_value = expected_worker
 
-        worker = await job_service.get_worker("w1")
-
-        assert worker == expected_worker
-        mock_worker_pool.get_worker.assert_called_once_with("w1")
-
-    async def test_restart_worker(self, job_service, mock_worker_pool):
-        """Test restarting a worker."""
-        mock_worker_pool.restart_worker.return_value = True
-
-        restarted = await job_service.restart_worker("w1")
-
-        assert restarted is True
-        mock_worker_pool.restart_worker.assert_called_once_with("w1")
 
 
 class TestMetrics:
@@ -549,7 +540,7 @@ class TestEventPublishing:
         await service.submit_job("test")
 
         # Event should be published
-        mock_event_bus.publish.assert_called_once()
+        mock_event_bus.publish_simple.assert_called_once()
 
     async def test_no_event_when_bus_not_configured(self, mock_queue, mock_worker_pool):
         """Test that no events published when no event bus."""

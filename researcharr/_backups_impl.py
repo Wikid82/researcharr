@@ -81,8 +81,7 @@ def create_backup_file(
     except Exception:  # nosec B110 -- intentional broad except for resilience
         LOGGER.exception("Failed to create stub backup %s", dest)
         try:
-            if dest.exists():
-                dest.unlink()
+            dest.unlink(missing_ok=True)
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
         return None

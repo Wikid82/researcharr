@@ -71,20 +71,20 @@ def _load_scheduler_classes():
 
         class _CronTrigger:
             @staticmethod
-            def from_crontab(expr, timezone=None):
+            def from_crontab(*_args, **_kwargs):
                 return object()
 
         class _BackgroundScheduler:
             def __init__(self, timezone=None):
                 self._jobs = []
 
-            def add_job(self, func, trigger, id=None, replace_existing=False):
+            def add_job(self, func, trigger, **_kwargs):
                 self._jobs.append((func, trigger))
 
             def start(self):
                 return
 
-            def shutdown(self, wait=False):
+            def shutdown(self, *_args, **_kwargs):
                 return
 
         return _BackgroundScheduler, _CronTrigger

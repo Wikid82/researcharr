@@ -1,0 +1,25 @@
+---
+ignore:
+  - .git
+  - .venv
+  - .tox
+  - env
+  - .env
+  - node_modules
+  - dist
+  - build
+  - site
+  - htmlcov
+  - reports
+  - docs/_build
+rule_settings:
+  enable:
+    - default
+  disable:
+    - low-code-quality
+  rule_types:
+    - refactoring
+    - suggestion
+  python_version: "3.10"
+metrics:
+  quality_threshold: 25.0

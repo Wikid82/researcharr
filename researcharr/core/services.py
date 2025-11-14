@@ -556,9 +556,8 @@ class SchedulerService:
         if self._started:
             return True
 
-        if self._scheduler is None:
-            if not self.initialize():
-                return False
+        if self._scheduler is None and not self.initialize():
+            return False
 
         try:
             # Setup backup scheduler jobs
@@ -698,13 +697,12 @@ class MonitoringService:
         }
 
         # Ensure monitors are initialized
-        if self._backup_monitor is None or self._database_monitor is None:
-            if not self.initialize():
-                results["status"] = "error"
-                results["alerts"].append(
-                    {"level": "error", "message": "Monitoring not initialized"}
-                )
-                return results
+        if (self._backup_monitor is None or self._database_monitor is None) and not self.initialize():
+            results["status"] = "error"
+            results["alerts"].append(
+                {"level": "error", "message": "Monitoring not initialized"}
+            )
+            return results
 
         # Check backup health
         try:

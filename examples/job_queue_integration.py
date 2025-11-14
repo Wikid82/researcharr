@@ -7,7 +7,7 @@ existing researcharr services like backup processing.
 import asyncio
 import logging
 
-from researcharr.core import JobService, JobPriority
+from researcharr.core import JobPriority, JobService
 
 logger = logging.getLogger(__name__)
 
@@ -273,11 +273,11 @@ async def example_usage():
 
         # Check metrics
         metrics = await service.get_metrics()
-        print(f"\nQueue metrics:")
+        print("\nQueue metrics:")
         print(f"  Pending: {metrics['queue']['pending']}")
         print(f"  Running: {metrics['queue']['running']}")
         print(f"  Completed: {metrics['queue']['completed']}")
-        print(f"\nWorker metrics:")
+        print("\nWorker metrics:")
         print(f"  Total: {metrics['workers']['total']}")
         print(f"  Idle: {metrics['workers']['idle']}")
         print(f"  Busy: {metrics['workers']['busy']}")

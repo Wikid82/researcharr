@@ -267,7 +267,7 @@ class DatabaseHealthMonitor:
             if message:
                 result["message"] = message
 
-            if status == "warning" or status == "critical":
+            if status in {"warning", "critical"}:
                 self._publish_event(
                     "DB_SIZE_WARNING",
                     {

@@ -555,6 +555,46 @@ class CoreApplicationFactory:
 
         return app
 
+    def initialize_job_queue(self, app: Flask) -> None:
+        """Optionally initialize the job queue and register backup handlers.
+
+        Controlled via the ``JOB_QUEUE_ENABLED`` environment variable. When
+        enabled, a JobService is created, backup handlers registered and
+        workers started. Failures are logged but do not block application
+        startup.
+        """
+        import os
+        import asyncio
+        from .events import get_event_bus
+        from .jobs import JobService, register_backup_job_handlers
+
+        if not os.getenv("JOB_QUEUE_ENABLED"):
+            return None
+        if getattr(app, "job_service", None) is not None:
+            return None
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        try:
+            svc = JobService(redis_url=redis_url, event_bus=get_event_bus())
+
+            async def _init():
+                await svc.initialize()
+                register_backup_job_handlers(svc)
+                # Use CPU count default; minimal floor of 1
+                try:
+                    import os as _os
+                    count = max(1, len(os.sched_getaffinity(0))) if hasattr(os, "sched_getaffinity") else (_os.cpu_count() or 1)
+                except Exception:
+                    count = 1
+                await svc.start_workers(count=count)
+
+            asyncio.run(_init())
+            app.job_service = svc  # type: ignore[attr-defined]
+        except Exception:  # nosec B110 - resilience; job queue optional
+            try:
+                app.logger.exception("Failed to initialize job queue")
+            except Exception:
+                pass
+
 
 # Factory function for backwards compatibility
 def create_core_app(config_dir: str = "/config") -> Flask:

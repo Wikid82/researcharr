@@ -4,7 +4,9 @@ This module provides the core application setup and configuration functionality
 extracted from factory.py, integrated with the new core architecture components.
 """
 
+from copy import deepcopy
 import importlib.util
+import logging
 import os
 from types import ModuleType
 from typing import Any
@@ -30,6 +32,8 @@ from .services import (
     SchedulerService,
     StorageService,
 )
+
+LOGGER = logging.getLogger(__name__)
 
 try:
     # Optional: repository Unit of Work registration
@@ -117,37 +121,40 @@ class CoreApplicationFactory:
 
     def setup_configuration(self, config_dir: str = "/config") -> dict[str, Any]:
         """Setup application configuration with core architecture integration."""
+        default_config = {
+            "app": {"name": "researcharr", "version": "1.0.0", "debug": False},
+            "logging": {
+                "level": "INFO",
+                "file": os.path.join(config_dir, "app.log"),
+            },
+            "database": {"path": "researcharr.db"},
+            "general": {
+                "PUID": os.getenv("PUID", "1000"),
+                "PGID": os.getenv("PGID", "1000"),
+                "Timezone": os.getenv("TIMEZONE", "America/New_York"),
+                "LogLevel": os.getenv("LOGLEVEL", "INFO"),
+            },
+            "scheduling": {"cron_schedule": "0 0 * * *", "timezone": "UTC"},
+            "user": {
+                "username": "admin",
+                "password": "password",
+            },  # pragma: allowlist secret
+            "backups": {
+                "retain_count": 10,
+                "retain_days": 30,
+                "pre_restore": True,
+                "pre_restore_keep_days": 1,
+                "auto_backup_enabled": False,
+                "auto_backup_cron": "0 2 * * *",
+                "prune_cron": "0 3 * * *",
+            },
+            "tasks": {},
+        }
+
         # Add configuration sources
         self.config_manager.add_source(
             "default_config",
-            data={
-                "app": {"name": "researcharr", "version": "1.0.0", "debug": False},
-                "logging": {
-                    "level": "INFO",
-                    "file": os.path.join(config_dir, "app.log"),
-                },
-                "database": {"path": "researcharr.db"},
-                "general": {
-                    "PUID": os.getenv("PUID", "1000"),
-                    "PGID": os.getenv("PGID", "1000"),
-                    "Timezone": os.getenv("TIMEZONE", "America/New_York"),
-                    "LogLevel": os.getenv("LOGLEVEL", "INFO"),
-                },
-                "scheduling": {"cron_schedule": "0 0 * * *", "timezone": "UTC"},
-                "user": {
-                    "username": "admin",
-                    "password": "password",
-                },  # pragma: allowlist secret
-                "backups": {
-                    "retain_count": 10,
-                    "retain_days": 30,
-                    "pre_restore": True,
-                    "pre_restore_keep_days": 1,
-                    "auto_backup_enabled": False,
-                    "auto_backup_cron": "0 2 * * *",
-                    "prune_cron": "0 3 * * *",
-                },
-            },
+            data=default_config,
             priority=100,
         )
 
@@ -166,27 +173,94 @@ class CoreApplicationFactory:
             priority=70,
         )
 
-        # Load all configuration
-        success = self.config_manager.load_config()
+        try:
+            success = self.config_manager.load_config()
+        except Exception:  # pragma: no cover - defensive guard
+            LOGGER.exception("Configuration manager raised during load; using fallback defaults")
+            success = False
 
         if success:
-            # Create legacy config_data structure for backwards compatibility
-            config_data = {
-                "app": self.config_manager.get_section("app"),
-                "logging": self.config_manager.get_section("logging"),
-                "database": self.config_manager.get_section("database"),
-                "general": self.config_manager.get_section("general"),
-                "radarr": [],
-                "sonarr": [],
-                "scheduling": self.config_manager.get_section("scheduling"),
-                "user": self.config_manager.get_section("user"),
-                "backups": self.config_manager.get_section("backups"),
-                "tasks": self.config_manager.get_section("tasks"),
-            }
+            return self._build_config_data_from_manager()
 
-            return config_data
-        else:
-            raise RuntimeError("Failed to load application configuration")
+        LOGGER.warning(
+            "Configuration manager failed to load sources for %s; falling back to defaults",
+            config_dir,
+        )
+        try:
+            errors = self.config_manager.validation_errors
+            if errors:
+                LOGGER.warning("Config validation errors: %s", errors)
+        except Exception:  # pragma: no cover - best effort logging only
+            pass
+
+        fallback_config = self._build_fallback_config(default_config, config_dir)
+        try:
+            self.config_manager._config = fallback_config  # type: ignore[attr-defined]
+        except Exception:  # pragma: no cover - best effort
+            pass
+
+        return self._build_config_data_from_manager()
+
+    def _build_config_data_from_manager(self) -> dict[str, Any]:
+        """Create a legacy-compatible config payload from the manager state."""
+        return {
+            "app": self.config_manager.get_section("app"),
+            "logging": self.config_manager.get_section("logging"),
+            "database": self.config_manager.get_section("database"),
+            "general": self.config_manager.get_section("general"),
+            "radarr": [],
+            "sonarr": [],
+            "scheduling": self.config_manager.get_section("scheduling"),
+            "user": self.config_manager.get_section("user"),
+            "backups": self.config_manager.get_section("backups"),
+            "tasks": self.config_manager.get_section("tasks"),
+        }
+
+    def _build_fallback_config(self, defaults: dict[str, Any], config_dir: str) -> dict[str, Any]:
+        """Construct a configuration snapshot without the config manager."""
+        current_config: dict[str, Any] = {}
+        try:
+            existing = getattr(self.config_manager, "_config", {})
+            if isinstance(existing, dict) and existing:
+                current_config = deepcopy(existing)
+        except Exception:  # pragma: no cover - defensive
+            current_config = {}
+
+        baseline = self._deep_merge_dicts(defaults, current_config)
+
+        legacy_files = [
+            os.path.join(config_dir, "config.yml"),
+            os.path.join(config_dir, "general.yml"),
+            os.path.join(config_dir, "tasks.yml"),
+        ]
+
+        for path in legacy_files:
+            if not os.path.exists(path):
+                continue
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    data = yaml.safe_load(fh) or {}
+                if isinstance(data, dict):
+                    baseline = self._deep_merge_dicts(baseline, data)
+            except Exception:
+                LOGGER.warning("Failed to load fallback config file: %s", path, exc_info=True)
+
+        return baseline
+
+    @staticmethod
+    def _deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+        """Recursively merge two dictionaries without mutating inputs."""
+        result = deepcopy(base)
+        for key, value in override.items():
+            if (
+                key in result
+                and isinstance(result[key], dict)
+                and isinstance(value, dict)
+            ):
+                result[key] = CoreApplicationFactory._deep_merge_dicts(result[key], value)
+            else:
+                result[key] = deepcopy(value)
+        return result
 
     def setup_plugins(self, app: Flask, config_dir: str = "/config") -> Any:
         """Setup plugin registry and load plugin configurations."""

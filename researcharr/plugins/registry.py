@@ -170,9 +170,9 @@ else:
 
                 def create_instance(self, plugin_name: str, config: dict) -> Any:
                     cls = self.get(plugin_name)
-                    if not cls:
-                        raise KeyError(f"Unknown plugin: {plugin_name}")
-                    return cls(config)
+                    if cls:
+                        return cls(config)
+                    raise KeyError(f"Unknown plugin: {plugin_name}")
 
                 def list_plugins(self) -> list[str]:
                     return list(self._plugins.keys())

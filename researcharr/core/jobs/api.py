@@ -13,6 +13,7 @@ from flask import Blueprint, current_app, jsonify, request
 from werkzeug.security import check_password_hash
 
 from researcharr.core.jobs import JobPriority, JobStatus
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -116,13 +117,28 @@ def submit_job():
         kwargs = data.get("kwargs", {})
         priority_str = data.get("priority", "normal").upper()
         priority = JobPriority[priority_str]
+        scheduled_at = None
+        if "scheduled_at" in data and data["scheduled_at"]:
+            try:
+                scheduled_at = datetime.fromisoformat(data["scheduled_at"])
+            except Exception:
+                return jsonify({"error": "invalid scheduled_at timestamp"}), 400
         max_retries = data.get("max_retries", 3)
         timeout = data.get("timeout")
 
         # Submit job (would need async wrapper)
-        job_id = "placeholder-id"  # service.submit_job(...)
+        # Submit actual job
+        job_id = await service.submit_job(
+            handler,
+            args=args,
+            kwargs=kwargs,
+            priority=priority,
+            scheduled_at=scheduled_at,
+            max_retries=max_retries,
+            timeout=timeout,
+        )
 
-        return jsonify({"job_id": job_id, "status": "submitted"}), 201
+        return jsonify({"job_id": str(job_id), "status": "submitted", "scheduled_at": scheduled_at.isoformat() if scheduled_at else None}), 201
 
     except KeyError as e:
         return jsonify({"error": f"Invalid priority: {e}"}), 400

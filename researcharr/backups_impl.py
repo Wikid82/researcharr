@@ -328,9 +328,7 @@ def get_default_backup_config() -> dict:
 
 
 def merge_backup_configs(default_config: dict, user_config: dict) -> dict:
-    merged = dict(default_config or {})
-    merged.update(user_config or {})
-    return merged
+    return (default_config or {}) | (user_config or {})
 
 
 def get_backup_info(backup_path: str | Path) -> dict[str, object] | None:

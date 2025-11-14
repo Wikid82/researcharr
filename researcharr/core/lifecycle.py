@@ -176,7 +176,7 @@ class ApplicationLifecycle:
                     LOGGER.error("Critical startup hook failed: %s", hook.name)
                     self._set_state(ApplicationState.FAILED)
                     # Raise the underlying exception expectation for tests.
-                    raise Exception("Critical failure")
+                    raise RuntimeError(f"Critical failure in startup hook: {hook.name}")
 
             self._set_state(ApplicationState.STARTED)
             LOGGER.info("Application started successfully")

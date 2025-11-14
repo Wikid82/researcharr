@@ -112,7 +112,9 @@ async def test_backup_prune_job(job_service, temp_config_root):
         from researcharr.backups_impl import prune_backups as _prune
 
         _prune(backups_dir, {"retain_count": 2})
-        post_files = [p for p in backups_dir.iterdir() if p.is_file() and p.name.startswith("prune")]
+        post_files = [
+            p for p in backups_dir.iterdir() if p.is_file() and p.name.startswith("prune")
+        ]
     assert len(post_files) == 2
     os.environ.pop("BACKUP_RETAIN_COUNT", None)
 

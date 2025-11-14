@@ -98,7 +98,16 @@ def test_background_serialization_schema(tmp_path):
     data = mgr.serialize(tid)
     assert data is not None
     # Required unified fields
-    for key in ["job_id", "status", "result", "error", "started_at", "completed_at", "duration", "type"]:
+    for key in [
+        "job_id",
+        "status",
+        "result",
+        "error",
+        "started_at",
+        "completed_at",
+        "duration",
+        "type",
+    ]:
         assert key in data
     assert data["type"] == "background"
     mgr.shutdown()

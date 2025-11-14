@@ -320,10 +320,7 @@ class TestRedisQueue:
     async def test_list_jobs(self, redis_queue):
         """Test listing jobs."""
         # Submit multiple jobs
-        jobs = [
-            JobDefinition(handler=f"test.handler{i}")
-            for i in range(5)
-        ]
+        jobs = [JobDefinition(handler=f"test.handler{i}") for i in range(5)]
         for job in jobs:
             await redis_queue.submit(job)
 

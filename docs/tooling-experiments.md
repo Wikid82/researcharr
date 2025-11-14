@@ -1,6 +1,30 @@
 # Experimental Tooling: Sourcery & Vulture
 
-These notes document how to try Sourcery (refactoring suggestions) and Vulture (dead-code finder) locally using the new VS Code tasks. Nothing is wired into CI—run them on demand to see if the feedback is useful.
+Sourcery now runs automatically as part of `pre-commit` (limited to the highest-signal rules listed below) while Vulture remains opt-in. Use this doc when you need the full ad-hoc scans, want to tweak the rule tiers, or simply forget the setup steps.
+
+## Sourcery in pre-commit (high/medium rule tiers)
+
+The `sourcery` hook in `.pre-commit-config.yaml` executes `sourcery review --check researcharr` with a hand-curated rule allowlist. Those rules are grouped into the same "high" and "medium" buckets that power `reports/sourcery-priority.json`:
+
+**High priority (correctness & safety)**
+- `raise-specific-error`
+- `raise-from-previous-error`
+- `remove-redundant-exception`
+- `simplify-single-exception-tuple`
+- `remove-none-from-default-get`
+- `remove-redundant-path-exists`
+
+**Medium priority (readability & maintainability)**
+- `collection-into-set`
+- `dict-assign-update-to-union`
+- `hoist-statement-from-if`
+- `introduce-default-else`
+- `merge-list-appends-into-extend`
+- `merge-nested-ifs`
+- `remove-unnecessary-else`
+- `swap-if-else-branches`
+
+If you want to tighten or relax what runs before each commit, edit the `--enable <rule-id>` entries in the hook and update this section (and the JSON report, if you keep it synchronized). The hook installs Sourcery automatically, but you still need to provide credentials once per machine—either run `sourcery login` or export `SOURCERY_TOKEN` so that both `pre-commit` and the manual tasks can authenticate.
 
 ## 1. One-time setup
 
@@ -9,7 +33,7 @@ source .venv/bin/activate
 python -m pip install --upgrade "sourcery-cli>=1.16" vulture
 ```
 
-Sourcery also needs an API token:
+These commands are still useful when you want to run the full Sourcery/Vulture scans manually (outside of the limited pre-commit tier). Sourcery also needs an API token:
 
 1. Create/sign in to a Sourcery account.
 2. Run `sourcery login` once or export an existing token:
@@ -48,7 +72,7 @@ Open the command palette → `Tasks: Run Task` and pick:
 
 - Treat both reports as advisory. Anything actionable can be turned into a normal issue/PR.
 - Because these runs are local-only, you can tweak thresholds or scopes without affecting other developers.
-- If the output proves valuable, we can discuss promoting either tool to an optional pre-commit hook or CI job later.
+- Sourcery already blocks on the curated rule set via pre-commit, but these wider runs tell you whether we should promote additional rules (or drop noisy ones) in the future.
 
 ## 4. Cleanup (optional)
 
@@ -108,4 +132,4 @@ with open("reports/sourcery-priority.json", "w", encoding="utf-8") as fh:
 PY
 ```
 
-The generated JSON currently lists 24 findings under `reports/sourcery-priority.json`. Re-run the steps above after new Sourcery scans to refresh the file.
+The generated JSON currently lists 24 findings under `reports/sourcery-priority.json`. Re-run the steps above after new Sourcery scans (or after changing the pre-commit allowlist) to refresh the file.

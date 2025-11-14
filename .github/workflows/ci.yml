@@ -311,7 +311,7 @@ jobs:
     if: needs.build-wheels.result == 'success' && github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/'))
     steps:
       - name: Download wheelhouse artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
           path: wheelhouse
       - name: Install twine
@@ -366,7 +366,7 @@ jobs:
           echo "PIP_EXTRA_INDEX_URL=https://pypi.org/simple" >> $GITHUB_ENV
           mkdir -p ./wheelhouse || true
       - name: Download wheelhouse (artifact, fallback)
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         continue-on-error: true
         with:
           path: ./wheelhouse
@@ -378,7 +378,7 @@ jobs:
         run: |
           mkdir -p /tmp/ci/.cache
       - name: Set up Docker (ensure docker build works)
-        uses: docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55 # v2
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
       - name: Set env defaults
         run: |
           echo "PYTHONHASHSEED=0" >> $GITHUB_ENV

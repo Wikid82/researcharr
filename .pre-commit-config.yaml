@@ -107,6 +107,13 @@ repos:
   # Local hooks: shellcheck (system binary) and detect-secrets (Python tool)
   - repo: local
     hooks:
+      - id: filename-sanity
+        name: filename sanity (no long or weird names)
+        entry: python scripts/check_filename_sanity.py
+        language: system
+        pass_filenames: true
+        stages: [pre-commit]
+
       - id: pytest-ci-smoke
         name: pytest (CI-mode smoke)
         entry: ./scripts/test-ci-smoke.sh

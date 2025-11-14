@@ -402,6 +402,47 @@
             "problemMatcher": [],
             "detail": "Run Prettier to format YAML files"
         }
+        ,
+        {
+            "label": "Sourcery: Analyze (Trial)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "source ${workspaceFolder}/.venv/bin/activate && sourcery review ${input:SOURCERY_SCOPE}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "SOURCERY_TOKEN": "${env:SOURCERY_TOKEN}"
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [],
+            "detail": "Runs Sourcery CLI over a path without wiring it into CI (requires sourcery-cli + token)."
+        }
+        ,
+        {
+            "label": "Vulture: Dead Code Scan (Trial)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "source ${workspaceFolder}/.venv/bin/activate && vulture ${workspaceFolder}/researcharr ${workspaceFolder}/scripts ${input:VULTURE_EXTRA_ARGS}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": [],
+            "detail": "Runs Vulture locally to list potential dead code (optional experiment)."
+        }
 
 
     ],
@@ -411,6 +452,18 @@
             "type": "promptString",
             "description": "Test file(s) or pattern (e.g. tests/test_factory_shim_new.py)",
             "default": "tests/test_factory_shim_new.py"
+        },
+        {
+            "id": "SOURCERY_SCOPE",
+            "type": "promptString",
+            "description": "Path (or file) for Sourcery review",
+            "default": "researcharr"
+        },
+        {
+            "id": "VULTURE_EXTRA_ARGS",
+            "type": "promptString",
+            "description": "Extra Vulture arguments (e.g. confidence, exclude files)",
+            "default": "--min-confidence 80"
         }
     ]
 }

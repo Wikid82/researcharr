@@ -21,15 +21,16 @@ import os
 from pathlib import Path
 from typing import Any
 
-from .types import JobDefinition
-
 # Import backing implementation helpers directly for deterministic behavior.
 from ...backups_impl import (
     create_backup_file,
     prune_backups,
-    restore_backup as impl_restore_backup,
     validate_backup_file,
 )
+from ...backups_impl import (
+    restore_backup as impl_restore_backup,
+)
+from .types import JobDefinition
 
 
 async def backup_create(job: JobDefinition, progress):  # noqa: D401 - concise handler

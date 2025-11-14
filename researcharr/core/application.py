@@ -4,10 +4,10 @@ This module provides the core application setup and configuration functionality
 extracted from factory.py, integrated with the new core architecture components.
 """
 
-from copy import deepcopy
 import importlib.util
 import logging
 import os
+from copy import deepcopy
 from types import ModuleType
 from typing import Any
 
@@ -252,11 +252,7 @@ class CoreApplicationFactory:
         """Recursively merge two dictionaries without mutating inputs."""
         result = deepcopy(base)
         for key, value in override.items():
-            if (
-                key in result
-                and isinstance(result[key], dict)
-                and isinstance(value, dict)
-            ):
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
                 result[key] = CoreApplicationFactory._deep_merge_dicts(result[key], value)
             else:
                 result[key] = deepcopy(value)

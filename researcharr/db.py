@@ -9,7 +9,6 @@ from __future__ import annotations
 import os
 import sqlite3
 import time
-from typing import Dict, Optional
 
 
 def _get_db_path() -> str:
@@ -58,23 +57,23 @@ def init_db() -> None:
         conn.close()
 
 
-def load_user() -> Optional[Dict[str, Optional[str]]]:
+def load_user() -> dict[str, str | None] | None:
     """Return the first user row as a dict or None if no user exists."""
     init_db()
     conn = get_connection()
     try:
         cur = conn.cursor()
         cur.execute(
-            "SELECT username, password_hash, api_key_hash" " FROM webui_users ORDER BY id LIMIT 1"
+            "SELECT username, password_hash, api_key_hash FROM webui_users ORDER BY id LIMIT 1"
         )
         row = cur.fetchone()
-        if not row:
-            return None
-        return {
-            "username": row["username"],
-            "password_hash": row["password_hash"],
-            "api_key_hash": row["api_key_hash"],
-        }
+        if row:
+            return {
+                "username": row["username"],
+                "password_hash": row["password_hash"],
+                "api_key_hash": row["api_key_hash"],
+            }
+        return None
     finally:
         conn.close()
 
@@ -82,7 +81,7 @@ def load_user() -> Optional[Dict[str, Optional[str]]]:
 def save_user(
     username: str,
     password_hash: str,
-    api_key_hash: Optional[str] = None,
+    api_key_hash: str | None = None,
 ) -> None:
     """Insert or update the single webui user (id=1 semantics).
 
@@ -96,8 +95,7 @@ def save_user(
         cur = conn.cursor()
         # Try update first; if no rows updated, insert.
         cur.execute(
-            "UPDATE webui_users SET username = ?, password_hash = ?,"
-            " api_key_hash = ? WHERE id = 1",
+            "UPDATE webui_users SET username = ?, password_hash = ?, api_key_hash = ? WHERE id = 1",
             (username, password_hash, api_key_hash),
         )
         if cur.rowcount == 0:
@@ -112,7 +110,7 @@ def save_user(
 
 
 # Backward-compatible wrappers / aliases for test compatibility
-def get_user_by_username(username: Optional[str] = None) -> Optional[Dict[str, Optional[str]]]:
+def get_user_by_username(username: str | None = None) -> dict[str, str | None] | None:
     """Return the first user row.
 
     Historically tests call `get_user_by_username(username)` even though the

@@ -19,12 +19,18 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import datetime, timedelta
+from typing import Any
 from urllib.parse import urlencode
 
 import requests
 from requests import exceptions as req_exceptions
+
+# Python 3.10 compatibility: UTC added in 3.11
+try:
+    from datetime import UTC
+except ImportError:
+    UTC = UTC
 
 GITHUB_API = "https://api.github.com"
 DEFAULT_TIMEOUT = 30
@@ -38,7 +44,7 @@ def api_path(*parts: str) -> str:
     return "/".join([GITHUB_API.rstrip("/")] + list(parts))
 
 
-def get_auth_headers(token: str) -> Dict[str, str]:
+def get_auth_headers(token: str) -> dict[str, str]:
     return {
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
@@ -46,10 +52,10 @@ def get_auth_headers(token: str) -> Dict[str, str]:
     }
 
 
-def list_packages(owner: str, token: str) -> List[Dict[str, Any]]:
+def list_packages(owner: str, token: str) -> list[dict[str, Any]]:
     # try org endpoint first, then users
     headers = get_auth_headers(token)
-    packages: List[Dict[str, Any]] = []
+    packages: list[dict[str, Any]] = []
     for base in (
         api_path("orgs", owner) + "/packages?package_type=container",
         api_path("users", owner) + "/packages?package_type=container",
@@ -89,9 +95,9 @@ def list_packages(owner: str, token: str) -> List[Dict[str, Any]]:
     return packages
 
 
-def list_package_versions(owner: str, package_name: str, token: str) -> List[Dict[str, Any]]:
+def list_package_versions(owner: str, package_name: str, token: str) -> list[dict[str, Any]]:
     headers = get_auth_headers(token)
-    versions: List[Dict[str, Any]] = []
+    versions: list[dict[str, Any]] = []
     # try org path then user path
     for base in (
         api_path(
@@ -143,7 +149,7 @@ def list_package_versions(owner: str, package_name: str, token: str) -> List[Dic
             break
     # deduplicate by id (some test stubs return the same page multiple times)
     seen_ids = set()
-    unique_versions: List[Dict[str, Any]] = []
+    unique_versions: list[dict[str, Any]] = []
     for v in versions:
         vid = v.get("id")
         if vid not in seen_ids:
@@ -233,7 +239,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def truthy_env(val: Optional[str]) -> Optional[bool]:
+def truthy_env(val: str | None) -> bool | None:
     if val is None:
         return None
     v = val.lower()
@@ -262,7 +268,7 @@ def main() -> None:
         sys.exit(1)
 
     # early token validation: call /user to surface token owner and scopes
-    def _get_user_and_scopes(tok: str) -> tuple[Optional[str], List[str]]:
+    def _get_user_and_scopes(tok: str) -> tuple[str | None, list[str]]:
         headers = get_auth_headers(tok)
         try:
             r = requests.get(api_path("user"), headers=headers, timeout=DEFAULT_TIMEOUT)
@@ -326,7 +332,7 @@ def main() -> None:
         print("OWNER and REPO must be provided. Exiting.")
         sys.exit(1)
 
-    keep_since = datetime.now(timezone.utc) - timedelta(days=days)
+    keep_since = datetime.now(UTC) - timedelta(days=days)
     print(
         "Owner: %s, Package: %s, keep versions newer than: %s"
         % (owner, repo, keep_since.isoformat())
@@ -348,7 +354,7 @@ def main() -> None:
     versions = list_package_versions(owner, repo, token)
     print(f"Found {len(versions)} versions for package {repo}")
 
-    report: Dict[str, Any] = {
+    report: dict[str, Any] = {
         "owner": owner,
         "package": repo,
         "scanned": len(versions),
@@ -376,24 +382,23 @@ def main() -> None:
             decision = "SKIP_PROTECTED"
             matched = sorted(list(tag_set & protected_tags))
             reason = "protected tags: %s" % (matched,)
+        elif created_at is None:
+            decision = "SKIP_BAD_DATE"
+            reason = "created_at is None"
         else:
-            if created_at is None:
+            try:
+                created_at_fixed = created_at.replace("Z", "+00:00")
+                created_dt = datetime.fromisoformat(created_at_fixed)
+            except Exception:
                 decision = "SKIP_BAD_DATE"
-                reason = "created_at is None"
+                reason = f"could not parse created_at: {created_at}"
             else:
-                try:
-                    created_at_fixed = created_at.replace("Z", "+00:00")
-                    created_dt = datetime.fromisoformat(created_at_fixed)
-                except Exception:
-                    decision = "SKIP_BAD_DATE"
-                    reason = f"could not parse created_at: {created_at}"
+                if created_dt < keep_since:
+                    decision = "DELETE"
+                    reason = "older than retention"
                 else:
-                    if created_dt < keep_since:
-                        decision = "DELETE"
-                        reason = "older than retention"
-                    else:
-                        decision = "KEEP"
-                        reason = "newer than retention"
+                    decision = "KEEP"
+                    reason = "newer than retention"
 
         report["candidates"].append(
             {

@@ -1,7 +1,6 @@
 import importlib
 import importlib.util
 import os
-from typing import Dict, List, Type
 
 from researcharr.plugins.base import BasePlugin
 
@@ -9,9 +8,9 @@ from researcharr.plugins.base import BasePlugin
 class PluginRegistry:
     def __init__(self):
         # mapping plugin_name -> plugin class
-        self._plugins: Dict[str, Type[BasePlugin]] = {}
+        self._plugins: dict[str, type[BasePlugin]] = {}
 
-    def register(self, name: str, cls: Type[BasePlugin]):
+    def register(self, name: str, cls: type[BasePlugin]):
         self._plugins[name] = cls
 
     def get(self, name: str):
@@ -45,22 +44,32 @@ class PluginRegistry:
                     continue
                 path = os.path.join(root, fn)
                 name = os.path.splitext(fn)[0]
-                mod_name = f"plugins.{name}"
+                # Use a unique module name to avoid collisions with the
+                # repository's real 'plugins' package. Collisions can occur
+                # under test when loading from a temporary directory.
+                mod_name = f"_researcharr_local_plugin_{name}_{abs(hash(path))}"
                 spec = importlib.util.spec_from_file_location(mod_name, path)
                 if spec is None or spec.loader is None:
+                    # noisy debug when enabled via env for container diagnosis
+                    if os.getenv("RESEARCHARR_DEBUG_REGISTRY_SHIM"):
+                        print(f"[registry-discover] skip spec load path={path}")
                     continue
                 mod = importlib.util.module_from_spec(spec)
                 loader = spec.loader
                 assert loader is not None
                 try:
                     loader.exec_module(mod)
-                except Exception:
+                except Exception as e:
                     # skip modules that fail to import during discovery
+                    if os.getenv("RESEARCHARR_DEBUG_REGISTRY_SHIM"):
+                        print(f"[registry-discover] import failed path={path} err={e}")
                     continue
 
                 plugin_name = getattr(mod, "PLUGIN_NAME", None)
                 plugin_cls = getattr(mod, "Plugin", None)
                 if not plugin_name or not plugin_cls:
+                    if os.getenv("RESEARCHARR_DEBUG_REGISTRY_SHIM"):
+                        print(f"[registry-discover] missing PLUGIN_NAME/Plugin path={path}")
                     continue
 
                 # Determine category: explicit module-level or class attr
@@ -74,13 +83,17 @@ class PluginRegistry:
                 else:
                     plugin_cls.category = getattr(plugin_cls, "category", "plugins")
 
+                if os.getenv("RESEARCHARR_DEBUG_REGISTRY_SHIM"):
+                    print(
+                        f"[registry-discover] registered name={plugin_name} cat={getattr(plugin_cls, 'category', None)} path={path} mod={mod_name}"
+                    )
                 self.register(plugin_name, plugin_cls)
 
-    def create_instance(self, plugin_name: str, config: Dict):
+    def create_instance(self, plugin_name: str, config: dict):
         cls = self.get(plugin_name)
         if not cls:
             raise KeyError(f"Unknown plugin: {plugin_name}")
         return cls(config)
 
-    def list_plugins(self) -> List[str]:
+    def list_plugins(self) -> list[str]:
         return list(self._plugins.keys())

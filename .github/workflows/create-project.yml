@@ -1,16 +1,17 @@
+---
 name: Create Project Board
 
 on:
   workflow_dispatch:
     inputs:
       project_name:
-        description: 'Name for the project board'
+        description: "Name for the project board"
         required: true
-        default: 'Researcharr Development'
+        default: "Researcharr Development"
       project_description:
-        description: 'Description for the project board'
+        description: "Description for the project board"
         required: false
-        default: 'Development board for Researcharr project management'
+        default: "Development board for Researcharr project management"
 
 jobs:
   create_project:

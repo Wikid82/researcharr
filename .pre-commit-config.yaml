@@ -1,3 +1,4 @@
+---
 # Pre-commit configuration for development
 # IMPORTANT: Replace the `rev` placeholders below with a specific tag/commit
 # for reproducible installs. See https://pre-commit.com for guidance.
@@ -8,19 +9,7 @@ repos:
       - id: ruff
         args: ["--fix"]
         stages: [pre-commit]
-
-  - repo: https://github.com/psf/black
-    rev: "25.9.0"
-    hooks:
-      - id: black
-        language_version: python3
-        stages: [pre-commit]
-
-  - repo: https://github.com/PyCQA/isort
-    rev: "7.0.0"
-    hooks:
-      - id: isort
-        name: isort (python)
+      - id: ruff-format
         stages: [pre-commit]
 
   # NOTE: the previous mirrors-mypy hook would create an isolated install of
@@ -34,6 +23,10 @@ repos:
     rev: v1.37.1
     hooks:
       - id: yamllint
+        # Only run yamllint on repository config and workflow files to
+        # reduce noise from vendored/package files. Adjust this regex as
+        # needed to expand or contract the scope of the hook.
+        files: '^(\.github/workflows/|config/|\.pre-commit-config.yaml$|^mkdocs\.yml$|^\.yamllint$|^docs/|^researcharr/).*'
         stages: [pre-commit]
 
   # Security linting with bandit
@@ -43,6 +36,48 @@ repos:
       - id: bandit
         args: ["-c", ".bandit.yaml", "-r", "."]
         additional_dependencies: ["pbr"]
+        stages: [pre-commit]
+
+  - repo: https://github.com/sourcery-ai/sourcery
+    rev: "v1.40.0"
+    hooks:
+      - id: sourcery
+        name: sourcery (priority high+medium)
+        args:
+          # High priority rules
+          - "--enable"
+          - "raise-specific-error"
+          - "--enable"
+          - "raise-from-previous-error"
+          - "--enable"
+          - "remove-redundant-exception"
+          - "--enable"
+          - "simplify-single-exception-tuple"
+          - "--enable"
+          - "remove-none-from-default-get"
+          - "--enable"
+          - "remove-redundant-path-exists"
+          # Medium priority rules
+          - "--enable"
+          - "collection-into-set"
+          - "--enable"
+          - "dict-assign-update-to-union"
+          - "--enable"
+          - "hoist-statement-from-if"
+          - "--enable"
+          - "introduce-default-else"
+          - "--enable"
+          - "merge-list-appends-into-extend"
+          - "--enable"
+          - "merge-nested-ifs"
+          - "--enable"
+          - "remove-unnecessary-else"
+          - "--enable"
+          - "swap-if-else-branches"
+          - "--config"
+          - ".sourcery.yaml"
+          - "researcharr"
+        pass_filenames: false
         stages: [pre-commit]
 
   # Note: shellcheck integration omitted because the shellcheck mirror
@@ -72,6 +107,13 @@ repos:
   # Local hooks: shellcheck (system binary) and detect-secrets (Python tool)
   - repo: local
     hooks:
+      - id: pytest-ci-smoke
+        name: pytest (CI-mode smoke)
+        entry: ./scripts/test-ci-smoke.sh
+        language: script
+        pass_filenames: false
+        stages: [pre-commit]
+
       - id: multi-version-test
         name: multi-version Python compatibility test
         entry: scripts/multi-version-test.sh
@@ -97,9 +139,17 @@ repos:
         name: detect-secrets (local wrapper)
         entry: scripts/run-detect-secrets.sh
         language: script
-        # Exclude tests and node_modules from detect-secrets scans here to
-        # avoid false positives on test fixtures and locally vendored files.
-        files: '^(?!tests/|node_modules/).*'
+        # Restrict detect-secrets to scanning repository source and config files
+        # to avoid baseline churn caused by vendor/venv/generated files.
+        files: '^(researcharr/|config/|templates/|\.github/|\.pre-commit-config.yaml$|^mkdocs\.yml$|^\.yamllint$|^docs/|.*\.(py|yml|yaml|ini|cfg|env|json)$)'
+        exclude: '(^|/)(\.venv|\.tox|site|node_modules|dist|build)/'
+        stages: [pre-commit]
+
+      - id: safety
+        name: safety (vulnerability scan)
+        entry: scripts/run-safety-precommit.sh
+        language: script
+        pass_filenames: false
         stages: [pre-commit]
 
       - id: basedpyright-system
@@ -114,6 +164,13 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      - id: auto-fix-yaml
+        name: auto-fix YAML (local)
+        entry: ./scripts/auto_fix_yaml.sh
+        language: script
+        pass_filenames: false
+        stages: [manual]
+
       # Run pytest in the developer environment. We use `language: system`
       # so the hook invokes the pytest installed in the developer's venv
       # (this avoids needing to replicate the entire test environment in
@@ -126,15 +183,21 @@ repos:
         entry: ./scripts/run-pytest-precommit.sh
         language: script
         pass_filenames: false
-        stages: [pre-commit]
+        stages: [manual]
 
-      # run local wrapper hooks at the pre-commit stage
-      # (keeps behavior equivalent to prior config while using new stage name)
+      - id: pytest-ci-full
+        name: pytest (CI-mode full)
+        entry: ./scripts/test-ci-mode.sh
+        language: script
+        pass_filenames: false
+        stages: [pre-push]
 
-      # NOTE: pytest pre-push hook removed; a dedicated git pre-push hook will
-      # be installed locally instead to avoid pre-commit re-running formatters
-      # and other hooks during the push stage.
+    # run local wrapper hooks at the pre-commit stage
+    # (keeps behavior equivalent to prior config while using new stage name)
 
+    # NOTE: pytest pre-push hook removed; a dedicated git pre-push hook will
+    # be installed locally instead to avoid pre-commit re-running formatters
+    # and other hooks during the push stage.
 # Recommended usage:
 # 1. Replace all <pin-*> placeholders with concrete tag names or commit hashes.
 # 2. Install pre-commit in your environment: `pip install pre-commit`.

@@ -8,9 +8,9 @@ import the top-level `backups` module get the same public functions.
 from __future__ import annotations
 
 from importlib import import_module
-from typing import Any, Optional
+from typing import Any
 
-_IMPL: Optional[Any] = None
+_IMPL: Any | None = None
 try:
     # Import the concrete implementations from the package internals.
     # The canonical, full implementation lives in `researcharr.backups_impl`.
@@ -61,7 +61,44 @@ except Exception:
         return {}
 
 
-__all__ = ["BackupPath", "create_backup_file", "get_backup_info", "prune_backups"]
+__all__ = [
+    "BackupPath",
+    "create_backup_file",
+    "get_backup_info",
+    "prune_backups",
+    "get_backup_config",
+]
+
+
+def get_backup_config(config_root: str | Any) -> dict:
+    """Return a minimal backup configuration mapping.
+
+    Provides a "backups_dir" key pointing at ``<config_root>/backups`` and merges
+    defaults when available. Tests monkeypatch this symbol; keep implementation
+    intentionally simple.
+    """
+    try:
+        import os as _os
+        from pathlib import Path
+
+        root = Path(str(config_root or _os.getenv("CONFIG_DIR", "/config")))
+        backups_dir = root / "backups"
+        defaults = {}
+        try:
+            defaults = get_default_backup_config()  # type: ignore[name-defined]
+        except Exception:
+            defaults = {}
+        cfg = {"backups_dir": str(backups_dir)}
+        try:
+            # Merge defaults without overwriting backups_dir
+            merged = dict(defaults)
+            merged.update(cfg)
+            return merged
+        except Exception:
+            return cfg
+    except Exception:
+        return {"backups_dir": f"{config_root}/backups"}
+
 
 # Ensure package-qualified name points to the same module object
 # Top-level shim should not override the package-qualified module mapping;
@@ -83,6 +120,8 @@ def create_backup_file(config_root, backups_dir, prefix=""):
     if not cr.exists() and not prefix:
         raise Exception("config_root does not exist and no prefix provided")
     # Delegate to the implementation module
+    if _IMPL is None:
+        raise ImportError("backups_impl not available")
     return _IMPL.create_backup_file(config_root, backups_dir, prefix=prefix)
 
 
@@ -97,7 +136,13 @@ try:
     _sp = globals().get("__spec__", None)
     _nm = getattr(_sp, "name", None) or __name__
     _mod = _sys.modules.get(__name__)
-    if _mod is not None and _nm:
+    # Only install this module under the package-qualified name when the
+    # resolved name is actually a researcharr package submodule. Avoid
+    # aggressively overwriting `sys.modules` entries when this shim is
+    # imported as a top-level module during tests or by legacy imports,
+    # because doing so can replace the package implementation object and
+    # pollute global state for other tests.
+    if _mod is not None and _nm and _nm.startswith("researcharr.") and _nm != __name__:
         _sys.modules[_nm] = _mod
 except Exception:
     pass

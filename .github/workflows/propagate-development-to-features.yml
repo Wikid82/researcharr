@@ -1,15 +1,16 @@
+---
 name: Propagate development to feature branches
 
 on:
   push:
-    branches: [ development ]
+    branches: [development]
   workflow_dispatch:
     inputs:
       pattern:
-        description: 'Branch name prefix or pattern to match target branches (default: feature/)'
+        description: "Branch name prefix or pattern to match target branches (default: feature/)"
         required: false
       head:
-        description: 'Branch to propagate from (defaults to pushed branch or development)'
+        description: "Branch to propagate from (defaults to pushed branch or development)"
         required: false
 
 permissions:
@@ -20,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Create PRs from development into feature branches
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd  # v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |

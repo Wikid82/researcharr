@@ -138,7 +138,7 @@ def check_radarr_connection(*args, **kwargs):
                 if isinstance(_g, _mock.Mock):
                     _requests = _m
                     break
-            except Exception:  # nosec B110 -- intentional broad except for resilience
+            except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                 continue
 
         if _requests is None:
@@ -153,7 +153,7 @@ def check_radarr_connection(*args, **kwargs):
                     try:
                         if os.environ.get("RESEARCHARR_SHIM_DEBUG2"):
                             print(
-                                f"SHIMDBG_RADARR: inspecting module {getattr(mod, '__name__', None)} id={id(mod)} cand={repr(cand)} get={repr(getattr(cand,'get',None))}"
+                                f"SHIMDBG_RADARR: inspecting module {getattr(mod, '__name__', None)} id={id(mod)} cand={repr(cand)} get={repr(getattr(cand, 'get', None))}"
                             )
                     except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
@@ -170,7 +170,7 @@ def check_radarr_connection(*args, **kwargs):
                     if isinstance(_modname, str) and _modname.startswith("tests"):
                         _requests = cand
                         break
-                except Exception:  # nosec B110 -- intentional broad except for resilience
+                except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                     continue
 
     if _requests is None:
@@ -234,7 +234,7 @@ def check_sonarr_connection(*args, **kwargs):
                 if isinstance(cand, _mock.Mock):
                     _requests = cand
                     break
-            except Exception:  # nosec B110 -- intentional broad except for resilience
+            except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                 continue
 
     if _requests is None:
@@ -258,7 +258,7 @@ def load_config(path="config.yml"):
     # "researcharr.researcharr.os.path.exists" are respected.
     _mod = sys.modules.get("researcharr") or sys.modules.get(__name__)
     _os = getattr(_mod, "os", os)
-    _exists = getattr(getattr(_os, "path"), "exists", os.path.exists)
+    _exists = getattr(_os.path, "exists", os.path.exists)
 
     if not _exists(path):
         # If tests explicitly patched exists to simulate a missing file,
@@ -278,8 +278,6 @@ def load_config(path="config.yml"):
                 return {}
             config = _yaml.safe_load(f)
             return config or {}
-    except FileNotFoundError:
-        return {}
     except Exception:  # nosec B110 -- intentional broad except for resilience
         return {}
 
@@ -288,9 +286,7 @@ def create_metrics_app():
     """Create a tiny Flask app with /health and /metrics used by tests."""
     try:
         from flask import Flask, jsonify
-    except (
-        Exception
-    ):  # flask may not be available in some isolated checks  # nosec B110 -- intentional broad except for resilience
+    except Exception:  # flask may not be available in some isolated checks  # nosec B110 -- intentional broad except for resilience
 
         class Dummy:
             def test_client(self):
@@ -305,7 +301,7 @@ def create_metrics_app():
     app.metrics = {"requests_total": 0, "errors_total": 0}  # type: ignore[attr-defined]
     try:
         app.config["metrics"] = app.metrics
-    except Exception:
+    except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
 
     @app.before_request
@@ -396,9 +392,8 @@ def serve():
         if os.environ.get("PYTEST_CURRENT_TEST"):
             return
         app.run(host="0.0.0.0", port=2929)  # nosec B104
-    else:
-        if hasattr(app, "run"):
-            app.run(host="0.0.0.0", port=2929)  # nosec B104
+    elif hasattr(app, "run"):
+        app.run(host="0.0.0.0", port=2929)  # nosec B104
 
 
 # (The complex, multi-source resolution `serve()` was removed in favor of

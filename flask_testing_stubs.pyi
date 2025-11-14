@@ -1,7 +1,8 @@
 # Flask testing helpers stub for Pylance
 # These methods exist at runtime but may be missing from type stubs
 
-from typing import Any, ContextManager, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, ContextManager
 
 class FlaskClient:
     def session_transaction(self) -> ContextManager[Any]:
@@ -10,14 +11,12 @@ class FlaskClient:
 
     def get(self, path: str, **kwargs: Any) -> Any:  # simplified
         ...
-
     def post(self, path: str, **kwargs: Any) -> Any:  # simplified
         ...
 
 class FlaskApp:
     def test_client(self) -> FlaskClient:  # simplified
         ...
-
     def app_context(self) -> ContextManager[Any]:
         """Context manager for application context."""
         ...
@@ -30,7 +29,7 @@ class FlaskApp:
 
     # Logger and name are commonly accessed in tests
     logger: Any
-    name: Optional[str]
+    name: str | None
 
 class Response:
     """Lightweight response type used in tests."""

@@ -1,22 +1,23 @@
+---
 name: GHCR prune (hybrid keep-last-N + age)
 
 on:
   schedule:
-    - cron: '0 4 * * 0' # weekly on Sunday 04:00 UTC
+    - cron: "0 4 * * 0"  # weekly on Sunday 04:00 UTC
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'If true, show what would be deleted but do not delete (default true)'
+        description: "If true, show what would be deleted but do not delete (default true)"
         required: false
-        default: 'true'
+        default: "true"
       keep_last_n:
-        description: 'How many protected versions to keep (per protected set)'
+        description: "How many protected versions to keep (per protected set)"
         required: false
-        default: '10'
+        default: "10"
       cutoff_days:
-        description: 'Age cutoff in days for non-protected branch images'
+        description: "Age cutoff in days for non-protected branch images"
         required: false
-        default: '30'
+        default: "30"
 
 permissions:
   packages: write

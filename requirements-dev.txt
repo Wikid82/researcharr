@@ -1,33 +1,32 @@
-isort==7.0.0
-ruff
-bandit
-pre-commit
-pytest==8.4.2
-pytest-cov
-types-requests
-types-PyYAML
-types-Markdown
+# Pin ruff to an available release compatible with Python 3.10
+ruff==0.14.4
+bandit==1.8.6
+pre-commit==4.4.0
+pytest==9.0.0
+pytest-cov==7.0.0
+pytest-randomly==3.16.0
+types-requests==2.32.4.20250913
+types-PyYAML==6.0.3
+types-Markdown==3.10.0.20251106
 
 # Optional packages used by pipeline features (convenience for local dev)
-PyYAML>=6.0
-jsonschema>=4.0
-prometheus-client>=0.16.0
+PyYAML==6.0.3
+jsonschema==4.25.1
+prometheus-client==0.23.1
 
 # Optional tooling (development-only)
-setuptools_scm
-python-json-logger
-debugpy
-ruff
-ipython
-ipdb
-tox
-pip-tools
-bandit
-safety
-pytest-xdist
-detect-secrets
-
+setuptools_scm==9.2.2
+python-json-logger==4.0.0
+debugpy==1.6.7
+# ipython 9.x requires Python >=3.11, use 8.x for Python 3.10 compatibility
+ipython>=8.12.0,<9.0; python_version < "3.11"
+ipython>=9.0,<10.0; python_version >= "3.11"
+ipdb==0.13.9
+tox==4.32.0
+pip-tools==7.5.1
+safety==3.7.0
+pytest-xdist==3.8.0
+detect-secrets==1.5.0
 # Documentation tooling
-mkdocs
-mkdocs-material
-pip-tools
+mkdocs==1.5.2
+mkdocs-material==9.1.13

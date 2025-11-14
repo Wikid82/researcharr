@@ -21,6 +21,15 @@ __path__ = [
     os.path.abspath(os.path.join(os.path.dirname(__file__), "researcharr")),
 ]
 
+# Ensure this module is available as top-level name `entrypoint`.
+# Some tests import or patch `entrypoint` directly (instead of
+# `researcharr.entrypoint`); registering the current module under that
+# name prevents duplicate module objects and avoids mocks being applied
+# to the wrong module object.
+import sys
+
+sys.modules.setdefault("entrypoint", sys.modules.get(__name__))
+
 if "requests" not in globals():
     import requests
 
@@ -151,7 +160,33 @@ def create_metrics_app():
 
     @app.route("/metrics")
     def metrics_endpoint():
-        return jsonify(app.metrics)
+        data = dict(app.metrics or {})
+        try:
+            from researcharr.cache import (
+                metrics as cache_metrics,  # type: ignore
+            )
+
+            c = cache_metrics() or {}
+            data["cache_hits"] = int(c.get("hits", 0))
+            data["cache_misses"] = int(c.get("misses", 0))
+            data["cache_sets"] = int(c.get("sets", 0))
+            data["cache_evictions"] = int(c.get("evictions", 0))
+        except Exception:
+            pass
+        return jsonify(data)
+
+    @app.route("/metrics.prom")
+    def metrics_prometheus():
+        try:
+            from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+            from prometheus_client import REGISTRY as _DEFAULT_REGISTRY
+        except Exception:
+            return jsonify({"error": "prometheus_client not installed"}), 501
+
+        output = generate_latest(_DEFAULT_REGISTRY)
+        from flask import Response as _Response
+
+        return _Response(output, content_type=CONTENT_TYPE_LATEST)
 
     @app.errorhandler(404)
     @app.errorhandler(500)

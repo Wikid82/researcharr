@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 # --- Flask app and route definitions only; all HTML/Jinja/JS is in templates
 # Keep route helpers and config management small and testable
 
 import os
 from types import ModuleType
-from typing import Optional
 
 from werkzeug.security import generate_password_hash
 
@@ -12,7 +10,7 @@ USER_CONFIG_PATH = os.getenv("USER_CONFIG_PATH", "/config/webui_user.yml")
 
 # DB helper import: tests may monkeypatch `webui.rdb` to a fake object with
 # load_user/save_user; leave None when import fails.
-rdb: Optional[ModuleType]
+rdb: ModuleType | None
 try:
     from researcharr import db as rdb  # type: ignore
 except Exception:

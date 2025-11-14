@@ -1,3 +1,4 @@
+---
 codecov:
   token: 13987d18-8800-42bc-a9e0-89dbfa9f2e9c
   require_ci_to_pass: false
@@ -26,11 +27,28 @@ ignore:
   - "site/**"
   - ".venv/**"
   - "venv/**"
+  - ".venv*/**"
   - "scripts/**"
   - "backups-scratch/**"
   - "container_build/**"
   - "repo-mirror.git/**"
   - "researcharr.egg-info/**"
   - "home/**"
-  - "**/*.pyi"
   - "htmlcov/**"
+  - "node_modules/**"
+  - "alembic/versions/**"
+  - "typings/**"
+  - ".tmp/**"
+  - "**/*.pyi"
+  - "**/conftest.py"
+  - "**/__pycache__/**"
+  - "**/test_utils/**"
+  - "static/**"
+  - "templates/**"
+
+  # Bisect/replay artifacts produced during flaky-test triage
+  - "**/replay_*.xml"
+  - "**/replay_*.log"
+  - "**/pairwise_bisect_*.xml"
+  - "**/random_*.xml"
+  - "**/researcharr-bisect/**"

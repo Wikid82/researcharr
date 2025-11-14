@@ -7,17 +7,21 @@ SQLite file `researcharr.db` when present.
 
 from __future__ import annotations
 
+import json
 import shutil
+import sqlite3
 import tempfile
 import zipfile
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
+
+from researcharr.compat import UTC
 
 
 def create_backup_file(
     config_root: str | Path, backups_dir: str | Path, prefix: str = ""
-) -> Optional[Path | Any]:
+) -> Path | Any | None:
     """Create a zip backup of the whole ``config_root`` tree.
 
     This is a minimal, deterministic implementation intended for tests and
@@ -33,14 +37,14 @@ def create_backup_file(
     # returning None. Several tests exercise this branch explicitly against
     # the implementation module (not just the package shim).
     if not config_root.exists() and not prefix:
-        raise Exception("config_root does not exist and no prefix provided")
+        raise FileNotFoundError("config_root does not exist and no prefix provided")
 
     try:
         backups_dir.mkdir(parents=True, exist_ok=True)
     except Exception:  # nosec B110 -- intentional broad except for resilience
         return None
 
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     name = f"{prefix}researcharr-backup-{timestamp}.zip"
     out_path = backups_dir / name
 
@@ -51,10 +55,21 @@ def create_backup_file(
         tmpf.close()
         tmp_path = Path(tmpf.name)
 
+        # Prepare optional metadata for cross-version compatibility
+        meta: dict[str, Any] = {
+            "created": timestamp,
+            "app_version": _detect_app_version(),
+            "alembic_revision": None,
+        }
+
         with zipfile.ZipFile(tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             zf.writestr("metadata.txt", f"backup_created={timestamp}\n")
+            try:
+                zf.writestr("backup_meta.json", json.dumps(meta, separators=(",", ":")))
+            except Exception:  # nosec B110 -- intentional broad except for resilience
+                pass
 
-            if config_root.exists() and config_root.is_dir():
+            if config_root.is_dir():
                 for p in sorted(config_root.rglob("*")):
                     if p.is_file():
                         try:
@@ -67,6 +82,38 @@ def create_backup_file(
                         arcname = str(rel)
                         if p.name == "researcharr.db":
                             arcname = str(Path("db") / p.name)
+                            # Capture a hot copy using SQLite backup API if possible
+                            snap = _sqlite_hot_copy(p)
+                            # Try to read alembic revision for metadata from the live DB
+                            try:
+                                meta["alembic_revision"] = _detect_db_revision(p)
+                                # Update meta in the archive (best effort)
+                                try:
+                                    zf.writestr(
+                                        "backup_meta.json",
+                                        json.dumps(meta, separators=(",", ":")),
+                                    )
+                                except Exception:  # nosec B110 -- intentional broad except for resilience
+                                    pass
+                            except Exception:  # nosec B110 -- intentional broad except for resilience
+                                pass
+                            try:
+                                zf.write(snap, arcname=arcname)
+                            finally:
+                                try:
+                                    Path(snap).unlink(missing_ok=True)
+                                except Exception:  # nosec B110 -- intentional broad except for resilience
+                                    pass
+                            # Optionally include WAL/SHM for point-in-time within interval
+                            if _env_true("RESEARCHARR_BACKUP_INCLUDE_WAL"):
+                                for suffix in ("-wal", "-shm"):
+                                    wal = p.with_name(p.name + suffix)
+                                    if wal.is_file():
+                                        try:
+                                            zf.write(wal, arcname=str(Path("db") / wal.name))
+                                        except Exception:  # nosec B110 -- intentional broad except for resilience
+                                            pass
+                            continue
                         zf.write(p, arcname=arcname)
 
         try:
@@ -94,7 +141,7 @@ def create_backup_file(
         return None
 
 
-def prune_backups(backups_dir: str | Path, cfg: Optional[dict] = None) -> None:
+def prune_backups(backups_dir: str | Path, cfg: dict | None = None) -> None:
     """Prune backup files according to cfg.
 
     Supports retain_count, retain_days and pre_restore_keep_days. If cfg is
@@ -174,11 +221,11 @@ def prune_backups(backups_dir: str | Path, cfg: Optional[dict] = None) -> None:
                         p.unlink()
                     except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
-            except Exception:  # nosec B110 -- intentional broad except for resilience
+            except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                 continue
 
 
-def list_backups(backups_dir: str | Path, *, pattern: str | None = None) -> list[Dict[str, object]]:
+def list_backups(backups_dir: str | Path, *, pattern: str | None = None) -> list[dict[str, object]]:
     d = Path(backups_dir)
     try:
         # Wrap existence/dir checks to tolerate patched stat raising.
@@ -186,7 +233,7 @@ def list_backups(backups_dir: str | Path, *, pattern: str | None = None) -> list
             return []
     except Exception:  # nosec B110 -- intentional broad except for resilience
         return []
-    res: list[Dict[str, object]] = []
+    res: list[dict[str, object]] = []
     # Safely iterate directory; if iteration itself raises return what we have.
     try:
         candidates = [p for p in d.iterdir() if p.is_file() and p.suffix == ".zip"]
@@ -210,7 +257,7 @@ def list_backups(backups_dir: str | Path, *, pattern: str | None = None) -> list
             if pattern and pattern not in info.get("name", ""):
                 continue
             res.append(info)
-        except Exception:  # nosec B110 -- intentional broad except for resilience
+        except Exception:  # nosec B110, B112 -- intentional broad except for resilience
             continue
     return res
 
@@ -224,10 +271,10 @@ def restore_backup(backup_path: str | Path, restore_dir: str | Path) -> bool:
     # Destination must already exist; letting the exception propagate for
     # callers/tests that expect an exception when it does not.
     if not dest.exists() or not dest.is_dir():
-        raise Exception("restore destination does not exist")
+        raise FileNotFoundError("restore destination does not exist")
 
     if not zipfile.is_zipfile(str(p)):
-        raise Exception("invalid backup file")
+        raise ValueError("invalid backup file")
 
     with zipfile.ZipFile(str(p), "r") as zf:
         for member in zf.namelist():
@@ -237,7 +284,7 @@ def restore_backup(backup_path: str | Path, restore_dir: str | Path) -> bool:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with open(target, "wb") as f:
                     f.write(data)
-            except Exception:  # nosec B110 -- intentional broad except for resilience
+            except Exception:  # nosec B110, B112 -- intentional broad except for resilience
                 # best-effort for per-file extraction failures; continue
                 continue
 
@@ -281,12 +328,10 @@ def get_default_backup_config() -> dict:
 
 
 def merge_backup_configs(default_config: dict, user_config: dict) -> dict:
-    merged = dict(default_config or {})
-    merged.update(user_config or {})
-    return merged
+    return (default_config or {}) | (user_config or {})
 
 
-def get_backup_info(backup_path: str | Path) -> Optional[Dict[str, object]]:
+def get_backup_info(backup_path: str | Path) -> dict[str, object] | None:
     try:
         p = Path(backup_path)
         if not p.exists():
@@ -301,8 +346,91 @@ def get_backup_info(backup_path: str | Path) -> Optional[Dict[str, object]]:
             if zipfile.is_zipfile(str(p)):
                 with zipfile.ZipFile(str(p), "r") as zf:
                     info["files"] = zf.namelist()
+                    try:
+                        import json as _json
+
+                        meta_bytes = zf.read("backup_meta.json")
+                        info["meta"] = _json.loads(meta_bytes.decode("utf-8"))
+                    except Exception:  # nosec B110 -- intentional broad except for resilience
+                        pass
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
         return info
     except Exception:  # nosec B110 -- intentional broad except for resilience
         return None
+
+
+def _env_true(name: str) -> bool:
+    try:
+        import os
+
+        return os.getenv(name, "").lower() in ("1", "true", "yes", "on")
+    except Exception:
+        return False
+
+
+def _detect_app_version() -> str:
+    try:
+        # Prefer setuptools_scm-written version module
+        from researcharr._version import version  # type: ignore
+
+        return str(version)
+    except Exception:
+        try:
+            import importlib.metadata as _md
+
+            return _md.version("researcharr")
+        except Exception:
+            return "0.0.0"
+
+
+def _detect_db_revision(db_path: Path) -> str | None:
+    try:
+        if not db_path.exists():
+            return None
+        con = sqlite3.connect(str(db_path))
+        try:
+            cur = con.execute("SELECT version_num FROM alembic_version LIMIT 1")
+            row = cur.fetchone()
+            return row[0] if row else None
+        finally:
+            con.close()
+    except Exception:
+        return None
+
+
+def _sqlite_hot_copy(live_db_path: Path) -> Path:
+    """Create a hot copy of a SQLite DB file.
+
+    If the application engine is using the same file, use the SQLite backup API
+    via a raw connection; otherwise perform a filesystem copy.
+    Returns path to the temporary copy.
+    """
+    tmp = Path(tempfile.mkstemp(prefix="sqlite-snap-", suffix=".db")[1])
+    try:
+        # Try to use SQLAlchemy engine raw connection if available
+        try:
+            from researcharr.storage.database import get_engine  # type: ignore
+
+            engine = get_engine()
+            url = str(engine.url) if getattr(engine, "url", None) else ""
+            # Basic heuristic: ensure URL points to the same path
+            if live_db_path.as_posix() in url:
+                src = engine.raw_connection().connection  # type: ignore[attr-defined]
+                dest = sqlite3.connect(str(tmp))
+                try:
+                    src.backup(dest)
+                    return tmp
+                finally:
+                    dest.close()
+        except Exception:  # nosec B110 -- intentional broad except for resilience
+            pass
+        # Fallback: direct file copy
+        shutil.copy2(str(live_db_path), str(tmp))
+        return tmp
+    except Exception:  # nosec B110 -- intentional broad except for resilience
+        # As a last resort, return the original path (zip will read live file)
+        try:
+            return live_db_path
+        except Exception:  # nosec B110 -- intentional broad except for resilience
+            return tmp

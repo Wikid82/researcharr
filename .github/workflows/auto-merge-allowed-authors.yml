@@ -1,3 +1,4 @@
+---
 name: Auto-merge trusted authors
 
 on:
@@ -15,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Auto-merge trusted authors
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd  # v8
         with:
           github-token: ${{ secrets.AUTO_MERGE_TOKEN }}
           script: |
@@ -30,13 +31,13 @@ jobs:
             // Only auto-merge PRs targeting the development branch
             const baseBranch = pr.base && pr.base.ref;
             if (baseBranch !== 'development') {
-              core.info(`PR #${pr.number} targets '${baseBranch}', not 'development'; skipping auto-merge`);
+              core.info(`PR  #${pr.number} targets '${baseBranch}', not 'development'; skipping auto-merge`);
               return;
             }
 
             // Skip forks: require PR head repo to be same repo (no external forks)
             if (pr.head.repo && pr.head.repo.fork) {
-              core.info(`PR #${pr.number} is from a fork; skipping auto-merge`);
+              core.info(`PR  #${pr.number} is from a fork; skipping auto-merge`);
               return;
             }
 
@@ -80,12 +81,12 @@ jobs:
             });
 
             if (prInfo.state !== 'open') {
-              core.info(`PR #${pr.number} is not open (state=${prInfo.state}); skipping`);
+              core.info(`PR  #${pr.number} is not open (state=${prInfo.state}); skipping`);
               return;
             }
 
             if (prInfo.mergeable === false) {
-              core.info(`PR #${pr.number} is not mergeable (mergeable=false); skipping`);
+              core.info(`PR  #${pr.number} is not mergeable (mergeable=false); skipping`);
               return;
             }
 
@@ -97,7 +98,7 @@ jobs:
                 pull_number: pr.number,
                 merge_method: 'squash',
               });
-              core.info(`Auto-merged PR #${pr.number} by ${author}`);
+              core.info(`Auto-merged PR  #${pr.number} by ${author}`);
             } catch (err) {
-              core.warning(`Failed to auto-merge PR #${pr.number}: ${err.message}`);
+              core.warning(`Failed to auto-merge PR  #${pr.number}: ${err.message}`);
             }

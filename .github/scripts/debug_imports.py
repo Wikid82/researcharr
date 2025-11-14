@@ -27,8 +27,9 @@ except Exception as e:
 if __name__ == "__main__":
     # Additional printouts when invoked directly
     try:
-        import pkgutil
-
-        print("pkgutil find:", pkgutil.get_loader("researcharr"))
+        spec = importlib.util.find_spec("researcharr")
+        print("importlib spec:", spec)
+        if spec is not None:
+            print("loader:", getattr(spec, "loader", None))
     except Exception:
         pass

@@ -1,3 +1,4 @@
+# basedpyright: reportAttributeAccessIssue=false
 """Fallback package shim for the directory-import path.
 
 When the import system resolves the name `researcharr` to the nested
@@ -17,6 +18,15 @@ import sqlite3 as _sqlite
 import sys
 from types import ModuleType
 
+_RECONCILED_PACKAGE_ATTRS = {
+    "factory",
+    "run",
+    "webui",
+    "backups",
+    "api",
+    "entrypoint",
+}
+
 # Defensive: make attribute access on the package reconcile short-name
 # top-level modules with their package-qualified counterparts. Some
 # import orders used by the tests insert a short-name module into
@@ -27,19 +37,23 @@ from types import ModuleType
 # canonical module object and that ``importlib.reload()`` will work,
 # set the package object's class to a small ModuleType subclass that
 # normalizes access for a handful of known names.
-try:
+try:  # pragma: no cover - complex module reconciliation for import edge cases
 
-    class _ResearcharrModule(ModuleType):
-        def __getattribute__(self, name: str):
+    class _ResearcharrModule(ModuleType):  # pragma: no cover
+        def __getattribute__(self, name: str):  # pragma: no cover
             # Only handle a small, well-known set of repo-root modules.
-            if name in ("factory", "run", "webui", "backups", "api", "entrypoint"):
+            if name in _RECONCILED_PACKAGE_ATTRS:
                 try:
                     # DEBUG: trace attribute access for reconciliation
                     # (left intentionally lightweight for local diagnostics)
                     try:
+                        import os as _os
                         import sys as _sys
 
-                        _sys.stderr.write(f"[pkg-attr-access] {name}\n")
+                        # Only emit diagnostics when explicitly enabled; this
+                        # reduces noise in normal test runs and CI.
+                        if _os.environ.get("RESEARCHARR_VERBOSE_FACTORY_HELPER", "0") == "1":
+                            _sys.stderr.write(f"[pkg-attr-access] {name}\n")
                     except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
                     _top = sys.modules.get(name)
@@ -60,6 +74,24 @@ try:
                                 getattr(_pkg, "__file__", None) is not None
                                 or getattr(_pkg, "__spec__", None) is not None
                             ):
+                                # Heal factory create_app if missing on the real package mapping
+                                if name == "factory":
+                                    try:
+                                        _delegate = getattr(
+                                            sys.modules.get(__name__), "_create_app_delegate", None
+                                        )
+                                        if _delegate is not None:
+                                            _cur = getattr(_pkg, "create_app", None)
+                                            if _cur is None or not callable(_cur):
+                                                try:
+                                                    _pkg.__dict__["create_app"] = _delegate
+                                                except Exception:  # nosec B110
+                                                    try:
+                                                        _pkg.__dict__["create_app"] = _delegate
+                                                    except Exception:  # nosec B110
+                                                        pass
+                                    except Exception:  # nosec B110 -- defensive
+                                        pass
                                 return _pkg
                         except Exception:  # nosec B110 -- intentional broad except for resilience
                             pass
@@ -88,6 +120,24 @@ try:
                                 )
                         except Exception:  # nosec B110 -- intentional broad except for resilience
                             pass
+                        # Heal factory create_app on the chosen top-level module if missing
+                        if name == "factory":
+                            try:
+                                _delegate = getattr(
+                                    sys.modules.get(__name__), "_create_app_delegate", None
+                                )
+                                if _delegate is not None:
+                                    _cur = getattr(_top, "create_app", None)
+                                    if _cur is None or not callable(_cur):
+                                        try:
+                                            _top.__dict__["create_app"] = _delegate
+                                        except Exception:  # nosec B110
+                                            try:
+                                                _top.__dict__["create_app"] = _delegate
+                                            except Exception:  # nosec B110
+                                                pass
+                            except Exception:  # nosec B110 -- defensive
+                                pass
                         return _top
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     # Fall through to default behavior on any error
@@ -100,7 +150,7 @@ try:
             # canonical sys.modules entries are updated so that
             # importlib.reload() will find the module under its
             # package-qualified name.
-            if name in ("factory", "run", "webui", "backups", "api", "entrypoint"):
+            if name in _RECONCILED_PACKAGE_ATTRS:
                 try:
                     if isinstance(value, ModuleType):
                         _pkg_name = f"{__name__}.{name}"
@@ -126,9 +176,7 @@ try:
                         if not _has_top:
                             try:
                                 sys.modules.setdefault(name, value)
-                            except (
-                                Exception
-                            ):  # nosec B110 -- intentional broad except for resilience
+                            except Exception:  # nosec B110 -- intentional broad except for resilience
                                 pass
                         try:
                             if (
@@ -190,44 +238,44 @@ try:
                             continue
                         try:
                             setattr(_new, _a, getattr(_pf, _a))
-                        except Exception:
+                        except Exception:  # nosec B110 -- intentional broad except for resilience
                             pass
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
                 # ensure render_template is present
                 try:
                     from flask import render_template as _rt
 
-                    setattr(_new, "render_template", _rt)
-                except Exception:
+                    _new.__dict__["render_template"] = _rt
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     try:
                         # last resort: set to None so patch can replace it
-                        setattr(_new, "render_template", None)
-                    except Exception:
+                        _new.__dict__["render_template"] = None
+                    except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
                 # preserve spec if possible
                 try:
                     _spec = getattr(_pf, "__spec__", None)
                     if _spec is not None:
                         _new.__spec__ = _spec
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
                 # register new module object under both keys
                 try:
                     _sys.modules[_pkg_key] = _new
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
                 try:
                     _sys.modules[_top_key] = _new
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
                 try:
                     globals()["factory"] = _new
-                except Exception:
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
-except Exception:
+except Exception:  # nosec B110 -- intentional broad except for resilience
     pass
 
 
@@ -277,7 +325,7 @@ def _load_impl() -> ModuleType | None:
                 # Ensure __file__ is set so consumers can inspect it
                 try:
                     if not getattr(m, "__file__", None):
-                        setattr(m, "__file__", os.path.abspath(path))
+                        m.__file__ = os.path.abspath(path)
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
                 return m
@@ -320,13 +368,13 @@ if impl is not None:
     try:
         if getattr(impl, "requests", None) is not None:
             name = "researcharr.researcharr.requests"
-            sys.modules.setdefault(name, getattr(impl, "requests"))
+            sys.modules.setdefault(name, impl.requests)
     except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
     try:
         if getattr(impl, "yaml", None) is not None:
             name = "researcharr.researcharr.yaml"
-            sys.modules.setdefault(name, getattr(impl, "yaml"))
+            sys.modules.setdefault(name, impl.yaml)
     except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
     try:
@@ -334,7 +382,7 @@ if impl is not None:
         # under the nested module path so import-style lookups succeed.
         if getattr(impl, "sqlite3", None) is not None:
             name = "researcharr.researcharr.sqlite3"
-            sys.modules.setdefault(name, getattr(impl, "sqlite3"))
+            sys.modules.setdefault(name, impl.sqlite3)
     except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
     try:
@@ -692,9 +740,7 @@ except Exception:  # nosec B110 -- intentional broad except for resilience
                         if not hasattr(_pkg, _attr):
                             try:
                                 setattr(_pkg, _attr, getattr(_top, _attr))
-                            except (
-                                Exception
-                            ):  # nosec B110 -- intentional broad except for resilience
+                            except Exception:  # nosec B110 -- intentional broad except for resilience
                                 pass
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
@@ -728,12 +774,13 @@ except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
     except Exception:  # nosec B110 -- intentional broad except for resilience
         pass
-# Deterministic final reconciliation: prefer an existing top-level module
-# object when present and ensure it is also registered under the
-# package-qualified name with a minimal __spec__. This guarantees that
-# importlib.reload() will find the same object under
-# 'researcharr.<name>' and avoids races when tests insert a short-name
-# module into sys.modules before importing the package submodule.
+# Deterministic final reconciliation: ensure package-qualified names map to
+# the most appropriate module object. Prefer an existing package-level
+# implementation (for example the nested package file like
+# `researcharr/backups.py`) when it exists; only register a repo-root
+# top-level module under the package-qualified name if no package-local
+# file is present. This avoids accidentally shadowing package
+# implementations with repo-root shims during test runs.
 try:
     for _mname in ("factory", "run", "webui", "backups", "api", "entrypoint"):
         _top = sys.modules.get(_mname)
@@ -741,16 +788,24 @@ try:
         _pkg = sys.modules.get(_pkg_name)
 
         # If a top-level module exists and is not already the package
-        # module, prefer the top-level module as the canonical object by
-        # registering it under the package-qualified name and giving it
-        # a minimal __spec__ with that name so importlib.reload() will
-        # succeed.
+        # module, only register it under the package-qualified name when
+        # there is no package-local file that should take precedence.
+        try:
+            _here = os.path.abspath(os.path.dirname(__file__))
+            _pkg_local_fp = os.path.join(_here, f"{_mname}.py")
+            _pkg_local_exists = os.path.isfile(_pkg_local_fp)
+        except Exception:
+            _pkg_local_exists = False
+
         if _top is not None and _pkg is not _top:
+            # If a package-local implementation exists, prefer it and do
+            # not overwrite the package-qualified mapping with the
+            # top-level module.
+            if _pkg_local_exists:
+                continue
+
             try:
-                if (
-                    getattr(_top, "__spec__", None) is None
-                    or getattr(_top, "__spec__").name != _pkg_name
-                ):
+                if getattr(_top, "__spec__", None) is None or _top.__spec__.name != _pkg_name:
                     _top.__spec__ = importlib.util.spec_from_loader(_pkg_name, loader=None)
             except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
@@ -778,20 +833,20 @@ try:
     _top_run = sys.modules.get("run")
     if _top_run is not None:
         try:
-            if not hasattr(_top_run, "schedule") or getattr(_top_run, "schedule") is None:
+            if not hasattr(_top_run, "schedule") or _top_run.schedule is None:
                 # Create a module-like object so patch() can set attributes on it
                 _sched = types.ModuleType("run.schedule")
                 # Provide minimal callable attributes so tests can patch
                 # them (patch requires the attribute to exist).
                 try:
-                    setattr(_sched, "every", lambda *a, **kw: None)
+                    setattr(_sched, "every", lambda *a, **kw: None)  # noqa: B010
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
                 try:
-                    setattr(_sched, "run_pending", lambda *a, **kw: None)
+                    setattr(_sched, "run_pending", lambda *a, **kw: None)  # noqa: B010
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
-                setattr(_top_run, "schedule", _sched)
+                setattr(_top_run, "schedule", _sched)  # noqa: B010
                 # Also register a synthetic module path for importlib-style
                 # lookups (some patch implementations import the dotted
                 # module before walking attributes).
@@ -806,26 +861,23 @@ try:
             # If package-level run already has schedule pointing at a real
             # object, prefer that. Otherwise, point it at the top-level
             # synthetic object if available, or create one locally.
-            if hasattr(_pkg_run, "schedule") and getattr(_pkg_run, "schedule") is not None:
+            if hasattr(_pkg_run, "schedule") and _pkg_run.schedule is not None:
                 pass
+            elif _top_run is not None and getattr(_top_run, "schedule", None) is not None:
+                setattr(_pkg_run, "schedule", _top_run.schedule)  # noqa: B010
+                sys.modules.setdefault("researcharr.run.schedule", _top_run.schedule)
             else:
-                if _top_run is not None and getattr(_top_run, "schedule", None) is not None:
-                    setattr(_pkg_run, "schedule", getattr(_top_run, "schedule"))
-                    sys.modules.setdefault(
-                        "researcharr.run.schedule", getattr(_top_run, "schedule")
-                    )
-                else:
-                    _sched2 = types.ModuleType("researcharr.run.schedule")
-                    try:
-                        setattr(_sched2, "every", lambda *a, **kw: None)
-                    except Exception:  # nosec B110 -- intentional broad except for resilience
-                        pass
-                    try:
-                        setattr(_sched2, "run_pending", lambda *a, **kw: None)
-                    except Exception:  # nosec B110 -- intentional broad except for resilience
-                        pass
-                    setattr(_pkg_run, "schedule", _sched2)
-                    sys.modules.setdefault("researcharr.run.schedule", _sched2)
+                _sched2 = types.ModuleType("researcharr.run.schedule")
+                try:
+                    setattr(_sched2, "every", lambda *a, **kw: None)  # noqa: B010
+                except Exception:  # nosec B110 -- intentional broad except for resilience
+                    pass
+                try:
+                    setattr(_sched2, "run_pending", lambda *a, **kw: None)  # noqa: B010
+                except Exception:  # nosec B110 -- intentional broad except for resilience
+                    pass
+                setattr(_pkg_run, "schedule", _sched2)  # noqa: B010
+                sys.modules.setdefault("researcharr.run.schedule", _sched2)
         except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
 except Exception:  # nosec B110 -- intentional broad except for resilience
@@ -856,13 +908,13 @@ try:
     # point so tests that patch `researcharr.create_metrics_app` are
     # consistently honored. Re-exporting the implementation's symbol here
     # could overwrite the dispatcher installed above.
-    from .researcharr import DB_PATH  # noqa: F401
-    from .researcharr import check_radarr_connection  # noqa: F401
-    from .researcharr import check_sonarr_connection  # noqa: F401
-    from .researcharr import has_valid_url_and_key  # noqa: F401
-    from .researcharr import init_db  # noqa: F401
-    from .researcharr import load_config  # noqa: F401
     from .researcharr import (  # type: ignore[attr-defined]  # noqa: F401
+        DB_PATH,  # noqa: F401
+        check_radarr_connection,  # noqa: F401
+        check_sonarr_connection,  # noqa: F401
+        has_valid_url_and_key,  # noqa: F401
+        init_db,  # noqa: F401
+        load_config,  # noqa: F401
         setup_logger,
     )
 except ImportError:
@@ -941,13 +993,13 @@ try:
         _needs_fix = _cur is None or not callable(_cur)
         if _needs_fix:
             try:
-                _delegate = globals().get("_create_app_delegate", None)
+                _delegate = globals().get("_create_app_delegate")
                 if _delegate is not None:
                     try:
                         _pf.__dict__["create_app"] = _delegate
                     except Exception:  # nosec B110 -- intentional broad except for resilience
                         try:
-                            setattr(_pf, "create_app", _delegate)
+                            _pf.create_app = _delegate  # type: ignore[attr-defined]
                         except Exception:  # nosec B110 -- intentional broad except for resilience
                             pass
             except Exception:  # nosec B110 -- intentional broad except for resilience
@@ -963,7 +1015,7 @@ except Exception:  # nosec B110 -- intentional broad except for resilience
 # short/package-qualified sys.modules entries unconditionally when they lack a
 # callable or expose a different implementation. Best-effort; never raises.
 try:
-    _delegate = globals().get("_create_app_delegate", None)
+    _delegate = globals().get("_create_app_delegate")
     if _delegate is not None and callable(_delegate):
         _pkg_mod = sys.modules.get("researcharr")
         _factory_attr = getattr(_pkg_mod, "factory", None) if _pkg_mod else None
@@ -983,7 +1035,7 @@ try:
                     _m.__dict__["create_app"] = _delegate
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     try:
-                        setattr(_m, "create_app", _delegate)
+                        _m.create_app = _delegate  # type: ignore[attr-defined]
                     except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
         # Ensure the package attribute points at a module object whose
@@ -998,7 +1050,7 @@ try:
                     _factory_attr.__dict__["create_app"] = _delegate
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     try:
-                        setattr(_factory_attr, "create_app", _delegate)
+                        _factory_attr.create_app = _delegate
                     except Exception:  # nosec B110 -- intentional broad except for resilience
                         pass
 except Exception:  # nosec B110 -- intentional broad except for resilience
@@ -1165,26 +1217,33 @@ except Exception:  # nosec B110 -- intentional broad except for resilience
 try:
     import importlib as _il
 
-    _orig_reload = getattr(_il, "reload", None)
+    # Avoid double-wrapping importlib.reload in long test runs which can
+    # lead to recursion errors. Record whether we've already applied the
+    # patch (using a flag on the importlib module) and store the original
+    # reload implementation in a module-local name so our patched wrapper
+    # always calls the original function directly.
+    if not getattr(_il, "_researcharr_reload_wrapped", False):
+        _researcharr_orig_reload = getattr(_il, "reload", None)
 
-    if callable(_orig_reload):
+        if callable(_researcharr_orig_reload):
 
-        def _patched_reload(module):
+            def _patched_reload(module):
+                try:
+                    import sys as _sys
+
+                    _spec = getattr(module, "__spec__", None)
+                    _name = getattr(_spec, "name", None) or getattr(module, "__name__", None)
+                    if _name and _sys.modules.get(_name) is not module:
+                        _sys.modules[_name] = module
+                except Exception:  # nosec B110 -- intentional broad except for resilience
+                    pass
+                return _researcharr_orig_reload(module)
+
             try:
-                import sys as _sys
-
-                _spec = getattr(module, "__spec__", None)
-                _name = getattr(_spec, "name", None) or getattr(module, "__name__", None)
-                if _name and _sys.modules.get(_name) is not module:
-                    _sys.modules[_name] = module
+                _il.reload = _patched_reload
+                _il._researcharr_reload_wrapped = True
             except Exception:  # nosec B110 -- intentional broad except for resilience
                 pass
-            return _orig_reload(module)
-
-        try:
-            setattr(_il, "reload", _patched_reload)
-        except Exception:  # nosec B110 -- intentional broad except for resilience
-            pass
 except Exception:  # nosec B110 -- intentional broad except for resilience
     pass
 
@@ -1330,9 +1389,7 @@ def __getattr__(name: str):
                             if _sys.modules.get(_spec_name) is mod:
                                 try:
                                     del _sys.modules[_spec_name]
-                                except (
-                                    Exception
-                                ):  # nosec B110 -- intentional broad except for resilience
+                                except Exception:  # nosec B110 -- intentional broad except for resilience
                                     pass
                         except Exception:  # nosec B110 -- intentional broad except for resilience
                             pass
@@ -1359,14 +1416,14 @@ try:
 
             try:
                 _pf.__dict__["render_template"] = _rt
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 try:
-                    setattr(_pf, "render_template", _rt)
-                except Exception:
+                    _pf.render_template = _rt  # type: ignore[attr-defined]
+                except Exception:  # nosec B110 -- intentional broad except for resilience
                     pass
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
-except Exception:
+except Exception:  # nosec B110 -- intentional broad except for resilience
     pass
 
 try:
@@ -1395,16 +1452,16 @@ try:
                                 from flask import render_template as _rt
 
                                 return _rt
-                            except Exception:
+                            except Exception:  # nosec B110 -- intentional broad except for resilience
                                 pass
                         raise
 
             try:
                 _pf.__class__ = _FallbackModule  # type: ignore
-            except Exception:
+            except Exception:  # nosec B110 -- intentional broad except for resilience
                 # best-effort; ignore if runtime prevents changing __class__
                 pass
-        except Exception:
+        except Exception:  # nosec B110 -- intentional broad except for resilience
             pass
-except Exception:
+except Exception:  # nosec B110 -- intentional broad except for resilience
     pass

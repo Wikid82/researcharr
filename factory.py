@@ -7,10 +7,13 @@ import secrets
 import shutil
 import time
 import zipfile
+from collections.abc import Mapping
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Mapping, Optional
+from typing import TYPE_CHECKING, Any
 
 import yaml
+from werkzeug.security import check_password_hash, generate_password_hash
+
 from flask import (
     Flask,
     Response,
@@ -24,13 +27,114 @@ from flask import (
     stream_with_context,
     url_for,
 )
-from werkzeug.security import check_password_hash, generate_password_hash
 
 # Re-export select helpers for tests that patch attributes on module objects.
-__all__ = ["check_password_hash"]
+__all__ = ["check_password_hash", "_RuntimeConfig"]
 from werkzeug.utils import secure_filename
 
 from researcharr.backups import create_backup_file, prune_backups
+
+
+class _RuntimeConfig:
+    """Singleton to hold runtime configuration checks that need to be patchable in tests.
+
+    Tests can override these methods to control runtime behavior without dealing with
+    module identity issues across Python versions.
+    """
+
+    _running_in_image_override = None
+    _webui_override = None
+
+    @classmethod
+    def running_in_image(cls) -> bool:
+        """Check if running in a container/image environment.
+
+        Tests can patch this via: _RuntimeConfig._running_in_image_override = lambda: False
+        """
+        override = getattr(cls, "_running_in_image_override", None)
+        if override is not None:
+            try:
+                return bool(override())
+            except Exception:
+                return False
+        return _default_running_in_image_check()
+
+    @classmethod
+    def get_webui(cls):
+        """Get the webui module, with override support for tests.
+
+        Tests can patch this via: _RuntimeConfig._webui_override = MockWebUI()
+        """
+        if cls._webui_override is not None:
+            return cls._webui_override
+        return None  # Will fall through to _get_webui() logic
+
+    @classmethod
+    def set_webui(cls, obj) -> None:
+        """Set a concrete webui override object for tests.
+
+        Accepts any object that provides save_user_config/load_user_config.
+        """
+        cls._webui_override = obj
+
+    @classmethod
+    def clear_webui(cls) -> None:
+        """Clear any webui override, restoring default resolution."""
+        cls._webui_override = None
+
+    @classmethod
+    def set_running_in_image(cls, value_or_callable) -> None:
+        """Override container detection for tests.
+
+        Accepts a bool or a zero-arg callable returning bool.
+        """
+        if callable(value_or_callable):
+            cls._running_in_image_override = value_or_callable
+            return
+        val = bool(value_or_callable)
+
+        def _override():
+            return val
+
+        cls._running_in_image_override = _override
+
+    @classmethod
+    def clear_running_in_image(cls) -> None:
+        cls._running_in_image_override = None
+
+
+def _default_running_in_image_check() -> bool:
+    """Default implementation of container detection."""
+    try:
+        if os.path.exists("/.dockerenv"):
+            return True
+        if os.getenv("KUBERNETES_SERVICE_HOST"):
+            return True
+        if os.getenv("CONTAINER") or os.getenv("IN_CONTAINER"):
+            return True
+    except Exception:
+        pass
+    return False
+
+
+# Provide a lightweight, patch-friendly webui sentinel early so tests that
+# perform `patch('researcharr.factory.webui.save_user_config')` before
+# create_app() runs have an object to attach attributes onto. The real webui
+# loader later replaces this with the concrete module or a richer stub.
+try:
+
+    class _EarlyWebUIStub:
+        def load_user_config(self):
+            return {}
+
+        def save_user_config(self, *a, **k):
+            return None
+
+    # Only set when not already provided by prior import order.
+    if globals().get("webui") is None:
+        globals()["webui"] = _EarlyWebUIStub()
+except Exception:
+    pass
 
 # Expose a sentinel `_impl` on the top-level factory module. Tests that
 # reload `researcharr.factory` may end up operating against the top-level
@@ -130,10 +234,19 @@ def save_user_config(cfg, path=None):
         return None
 
 
+# Provide a module-level `_running_in_image` function so tests can
+# monkeypatch it reliably on the module object. The create_app() closure
+# will prefer a module-level override when present; having a default
+# implementation here also provides sensible behavior outside of tests.
+def _running_in_image() -> bool:
+    """Check if running in container. Delegates to RuntimeConfig for test override support."""
+    return _RuntimeConfig.running_in_image()
+
+
 def load_pipeline_from_config(
     name_or_path: str,
-    variables: Optional[dict] = None,
-    schema: Optional[dict] = None,
+    variables: dict | None = None,
+    schema: dict | None = None,
     expand_env: bool = True,
 ):
     """Load a Pipeline from the repository `config/` directory or a direct path.
@@ -324,7 +437,11 @@ def create_app() -> Flask:
 
     # Annotate as Any so static type checkers (Pylance) don't warn about
     # project-specific attributes we attach to the Flask app at runtime.
-    app: Any = Flask(__name__, template_folder=templates_path)
+    # Use a stable import name to avoid Flask attempting to resolve a plain
+    # top-level module name like 'factory' which can behave like a namespace
+    # in certain environments (leading to instance path resolution errors).
+    import_name = "researcharr" if __name__ == "factory" else __name__
+    app: Any = Flask(import_name, template_folder=templates_path)
     # Ensure exceptions raised during request handling are passed to the
     # error handlers (tests expect the app to return 500 responses that
     # go through our handlers even when TESTING=True).
@@ -348,6 +465,10 @@ def create_app() -> Flask:
         "WEBUI_DEV_ENABLE_DEBUG_ENDPOINT", os.getenv("WEBUI_DEV_DEBUG", "false")
     )
 
+    # Feature flag to enable/disable Web UI endpoints while under development.
+    # Defaults to enabled to preserve behavior unless explicitly turned off.
+    app.config["WEBUI_ENABLED"] = _env_bool("WEBUI_ENABLED", "true")
+
     # SECRET_KEY must be provided in production. In development/test the
     # default 'dev' key is used but a warning is emitted. Use an
     # environment variable to supply a strong secret in production.
@@ -360,17 +481,14 @@ def create_app() -> Flask:
     if not secret and env_prod:
         # Fail fast in production if SECRET_KEY is missing.
         raise SystemExit(
-            (
-                "SECRET_KEY environment variable is required in production."
-                " Set SECRET_KEY and restart."
-            )
+            "SECRET_KEY environment variable is required in production. Set SECRET_KEY and restart."
         )
     if not secret:
         secret = "dev"  # nosec B105
         # Will be visible in logs once the app logger is configured; use
         # print as a fallback in early startup paths.
         try:
-            print(("WARNING: using insecure default SECRET_KEY; " "set SECRET_KEY in production"))
+            print("WARNING: using insecure default SECRET_KEY; set SECRET_KEY in production")
         except Exception:
             pass
     app.secret_key = secret
@@ -380,18 +498,16 @@ def create_app() -> Flask:
     # `create_app()` is called. Some import-order shims replace module
     # objects with proxies that may omit this attribute; proactively set
     # it on common module keys used by tests.
+    # Provide a safe reference to render_template for tests without mutating ModuleType attributes
     try:
         import sys as _sys
 
         _m = _sys.modules.get("researcharr.factory") or _sys.modules.get("factory")
-        if _m is not None and not hasattr(_m, "render_template"):
+        if _m is not None and not getattr(_m, "_render_template_ref", None):
             try:
-                _m.__dict__["render_template"] = render_template
+                _m.__dict__["_render_template_ref"] = render_template
             except Exception:
-                try:
-                    setattr(_m, "render_template", render_template)
-                except Exception:
-                    pass
+                pass
     except Exception:
         pass
 
@@ -494,39 +610,127 @@ def create_app() -> Flask:
     app.metrics = {"requests_total": 0, "errors_total": 0, "plugins": {}}
 
     # Attempt to import the `webui` module lazily so test fixtures that
-    # patch DB paths can run before we touch persistent storage.
-    _webui: Optional[ModuleType] = None
+    # patch DB paths can run before we touch persistent storage. Prefer a
+    # top-level module named 'webui' when present (as tests often provide),
+    # then fall back to the packaged module or a direct file load. Provide
+    # a resolver helper so routes always see the current patched object.
+    _webui: ModuleType | None = None
     try:
-        try:
-            from researcharr import webui as _webui  # type: ignore
-        except Exception:
-            spec = importlib.util.spec_from_file_location(
-                "webui", os.path.join(os.path.dirname(__file__), "webui.py")
-            )
-            if spec is None or spec.loader is None:
-                _webui = None
-            else:
-                _webui = importlib.util.module_from_spec(spec)
-                loader = spec.loader
-                assert loader is not None
-                loader.exec_module(_webui)  # type: ignore
+        import sys as _sys
+
+        _top = _sys.modules.get("webui")
+        if _top is not None:
+            _webui = _top
+        else:
+            try:
+                from researcharr import webui as _webui  # type: ignore
+            except Exception:
+                spec = importlib.util.spec_from_file_location(
+                    "webui", os.path.join(os.path.dirname(__file__), "webui.py")
+                )
+                if spec is None or spec.loader is None:
+                    _webui = None
+                else:
+                    _webui = importlib.util.module_from_spec(spec)
+                    loader = spec.loader
+                    assert loader is not None
+                    loader.exec_module(_webui)  # type: ignore
     except Exception:
         _webui = None
 
-    # If we successfully loaded a concrete webui module, expose its
-    # loader/save helpers at module scope so tests can patch them via
-    # `factory.load_user_config` / `factory.save_user_config`.
-    if _webui is not None:
+    def _get_webui():
+        # Check for test override first
+        override = _RuntimeConfig.get_webui()
+        if override is not None:
+            try:
+                import os as _os_dbg
+
+                if _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                    print(
+                        f"[get_webui:return:override] obj_id={id(override)} type={type(override).__name__}"
+                    )
+            except Exception:
+                pass
+            return override
+
         try:
-            # Expose the concrete module so callers and tests can patch
-            # `factory.webui.*` members as needed. Do NOT override the
-            # module-level `load_user_config`/`save_user_config` names used
-            # for general config file IO — keep those as the config file
-            # helpers so tests that patch `factory.load_user_config` still
-            # work.
-            globals()["webui"] = _webui
+            import sys as _sys2
+
+            _cand = _sys2.modules.get("webui")
+            # Accept modules that provide either both functions or at
+            # least a save_user_config for write-only flows (e.g. setup).
+            if _cand is not None and (
+                hasattr(_cand, "save_user_config")
+                or (hasattr(_cand, "load_user_config") and hasattr(_cand, "save_user_config"))
+            ):
+                try:
+                    import os as _os_dbg
+
+                    if _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                        print(
+                            f"[get_webui:return:sys.modules] obj_id={id(_cand)} type={type(_cand).__name__}"
+                        )
+                except Exception:
+                    pass
+                return _cand
         except Exception:
             pass
+        try:
+            _cand = globals().get("webui")
+            if _cand is not None and (
+                hasattr(_cand, "save_user_config")
+                or (hasattr(_cand, "load_user_config") and hasattr(_cand, "save_user_config"))
+            ):
+                try:
+                    import os as _os_dbg
+
+                    if _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                        print(
+                            f"[get_webui:return:globals] obj_id={id(_cand)} type={type(_cand).__name__}"
+                        )
+                except Exception:
+                    pass
+                return _cand
+        except Exception:
+            pass
+        if _webui is not None:
+            try:
+                import os as _os_dbg
+
+                if _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                    print(
+                        f"[get_webui:return:local] obj_id={id(_webui)} type={type(_webui).__name__}"
+                    )
+            except Exception:
+                pass
+            return _webui
+
+        class _CfgIO:
+            def load_user_config(self):  # type: ignore
+                try:
+                    return globals().get("load_user_config")()
+                except Exception:
+                    return {}
+
+            def save_user_config(self, *a, **k):  # type: ignore
+                try:
+                    return globals().get("save_user_config")(*a, **k)
+                except Exception:
+                    return None
+
+        try:
+            import os as _os_dbg
+
+            if _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                print("[get_webui:return:fallback_cfgio]")
+        except Exception:
+            pass
+        return _CfgIO()
+
+    try:
+        globals()["webui"] = _webui or globals().get("webui") or _get_webui()
+    except Exception:
+        pass
 
     # Ensure web UI user config exists on startup. If a first-run password is
     # generated, the loader returns the plaintext as `password` so we can set
@@ -538,7 +742,7 @@ def create_app() -> Flask:
         # keeps that behavior centralized and easier to test.
         try:
             try:
-                ucfg = webui.load_user_config()
+                ucfg = _get_webui().load_user_config()
             except Exception:
                 ucfg = None
         except Exception:
@@ -569,7 +773,7 @@ def create_app() -> Flask:
                         if api_key_val:
                             hashed = generate_password_hash(str(api_key_val))
                             username_default = app.config_data["user"]["username"]
-                            webui.save_user_config(
+                            _get_webui().save_user_config(
                                 ucfg.get("username", username_default),
                                 ucfg.get("password_hash"),
                                 api_key_hash=hashed,
@@ -625,7 +829,7 @@ def create_app() -> Flask:
                 _reg_mod = _importlib_mod.import_module("researcharr.plugins.registry")
             except Exception:
                 _reg_mod = _importlib_mod.import_module("plugins.registry")
-            _PluginRegistryRuntime = getattr(_reg_mod, "PluginRegistry")
+            _PluginRegistryRuntime = _reg_mod.PluginRegistry
             registry = _PluginRegistryRuntime()
         except Exception:
             # Fallback: attempt to load the module directly from the
@@ -644,12 +848,17 @@ def create_app() -> Flask:
             loader = spec.loader
             assert loader is not None
             loader.exec_module(plugin_mod)
-            _PluginRegistryRuntime = getattr(plugin_mod, "PluginRegistry")
+            _PluginRegistryRuntime = plugin_mod.PluginRegistry
             registry = _PluginRegistryRuntime()
 
-        # Discover any local plugin modules placed under researcharr/plugins
+        # Discover any local plugin modules. Prefer repository-level
+        # '<repo>/plugins' when present, falling back to the packaged
+        # 'researcharr/plugins' directory otherwise so example plugins are
+        # visible in both layouts (repo and installed package).
         pkg_dir = os.path.dirname(__file__)
-        plugins_dir = os.path.join(pkg_dir, "plugins")
+        repo_plugins = os.path.abspath(os.path.join(pkg_dir, os.pardir, "plugins"))
+        pkg_plugins = os.path.join(pkg_dir, "plugins")
+        plugins_dir = repo_plugins if os.path.isdir(repo_plugins) else pkg_plugins
         registry.discover_local(plugins_dir)
         # For tests we may want to instantiate configured plugin instances
         app.plugin_registry = registry
@@ -702,10 +911,7 @@ def create_app() -> Flask:
             app.config_data["general"]["PUID"] = str(puid_val)
         except Exception:
             app.logger.warning(
-                (
-                    "Invalid PUID '%s' — falling back to 1000. "
-                    "Set PUID env var to a valid integer."
-                ),
+                ("Invalid PUID '%s' — falling back to 1000. Set PUID env var to a valid integer."),
                 app.config_data["general"].get("PUID"),
             )
             app.config_data["general"]["PUID"] = "1000"
@@ -715,10 +921,7 @@ def create_app() -> Flask:
             app.config_data["general"]["PGID"] = str(pgid_val)
         except Exception:
             app.logger.warning(
-                (
-                    "Invalid PGID '%s' — falling back to 1000. "
-                    "Set PGID env var to a valid integer."
-                ),
+                ("Invalid PGID '%s' — falling back to 1000. Set PGID env var to a valid integer."),
                 app.config_data["general"].get("PGID"),
             )
             app.config_data["general"]["PGID"] = "1000"
@@ -815,9 +1018,10 @@ def create_app() -> Flask:
                     generated_api = None
                     if not api_key:
                         generated_api = secrets.token_urlsafe(32)
-                        webui.save_user_config(username, phash, api_key=generated_api)
+                        _get_webui().save_user_config(username, phash, api_key=generated_api)
                     else:
-                        webui.save_user_config(username, phash, api_key=api_key)
+                        _get_webui().save_user_config(username, phash, api_key=api_key)
+                    # Set flag only after successful save (no exception raised)
                     app.config["USER_CONFIG_EXISTS"] = True
                     # If we generated an API token, show it once on a success
                     # page so the operator can copy it. Otherwise redirect to
@@ -963,7 +1167,7 @@ def create_app() -> Flask:
                 # Persist to file if webui.save_user_config is available
                 try:
                     pwd_hash = generate_password_hash(password)
-                    webui.save_user_config(app.config_data["user"]["username"], pwd_hash)
+                    _get_webui().save_user_config(app.config_data["user"]["username"], pwd_hash)
                 except Exception:
                     # best-effort persistence; ignore failures here
                     pass
@@ -994,10 +1198,10 @@ def create_app() -> Flask:
                 app.config_data.setdefault("general", {})["api_key_hash"] = new_hash
                 # Persist to the user config so the key survives restarts
                 try:
-                    ucfg = webui.load_user_config() or {}
+                    ucfg = _get_webui().load_user_config() or {}
                     username = ucfg.get("username", app.config_data["user"]["username"])
                     pwd_hash = ucfg.get("password_hash")
-                    webui.save_user_config(username, pwd_hash, api_key_hash=new_hash)
+                    _get_webui().save_user_config(username, pwd_hash, api_key_hash=new_hash)
                 except Exception:
                     app.logger.exception("Failed to persist regenerated API key")
                 flash("API key regenerated")
@@ -1099,7 +1303,7 @@ def create_app() -> Flask:
         meta = {}
         try:
             if os.path.exists(app_log):
-                with open(app_log, "r", errors="ignore") as fh:
+                with open(app_log, errors="ignore") as fh:
                     all_lines = fh.read().splitlines()
                 tail = all_lines[-lines:]
                 content = "\n".join(tail)
@@ -1162,7 +1366,7 @@ def create_app() -> Flask:
         total = 0
         try:
             if os.path.exists(hist_file):
-                with open(hist_file, "r") as fh:
+                with open(hist_file) as fh:
                     for line in fh:
                         line = line.strip()
                         if not line:
@@ -1272,7 +1476,7 @@ def create_app() -> Flask:
                     yield "\n"
 
                 # now stream appended lines by seeking to end and reading
-                with open(app_log, "r", errors="ignore") as fh:
+                with open(app_log, errors="ignore") as fh:
                     fh.seek(0, os.SEEK_END)
                     while True:
                         where = fh.tell()
@@ -1906,17 +2110,96 @@ def create_app() -> Flask:
 
     @app.route("/save", methods=["POST"])
     def save():
-        # Simulate saving general settings
-        # Only allow saving of non-runtime fields. Do not overwrite
-        # PUID/PGID/Timezone which are controlled via environment variables.
-        return render_template(
-            "general.html",
-            puid=app.config_data["general"].get("PUID"),
-            pgid=app.config_data["general"].get("PGID"),
-            timezone=app.config_data["general"].get("Timezone"),
-            loglevel=app.config_data["general"].get("LogLevel"),
-            msg="Saved",
-        )
+        try:
+            import os as _os_dbg
+        except Exception:
+            _os_dbg = None  # type: ignore
+
+        webui = _get_webui()
+        # If tests patched `researcharr.factory.webui.save_user_config` onto the
+        # module object before create_app ran, prefer that patched attribute so
+        # `patch("researcharr.factory.webui.save_user_config")` assertions see calls.
+        try:
+            _mod_webui = globals().get("webui")
+            if _mod_webui is not None and hasattr(_mod_webui, "save_user_config"):
+                webui = _mod_webui  # type: ignore
+        except Exception:
+            pass
+        if _os_dbg is not None and _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+            try:
+                print(
+                    f"[setup:begin] webui_id={id(webui)} has_save={hasattr(webui, 'save_user_config')} has_load={hasattr(webui, 'load_user_config')}"
+                )
+            except Exception:
+                pass
+
+        if not app.config.get("WEBUI_ENABLED", True):
+            return jsonify({"status": "disabled"}), 503
+
+        data = request.get_json(silent=True) or {}
+        # Accept credentials payload; legacy tests supply only 'api' and 'token'.
+        # Map these to the underlying webui.save_user_config signature which expects
+        # (username, password_hash, api_key|api_key_hash). For now treat 'token' as
+        # a password and hash it; use a default username when one is not provided.
+        api = data.get("api")
+        token = data.get("token")  # legacy name for password/API token
+        username = data.get("username") or "user"
+        if not api or not token:
+            return jsonify({"status": "missing_fields"}), 400
+        try:
+            if _os_dbg is not None and _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                try:
+                    print(
+                        f"[setup:save_user_config] api_len={len(api) if isinstance(api, str) else 'na'} token_len={len(token) if isinstance(token, str) else 'na'}"
+                    )
+                except Exception:
+                    pass
+            # Adapter: perform hashing of the supplied token to align with webui.save_user_config
+            try:
+                from werkzeug.security import generate_password_hash as _gen_hash
+            except Exception:  # pragma: no cover - defensive import fallback
+
+                def _fallback_hash(v):  # type: ignore
+                    return v
+
+                _gen_hash = _fallback_hash  # type: ignore
+            password_hash = _gen_hash(token)
+            # Attempt to resolve the patched webui object from any canonical module
+            # key that tests might have used during monkeypatching. In large xdist
+            # runs duplicate module objects (e.g. 'factory' vs 'researcharr.factory')
+            # can appear; prefer whichever provides the patched save_user_config.
+            try:
+                import sys as _sys_mod
+
+                for _key in ("researcharr.factory", "factory"):
+                    _m = _sys_mod.modules.get(_key)
+                    if _m is not None:
+                        try:
+                            _candidate_webui = getattr(_m, "webui", None)
+                            if _candidate_webui is not None and hasattr(
+                                _candidate_webui, "save_user_config"
+                            ):
+                                webui = _candidate_webui  # type: ignore
+                                break
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+            webui.save_user_config(username, password_hash, api_key=api)
+            app.config["USER_CONFIG_EXISTS"] = True
+            if _os_dbg is not None and _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                try:
+                    print(f"[setup:end] USER_CONFIG_EXISTS={app.config.get('USER_CONFIG_EXISTS')}")
+                except Exception:
+                    pass
+            return jsonify({"status": "ok"})
+        except Exception as _ex:
+            if _os_dbg is not None and _os_dbg.getenv("FACTORY_DEBUG_SETUP") == "1":
+                try:
+                    print(f"[setup:error] exc={type(_ex).__name__}: {_ex}")
+                except Exception:
+                    pass
+            return jsonify({"status": "error"}), 500
 
     @app.route("/health")
     def health():
@@ -1933,8 +2216,50 @@ def create_app() -> Flask:
 
     @app.route("/metrics")
     def metrics():
-        # Return and increment metrics
-        return jsonify(app.metrics)
+        # Return application metrics including backup and database metrics
+        all_metrics = dict(app.metrics)
+
+        # Add backup metrics if available
+        try:
+            import os
+
+            from researcharr.backups import get_default_backup_config, merge_backup_configs
+            from researcharr.monitoring import BackupHealthMonitor
+
+            config_root = os.getenv("CONFIG_DIR", "/config")
+            # Derive backup configuration (simple defaults + env/root path)
+            default_cfg = get_default_backup_config() or {}
+            root_cfg = {"backups_dir": f"{config_root}/backups"}
+            backup_cfg = merge_backup_configs(default_cfg, root_cfg)
+            backups_dir = backup_cfg.get("backups_dir", f"{config_root}/backups")
+            monitor = BackupHealthMonitor(config_dir=config_root)
+            # Ensure backups_dir attribute aligns with resolved path for metrics
+            try:
+                monitor.backups_dir = type(monitor.backups_dir)(backups_dir)
+            except Exception:
+                pass
+            backup_metrics = monitor.get_metrics()
+            all_metrics.update({"backup": backup_metrics})
+        except Exception:
+            pass
+
+        # Add database metrics if available
+        try:
+            from researcharr.monitoring import get_database_health_monitor
+
+            db_monitor = get_database_health_monitor()
+            db_metrics = db_monitor.get_metrics()
+
+            # Prefix database metrics for clarity
+            all_metrics["database"] = db_metrics
+        except Exception as e:
+            # Log but don't fail if database metrics unavailable
+            try:
+                app.logger.warning(f"Failed to collect database metrics: {e}")
+            except Exception:
+                pass
+
+        return jsonify(all_metrics)
 
     # Increment requests_total for every request
     @app.before_request
@@ -2099,7 +2424,7 @@ def create_app() -> Flask:
             # Run in background thread
             import threading
 
-            t = threading.Thread(target=getattr(run_mod, "run_job"), daemon=True)
+            t = threading.Thread(target=run_mod.run_job, daemon=True)
             t.start()
             return jsonify({"result": "triggered"})
         except Exception:
@@ -2383,6 +2708,50 @@ def create_app() -> Flask:
             app.logger.exception("Failed to download backup: %s", e)
             return jsonify({"error": "download_failed"}), 500
 
+    @app.route("/api/backups/compatibility/<path:name>", methods=["GET"])
+    def api_backups_compatibility(name: str):
+        """Return compatibility info for a backup, including suggested image tag."""
+        if not is_logged_in():
+            return jsonify({"error": "unauthorized"}), 401
+        config_root = os.getenv("CONFIG_DIR", "/config")
+        backups_dir = os.path.join(config_root, "backups")
+        fpath = os.path.join(backups_dir, name)
+        try:
+            if not os.path.realpath(fpath).startswith(os.path.realpath(backups_dir)):
+                return jsonify({"error": "invalid_name"}), 400
+            if not os.path.exists(fpath):
+                return jsonify({"error": "not_found"}), 404
+            try:
+                from researcharr.storage.recovery import (
+                    get_alembic_head_revision,
+                    read_backup_meta,
+                    suggest_image_tag_from_meta,
+                )
+
+                meta = read_backup_meta(fpath) or {}
+                head = get_alembic_head_revision()
+                bkup_rev = meta.get("alembic_revision")
+                status = "ok"
+                suggested = None
+                if bkup_rev and head and bkup_rev != head:
+                    status = "schema_newer_than_runtime"
+                    suggested = suggest_image_tag_from_meta(meta)
+                return jsonify(
+                    {
+                        "name": name,
+                        "meta": meta,
+                        "runtime_head": head,
+                        "status": status,
+                        "suggested_image_tag": suggested,
+                    }
+                )
+            except Exception as e:
+                app.logger.exception("Failed to compute compatibility: %s", e)
+                return jsonify({"error": "compatibility_failed"}), 500
+        except Exception as e:
+            app.logger.exception("Failed to process compatibility: %s", e)
+            return jsonify({"error": "compatibility_error"}), 500
+
     @app.route("/api/backups/delete/<path:name>", methods=["DELETE"])
     def api_backups_delete(name: str):
         if not is_logged_in():
@@ -2437,6 +2806,42 @@ def create_app() -> Flask:
                 shutil.rmtree(tmpdir)
             os.makedirs(tmpdir, exist_ok=True)
             with zipfile.ZipFile(fpath, "r") as zf:
+                # Validate backup compatibility (if meta present)
+                try:
+                    meta_bytes = zf.read("backup_meta.json")
+                    import json as _json
+
+                    meta = _json.loads(meta_bytes.decode("utf-8"))
+                except Exception:
+                    meta = {}
+
+                # If backup schema is newer than app supports, abort with guidance
+                try:
+                    from researcharr.storage.recovery import (
+                        get_alembic_head_revision,
+                        suggest_image_tag_from_meta,
+                    )
+
+                    head = get_alembic_head_revision()
+                    bkup_rev = meta.get("alembic_revision")
+                    if bkup_rev and head and bkup_rev != head:
+                        # Determine if newer: if not in script history, conservatively block
+                        newer = bkup_rev != head
+                        if newer:
+                            return (
+                                jsonify(
+                                    {
+                                        "error": "incompatible_backup",
+                                        "alembic_revision": bkup_rev,
+                                        "suggested_image_tag": suggest_image_tag_from_meta(meta),
+                                        "message": "Backup was created with a newer schema. Switch to the suggested image tag, restore, then upgrade.",
+                                    }
+                                ),
+                                409,
+                            )
+                except Exception:
+                    pass
+
                 zf.extractall(tmpdir)
             for root, dirs, files in os.walk(tmpdir):
                 rel = os.path.relpath(root, tmpdir)
@@ -2464,6 +2869,20 @@ def create_app() -> Flask:
             resp = {"result": "restored"}
             if pre_name:
                 resp["pre_restore_backup"] = pre_name
+            # If DB was restored, attempt to run migrations forward to head
+            try:
+                restored_db = os.path.join(config_root, "researcharr.db")
+                if os.path.exists(restored_db):
+                    try:
+                        from researcharr.storage.migrations import (
+                            migrate_database,
+                        )
+
+                        migrate_database(restored_db, use_migrations=True)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
             return jsonify(resp)
         except Exception as e:
             app.logger.exception("Failed to restore backup: %s", e)
@@ -2549,47 +2968,9 @@ def create_app() -> Flask:
     # Determine runtime-in-image state. Resolve any module-level override
     # dynamically at call-time so tests can monkeypatch `researcharr.factory`'s
     # `_running_in_image` after the app has been created.
-    def _local_running_in_image_heuristic() -> bool:
-        try:
-            if os.path.exists("/.dockerenv"):
-                return True
-            if os.getenv("KUBERNETES_SERVICE_HOST"):
-                return True
-            if os.getenv("CONTAINER") or os.getenv("IN_CONTAINER"):
-                return True
-        except Exception:
-            pass
-        return False
-
     def _running_in_image() -> bool:
-        # Prefer an explicit module-level override if present. Check both
-        # the package-qualified and top-level module keys to support
-        # different import layouts in tests.
-        try:
-            import sys as _sys
-
-            for _key in ("researcharr.factory", "factory"):
-                try:
-                    _mod = _sys.modules.get(_key)
-                    if _mod is None:
-                        continue
-                    _fn = getattr(_mod, "_running_in_image", None)
-                    if _fn is None:
-                        continue
-                    # Avoid calling into this closure recursively.
-                    if _fn is _running_in_image:
-                        continue
-                    if callable(_fn):
-                        try:
-                            return bool(_fn())
-                        except Exception:
-                            # ignore override errors and fall back
-                            pass
-                except Exception:
-                    continue
-        except Exception:
-            pass
-        return _local_running_in_image_heuristic()
+        # Use the RuntimeConfig singleton which handles test overrides consistently
+        return _RuntimeConfig.running_in_image()
 
     # Caching and backoff for update checks
     def _updates_cache_path():
@@ -2817,18 +3198,52 @@ def create_app() -> Flask:
             return jsonify({"error": "invalid_json"}), 400
 
         asset_url = data.get("asset_url")
-        # Validate the asset URL first so tests that exercise the URL
-        # validation branch receive deterministic responses even when
-        # runtime-in-image detection is true in containerized test runs.
+
+        # Disallow upgrades when running in an image-managed runtime first,
+        # regardless of URL validity. Honor RuntimeConfig override with highest priority,
+        # then any module-level override, then the default detector. Always evaluate at
+        # request time to respect patches applied after app creation.
+        effective_in_image = None
+        try:
+            # 1) RuntimeConfig override has highest precedence
+            _rt_override = getattr(_RuntimeConfig, "_running_in_image_override", None)
+            if _rt_override is not None:
+                try:
+                    effective_in_image = bool(_rt_override())
+                except Exception:
+                    effective_in_image = None
+            # 2) Next, honor a module-level override if present and distinct
+            if effective_in_image is None:
+                try:
+                    import sys as _sys
+
+                    _mod = _sys.modules.get("researcharr.factory") or _sys.modules.get("factory")
+                    if _mod is not None:
+                        _override = getattr(_mod, "_running_in_image", None)
+                        if callable(_override) and _override is not _running_in_image:
+                            try:
+                                effective_in_image = bool(_override())
+                            except Exception:
+                                effective_in_image = None
+                except Exception:
+                    effective_in_image = None
+            # 3) Fallback to default detector
+            if effective_in_image is None:
+                effective_in_image = bool(_running_in_image())
+        except Exception:
+            # If anything goes wrong determining the runtime, be conservative
+            effective_in_image = True
+
+        if effective_in_image:
+            return jsonify({"error": "in_image_runtime"}), 400
+
+        # Then validate the asset URL for non-image runtimes
         if (
             not asset_url
             or not isinstance(asset_url, str)
             or not asset_url.startswith(("http://", "https://"))
         ):
             return jsonify({"error": "invalid_asset_url"}), 400
-
-        if _running_in_image():
-            return jsonify({"error": "in_image_runtime"}), 400
 
         # perform the download in a background thread
         def _download_asset(url: str):

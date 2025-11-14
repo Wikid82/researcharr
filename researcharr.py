@@ -113,7 +113,7 @@ def serve():
                                     # or a real function. Tests that load the file
                                     # as a module and patch attributes will appear
                                     # here and should be honored.
-                                    cand = getattr(val, "create_metrics_app")
+                                    cand = val.create_metrics_app
                                     _create = cand
                                     break
                             except Exception:
@@ -149,7 +149,7 @@ def serve():
                                 and getattr(val, "__name__", None) == "researcharr"
                                 and hasattr(val, "create_metrics_app")
                             ):
-                                _create = getattr(val, "create_metrics_app")
+                                _create = val.create_metrics_app
                                 break
                         except Exception:
                             continue
@@ -197,7 +197,7 @@ def serve():
             pkg = sys.modules.get("researcharr")
             if pkg is not None and hasattr(pkg, "create_metrics_app"):
                 try:
-                    pkg_attr = getattr(pkg, "create_metrics_app")
+                    pkg_attr = pkg.create_metrics_app
                     if pkg_attr is not None:
                         _create = pkg_attr
                 except Exception:
@@ -214,7 +214,7 @@ def serve():
     try:
         pkg = sys.modules.get("researcharr")
         if pkg is not None and hasattr(pkg, "create_metrics_app"):
-            pkg_attr = getattr(pkg, "create_metrics_app")
+            pkg_attr = pkg.create_metrics_app
             if isinstance(pkg_attr, _mock.Mock):
                 _create = pkg_attr
     except Exception:
@@ -238,11 +238,10 @@ def serve():
             # Running under pytest: do not start the real server.
             return
         app.run(host="0.0.0.0", port=2929)  # nosec B104
-    else:
-        # For mocks and non-Flask implementations, call run() so tests
-        # that assert it was invoked succeed.
-        if hasattr(app, "run"):
-            app.run(host="0.0.0.0", port=2929)  # nosec B104
+    # For mocks and non-Flask implementations, call run() so tests
+    # that assert it was invoked succeed.
+    elif hasattr(app, "run"):
+        app.run(host="0.0.0.0", port=2929)  # nosec B104
 
 
 # NOTE: the actual __main__ invocation is placed at the end of the
@@ -562,7 +561,7 @@ def load_config(path="config.yml"):
         or sys.modules.get(__name__)
     )
     _os = getattr(_mod, "os", os)
-    _exists = getattr(getattr(_os, "path"), "exists", os.path.exists)
+    _exists = getattr(_os.path, "exists", os.path.exists)
 
     # Debug: when running under pytest, report which exists() is being used
     # No debug prints in load_config() (kept deterministic and quiet for tests)

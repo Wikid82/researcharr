@@ -134,16 +134,22 @@ jobs:
         echo "Renovate PR detected; skipping tests and coverage steps."
         # Create a tiny placeholder coverage.xml so later steps can be safely skipped or read
         echo "<?xml version=\"1.0\" ?><coverage line-rate=\"0.0\"></coverage>" > coverage.xml
+    - name: Set env defaults for tests
+      if: ${{ env.RENOVATE_BYPASS != '1' }}
+      run: |
+        echo "PYTHONHASHSEED=0" >> $GITHUB_ENV
+        echo "LANG=C.UTF-8" >> $GITHUB_ENV
+        echo "LC_ALL=C.UTF-8" >> $GITHUB_ENV
+        echo "TZ=UTC" >> $GITHUB_ENV
+        mkdir -p /tmp/ci/.cache
+        echo "TMPDIR=/tmp/ci" >> $GITHUB_ENV
+        echo "XDG_CACHE_HOME=/tmp/ci/.cache" >> $GITHUB_ENV
     - name: Run tests with pytest
       if: ${{ env.RENOVATE_BYPASS != '1' }}
-      # Ensure pytest prefers the installed package in site-packages over
-      # any top-level module file in the repo (e.g. researcharr.py), which can
-      # shadow the actual package. We detect the interpreter's site-packages
-      # path and prepend it to PYTHONPATH before running tests.
-      working-directory: .
+      # Use the same test execution method as ci-wheels-and-test.yml for consistency
       run: |
         # Detect site-packages for the chosen interpreter
-        SITE_PACKAGES=$(python -c 'import sysconfig, json; print(sysconfig.get_paths()["purelib"])')
+        SITE_PACKAGES=$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
         echo "Using site-packages: $SITE_PACKAGES"
         export PYTHONPATH="$SITE_PACKAGES:$PYTHONPATH"
 

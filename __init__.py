@@ -118,6 +118,9 @@ if os.path.exists(_impl_path):
     globals()["researcharr"] = _impl
     sys.modules["researcharr.researcharr"] = _impl
 
+# Version string to keep parity with nested package init
+__version__ = "0.1.0"
+
 # Explicitly define __all__ for static analysis tools
 __all__ = []
 
@@ -206,7 +209,7 @@ try:
                         _pf.__dict__["create_app"] = _delegate
                     except Exception:
                         try:
-                            setattr(_pf, "create_app", _delegate)
+                            _pf.create_app = _delegate
                         except Exception:
                             pass
         # Ensure the package attribute points at a module exposing a
@@ -229,7 +232,7 @@ try:
                             _attr.__dict__["create_app"] = _delegate
                         except Exception:
                             try:
-                                setattr(_attr, "create_app", _delegate)
+                                _attr.create_app = _delegate
                             except Exception:
                                 pass
     except Exception:
@@ -287,7 +290,7 @@ def __getattr__(name: str):
                     pf.__dict__["create_app"] = delegate
                 except Exception:
                     try:
-                        setattr(pf, "create_app", delegate)
+                        pf.create_app = delegate
                     except Exception:
                         pass
 

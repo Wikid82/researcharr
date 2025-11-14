@@ -1,3 +1,4 @@
+---
 site_name: researcharr
 site_description: "Documentation for researcharr — developer and user docs."
 site_author: "researcharr contributors"
@@ -9,7 +10,7 @@ theme:
   name: readthedocs
 
 extra_css:
-- assets/css/researcharr.css
+  - assets/css/researcharr.css
 
 # Navigation (optional). MkDocs will auto-generate nav from docs/ if not provided.
 

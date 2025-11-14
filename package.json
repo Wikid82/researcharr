@@ -8,7 +8,8 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "format:yaml": "prettier --write \"**/*.{yml,yaml}\" --ignore-path .gitignore"
   },
   "repository": {
     "type": "git",
@@ -22,6 +23,7 @@
   },
   "homepage": "https://github.com/Wikid82/researcharr#readme",
   "devDependencies": {
-    "basedpyright": "^1.1.407"
+    "basedpyright": "^1.1.407",
+    "prettier": "^3.0.0"
   }
 }

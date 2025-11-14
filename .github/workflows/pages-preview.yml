@@ -1,9 +1,10 @@
+---
 name: Deploy docs previews to GitHub Pages
 
 on:
   push:
     # run on all branches except main
-    branches-ignore: [ main ]
+    branches-ignore: [main]
 
 jobs:
   preview:
@@ -12,14 +13,14 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5
         with:
           fetch-depth: 0
 
       - name: Install Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c  # v6
         with:
-          python-version: '3.14'
+          python-version: "3.14"
 
       - name: Install docs deps
         run: |
@@ -31,7 +32,7 @@ jobs:
           fi
 
       - name: Cache pip
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements-dev.txt') }}
@@ -46,7 +47,7 @@ jobs:
           fi
 
       - name: Upload built site artifact (preview)
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # v5
         with:
           name: mkdocs-site-${{ github.sha }}
           path: site_build
@@ -73,7 +74,7 @@ jobs:
           fi
 
       - name: Deploy previews to gh-pages
-        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e  # v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./site

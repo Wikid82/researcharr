@@ -1,8 +1,9 @@
+---
 # General application settings
 researcharr:
   # User and group IDs for file permissions (optional, recommended for Unraid/Synology)
-  puid: 1000 # Set to your host user ID
-  pgid: 1000 # Set to your host group ID
+  puid: 1000  # Set to your host user ID
+  pgid: 1000  # Set to your host group ID
   # See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for a list of valid timezones
   timezone: "America/New_York"
   # Scheduler expression (cron-like) that controls how often the in-process
@@ -10,82 +11,102 @@ researcharr:
   # See https://crontab.guru/ for help generating a cron expression.
   cron_schedule: "0 * * * *"
 
+# Database monitoring settings
+database:
+  monitoring:
+    # Enable database health monitoring (default: true)
+    enabled: true
+    # How often to run health checks in minutes (default: 5)
+    health_check_interval_minutes: 5
+    # How often to run integrity checks in hours (default: 24)
+    integrity_check_interval_hours: 24
+    # Database size warning threshold in MB (default: 1000)
+    db_size_warning_mb: 1000
+    # Database size critical threshold in MB (default: 5000)
+    db_size_critical_mb: 5000
+    # Query latency warning threshold in ms (default: 100)
+    db_latency_warning_ms: 100
+    # Query latency critical threshold in ms (default: 500)
+    db_latency_critical_ms: 500
+    # WAL file size warning threshold in MB (default: 50)
+    wal_size_warning_mb: 50
+
 # Radarr instances (up to 5 supported)
 radarr:
-- enabled: false
-  name: "Radarr 1"
-  url: ""
-  api_key: ""
-  movies_to_upgrade: 5
-  # Maximum allowed items in Radarr's download queue before skipping upgrades (default: 15)
-  max_download_queue: 15
-  # Number of days before a movie is eligible to be reprocessed (default: 7)
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Radarr 2"
-  url: ""
-  api_key: ""
-  movies_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Radarr 3"
-  url: ""
-  api_key: ""
-  movies_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Radarr 4"
-  url: ""
-  api_key: ""
-  movies_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Radarr 5"
-  url: ""
-  api_key: ""
-  movies_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
+  - enabled: false
+    name: "Radarr 1"
+    url: ""
+    api_key: ""
+    movies_to_upgrade: 5
+    # Maximum allowed items in Radarr's download queue before skipping upgrades (default: 15)
+    max_download_queue: 15
+    # Number of days before a movie is eligible to be reprocessed (default: 7)
+    reprocess_interval_days: 7
+  - enabled: false
+    name: "Radarr 2"
+    url: ""
+    api_key: ""
+    movies_to_upgrade: 5
+    max_download_queue: 15
+    reprocess_interval_days: 7
+  - enabled: false
+    name: "Radarr 3"
+    url: ""
+    api_key: ""
+    movies_to_upgrade: 5
+    max_download_queue: 15
+    reprocess_interval_days: 7
+  - enabled: false
+    name: "Radarr 4"
+    url: ""
+    api_key: ""
+    movies_to_upgrade: 5
+    max_download_queue: 15
+    reprocess_interval_days: 7
+  - enabled: false
+    name: "Radarr 5"
+    url: ""
+    api_key: ""
+    movies_to_upgrade: 5
+    max_download_queue: 15
+    reprocess_interval_days: 7
 
 # Sonarr instances (up to 5 supported)
 sonarr:
-- enabled: false
-  name: "Sonarr 1"
-  url: ""
-  api_key: ""
-  episodes_to_upgrade: 5
-  # Maximum allowed items in Sonarr's download queue before skipping upgrades (default: 15)
-  max_download_queue: 15
-  # Number of days before an episode is eligible to be reprocessed (default: 7)
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Sonarr 2"
-  url: ""
-  api_key: ""
-  episodes_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Sonarr 3"
-  url: ""
-  api_key: ""
-  episodes_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Sonarr 4"
-  url: ""
-  api_key: ""
-  episodes_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
-- enabled: false
-  name: "Sonarr 5"
-  url: ""
-  api_key: ""
-  episodes_to_upgrade: 5
-  max_download_queue: 15
-  reprocess_interval_days: 7
+  - enabled: false
+    name: "Sonarr 1"
+    url: ""
+    api_key: ""
+    episodes_to_upgrade: 5
+    # Maximum allowed items in Sonarr's download queue before skipping upgrades (default: 15)
+    max_download_queue: 15
+    # Number of days before an episode is eligible to be reprocessed (default: 7)
+    reprocess_interval_days: 7
+  - enabled: false
+    name: "Sonarr 2"
+    url: ""
+    api_key: ""
+    episodes_to_upgrade: 5
+    max_download_queue: 15
+    reprocess_interval_days: 7
+  - enabled: false
+    name: "Sonarr 3"
+    url: ""
+    api_key: ""
+    episodes_to_upgrade: 5
+    max_download_queue: 15
+    reprocess_interval_days: 7
+  - enabled: false
+    name: "Sonarr 4"
+    url: ""
+    api_key: ""
+    episodes_to_upgrade: 5
+    max_download_queue: 15
+    reprocess_interval_days: 7
+  - enabled: false
+    name: "Sonarr 5"
+    url: ""
+    api_key: ""
+    episodes_to_upgrade: 5
+    max_download_queue: 15
+    reprocess_interval_days: 7

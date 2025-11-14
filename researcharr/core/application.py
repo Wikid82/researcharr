@@ -5,24 +5,41 @@ extracted from factory.py, integrated with the new core architecture components.
 """
 
 import importlib.util
+import logging
 import os
+from copy import deepcopy
 from types import ModuleType
-from typing import Any, Dict
+from typing import Any
 
 import yaml
-from flask import Flask
 from werkzeug.security import generate_password_hash
+
+from flask import Flask
 
 from .config import get_config_manager
 from .container import get_container
 from .events import Events, get_event_bus
 from .lifecycle import add_shutdown_hook, add_startup_hook, get_lifecycle
 from .services import (
+    ConnectivityService,
     DatabaseService,
+    FileSystemService,
     HealthService,
+    HttpClientService,
     LoggingService,
     MetricsService,
+    MonitoringService,
+    SchedulerService,
+    StorageService,
 )
+
+LOGGER = logging.getLogger(__name__)
+
+try:
+    # Optional: repository Unit of Work registration
+    from researcharr.repositories.uow import UnitOfWork  # type: ignore
+except Exception:  # pragma: no cover - defensive import for optional module
+    UnitOfWork = None  # type: ignore
 
 
 class CoreApplicationFactory:
@@ -36,26 +53,64 @@ class CoreApplicationFactory:
 
     def register_core_services(self) -> None:
         """Register all core services in the container."""
-        # Register core services
-        self.container.register_singleton("database_service", DatabaseService())
+        # Get configuration for service initialization
+        # Note: config_manager stores config in _config dict
+        config = self.config_manager._config if hasattr(self.config_manager, "_config") else {}
+
+        # Get DB path from config or environment or use default
+        db_path = (
+            config.get("database", {}).get("path")
+            or os.getenv("RESEARCHARR_DB")
+            or "researcharr.db"
+        )
+
+        # Register infrastructure services first (no dependencies)
+        self.container.register_singleton("filesystem_service", FileSystemService())
+        self.container.register_singleton("http_client_service", HttpClientService())
+
+        # Register core services with injected dependencies
+        self.container.register_singleton("database_service", DatabaseService(db_path))
         self.container.register_singleton("logging_service", LoggingService())
         self.container.register_singleton("health_service", HealthService())
         self.container.register_singleton("metrics_service", MetricsService())
+
+        # Register connectivity service with HTTP client
+        http_client = self.container.resolve("http_client_service")
+        self.container.register_singleton("connectivity_service", ConnectivityService(http_client))
+
+        # Register scheduler and monitoring services
+        self.container.register_singleton("scheduler_service", SchedulerService(config))
+        self.container.register_singleton("monitoring_service", MonitoringService(config))
+        self.container.register_singleton("storage_service", StorageService())
 
         # Register configuration and events
         self.container.register_singleton("config_manager", self.config_manager)
         self.container.register_singleton("event_bus", self.event_bus)
         self.container.register_singleton("lifecycle", self.lifecycle)
 
+        # Register a factory for UnitOfWork if available
+        try:
+            if UnitOfWork is not None:
+                self.container.register_factory("unit_of_work", lambda: UnitOfWork())
+        except Exception:  # nosec B110 -- intentional broad except for resilience
+            # Non-critical; continue without UoW service if registration fails
+            pass
+
         # Publish service registration event
         self.event_bus.publish_simple(
             Events.APP_STARTING,
             data={
                 "services_registered": [
+                    "filesystem",
+                    "http_client",
+                    "connectivity",
                     "database",
                     "logging",
                     "health",
                     "metrics",
+                    "scheduler",
+                    "monitoring",
+                    "storage",
                     "config",
                     "events",
                     "lifecycle",
@@ -64,39 +119,52 @@ class CoreApplicationFactory:
             source="core_application_factory",
         )
 
-    def setup_configuration(self, config_dir: str = "/config") -> Dict[str, Any]:
+    def setup_configuration(self, config_dir: str = "/config") -> dict[str, Any]:
         """Setup application configuration with core architecture integration."""
+        default_config = {
+            "app": {"name": "researcharr", "version": "1.0.0", "debug": False},
+            "logging": {
+                "level": "INFO",
+                "file": os.path.join(config_dir, "app.log"),
+            },
+            "database": {"path": "researcharr.db"},
+            "general": {
+                "PUID": os.getenv("PUID", "1000"),
+                "PGID": os.getenv("PGID", "1000"),
+                "Timezone": os.getenv("TIMEZONE", "America/New_York"),
+                "LogLevel": os.getenv("LOGLEVEL", "INFO"),
+            },
+            "scheduling": {"cron_schedule": "0 0 * * *", "timezone": "UTC"},
+            "user": {
+                "username": "admin",
+                "password": "password",
+            },  # pragma: allowlist secret
+            "backups": {
+                "retain_count": 10,
+                "retain_days": 30,
+                "pre_restore": True,
+                "pre_restore_keep_days": 1,
+                "auto_backup_enabled": False,
+                "auto_backup_cron": "0 2 * * *",
+                "prune_cron": "0 3 * * *",
+            },
+            "tasks": {},
+        }
+
+        managed_sources = {"default_config", "tasks_config", "general_config"}
+        try:
+            sources = getattr(self.config_manager, "_sources", None)
+            if isinstance(sources, list):
+                self.config_manager._sources = [  # type: ignore[attr-defined]
+                    src for src in sources if getattr(src, "name", None) not in managed_sources
+                ]
+        except Exception:  # nosec B110 -- best-effort cleanup only
+            pass
+
         # Add configuration sources
         self.config_manager.add_source(
             "default_config",
-            data={
-                "app": {"name": "researcharr", "version": "1.0.0", "debug": False},
-                "logging": {
-                    "level": "INFO",
-                    "file": os.path.join(config_dir, "app.log"),
-                },
-                "database": {"path": "researcharr.db"},
-                "general": {
-                    "PUID": os.getenv("PUID", "1000"),
-                    "PGID": os.getenv("PGID", "1000"),
-                    "Timezone": os.getenv("TIMEZONE", "America/New_York"),
-                    "LogLevel": os.getenv("LOGLEVEL", "INFO"),
-                },
-                "scheduling": {"cron_schedule": "0 0 * * *", "timezone": "UTC"},
-                "user": {
-                    "username": "admin",
-                    "password": "password",
-                },  # pragma: allowlist secret
-                "backups": {
-                    "retain_count": 10,
-                    "retain_days": 30,
-                    "pre_restore": True,
-                    "pre_restore_keep_days": 1,
-                    "auto_backup_enabled": False,
-                    "auto_backup_cron": "0 2 * * *",
-                    "prune_cron": "0 3 * * *",
-                },
-            },
+            data=default_config,
             priority=100,
         )
 
@@ -115,27 +183,90 @@ class CoreApplicationFactory:
             priority=70,
         )
 
-        # Load all configuration
-        success = self.config_manager.load_config()
+        try:
+            success = self.config_manager.load_config(reload=True)
+        except Exception:  # pragma: no cover - defensive guard
+            LOGGER.exception("Configuration manager raised during load; using fallback defaults")
+            success = False
 
         if success:
-            # Create legacy config_data structure for backwards compatibility
-            config_data = {
-                "app": self.config_manager.get_section("app"),
-                "logging": self.config_manager.get_section("logging"),
-                "database": self.config_manager.get_section("database"),
-                "general": self.config_manager.get_section("general"),
-                "radarr": [],
-                "sonarr": [],
-                "scheduling": self.config_manager.get_section("scheduling"),
-                "user": self.config_manager.get_section("user"),
-                "backups": self.config_manager.get_section("backups"),
-                "tasks": self.config_manager.get_section("tasks"),
-            }
+            return self._build_config_data_from_manager()
 
-            return config_data
-        else:
-            raise RuntimeError("Failed to load application configuration")
+        LOGGER.warning(
+            "Configuration manager failed to load sources for %s; falling back to defaults",
+            config_dir,
+        )
+        try:
+            errors = self.config_manager.validation_errors
+            if errors:
+                LOGGER.warning("Config validation errors: %s", errors)
+        except Exception:  # pragma: no cover - best effort logging only
+            pass
+
+        fallback_config = self._build_fallback_config(default_config, config_dir)
+        try:
+            self.config_manager._config = fallback_config  # type: ignore[attr-defined]
+        except Exception:  # pragma: no cover - best effort
+            pass
+
+        return self._build_config_data_from_manager()
+
+    def _build_config_data_from_manager(self) -> dict[str, Any]:
+        """Create a legacy-compatible config payload from the manager state."""
+        return {
+            "app": self.config_manager.get_section("app"),
+            "logging": self.config_manager.get_section("logging"),
+            "database": self.config_manager.get_section("database"),
+            "general": self.config_manager.get_section("general"),
+            "radarr": [],
+            "sonarr": [],
+            "scheduling": self.config_manager.get_section("scheduling"),
+            "user": self.config_manager.get_section("user"),
+            "backups": self.config_manager.get_section("backups"),
+            "tasks": self.config_manager.get_section("tasks"),
+        }
+
+    def _build_fallback_config(self, defaults: dict[str, Any], config_dir: str) -> dict[str, Any]:
+        """Construct a configuration snapshot without the config manager."""
+        current_config: dict[str, Any] = {}
+        try:
+            existing = getattr(self.config_manager, "_config", {})
+            if isinstance(existing, dict) and existing:
+                current_config = deepcopy(existing)
+        except Exception:  # pragma: no cover - defensive
+            current_config = {}
+
+        baseline = self._deep_merge_dicts(defaults, current_config)
+
+        legacy_files = [
+            os.path.join(config_dir, "config.yml"),
+            os.path.join(config_dir, "general.yml"),
+            os.path.join(config_dir, "tasks.yml"),
+        ]
+
+        for path in legacy_files:
+            if not os.path.exists(path):
+                continue
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    data = yaml.safe_load(fh) or {}
+                if isinstance(data, dict):
+                    baseline = self._deep_merge_dicts(baseline, data)
+            except Exception:
+                LOGGER.warning("Failed to load fallback config file: %s", path, exc_info=True)
+
+        return baseline
+
+    @staticmethod
+    def _deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+        """Recursively merge two dictionaries without mutating inputs."""
+        result = deepcopy(base)
+        for key, value in override.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = CoreApplicationFactory._deep_merge_dicts(result[key], value)
+            else:
+                result[key] = deepcopy(value)
+        return result
 
     def setup_plugins(self, app: Flask, config_dir: str = "/config") -> Any:
         """Setup plugin registry and load plugin configurations."""
@@ -149,7 +280,7 @@ class CoreApplicationFactory:
                     _reg_mod = _importlib_mod.import_module("researcharr.plugins.registry")
                 except Exception:  # nosec B110 -- intentional broad except for resilience
                     _reg_mod = _importlib_mod.import_module("plugins.registry")
-                _PluginRegistryRuntime = getattr(_reg_mod, "PluginRegistry")
+                _PluginRegistryRuntime = _reg_mod.PluginRegistry
                 registry = _PluginRegistryRuntime()
             except Exception:  # nosec B110 -- intentional broad except for resilience
                 # Fallback to direct file loading
@@ -162,7 +293,7 @@ class CoreApplicationFactory:
                     if spec and spec.loader:
                         plugin_mod = importlib.util.module_from_spec(spec)
                         spec.loader.exec_module(plugin_mod)
-                        _PluginRegistryRuntime = getattr(plugin_mod, "PluginRegistry")
+                        _PluginRegistryRuntime = plugin_mod.PluginRegistry
                         registry = _PluginRegistryRuntime()
 
             if registry:
@@ -195,9 +326,7 @@ class CoreApplicationFactory:
                                         data={"plugin": name, "instances": len(data)},
                                         source="core_application_factory",
                                     )
-                            except (
-                                Exception
-                            ) as e:  # nosec B110 -- intentional broad except for resilience
+                            except Exception as e:  # nosec B110 -- intentional broad except for resilience
                                 # Publish plugin error event
                                 self.event_bus.publish_simple(
                                     Events.PLUGIN_ERROR,
@@ -219,7 +348,7 @@ class CoreApplicationFactory:
 
         return None
 
-    def setup_user_authentication(self, config_dir: str = "/config") -> Dict[str, Any]:
+    def setup_user_authentication(self, config_dir: str = "/config") -> dict[str, Any]:
         """Setup user authentication with webui integration."""
         user_config = {
             "username": "admin",
@@ -333,6 +462,32 @@ class CoreApplicationFactory:
                 )
                 # Don't raise - logging failure shouldn't stop startup
 
+        def startup_scheduler():
+            """Start the scheduler service."""
+            try:
+                scheduler_service = self.container.resolve("scheduler_service")
+                if scheduler_service.start():
+                    self.event_bus.publish_simple(
+                        Events.APP_STARTED,
+                        data={"component": "scheduler"},
+                        source="lifecycle_hooks",
+                    )
+            except Exception as e:  # nosec B110 -- intentional broad except for resilience
+                self.event_bus.publish_simple(
+                    Events.ERROR_OCCURRED,
+                    data={"error": str(e), "component": "scheduler_startup"},
+                    source="lifecycle_hooks",
+                )
+                # Non-critical - app can run without scheduler
+
+        def shutdown_scheduler():
+            """Stop the scheduler service."""
+            try:
+                scheduler_service = self.container.resolve("scheduler_service")
+                scheduler_service.stop()
+            except Exception:  # nosec B110 -- intentional broad except for resilience
+                pass  # Best effort
+
         def shutdown_cleanup():
             """Cleanup on shutdown."""
             try:
@@ -347,6 +502,8 @@ class CoreApplicationFactory:
         # Register lifecycle hooks
         add_startup_hook("core_database", startup_database, priority=10, critical=True)
         add_startup_hook("core_logging", startup_logging, priority=20, critical=False)
+        add_startup_hook("core_scheduler", startup_scheduler, priority=30, critical=False)
+        add_shutdown_hook("core_scheduler", shutdown_scheduler, priority=10, critical=False)
         add_shutdown_hook("core_cleanup", shutdown_cleanup, priority=90, critical=False)
 
     def create_core_app(self, config_dir: str = "/config") -> Flask:

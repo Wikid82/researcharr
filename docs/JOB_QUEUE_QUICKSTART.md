@@ -44,16 +44,16 @@ async def process_media(job: JobDefinition, progress_callback):
     """Process media files."""
     media_id = job.args[0]
     quality = job.kwargs.get("quality", "medium")
-    
+
     # Report progress
     await progress_callback(0, 100, "Starting...")
-    
+
     # Do work
     result = await do_processing(media_id, quality)
-    
+
     # Report completion
     await progress_callback(100, 100, "Complete")
-    
+
     return result
 
 # Register handler
@@ -144,18 +144,18 @@ job_id = await job_service.submit_job(
 async def long_running_task(job: JobDefinition, progress_callback):
     """Task with progress updates."""
     items = job.args[0]
-    
+
     for i, item in enumerate(items):
         # Process item
         await process_item(item)
-        
+
         # Update progress
         await progress_callback(
             current=i + 1,
             total=len(items),
             message=f"Processed {i + 1}/{len(items)} items",
         )
-    
+
     return {"processed": len(items)}
 
 # Listen for progress events (if event bus configured)
@@ -264,10 +264,10 @@ def process_backup(backup_id):
 # Async wrapper for job handler
 async def process_backup_job(job: JobDefinition, progress_callback):
     backup_id = job.args[0]
-    
+
     # Run sync code in thread pool if needed
     result = await asyncio.to_thread(process_backup, backup_id)
-    
+
     return result
 
 job_service.register_handler("process_backup", process_backup_job)

@@ -74,3 +74,56 @@ async def test_backup_restore_job(job_service, temp_config_root):
     assert restore_res is not None
     assert restore_res.status == JobStatus.COMPLETED
     assert settings_path.exists()
+
+
+@pytest.mark.asyncio
+async def test_backup_prune_job(job_service, temp_config_root):
+    # Ensure automatic prune during create keeps all backups by using a large retain count
+    os.environ["BACKUP_RETAIN_COUNT"] = "999"
+    backups_dir = Path(os.environ["CONFIG_DIR"]) / "backups"
+    created_ids = []
+    for _ in range(5):
+        jid = await job_service.submit_job("backup.create", kwargs={"prefix": "prune-"})
+        created_ids.append(jid)
+    # Wait for all create jobs
+    for jid in created_ids:
+        for _ in range(60):
+            if await job_service.get_job_status(jid) == JobStatus.COMPLETED:
+                break
+            await asyncio.sleep(0.05)
+    pre_files = [p for p in backups_dir.iterdir() if p.is_file() and p.name.startswith("prune-")]
+    assert len(pre_files) >= 5
+    prune_id = await job_service.submit_job("backup.prune", kwargs={"retain_count": 2})
+    for _ in range(80):
+        status = await job_service.get_job_status(prune_id)
+        if status in (JobStatus.COMPLETED, JobStatus.FAILED):
+            break
+        await asyncio.sleep(0.05)
+    prune_res = await job_service.get_job_result(prune_id)
+    assert prune_res is not None
+    assert prune_res.status == JobStatus.COMPLETED
+    post_files = [p for p in backups_dir.iterdir() if p.is_file() and p.name.startswith("prune-")]
+    assert len(post_files) == 2
+    os.environ.pop("BACKUP_RETAIN_COUNT", None)
+
+
+@pytest.mark.asyncio
+async def test_backup_validate_job(job_service, temp_config_root):
+    create_id = await job_service.submit_job("backup.create", kwargs={"prefix": "validate-"})
+    for _ in range(60):
+        if await job_service.get_job_status(create_id) == JobStatus.COMPLETED:
+            break
+        await asyncio.sleep(0.05)
+    create_res = await job_service.get_job_result(create_id)
+    name = create_res.result.get("backup_name")  # type: ignore[assignment]
+    assert name and name.startswith("validate-")
+    validate_id = await job_service.submit_job("backup.validate", args=(name,))
+    for _ in range(60):
+        status = await job_service.get_job_status(validate_id)
+        if status in (JobStatus.COMPLETED, JobStatus.FAILED):
+            break
+        await asyncio.sleep(0.05)
+    validate_res = await job_service.get_job_result(validate_id)
+    assert validate_res is not None
+    assert validate_res.status == JobStatus.COMPLETED
+    assert bool(validate_res.result.get("valid")) is True

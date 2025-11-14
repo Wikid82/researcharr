@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import importlib
 import logging
 import os
@@ -26,7 +27,7 @@ class AsyncWorker:
         worker_id: str,
         queue: JobQueue,
         handlers: dict[str, Callable],
-        event_callback: Callable[[str, dict[str, Any]], None] | None = None,
+        event_callback: Callable[[str, dict[str, Any]], Any] | None = None,
     ):
         """Initialize worker.
 
@@ -51,6 +52,16 @@ class AsyncWorker:
         self._task: asyncio.Task | None = None
         self._stop_event = asyncio.Event()
         self._heartbeat_task: asyncio.Task | None = None
+
+    async def _emit(self, name: str, payload: dict[str, Any]) -> None:
+        if not self.event_callback:
+            return
+        try:
+            result = self.event_callback(name, payload)
+            if inspect.isawaitable(result):
+                await result
+        except Exception:
+            logger.exception("Event callback error for %s", name)
 
     async def start(self) -> None:
         """Start the worker."""
@@ -142,13 +153,12 @@ class AsyncWorker:
         logger.info(f"Worker {self.worker_id} executing job {job.id} ({job.handler})")
 
         # Publish job started event
-        if self.event_callback:
-            await self.event_callback("job.started", {
-                "job_id": str(job.id),
-                "worker_id": self.worker_id,
-                "handler": job.handler,
-                "attempt": result.attempts + 1,
-            })
+        await self._emit("job.started", {
+            "job_id": str(job.id),
+            "worker_id": self.worker_id,
+            "handler": job.handler,
+            "attempt": result.attempts + 1,
+        })
 
         try:
             # Get handler
@@ -162,8 +172,7 @@ class AsyncWorker:
                     total=total,
                     message=message,
                 )
-                if self.event_callback:
-                    await self.event_callback("job.progress", progress.to_dict())
+                await self._emit("job.progress", progress.to_dict())
 
             # Execute with timeout
             if job.timeout:
@@ -188,12 +197,11 @@ class AsyncWorker:
             )
 
             # Publish job completed event
-            if self.event_callback:
-                await self.event_callback("job.completed", {
-                    "job_id": str(job.id),
-                    "duration": result.duration,
-                    "worker_id": self.worker_id,
-                })
+            await self._emit("job.completed", {
+                "job_id": str(job.id),
+                "duration": result.duration,
+                "worker_id": self.worker_id,
+            })
 
         except TimeoutError:
             error_msg = f"Job timed out after {job.timeout}s"
@@ -202,12 +210,11 @@ class AsyncWorker:
             await self.queue.fail(job.id, error_msg, retry=True)
             self.info.jobs_failed += 1
 
-            if self.event_callback:
-                await self.event_callback("job.failed", {
-                    "job_id": str(job.id),
-                    "error": error_msg,
-                    "will_retry": True,
-                })
+            await self._emit("job.failed", {
+                "job_id": str(job.id),
+                "error": error_msg,
+                "will_retry": True,
+            })
 
         except Exception as e:
             error_msg = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
@@ -216,12 +223,11 @@ class AsyncWorker:
             await self.queue.fail(job.id, error_msg, retry=True)
             self.info.jobs_failed += 1
 
-            if self.event_callback:
-                await self.event_callback("job.failed", {
-                    "job_id": str(job.id),
-                    "error": str(e),
-                    "will_retry": True,
-                })
+            await self._emit("job.failed", {
+                "job_id": str(job.id),
+                "error": str(e),
+                "will_retry": True,
+            })
 
         finally:
             self.info.status = WorkerStatus.IDLE
@@ -269,7 +275,7 @@ class AsyncWorkerPool(WorkerPool):
         self,
         queue: JobQueue,
         handlers: dict[str, Callable] | None = None,
-        event_callback: Callable[[str, dict[str, Any]], None] | None = None,
+        event_callback: Callable[[str, dict[str, Any]], Any] | None = None,
     ):
         """Initialize worker pool.
 

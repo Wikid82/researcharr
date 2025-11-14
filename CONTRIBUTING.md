@@ -28,6 +28,8 @@ pre-commit run --all-files
 python -m pytest tests/ -v
 ```
 
+> Sourcery now runs inside `pre-commit`. Make sure the CLI is authenticated before the hook runs by executing `sourcery login` once (inside `.venv`) or exporting `SOURCERY_TOKEN=<your-token>` in your shell. See `docs/tooling-experiments.md` for the curated rule set and troubleshooting tips.
+
 Recommended developer command (same as used in CI-friendly helpers):
 
 ```bash

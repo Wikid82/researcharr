@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="researcharr contributors" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Services Architecture - researcharr</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/css/researcharr.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Services Architecture";
+        var mkdocs_page_input_path = "SERVICES_ARCHITECTURE.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> researcharr
+        </a>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">researcharr documentation — Day One</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../API/">ResearchArr API (v1)</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Backup-and-Recovery/">Backup and Recovery Procedures</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CI-and-Development/">CI and Development</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CLI-Usage/">CLI Usage Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CONFIGURATION/">Configuration Reference</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Changelog/">Changelog</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Contributing/">Contributing to researcharr</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-CI-Local-Differences/">Coverage Differences: CI vs Local</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Example-Comparison/">Coverage Gutters Example Structure</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Quick-Reference/">Coverage Gutters - Quick Reference Card</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Quick-Start/">Coverage Gutters - Visual Quick Start Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Setup/">Coverage Gutters Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEV/">DEV</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Deployment-and-Resources/">Deployment and Resource Recommendations</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Environment-Variables/">Environment variables</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../FAQ/">FAQ</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Getting-Started/">Getting Started</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Health-and-Metrics/">Health and Metrics Endpoints</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Integrations/">Integrations</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Logs/">Logs and Live Streaming</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Packaging-and-Distribution/">Packaging and Distribution</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Plugins/">Plugins and instance configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Recent-Changes/">Recent Changes</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Renovate-Configuration/">Renovate Bot Configuration Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Roadmap/">Roadmap</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="./">Services Architecture</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#core-services">Core Services</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-databaseservice">1. DatabaseService</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-loggingservice">2. LoggingService</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-connectivityservice">3. ConnectivityService</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#4-healthservice">4. HealthService</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#5-metricsservice">5. MetricsService</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#6-schedulerservice">6. SchedulerService</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#7-monitoringservice">7. MonitoringService</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#8-storageservice">8. StorageService</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#configuration-validation">Configuration Validation</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#service-container">Service Container</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#event-bus">Event Bus</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#application-lifecycle">Application Lifecycle</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#health-monitoring">Health Monitoring</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#backup-health-monitor">Backup Health Monitor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#database-health-monitor">Database Health Monitor</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#scheduled-tasks">Scheduled Tasks</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#backup-scheduler">Backup Scheduler</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#database-scheduler">Database Scheduler</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#best-practices">Best Practices</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#integration-example">Integration Example</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#testing">Testing</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#see-also">See Also</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Status-and-Warnings/">System status warnings and how to fix them</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Versioning/">Versioning & Releases</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../WHEELHOUSE/">Wheelhouse (built wheels) workflow</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../tooling-experiments/">Experimental Tooling: Sourcery & Vulture</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">researcharr</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a> &raquo;</li>
+      <li class="breadcrumb-item active">Services Architecture</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="services-architecture">Services Architecture</h1>
+<p>This document describes the core services architecture in Researcharr, including the integrated scheduler, monitoring, storage, and configuration validation services.</p>
+<h2 id="overview">Overview</h2>
+<p>Researcharr uses a service-oriented architecture with dependency injection. Core services are registered as singletons in a <code>ServiceContainer</code> and can be accessed throughout the application.</p>
+<h2 id="core-services">Core Services</h2>
+<h3 id="1-databaseservice">1. DatabaseService</h3>
+<p>Manages database connections and provides transaction support.</p>
+<p><strong>Key Methods:</strong>
+- <code>initialize()</code>: Set up database connection
+- <code>get_session()</code>: Get SQLAlchemy session
+- <code>execute_query(query)</code>: Execute raw SQL</p>
+<h3 id="2-loggingservice">2. LoggingService</h3>
+<p>Provides centralized logging with configurable levels and formatters.</p>
+<p><strong>Key Methods:</strong>
+- <code>get_logger(name)</code>: Get a named logger
+- <code>set_level(level)</code>: Change logging level
+- <code>add_handler(handler)</code>: Add custom log handler</p>
+<h3 id="3-connectivityservice">3. ConnectivityService</h3>
+<p>Monitors network connectivity and handles connection state.</p>
+<p><strong>Key Methods:</strong>
+- <code>is_connected()</code>: Check if connected to network
+- <code>wait_for_connection()</code>: Block until connected
+- <code>add_listener(callback)</code>: Register connectivity callback</p>
+<h3 id="4-healthservice">4. HealthService</h3>
+<p>Aggregates health status from all health monitors.</p>
+<p><strong>Key Methods:</strong>
+- <code>check_health()</code>: Get overall health status
+- <code>register_monitor(monitor)</code>: Add a health monitor
+- <code>get_metrics()</code>: Get health metrics</p>
+<h3 id="5-metricsservice">5. MetricsService</h3>
+<p>Collects and exposes application metrics.</p>
+<p><strong>Key Methods:</strong>
+- <code>record_metric(name, value)</code>: Record a metric
+- <code>get_metrics()</code>: Get all metrics
+- <code>expose()</code>: Export metrics (Prometheus format)</p>
+<h3 id="6-schedulerservice">6. SchedulerService</h3>
+<p>Manages scheduled tasks using APScheduler.</p>
+<p><strong>Key Methods:</strong>
+- <code>initialize()</code>: Set up scheduler
+- <code>start()</code>: Start scheduler
+- <code>stop()</code>: Stop scheduler
+- <code>add_job(func, trigger, **kwargs)</code>: Schedule a job
+- <code>get_schedule_info()</code>: Get info about scheduled jobs
+- <code>is_running()</code>: Check if scheduler is running</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-python">from researcharr.core import SchedulerService
+from apscheduler.triggers.cron import CronTrigger
+
+scheduler = SchedulerService(config)
+scheduler.initialize()
+scheduler.start()
+
+# Schedule a daily job
+scheduler.add_job(
+    my_function,
+    CronTrigger(hour=2, minute=0),
+    id=&quot;daily_job&quot;,
+    name=&quot;Daily Task&quot;
+)
+</code></pre>
+<h3 id="7-monitoringservice">7. MonitoringService</h3>
+<p>Orchestrates health monitors (backup and database monitoring).</p>
+<p><strong>Key Methods:</strong>
+- <code>initialize()</code>: Set up monitors
+- <code>check_all_health()</code>: Run all health checks
+- <code>get_all_metrics()</code>: Get metrics from all monitors
+- <code>get_backup_health()</code>: Get backup health specifically
+- <code>get_database_health()</code>: Get database health specifically</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-python">from researcharr.core import MonitoringService
+
+monitoring = MonitoringService(config)
+monitoring.initialize()
+
+# Check all health
+health = monitoring.check_all_health()
+print(f&quot;Status: {health['status']}&quot;)
+print(f&quot;Alerts: {len(health['alerts'])}&quot;)
+
+# Get specific metrics
+db_metrics = monitoring.get_database_health()
+</code></pre>
+<h3 id="8-storageservice">8. StorageService</h3>
+<p>Provides simplified access to repository layer.</p>
+<p><strong>Key Methods:</strong>
+- <code>initialize()</code>: Set up storage
+- <code>create_unit_of_work()</code>: Create UnitOfWork context manager
+- <code>get_app(app_id)</code>: Get managed app by ID
+- <code>get_all_apps()</code>: Get all managed apps
+- <code>get_enabled_apps()</code>: Get enabled apps
+- <code>get_tracked_item(item_id)</code>: Get tracked item
+- <code>get_processing_logs(limit)</code>: Get processing logs
+- <code>get_setting(key, default)</code>: Get setting value
+- <code>set_setting(key, value)</code>: Set setting value</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-python">from researcharr.core import StorageService
+
+storage = StorageService()
+storage.initialize()
+
+# Get all enabled apps
+apps = storage.get_enabled_apps()
+for app in apps:
+    print(f&quot;App: {app.name}&quot;)
+
+# Get a setting with default
+api_key = storage.get_setting(&quot;api_key&quot;, &quot;&quot;)
+
+# Update a setting
+storage.set_setting(&quot;last_sync&quot;, &quot;2024-01-15&quot;)
+</code></pre>
+<h2 id="configuration-validation">Configuration Validation</h2>
+<p>The <code>ConfigValidator</code> service validates configuration against JSON-like schemas and applies defaults.</p>
+<p><strong>Supported Sections:</strong>
+- <code>scheduling</code>: Scheduler configuration
+- <code>backups</code>: Backup monitoring configuration
+- <code>database</code>: Database monitoring configuration
+- <code>storage</code>: Storage settings</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-python">from researcharr.core import validate_config, apply_config_defaults
+
+config = {
+    &quot;scheduling&quot;: {&quot;timezone&quot;: &quot;America/New_York&quot;},
+    &quot;backups&quot;: {&quot;retain_count&quot;: 10}
+}
+
+# Validate configuration
+is_valid, errors = validate_config(config)
+if not is_valid:
+    print(f&quot;Configuration errors: {errors}&quot;)
+
+# Apply defaults for missing values
+config = apply_config_defaults(config)
+</code></pre>
+<p><strong>Getting Schema Documentation:</strong></p>
+<pre><code class="language-python">from researcharr.core import get_validator
+
+validator = get_validator()
+
+# Get all schema docs
+docs = validator.get_schema_docs()
+print(docs)
+
+# Get specific schema docs
+scheduling_docs = validator.get_schema_docs(&quot;scheduling&quot;)
+print(scheduling_docs)
+</code></pre>
+<h2 id="service-container">Service Container</h2>
+<p>All services are registered in a <code>ServiceContainer</code> which provides dependency injection.</p>
+<p><strong>Usage:</strong></p>
+<pre><code class="language-python">from researcharr.core import get_container
+
+container = get_container()
+
+# Resolve a service
+scheduler = container.resolve(&quot;scheduler_service&quot;)
+monitoring = container.resolve(&quot;monitoring_service&quot;)
+storage = container.resolve(&quot;storage_service&quot;)
+</code></pre>
+<h2 id="event-bus">Event Bus</h2>
+<p>Services communicate via an event bus using a publish-subscribe pattern.</p>
+<p><strong>Event Types:</strong>
+- <code>APP_STARTING</code>: Application is starting
+- <code>APP_STARTED</code>: Application has started
+- <code>APP_STOPPING</code>: Application is stopping
+- <code>APP_STOPPED</code>: Application has stopped
+- Database health events (7 types)
+- Backup events</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-python">from researcharr.core import get_container
+from researcharr.events.events import publish_simple
+
+def my_handler(event):
+    print(f&quot;Received event: {event.event_type}&quot;)
+
+# Subscribe to events
+container = get_container()
+event_bus = container.resolve(&quot;event_bus&quot;)
+event_bus.subscribe(&quot;BACKUP_STARTED&quot;, my_handler)
+
+# Publish an event
+publish_simple(&quot;CUSTOM_EVENT&quot;, {&quot;data&quot;: &quot;value&quot;})
+</code></pre>
+<h2 id="application-lifecycle">Application Lifecycle</h2>
+<p>The application follows a defined lifecycle:</p>
+<ol>
+<li><strong>Initialization</strong>: Services are registered in the container</li>
+<li><strong>Starting</strong>: <code>APP_STARTING</code> event is published</li>
+<li><strong>Startup</strong>: Scheduler is started</li>
+<li><strong>Running</strong>: Application serves requests</li>
+<li><strong>Stopping</strong>: <code>APP_STOPPING</code> event is published</li>
+<li><strong>Shutdown</strong>: Scheduler is stopped</li>
+<li><strong>Stopped</strong>: <code>APP_STOPPED</code> event is published</li>
+</ol>
+<p><strong>Lifecycle Hooks:</strong></p>
+<pre><code class="language-python">from researcharr.core import ApplicationLifecycle
+
+lifecycle = ApplicationLifecycle()
+
+# Register startup hook
+def on_startup():
+    print(&quot;Application starting&quot;)
+
+lifecycle.register_startup_hook(on_startup)
+
+# Register shutdown hook
+def on_shutdown():
+    print(&quot;Application stopping&quot;)
+
+lifecycle.register_shutdown_hook(on_shutdown)
+</code></pre>
+<h2 id="health-monitoring">Health Monitoring</h2>
+<h3 id="backup-health-monitor">Backup Health Monitor</h3>
+<p>Monitors backup status and alerts on issues.</p>
+<p><strong>Checks:</strong>
+- Backup age (too old?)
+- Backup count (too few?)
+- Backup size (too small/large?)
+- Backup integrity</p>
+<p><strong>Configuration:</strong></p>
+<pre><code class="language-yaml">backups:
+  enabled: true
+  retain_count: 5
+  max_age_days: 30
+  check_interval: 3600
+</code></pre>
+<h3 id="database-health-monitor">Database Health Monitor</h3>
+<p>Monitors database health and performance.</p>
+<p><strong>Checks:</strong>
+- Connection status
+- Database integrity (PRAGMA integrity_check)
+- Database size and fragmentation
+- WAL mode status
+- Journal mode</p>
+<p><strong>Configuration:</strong></p>
+<pre><code class="language-yaml">database:
+  monitoring:
+    enabled: true
+    health_check_interval: 300
+    integrity_check_interval: 86400
+    size_alert_threshold_mb: 1000
+    fragmentation_threshold: 0.3
+</code></pre>
+<h2 id="scheduled-tasks">Scheduled Tasks</h2>
+<h3 id="backup-scheduler">Backup Scheduler</h3>
+<p>Schedules backup operations.</p>
+<p><strong>Jobs:</strong>
+- Create backup (configurable schedule)
+- Cleanup old backups (daily)</p>
+<h3 id="database-scheduler">Database Scheduler</h3>
+<p>Schedules database maintenance.</p>
+<p><strong>Jobs:</strong>
+- Health checks (every 5 minutes)
+- Integrity checks (daily)
+- Statistics update (hourly)</p>
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li><strong>Always initialize services</strong>: Call <code>initialize()</code> before using a service</li>
+<li><strong>Use dependency injection</strong>: Resolve services from container, don't instantiate directly</li>
+<li><strong>Handle errors gracefully</strong>: Check return values from <code>initialize()</code></li>
+<li><strong>Validate configuration</strong>: Use <code>validate_config()</code> before passing to services</li>
+<li><strong>Use lifecycle hooks</strong>: Register cleanup in shutdown hooks</li>
+<li><strong>Monitor health</strong>: Regularly check <code>MonitoringService.check_all_health()</code></li>
+<li><strong>Use StorageService</strong>: Access repositories through StorageService, not UnitOfWork directly</li>
+</ol>
+<h2 id="integration-example">Integration Example</h2>
+<p>Complete example showing service integration:</p>
+<pre><code class="language-python">from researcharr.core import (
+    CoreApplicationFactory,
+    get_container,
+    validate_config,
+    apply_config_defaults
+)
+
+# Load and validate configuration
+config = load_config()  # Your config loading logic
+is_valid, errors = validate_config(config)
+if not is_valid:
+    raise ValueError(f&quot;Invalid config: {errors}&quot;)
+
+config = apply_config_defaults(config)
+
+# Create application
+factory = CoreApplicationFactory()
+factory.register_core_services()
+app = factory.create_app()
+
+# Get services
+container = get_container()
+scheduler = container.resolve(&quot;scheduler_service&quot;)
+monitoring = container.resolve(&quot;monitoring_service&quot;)
+storage = container.resolve(&quot;storage_service&quot;)
+
+# Initialize services
+scheduler.initialize()
+monitoring.initialize()
+storage.initialize()
+
+# Start scheduler
+scheduler.start()
+
+# Check health
+health = monitoring.check_all_health()
+print(f&quot;Application health: {health['status']}&quot;)
+
+# Use storage
+apps = storage.get_enabled_apps()
+print(f&quot;Managing {len(apps)} apps&quot;)
+
+# Application runs...
+
+# Cleanup on shutdown
+scheduler.stop()
+</code></pre>
+<h2 id="testing">Testing</h2>
+<p>When testing code that uses services, use mocks:</p>
+<pre><code class="language-python">from unittest.mock import Mock, patch
+
+def test_my_function():
+    with patch(&quot;researcharr.core.get_container&quot;) as mock_container:
+        mock_storage = Mock()
+        mock_storage.get_enabled_apps.return_value = []
+        mock_container.return_value.resolve.return_value = mock_storage
+
+        # Your test code here
+        result = my_function()
+        assert result is not None
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<p><strong>Scheduler not starting:</strong>
+- Check <code>scheduler.is_running()</code> returns <code>True</code>
+- Verify <code>initialize()</code> was called and returned <code>True</code>
+- Check logs for APScheduler errors</p>
+<p><strong>Health checks failing:</strong>
+- Check database path is correct
+- Verify database file permissions
+- Check disk space</p>
+<p><strong>Monitoring not working:</strong>
+- Verify <code>monitoring.initialize()</code> returns <code>True</code>
+- Check configuration is valid
+- Ensure monitors are enabled in config</p>
+<p><strong>Storage errors:</strong>
+- Check database connection
+- Verify migrations are up to date
+- Check file permissions on database</p>
+<h2 id="see-also">See Also</h2>
+<ul>
+<li><a href="../CONFIGURATION/">Configuration Schema Reference</a></li>
+<li><a href="MONITORING.md">Health Monitoring Guide</a></li>
+<li><a href="SCHEDULER.md">Scheduler Integration</a></li>
+<li><a href="../API/">API Documentation</a></li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../Roadmap/" class="btn btn-neutral float-left" title="Roadmap"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../Status-and-Warnings/" class="btn btn-neutral float-right" title="System status warnings and how to fix them">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../Roadmap/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../Status-and-Warnings/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

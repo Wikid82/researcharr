@@ -5,8 +5,8 @@ import time
 
 import pytest
 
-from researcharr.core.background import BackgroundTaskManager
 from researcharr.backups_impl import create_backup_file
+from researcharr.core.background import BackgroundTaskManager
 
 
 @pytest.mark.parametrize("count", [1, 2])

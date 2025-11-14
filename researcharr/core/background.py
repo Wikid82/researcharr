@@ -96,11 +96,11 @@ class BackgroundTaskManager:
                     sig = inspect.signature(fn)
                 except Exception:
                     sig = None
+                local_kwargs = dict(kwargs)
                 if sig and "cancel_event" in sig.parameters:
                     task._cancel_event = threading.Event()
-                    kwargs = dict(kwargs)
-                    kwargs.setdefault("cancel_event", task._cancel_event)
-                task.result = fn(*args, **kwargs)
+                    local_kwargs.setdefault("cancel_event", task._cancel_event)
+                task.result = fn(*args, **local_kwargs)
                 if task.cancel_requested and task._cancel_event and task._cancel_event.is_set():
                     # Function returned after seeing cancellation; treat as cancelled
                     task.status = "cancelled"
@@ -111,6 +111,10 @@ class BackgroundTaskManager:
             except Exception as e:  # pragma: no cover - broad resilience
                 task.error = f"{type(e).__name__}: {e}"
                 task.status = "failed"
+                try:
+                    print(f"DEBUG: task {task.id} failed with error={task.error}")
+                except Exception:
+                    pass
                 self._emit("background.task.failed", task)
             finally:
                 task.finished = time.time()
@@ -202,12 +206,20 @@ class BackgroundTaskManager:
                 # Treat as running if scheduled
             # Re-read status in case task transitioned while we held lock
             if task.status in ("running", "pending"):
+                try:
+                    print(f"DEBUG: cancelling task {task_id} status={task.status} cancel_event={bool(task._cancel_event)}")
+                except Exception:
+                    pass
                 task.cancel_requested = True
                 if task._cancel_event:
                     task._cancel_event.set()
                 self._emit("background.task.cancel.requested", task)
                 return True
             # Already terminal
+            try:
+                print(f"DEBUG: cancel fallthrough task {task_id} status={task.status}")
+            except Exception:
+                pass
             return False
 
 __all__ = ["BackgroundTaskManager", "BackgroundTask"]

@@ -366,8 +366,7 @@ class ConfigValidator:
 
         docs = ["# Configuration Reference\n"]
         for name, schema in self._schemas.items():
-            docs.append(self._document_schema(name, schema))
-            docs.append("")
+            docs.extend((self._document_schema(name, schema), ""))
 
         return "\n".join(docs)
 

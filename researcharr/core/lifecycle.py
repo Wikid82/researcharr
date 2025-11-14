@@ -225,10 +225,10 @@ class ApplicationLifecycle:
 
             if hook.timeout:
                 # TODO: Implement timeout handling with threading.Timer
-                # For now, just execute directly
-                hook.callback()
-            else:
-                hook.callback()
+                # For now, execution remains direct.
+                pass
+
+            hook.callback()
 
             LOGGER.debug("Successfully executed %s hook: %s", phase, hook.name)
             return True

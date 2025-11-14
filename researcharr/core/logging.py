@@ -84,9 +84,8 @@ class LoggerFactory:
         """Check if logger already has a FileHandler for the specified file."""
         log_file_str = str(log_file)
         for handler in logger.handlers:
-            if isinstance(handler, logging.FileHandler):
-                if handler.baseFilename == log_file_str:
-                    return True
+            if isinstance(handler, logging.FileHandler) and handler.baseFilename == log_file_str:
+                return True
         return False
 
     def reset_logger(self, name: str) -> None:

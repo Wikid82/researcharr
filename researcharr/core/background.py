@@ -21,8 +21,9 @@ import os
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 
 @dataclass
@@ -32,13 +33,13 @@ class BackgroundTask:
     func_repr: str
     status: str = "pending"  # pending|running|completed|failed|cancelled
     result: Any = None
-    error: Optional[str] = None
-    started: Optional[float] = None
-    finished: Optional[float] = None
+    error: str | None = None
+    started: float | None = None
+    finished: float | None = None
     cancel_requested: bool = False
-    _cancel_event: Optional[threading.Event] = None  # internal cooperative flag
+    _cancel_event: threading.Event | None = None  # internal cooperative flag
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize task similar to JobResult schema for UI consistency."""
         return {
             "job_id": self.id,
@@ -56,11 +57,11 @@ class BackgroundTask:
         }
 
 
-def _iso(ts: Optional[float]) -> Optional[str]:  # pragma: no cover - trivial
+def _iso(ts: float | None) -> str | None:  # pragma: no cover - trivial
     if ts is None:
         return None
     try:
-        from datetime import datetime, UTC
+        from datetime import UTC, datetime
         return datetime.fromtimestamp(ts, UTC).isoformat()
     except Exception:
         return None
@@ -69,8 +70,8 @@ def _iso(ts: Optional[float]) -> Optional[str]:  # pragma: no cover - trivial
 class BackgroundTaskManager:
     def __init__(self, max_workers: int = 4, *, event_bus: Any | None = None, ttl_seconds: int | None = None):
         self._executor = _futures.ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="bg-task")
-        self._tasks: Dict[str, BackgroundTask] = {}
-        self._futures: Dict[str, _futures.Future] = {}
+        self._tasks: dict[str, BackgroundTask] = {}
+        self._futures: dict[str, _futures.Future] = {}
         self._lock = threading.Lock()
         self._event_bus = event_bus
         # TTL for terminal tasks (completed/failed); default from env or 300s
@@ -126,7 +127,7 @@ class BackgroundTaskManager:
         self._futures[tid] = fut
         return tid
 
-    def get(self, task_id: str) -> Optional[BackgroundTask]:
+    def get(self, task_id: str) -> BackgroundTask | None:
         with self._lock:
             task = self._tasks.get(task_id)
             self._prune_expired_locked()
@@ -174,7 +175,7 @@ class BackgroundTaskManager:
             self._prune_expired_locked()
 
     # Unified serialization convenience --------------------------------
-    def serialize(self, task_id: str) -> Dict[str, Any] | None:
+    def serialize(self, task_id: str) -> dict[str, Any] | None:
         t = self.get(task_id)
         return t.to_dict() if t else None
 

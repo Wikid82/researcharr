@@ -61,6 +61,20 @@ from .services import (
 )
 from .services import load_config as load_config_legacy
 
+# Job Queue System
+from .jobs import (
+    JobDefinition,
+    JobPriority,
+    JobProgress,
+    JobQueue,
+    JobResult,
+    JobService,
+    JobStatus,
+    WorkerInfo,
+    WorkerPool,
+    WorkerStatus,
+)
+
 __all__ = [
     # Service Container
     "ServiceContainer",
@@ -72,6 +86,17 @@ __all__ = [
     "get_event_bus",
     "publish_simple",
     "subscribe",
+    # Job Queue System
+    "JobService",
+    "JobQueue",
+    "JobDefinition",
+    "JobResult",
+    "JobProgress",
+    "JobStatus",
+    "JobPriority",
+    "WorkerPool",
+    "WorkerInfo",
+    "WorkerStatus",
     # Lifecycle Management
     "ApplicationLifecycle",
     "apply_config_defaults",

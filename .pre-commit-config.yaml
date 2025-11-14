@@ -38,6 +38,48 @@ repos:
         additional_dependencies: ["pbr"]
         stages: [pre-commit]
 
+  - repo: https://github.com/sourcery-ai/sourcery
+    rev: "v1.40.0"
+    hooks:
+      - id: sourcery
+        name: sourcery (priority high+medium)
+        args:
+          # High priority rules
+          - "--enable"
+          - "raise-specific-error"
+          - "--enable"
+          - "raise-from-previous-error"
+          - "--enable"
+          - "remove-redundant-exception"
+          - "--enable"
+          - "simplify-single-exception-tuple"
+          - "--enable"
+          - "remove-none-from-default-get"
+          - "--enable"
+          - "remove-redundant-path-exists"
+          # Medium priority rules
+          - "--enable"
+          - "collection-into-set"
+          - "--enable"
+          - "dict-assign-update-to-union"
+          - "--enable"
+          - "hoist-statement-from-if"
+          - "--enable"
+          - "introduce-default-else"
+          - "--enable"
+          - "merge-list-appends-into-extend"
+          - "--enable"
+          - "merge-nested-ifs"
+          - "--enable"
+          - "remove-unnecessary-else"
+          - "--enable"
+          - "swap-if-else-branches"
+          - "--config"
+          - ".sourcery.yaml"
+          - "researcharr"
+        pass_filenames: false
+        stages: [pre-commit]
+
   # Note: shellcheck integration omitted because the shellcheck mirror
   # pre-commit hook is not available in this environment. You can add
   # a shellcheck hook later (for example via a maintained pre-commit

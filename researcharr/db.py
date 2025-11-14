@@ -67,13 +67,13 @@ def load_user() -> dict[str, str | None] | None:
             "SELECT username, password_hash, api_key_hash FROM webui_users ORDER BY id LIMIT 1"
         )
         row = cur.fetchone()
-        if not row:
-            return None
-        return {
-            "username": row["username"],
-            "password_hash": row["password_hash"],
-            "api_key_hash": row["api_key_hash"],
-        }
+        if row:
+            return {
+                "username": row["username"],
+                "password_hash": row["password_hash"],
+                "api_key_hash": row["api_key_hash"],
+            }
+        return None
     finally:
         conn.close()
 

@@ -4,7 +4,7 @@
 # for reproducible installs. See https://pre-commit.com for guidance.
 repos:
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: "v0.14.3"  # pinned ruff pre-commit tag (update as needed)
+    rev: "v0.14.4"  # pinned ruff pre-commit tag (update as needed)
     hooks:
       - id: ruff
         args: ["--fix"]

@@ -51,9 +51,12 @@ def validate_search_cycle(cycle: models.SearchCycle) -> None:
             continue
         if int(val) < 0:
             raise ValidationError(f"SearchCycle.{fld} must be >= 0")
-    if cycle.completed_at is not None and cycle.started_at is not None:
-        if cycle.completed_at < cycle.started_at:
-            raise ValidationError("SearchCycle.completed_at cannot be before started_at")
+    if (
+        cycle.completed_at is not None
+        and cycle.started_at is not None
+        and cycle.completed_at < cycle.started_at
+    ):
+        raise ValidationError("SearchCycle.completed_at cannot be before started_at")
 
 
 def validate_processing_log(log: models.ProcessingLog) -> None:

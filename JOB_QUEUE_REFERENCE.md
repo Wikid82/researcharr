@@ -102,27 +102,27 @@ print(f"Workers: {metrics['workers']}")
 ```python
 async def handler_template(job: JobDefinition, progress):
     """Job handler template.
-    
+
     Args:
         job: Contains args, kwargs, timeout, etc.
         progress: async callback(current, total, message)
-    
+
     Returns:
         Any JSON-serializable result
     """
     # Get args
     arg1 = job.args[0]
     option = job.kwargs.get("option", "default")
-    
+
     # Report progress
     await progress(0, 100, "Starting")
-    
+
     # Do work
     result = await do_work(arg1, option)
-    
+
     # Report completion
     await progress(100, 100, "Complete")
-    
+
     return result
 ```
 
@@ -289,27 +289,27 @@ from researcharr.core import JobService
 async def test_my_handler():
     service = JobService(redis_url="redis://localhost:6379/15")
     await service.initialize()
-    
+
     service.register_handler("test", my_handler)
     await service.start_workers(count=1)
-    
+
     job_id = await service.submit_job("test")
-    
+
     # Wait for completion
     for _ in range(50):
         status = await service.get_job_status(job_id)
         if status == JobStatus.COMPLETED:
             break
         await asyncio.sleep(0.1)
-    
+
     result = await service.get_job_result(job_id)
     assert result.status == JobStatus.COMPLETED
-    
+
     await service.shutdown()
 ```
 
 ---
 
-**Full Documentation**: `docs/JOB_QUEUE_QUICKSTART.md`  
-**Architecture**: `docs/architecture/JOB_QUEUE_DESIGN.md`  
+**Full Documentation**: `docs/JOB_QUEUE_QUICKSTART.md`
+**Architecture**: `docs/architecture/JOB_QUEUE_DESIGN.md`
 **Tests**: `tests/test_jobs.py`

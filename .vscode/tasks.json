@@ -83,8 +83,8 @@
             "type": "shell",
             "command": "bash",
             "args": [
-                "-c",
-                "SITE_PACKAGES=$(python -c \"import sysconfig; print(sysconfig.get_paths()['purelib'])\") && export PYTHONPATH=\"$SITE_PACKAGES:$PYTHONPATH\" && python -m pytest tests/ --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml"
+                "-lc",
+                "bash ./scripts/run_pytest_ci_cov.sh"
             ],
             "group": {
                 "kind": "test",
@@ -100,12 +100,10 @@
         {
             "label": "Run Tests (Quick)",
             "type": "shell",
-            "command": "python",
+            "command": "bash",
             "args": [
-                "-m",
-                "pytest",
-                "tests/",
-                "-v"
+                "-c",
+                "source ${workspaceFolder}/.venv/bin/activate && python -m pytest tests/ -v"
             ],
             "group": "test",
             "presentation": {
@@ -121,7 +119,7 @@
             "command": "bash",
             "args": [
                 "-c",
-                "SITE_PACKAGES=$(python -c \"import sysconfig; print(sysconfig.get_paths()['purelib'])\") && export PYTHONPATH=\"$SITE_PACKAGES:$PYTHONPATH\" && python -m pytest ${file} --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml"
+                "source ${workspaceFolder}/.venv/bin/activate && SITE_PACKAGES=$(python -c \"import sysconfig; print(sysconfig.get_paths()['purelib'])\") && export PYTHONPATH=\"$SITE_PACKAGES:$PYTHONPATH\" && python -m pytest ${file} --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml"
             ],
             "group": "test",
             "presentation": {
@@ -134,15 +132,10 @@
         {
             "label": "Run Tests with Coverage (Local Mode)",
             "type": "shell",
-            "command": "python",
+            "command": "bash",
             "args": [
-                "-m",
-                "pytest",
-                "tests/",
-                "--cov=researcharr",
-                "--cov-report=term-missing",
-                "--cov-report=html",
-                "--cov-report=xml"
+                "-c",
+                "source ${workspaceFolder}/.venv/bin/activate && python -m pytest tests/ --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml"
             ],
             "group": "test",
             "presentation": {

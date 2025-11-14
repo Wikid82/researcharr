@@ -108,7 +108,7 @@ def health():
                 "config": "ok",
                 "error": str(e),
             }
-        ), (503 if not conn_ok else 200)
+        ), (200 if conn_ok else 503)
 
 
 @bp.route("/metrics")
@@ -286,7 +286,7 @@ def notifications_send():
             "notification.send.started",
             data={
                 "title": title,
-                "body": body[:100] + "..." if len(body) > 100 else body,
+                "body": f"{body[:100]}..." if len(body) > 100 else body,
             },
             source="core_api",
         )

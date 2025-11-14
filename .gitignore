@@ -185,3 +185,6 @@ junit**
 **junit**
 # Local actions artifacts from triage script
 actions-artifacts/
+reports/sourcery-priority.json
+sourcery-report.json
+sourcery-report.csv

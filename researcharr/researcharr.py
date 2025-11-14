@@ -278,8 +278,6 @@ def load_config(path="config.yml"):
                 return {}
             config = _yaml.safe_load(f)
             return config or {}
-    except FileNotFoundError:
-        return {}
     except Exception:  # nosec B110 -- intentional broad except for resilience
         return {}
 

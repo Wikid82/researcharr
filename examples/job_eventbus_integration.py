@@ -215,7 +215,9 @@ async def main():
         print(f"  ID: {job_id}")
         print(f"  Status: {status}")
         if result:
-            print(f"  Result: {result.result if result.status == JobStatus.COMPLETED else result.error}")
+            print(
+                f"  Result: {result.result if result.status == JobStatus.COMPLETED else result.error}"
+            )
         print()
 
     # Show metrics

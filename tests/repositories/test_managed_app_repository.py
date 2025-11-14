@@ -1,5 +1,7 @@
 """Tests for ManagedAppRepository."""
 
+from researcharr.cache import make_key
+from researcharr.cache import set as cache_set
 from researcharr.storage.models import AppType, ManagedApp
 
 
@@ -88,6 +90,14 @@ def test_delete_app(app_repo, sample_radarr_app):
 
     assert result is True
     assert app_repo.get_by_id(app_id) is None
+
+
+def test_delete_app_with_cached_detached_instance(app_repo, sample_radarr_app):
+    """Deleting uses session instance even when cache returns detached copy."""
+    cache_set(make_key(("ManagedApp", "id", sample_radarr_app.id)), sample_radarr_app, ttl=120)
+
+    assert app_repo.delete(sample_radarr_app.id) is True
+    assert app_repo.get_by_id(sample_radarr_app.id) is None
 
 
 def test_delete_nonexistent_app(app_repo):

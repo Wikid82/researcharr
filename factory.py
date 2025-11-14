@@ -2586,6 +2586,29 @@ def create_app() -> Flask:
             return jsonify({"error": "unauthorized"}), 401
         config_root = os.getenv("CONFIG_DIR", "/config")
         backups_dir = os.path.join(config_root, "backups")
+        # If job queue available, submit an asynchronous backup.create job
+        job_service = getattr(app, "job_service", None)
+        if job_service is not None:
+            try:
+                import asyncio
+
+                prefix = ""
+                try:
+                    data = request.get_json(silent=True) or {}
+                    prefix = data.get("prefix", "") or ""
+                except Exception:
+                    prefix = ""
+                job_id = asyncio.run(
+                    job_service.submit_job(
+                        "backup.create",
+                        kwargs={"prefix": prefix},
+                        priority=None,
+                    )
+                )
+                return jsonify({"result": "queued", "job_id": str(job_id)})
+            except Exception:
+                # Fall back to legacy synchronous path if queuing fails
+                pass
         try:
             # Call the local delegator first. The delegator resolves the
             # module-level `create_backup_file` on `researcharr.factory` at
@@ -2783,6 +2806,23 @@ def create_app() -> Flask:
         config_root = os.getenv("CONFIG_DIR", "/config")
         backups_dir = os.path.join(config_root, "backups")
         fpath = os.path.join(backups_dir, name)
+        # If job queue available, submit restore job
+        job_service = getattr(app, "job_service", None)
+        if job_service is not None:
+            try:
+                import asyncio
+
+                job_id = asyncio.run(
+                    job_service.submit_job(
+                        "backup.restore",
+                        args=(name,),
+                        kwargs={"create_pre_backup": True},
+                    )
+                )
+                return jsonify({"result": "queued", "job_id": str(job_id)})
+            except Exception:
+                # Fall back to legacy synchronous path on failure
+                pass
         try:
             if not os.path.realpath(fpath).startswith(os.path.realpath(backups_dir)):
                 return jsonify({"error": "invalid_name"}), 400

@@ -33,10 +33,7 @@ def suggest_image_tag_from_meta(meta: dict[str, Any] | None) -> str | None:
         if not meta:
             return None
         ver = meta.get("app_version")
-        if not ver:
-            return None
-        # Project image registry/tag convention
-        return f"ghcr.io/wikid82/researcharr:{ver}"
+        return f"ghcr.io/wikid82/researcharr:{ver}" if ver else None
     except Exception:
         return None
 

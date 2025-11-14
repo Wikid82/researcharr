@@ -126,8 +126,7 @@ class BackupHealthMonitor:
             health["last_backup_size_bytes"] = latest.get("size", 0)
             health["last_backup_size_human"] = self._format_size(latest.get("size", 0))
 
-            timestamp_str = latest.get("timestamp")
-            if timestamp_str:
+            if timestamp_str := latest.get("timestamp"):
                 health["last_backup_timestamp"] = timestamp_str
                 try:
                     last_backup_time = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
@@ -162,8 +161,7 @@ class BackupHealthMonitor:
             # Check oldest backup
             if backups:
                 oldest = backups[-1]
-                oldest_timestamp = oldest.get("timestamp")
-                if oldest_timestamp:
+                if oldest_timestamp := oldest.get("timestamp"):
                     try:
                         oldest_time = datetime.fromisoformat(
                             oldest_timestamp.replace("Z", "+00:00")
@@ -201,8 +199,7 @@ class BackupHealthMonitor:
             self._metrics["last_backup_timestamp"] = datetime.now(UTC).isoformat()
 
             try:
-                info = get_backup_info(backup_path)
-                if info:
+                if info := get_backup_info(backup_path):
                     size = info.get("size", 0)
                     self._metrics["last_backup_size_bytes"] = size
             except Exception:  # nosec B110

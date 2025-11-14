@@ -11,10 +11,7 @@ import os
 import sqlite3
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    pass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -238,7 +235,7 @@ class DatabaseHealthMonitor:
             db_size_mb = db_size / (1024 * 1024)
 
             # Check WAL file if exists
-            wal_path = self.db_path.with_suffix(self.db_path.suffix + "-wal")
+            wal_path = self.db_path.with_suffix(f"{self.db_path.suffix}-wal")
             wal_size = 0
             if wal_path.exists():
                 wal_size = wal_path.stat().st_size
@@ -413,12 +410,10 @@ class DatabaseHealthMonitor:
 
                 # Expected core tables
                 expected_tables = {"global_settings", "managed_apps", "tracked_items"}
-                missing_tables = expected_tables - set(tables)
-
                 status = "ok"
                 message = None
 
-                if missing_tables:
+                if missing_tables := expected_tables - set(tables):
                     status = "warning"
                     message = f"Missing expected tables: {', '.join(missing_tables)}"
                 elif not migration_status.get("current", True):

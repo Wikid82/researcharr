@@ -11,6 +11,12 @@ Example:
     >>> result = await job_service.get_job_result(job_id)
 """
 
+from .api import jobs_bp
+from .handlers_backups import (
+    register_backup_handlers as register_backup_job_handlers,
+)
+from .queue import JobQueue
+from .service import JobService
 from .types import (
     JobDefinition,
     JobPriority,
@@ -18,13 +24,7 @@ from .types import (
     JobResult,
     JobStatus,
 )
-from .queue import JobQueue
 from .worker import WorkerInfo, WorkerPool, WorkerStatus
-from .service import JobService
-from .api import jobs_bp
-from .handlers_backups import (
-    register_backup_handlers as register_backup_job_handlers,
-)
 
 __all__ = [
     # Types

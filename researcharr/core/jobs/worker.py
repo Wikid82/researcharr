@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from uuid import UUID, uuid4
+from typing import Any
 
 
 class WorkerStatus(str, Enum):
@@ -156,7 +157,7 @@ class WorkerPool(ABC):
         """
 
     @abstractmethod
-    async def get_metrics(self) -> dict[str, any]:
+    async def get_metrics(self) -> dict[str, Any]:
         """Get worker pool metrics.
 
         Returns:

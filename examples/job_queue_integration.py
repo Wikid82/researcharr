@@ -93,9 +93,7 @@ async def cleanup_database_job(job, progress):
     await progress(0, 100, "Counting old records")
 
     # Count records to delete
-    count = await asyncio.to_thread(
-        lambda: db.count_old_records(days_old=days_old)
-    )
+    count = await asyncio.to_thread(lambda: db.count_old_records(days_old=days_old))
 
     await progress(25, 100, f"Found {count} old records")
 
@@ -106,9 +104,7 @@ async def cleanup_database_job(job, progress):
 
         while deleted < count:
             batch = min(batch_size, count - deleted)
-            await asyncio.to_thread(
-                lambda: db.delete_old_records(limit=batch)
-            )
+            await asyncio.to_thread(lambda: db.delete_old_records(limit=batch))
             deleted += batch
 
             progress_pct = 25 + (deleted / count * 75)

@@ -83,6 +83,82 @@ source .venv/bin/activate
 python -m pip uninstall sourcery-cli vulture
 ```
 
+---
+
+## 6. (New) Handling blocked PRs because of "verified" commit requirement ✅
+
+If a repository has branch protection requiring GitHub-verified commit signatures, a PR that contains unsigned commits will be blocked by GitHub. The following approaches are common ways to fix the problem.
+
+### Option A — Re-sign every commit on the branch (rewrites history)
+
+1. Set up a signing key locally (GPG example):
+
+```bash
+# Generate or reuse a key
+gpg --full-generate-key
+# Show the long key id
+gpg --list-secret-keys --keyid-format LONG
+# Configure Git to use it
+git config --global user.signingkey <LONGKEYID>
+# Optional: sign all commits by default
+git config --global commit.gpgsign true
+```
+
+2. Rebase and amend every commit so it's signed:
+
+```bash
+git fetch origin
+git checkout development
+# Rebase onto the base branch and sign each commit as we replay it
+git rebase -i --exec "git commit --amend --no-edit -n -S" origin/main
+# Force-push the rewritten branch
+git push --force-with-lease origin development
+```
+
+Notes:
+- This rewrites the branch history so it must be coordinated with any collaborators who may also have checked out the branch.
+- Your GPG agent may prompt for a passphrase during the rebase — give it time to complete.
+
+### Option B — Re-sign a single commit
+
+If only a few commits are unsigned, edit those individually with an interactive rebase:
+
+```bash
+git rebase -i origin/main  # mark the commit(s) with 'edit'
+git commit --amend --no-edit -S
+git rebase --continue
+git push --force-with-lease origin development
+```
+
+### Option C — Squash to a single signed commit
+
+This avoids re-signing many commits and preserves the branch as a single signed change:
+
+```bash
+git checkout -b development-signed development
+git reset $(git merge-base development origin/main)
+git add -A
+git commit -m "Sync development to main: CI improvements and test fixes" -S
+git push --set-upstream origin development-signed
+# Open a new PR from development-signed to main and merge once passing.
+```
+
+### Option D — Admin change (avoid rewriting)
+
+If you have repository admin permissions and want to allow unsigned commits temporarily, you can temporarily disable the signed-commit requirement under
+Settings → Branches → Protect Branch (main) → uncheck _Require signed commits_ — then merge the PR — then re-enable. This is not recommended unless you trust the contributor and need a quick unblock.
+
+### Quick checks
+
+To see whether a commit is verified:
+
+```bash
+git log --pretty=format:'%h %G? %an %ae %s' -n 20
+# The %G? column shows 'G' (good), 'B' (bad) or '?' (unknown/not signed).
+```
+
+---
+
 No repository files or workflows depend on them, so uninstalling is safe.
 
 ## 5. Capturing priority-rule JSON

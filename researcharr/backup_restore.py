@@ -198,21 +198,19 @@ def restore_with_rollback(
                 )
 
     except Exception as e:  # nosec B110
-        if snapshot_path and auto_rollback:
-            # Attempt rollback on exception
-            if snapshot_sqlite(snapshot_path, db_path):
-                monitor.record_backup_restored(backup_path, success=False, rollback=True)
-                return RestoreResult(
-                    success=False,
-                    message=f"Restore exception: {e}, automatic rollback executed",
-                    backup_path=backup_path,
-                    snapshot_path=snapshot_path,
-                    rollback_executed=True,
-                    errors=[
-                        f"Exception during restore: {e}",
-                        "Database rolled back to pre-restore state",
-                    ],
-                )
+        if snapshot_path and auto_rollback and snapshot_sqlite(snapshot_path, db_path):
+            monitor.record_backup_restored(backup_path, success=False, rollback=True)
+            return RestoreResult(
+                success=False,
+                message=f"Restore exception: {e}, automatic rollback executed",
+                backup_path=backup_path,
+                snapshot_path=snapshot_path,
+                rollback_executed=True,
+                errors=[
+                    f"Exception during restore: {e}",
+                    "Database rolled back to pre-restore state",
+                ],
+            )
 
         monitor.record_backup_restored(backup_path, success=False)
         return RestoreResult(
@@ -224,48 +222,45 @@ def restore_with_rollback(
         )
 
     # Verify database integrity after restore
-    if db_path.exists():
-        if not check_db_integrity(db_path):
-            if snapshot_path and auto_rollback:
-                # Rollback due to integrity failure
-                if snapshot_sqlite(snapshot_path, db_path):
-                    monitor.record_backup_restored(backup_path, success=False, rollback=True)
-                    return RestoreResult(
-                        success=False,
-                        message="Database integrity check failed, automatic rollback executed",
-                        backup_path=backup_path,
-                        snapshot_path=snapshot_path,
-                        rollback_executed=True,
-                        errors=[
-                            "Restored database failed integrity check",
-                            "Rolled back to pre-restore state",
-                        ],
-                    )
-                else:
-                    monitor.record_backup_restored(backup_path, success=False)
-                    return RestoreResult(
-                        success=False,
-                        message="Integrity check failed, rollback also failed",
-                        backup_path=backup_path,
-                        snapshot_path=snapshot_path,
-                        errors=[
-                            "Database integrity check failed",
-                            "Rollback failed",
-                            f"Manual recovery needed from: {snapshot_path}",
-                        ],
-                    )
-            else:
-                monitor.record_backup_restored(backup_path, success=False)
-                return RestoreResult(
-                    success=False,
-                    message="Database integrity check failed",
-                    backup_path=backup_path,
-                    snapshot_path=snapshot_path,
-                    errors=[
-                        "Restored database failed integrity check",
-                        f"Snapshot available at: {snapshot_path}",
-                    ],
-                )
+    if db_path.exists() and not check_db_integrity(db_path):
+        if snapshot_path and auto_rollback and snapshot_sqlite(snapshot_path, db_path):
+            monitor.record_backup_restored(backup_path, success=False, rollback=True)
+            return RestoreResult(
+                success=False,
+                message="Database integrity check failed, automatic rollback executed",
+                backup_path=backup_path,
+                snapshot_path=snapshot_path,
+                rollback_executed=True,
+                errors=[
+                    "Restored database failed integrity check",
+                    "Rolled back to pre-restore state",
+                ],
+            )
+        if snapshot_path and auto_rollback:
+            monitor.record_backup_restored(backup_path, success=False)
+            return RestoreResult(
+                success=False,
+                message="Integrity check failed, rollback also failed",
+                backup_path=backup_path,
+                snapshot_path=snapshot_path,
+                errors=[
+                    "Database integrity check failed",
+                    "Rollback failed",
+                    f"Manual recovery needed from: {snapshot_path}",
+                ],
+            )
+
+        monitor.record_backup_restored(backup_path, success=False)
+        return RestoreResult(
+            success=False,
+            message="Database integrity check failed",
+            backup_path=backup_path,
+            snapshot_path=snapshot_path,
+            errors=[
+                "Restored database failed integrity check",
+                f"Snapshot available at: {snapshot_path}",
+            ],
+        )
 
     # Success! Clean up snapshot if requested
     if snapshot_path and cleanup_snapshot and snapshot_path.exists():

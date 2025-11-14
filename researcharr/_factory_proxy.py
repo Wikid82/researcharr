@@ -14,6 +14,8 @@ import os
 import sys
 from types import ModuleType
 
+_PROXY_INTERNAL_ATTRS = {"_pkg_name", "_short_name", "_repo_fp", "_target"}
+
 
 class _ModuleProxy(ModuleType):
     def __init__(self, pkg_name: str, short_name: str, repo_fp: str | None = None):
@@ -68,7 +70,7 @@ class _ModuleProxy(ModuleType):
         return None
 
     def __getattr__(self, name: str):
-        if name in ("_pkg_name", "_short_name", "_repo_fp", "_target"):
+        if name in _PROXY_INTERNAL_ATTRS:
             return object.__getattribute__(self, name)
         tgt = self._ensure_target()
         if tgt is not None:
@@ -78,7 +80,7 @@ class _ModuleProxy(ModuleType):
         )
 
     def __setattr__(self, name: str, value):
-        if name in ("_pkg_name", "_short_name", "_repo_fp", "_target"):
+        if name in _PROXY_INTERNAL_ATTRS:
             return object.__setattr__(self, name, value)
         tgt = self._ensure_target()
         if tgt is not None:
@@ -87,7 +89,7 @@ class _ModuleProxy(ModuleType):
         return object.__setattr__(self, name, value)
 
     def __delattr__(self, name: str):
-        if name in ("_pkg_name", "_short_name", "_repo_fp", "_target"):
+        if name in _PROXY_INTERNAL_ATTRS:
             return object.__delattr__(self, name)
         tgt = self._ensure_target()
         if tgt is not None:

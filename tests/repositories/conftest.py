@@ -2,6 +2,7 @@
 
 import pytest
 
+from researcharr import cache as _cache
 from researcharr.repositories import (
     GlobalSettingsRepository,
     ManagedAppRepository,
@@ -10,6 +11,14 @@ from researcharr.repositories import (
     TrackedItemRepository,
 )
 from researcharr.storage.models import AppType, GlobalSettings, ManagedApp
+
+
+@pytest.fixture(autouse=True)
+def clear_repository_cache():
+    """Ensure repository-level cache is cleared between tests."""
+    _cache.clear_all()
+    yield
+    _cache.clear_all()
 
 
 @pytest.fixture

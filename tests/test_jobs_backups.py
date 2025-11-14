@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from researcharr.core.jobs import JobService, register_backup_job_handlers, JobStatus
+from researcharr.core.jobs import JobService, JobStatus, register_backup_job_handlers
 
 
 @pytest.fixture

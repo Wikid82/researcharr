@@ -21,6 +21,8 @@ from unittest.mock import Mock as _Mock
 
 from werkzeug.security import generate_password_hash
 
+_TRUTHY_ENV_VALUES = {"1", "true", "yes"}
+
 # Try to locate an underlying top-level `webui` implementation; keep it
 # available as `_impl` but do not rebind functions directly — we want
 # wrapper functions defined in this module so their `__module__` is
@@ -73,7 +75,7 @@ if _impl is not None:
 def _env_bool(name: str, default: str = "false") -> bool:
     """Return True if env var is truthy (1/true/yes)."""
     v = os.getenv(name, default)
-    return str(v).lower() in ("1", "true", "yes")
+    return str(v).lower() in _TRUTHY_ENV_VALUES
 
 
 def load_user_config() -> dict[str, str | None] | None:
@@ -111,10 +113,10 @@ def save_user_config(
     if rdb is None:
         raise RuntimeError("DB backend not available for saving webui user")
 
-    if api_key is not None:
-        api_hash = generate_password_hash(api_key)
-    else:
+    if api_key is None:
         api_hash = api_key_hash
+    else:
+        api_hash = generate_password_hash(api_key)
 
     # Delegate to the provided rdb object
     rdb.save_user(username, password_hash, api_hash)

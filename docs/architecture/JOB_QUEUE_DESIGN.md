@@ -1,7 +1,7 @@
 # Job Queue and Task Management - Architecture Design
 
-**Issue**: #109  
-**Status**: Design Phase  
+**Issue**: #109
+**Status**: Design Phase
 **Date**: November 14, 2025
 
 ## Overview
@@ -84,30 +84,30 @@ class JobPriority(int, Enum):
 @dataclass
 class JobDefinition:
     """Definition of work to be performed."""
-    
+
     # Identity
     id: UUID = field(default_factory=uuid4)
     name: str = ""  # e.g., "process_media_item"
-    
+
     # Execution
     handler: str = ""  # Fully qualified function path
     args: tuple[Any, ...] = field(default_factory=tuple)
     kwargs: dict[str, Any] = field(default_factory=dict)
-    
+
     # Scheduling
     priority: JobPriority = JobPriority.NORMAL
     max_retries: int = 3
     retry_delay: float = 1.0  # Base delay in seconds
     retry_backoff: float = 2.0  # Multiplier for exponential backoff
     timeout: Optional[float] = None  # Max execution time in seconds
-    
+
     # Metadata
     tags: dict[str, str] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.utcnow)
-    
+
     # Dependencies
     depends_on: list[UUID] = field(default_factory=list)
-    
+
     def __post_init__(self):
         """Validate job definition."""
         if not self.handler:
@@ -119,7 +119,7 @@ class JobDefinition:
 @dataclass
 class JobResult:
     """Result of job execution."""
-    
+
     job_id: UUID
     status: JobStatus
     result: Any = None
@@ -128,7 +128,7 @@ class JobResult:
     completed_at: Optional[datetime] = None
     attempts: int = 0
     worker_id: Optional[str] = None
-    
+
     @property
     def duration(self) -> Optional[float]:
         """Execution duration in seconds."""
@@ -140,14 +140,14 @@ class JobResult:
 @dataclass
 class JobProgress:
     """Progress information for long-running jobs."""
-    
+
     job_id: UUID
     current: int = 0
     total: Optional[int] = None
     message: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
     updated_at: datetime = field(default_factory=datetime.utcnow)
-    
+
     @property
     def percentage(self) -> Optional[float]:
         """Progress as percentage (0-100)."""
@@ -170,97 +170,97 @@ from .types import JobDefinition, JobResult, JobStatus
 
 class JobQueue(ABC):
     """Abstract interface for job queue implementations."""
-    
+
     @abstractmethod
     async def submit(self, job: JobDefinition) -> UUID:
         """Submit a job to the queue.
-        
+
         Returns:
             job_id: UUID of the submitted job
         """
         pass
-    
+
     @abstractmethod
     async def get_next(self, worker_id: str) -> Optional[JobDefinition]:
         """Get the next job from queue for a worker.
-        
+
         Priority order: CRITICAL > HIGH > NORMAL > LOW
         Within same priority: FIFO
-        
+
         Returns:
             JobDefinition if available, None if queue empty
         """
         pass
-    
+
     @abstractmethod
     async def complete(self, job_id: UUID, result: JobResult) -> None:
         """Mark job as completed with result."""
         pass
-    
+
     @abstractmethod
     async def fail(
-        self, 
-        job_id: UUID, 
-        error: str, 
+        self,
+        job_id: UUID,
+        error: str,
         retry: bool = True
     ) -> None:
         """Mark job as failed.
-        
+
         Args:
             job_id: Job identifier
             error: Error message/traceback
             retry: Whether to retry (if retries remaining)
         """
         pass
-    
+
     @abstractmethod
     async def cancel(self, job_id: UUID) -> bool:
         """Cancel a pending job.
-        
+
         Returns:
             True if cancelled, False if already running/completed
         """
         pass
-    
+
     @abstractmethod
     async def get_status(self, job_id: UUID) -> Optional[JobStatus]:
         """Get current status of a job."""
         pass
-    
+
     @abstractmethod
     async def get_result(self, job_id: UUID) -> Optional[JobResult]:
         """Get result of a completed job."""
         pass
-    
+
     @abstractmethod
     async def list_jobs(
-        self, 
+        self,
         status: Optional[JobStatus] = None,
         limit: int = 100,
         offset: int = 0
     ) -> list[JobDefinition]:
         """List jobs, optionally filtered by status."""
         pass
-    
+
     @abstractmethod
     async def get_dead_letters(self, limit: int = 100) -> list[JobDefinition]:
         """Get jobs that failed permanently (dead letter queue)."""
         pass
-    
+
     @abstractmethod
     async def requeue_dead_letter(self, job_id: UUID) -> bool:
         """Move a dead-letter job back to pending queue."""
         pass
-    
+
     @abstractmethod
     async def purge(self, status: Optional[JobStatus] = None) -> int:
         """Remove jobs from queue.
-        
+
         Returns:
             Number of jobs removed
         """
         pass
-    
+
     @abstractmethod
     async def get_metrics(self) -> dict[str, Any]:
         """Get queue metrics (size, throughput, etc.)."""
@@ -292,7 +292,7 @@ class WorkerStatus(str, Enum):
 @dataclass
 class WorkerInfo:
     """Information about a worker process."""
-    
+
     id: str = field(default_factory=lambda: str(uuid4()))
     status: WorkerStatus = WorkerStatus.IDLE
     current_job: Optional[UUID] = None
@@ -300,7 +300,7 @@ class WorkerInfo:
     last_heartbeat: datetime = field(default_factory=datetime.utcnow)
     jobs_completed: int = 0
     jobs_failed: int = 0
-    
+
     @property
     def is_healthy(self) -> bool:
         """Check if worker is healthy (recent heartbeat)."""
@@ -310,41 +310,41 @@ class WorkerInfo:
 
 class WorkerPool(ABC):
     """Abstract interface for managing worker processes."""
-    
+
     @abstractmethod
     async def start(self, count: int = 1) -> None:
         """Start worker processes.
-        
+
         Args:
             count: Number of workers to start
         """
         pass
-    
+
     @abstractmethod
     async def stop(self, graceful: bool = True, timeout: float = 30.0) -> None:
         """Stop all workers.
-        
+
         Args:
             graceful: Wait for current jobs to complete
             timeout: Max time to wait for graceful shutdown
         """
         pass
-    
+
     @abstractmethod
     async def scale(self, target_count: int) -> None:
         """Scale workers to target count."""
         pass
-    
+
     @abstractmethod
     async def get_workers(self) -> list[WorkerInfo]:
         """Get information about all workers."""
         pass
-    
+
     @abstractmethod
     async def get_worker(self, worker_id: str) -> Optional[WorkerInfo]:
         """Get information about a specific worker."""
         pass
-    
+
     @abstractmethod
     async def restart_worker(self, worker_id: str) -> bool:
         """Restart a specific worker."""
@@ -366,9 +366,9 @@ from .worker import WorkerPool
 
 class JobService:
     """High-level service for job management."""
-    
+
     def __init__(
-        self, 
+        self,
         queue: JobQueue,
         worker_pool: WorkerPool,
         event_bus: Any,  # EventBus
@@ -379,16 +379,16 @@ class JobService:
         self._events = event_bus
         self._metrics = metrics
         self._handlers: dict[str, Callable] = {}
-    
+
     def register_handler(self, name: str, handler: Callable) -> None:
         """Register a job handler function.
-        
+
         Args:
             name: Handler name (e.g., 'process_media')
             handler: Async callable that accepts (job_def, progress_callback)
         """
         self._handlers[name] = handler
-    
+
     async def submit_job(
         self,
         handler: str,
@@ -398,14 +398,14 @@ class JobService:
         **options
     ) -> UUID:
         """Submit a job for execution.
-        
+
         Args:
             handler: Name of registered handler
             args: Positional arguments
             kwargs: Keyword arguments
             priority: Job priority
             **options: Additional JobDefinition fields
-            
+
         Returns:
             job_id: UUID of submitted job
         """
@@ -416,60 +416,60 @@ class JobService:
             priority=priority,
             **options
         )
-        
+
         job_id = await self._queue.submit(job)
-        
+
         # Publish event
         await self._events.publish('job.submitted', {
             'job_id': str(job_id),
             'handler': handler,
             'priority': priority.value
         })
-        
+
         # Update metrics
         self._metrics.increment('jobs_submitted_total', {
             'handler': handler,
             'priority': priority.name
         })
-        
+
         return job_id
-    
+
     async def get_job_status(self, job_id: UUID) -> Optional[JobStatus]:
         """Get current status of a job."""
         return await self._queue.get_status(job_id)
-    
+
     async def get_job_result(self, job_id: UUID) -> Optional[JobResult]:
         """Get result of a completed job."""
         return await self._queue.get_result(job_id)
-    
+
     async def cancel_job(self, job_id: UUID) -> bool:
         """Cancel a pending job."""
         cancelled = await self._queue.cancel(job_id)
         if cancelled:
             await self._events.publish('job.cancelled', {'job_id': str(job_id)})
         return cancelled
-    
+
     async def list_jobs(
-        self, 
+        self,
         status: Optional[JobStatus] = None,
         limit: int = 100
     ) -> list[JobDefinition]:
         """List jobs, optionally filtered by status."""
         return await self._queue.list_jobs(status=status, limit=limit)
-    
+
     async def get_dead_letters(self) -> list[JobDefinition]:
         """Get permanently failed jobs."""
         return await self._queue.get_dead_letters()
-    
+
     async def retry_dead_letter(self, job_id: UUID) -> bool:
         """Retry a permanently failed job."""
         return await self._queue.requeue_dead_letter(job_id)
-    
+
     async def get_metrics(self) -> dict[str, Any]:
         """Get comprehensive job system metrics."""
         queue_metrics = await self._queue.get_metrics()
         workers = await self._workers.get_workers()
-        
+
         return {
             'queue': queue_metrics,
             'workers': {
@@ -482,14 +482,14 @@ class JobService:
                 'handlers_registered': len(self._handlers),
             }
         }
-    
+
     async def start(self, worker_count: int = 1) -> None:
         """Start the job service and workers."""
         await self._workers.start(worker_count)
         await self._events.publish('job_service.started', {
             'worker_count': worker_count
         })
-    
+
     async def stop(self, graceful: bool = True) -> None:
         """Stop the job service and workers."""
         await self._workers.stop(graceful=graceful)
@@ -811,33 +811,33 @@ jobs:
     type: memory  # memory, redis, database
     max_size: 10000
     redis_url: redis://localhost:6379/0  # if type=redis
-  
+
   # Worker configuration
   workers:
     count: 4
     max_jobs_per_worker: 1000  # Restart worker after N jobs
     heartbeat_interval: 10  # seconds
     shutdown_timeout: 30  # seconds
-  
+
   # Retry configuration
   retry:
     max_attempts: 3
     base_delay: 1.0  # seconds
     backoff_multiplier: 2.0
     max_delay: 300.0  # seconds (5 minutes)
-  
+
   # Result storage
   results:
     backend: database  # database, redis, s3
     ttl: 604800  # 7 days in seconds
     large_result_threshold: 1048576  # 1MB, store in object storage
     s3_bucket: researcharr-job-results  # if backend=s3
-  
+
   # Dead letter queue
   dead_letter:
     max_size: 1000
     retention_days: 30
-  
+
   # Monitoring
   monitoring:
     metrics_interval: 5  # seconds
@@ -958,7 +958,7 @@ When ready for distributed processing:
 # researcharr/core/jobs/celery_queue.py
 class CeleryJobQueue(JobQueue):
     """Celery-based distributed queue."""
-    
+
     def __init__(self, broker_url: str, result_backend: str):
         from celery import Celery
         self.app = Celery('researcharr', broker=broker_url, backend=result_backend)
@@ -983,7 +983,7 @@ Lighter alternative to Celery:
 # researcharr/core/jobs/rq_queue.py
 class RQJobQueue(JobQueue):
     """Redis Queue based implementation."""
-    
+
     def __init__(self, redis_url: str):
         from rq import Queue
         self.queue = Queue(connection=Redis.from_url(redis_url))
@@ -1059,7 +1059,7 @@ Trade-offs:
 
 ---
 
-**Document Status**: Draft for review  
-**Next Review**: Before Phase 1 implementation  
-**Owner**: Development Team  
+**Document Status**: Draft for review
+**Next Review**: Before Phase 1 implementation
+**Owner**: Development Team
 **Related Issues**: #109

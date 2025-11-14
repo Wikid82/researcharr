@@ -569,6 +569,14 @@ class CoreApplicationFactory:
         from .jobs import JobService, register_backup_job_handlers
 
         if not os.getenv("JOB_QUEUE_ENABLED"):
+            # When job queue disabled, provide lightweight background task manager
+            try:
+                from .background import BackgroundTaskManager
+
+                if getattr(app, "background_tasks", None) is None:
+                    app.background_tasks = BackgroundTaskManager()  # type: ignore[attr-defined]
+            except Exception:
+                pass
             return None
         if getattr(app, "job_service", None) is not None:
             return None

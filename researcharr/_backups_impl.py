@@ -144,7 +144,7 @@ def restore_backup(backup_path: str | Path, restore_dir: str | Path) -> bool:
 
 def validate_backup_file(backup_path: str | Path) -> bool:
     p = Path(backup_path)
-    return p.exists() and p.is_file() and zipfile.is_zipfile(str(p))
+    return p.is_file() and zipfile.is_zipfile(str(p))
 
 
 def get_backup_size(backup_path: str | Path) -> int:

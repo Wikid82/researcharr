@@ -4,6 +4,12 @@ This manager provides a simple thread-pool backed facility for executing
 callables outside the request/foreground context when the full job queue
 is disabled. It is intentionally minimal and keeps all state in-memory.
 
+Features:
+    - ThreadPool execution (no asyncio loop dependency)
+    - Lifecycle events (submitted, started, completed, failed)
+    - Automatic TTL-based cleanup of terminal tasks
+    - Unified status serialization aligned with JobResult schema
+
 It is NOT a replacement for the distributed job queue; it serves as a
 fallback so endpoints can still return quickly while longer work runs.
 """
@@ -11,10 +17,11 @@ fallback so endpoints can still return quickly while longer work runs.
 from __future__ import annotations
 
 import concurrent.futures as _futures
+import os
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional
 
 
@@ -29,40 +36,79 @@ class BackgroundTask:
     started: Optional[float] = None
     finished: Optional[float] = None
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize task similar to JobResult schema for UI consistency."""
+        return {
+            "job_id": self.id,
+            "status": self.status,
+            "result": self.result if self.status == "completed" else None,
+            "error": self.error,
+            "started_at": _iso(self.started),
+            "completed_at": _iso(self.finished),
+            "attempts": 1,
+            "worker_id": "background",
+            "duration": (self.finished - self.started) if self.started and self.finished else None,
+            "type": "background",
+        }
+
+
+def _iso(ts: Optional[float]) -> Optional[str]:  # pragma: no cover - trivial
+    if ts is None:
+        return None
+    try:
+        from datetime import datetime, UTC
+        return datetime.fromtimestamp(ts, UTC).isoformat()
+    except Exception:
+        return None
+
 
 class BackgroundTaskManager:
-    def __init__(self, max_workers: int = 4):
+    def __init__(self, max_workers: int = 4, *, event_bus: Any | None = None, ttl_seconds: int | None = None):
         self._executor = _futures.ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="bg-task")
         self._tasks: Dict[str, BackgroundTask] = {}
         self._lock = threading.Lock()
+        self._event_bus = event_bus
+        # TTL for terminal tasks (completed/failed); default from env or 300s
+        self._ttl = ttl_seconds if ttl_seconds is not None else int(os.getenv("BACKGROUND_TASK_TTL", "300"))
 
     def submit(self, fn: Callable[..., Any], *args, **kwargs) -> str:
         tid = uuid.uuid4().hex
         task = BackgroundTask(id=tid, created=time.time(), func_repr=repr(fn))
         with self._lock:
             self._tasks[tid] = task
+        self._emit("background.task.submitted", task)
+        self._prune_expired_locked()
 
         def _run():
             task.started = time.time()
             task.status = "running"
+            self._emit("background.task.started", task)
             try:
                 task.result = fn(*args, **kwargs)
                 task.status = "completed"
+                self._emit("background.task.completed", task)
             except Exception as e:  # pragma: no cover - broad resilience
                 task.error = f"{type(e).__name__}: {e}"
                 task.status = "failed"
+                self._emit("background.task.failed", task)
             finally:
                 task.finished = time.time()
+                # Final prune pass
+                with self._lock:
+                    self._prune_expired_locked()
 
         self._executor.submit(_run)
         return tid
 
     def get(self, task_id: str) -> Optional[BackgroundTask]:
         with self._lock:
-            return self._tasks.get(task_id)
+            task = self._tasks.get(task_id)
+            self._prune_expired_locked()
+            return task
 
     def list(self) -> list[BackgroundTask]:  # pragma: no cover - debug helper
         with self._lock:
+            self._prune_expired_locked()
             return list(self._tasks.values())
 
     def shutdown(self, wait: bool = True):  # pragma: no cover - app lifecycle
@@ -74,5 +120,36 @@ class BackgroundTaskManager:
 
     def submit_backup_restore(self, restore_fn: Callable[..., Any], backup_path: str, config_root: str) -> str:
         return self.submit(restore_fn, backup_path, config_root)
+
+    # Internal helpers -------------------------------------------------
+    def _emit(self, event: str, task: BackgroundTask):  # pragma: no cover - simple publish
+        if not self._event_bus:
+            return None
+        try:
+            self._event_bus.publish(event, {"task": task.to_dict()})
+        except Exception:
+            return None
+
+    def _prune_expired_locked(self):  # assumes caller holds _lock
+        now = time.time()
+        if self._ttl <= 0:
+            return None
+        remove: list[str] = []
+        for tid, t in self._tasks.items():
+            if t.status in ("completed", "failed", "cancelled") and t.finished:
+                if (now - t.finished) > self._ttl:
+                    remove.append(tid)
+        for tid in remove:
+            self._tasks.pop(tid, None)
+
+    # Public prune (manual trigger) ------------------------------------
+    def prune_expired(self):  # pragma: no cover - manual utility
+        with self._lock:
+            self._prune_expired_locked()
+
+    # Unified serialization convenience --------------------------------
+    def serialize(self, task_id: str) -> Dict[str, Any] | None:
+        t = self.get(task_id)
+        return t.to_dict() if t else None
 
 __all__ = ["BackgroundTaskManager", "BackgroundTask"]

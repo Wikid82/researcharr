@@ -1,5 +1,6 @@
 """Consolidated miscellaneous tests - merging remaining test files."""
 
+import builtins
 import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
@@ -287,7 +288,14 @@ class TestErrorHandlingConsolidated(unittest.TestCase):
 
     def test_configuration_error_handling(self):
         """Test configuration error handling."""
-        with patch("builtins.open", side_effect=FileNotFoundError()):
+        original_open = builtins.open
+
+        def _open_side_effect(*args, **kwargs):
+            if args and args[0] == "config.yml":
+                raise FileNotFoundError()
+            return original_open(*args, **kwargs)
+
+        with patch("builtins.open", side_effect=_open_side_effect):
             try:
                 from researcharr.researcharr import load_config
 

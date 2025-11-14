@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-import os
 from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from researcharr.core.jobs import JobService, JobPriority, JobStatus
+from researcharr.core.jobs import JobPriority, JobService, JobStatus
 
 
 @pytest.mark.asyncio

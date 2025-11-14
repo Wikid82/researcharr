@@ -157,10 +157,9 @@ else:
                             plugin_cls = getattr(mod, "Plugin", None)
                             if not plugin_name or not plugin_cls:
                                 continue
-                            explicit_cat = getattr(mod, "CATEGORY", None) or getattr(
+                            if explicit_cat := getattr(mod, "CATEGORY", None) or getattr(
                                 plugin_cls, "category", None
-                            )
-                            if explicit_cat:
+                            ):
                                 plugin_cls.category = explicit_cat
                             elif parent:
                                 plugin_cls.category = parent
@@ -169,8 +168,7 @@ else:
                             self.register(plugin_name, plugin_cls)
 
                 def create_instance(self, plugin_name: str, config: dict) -> Any:
-                    cls = self.get(plugin_name)
-                    if cls:
+                    if cls := self.get(plugin_name):
                         return cls(config)
                     raise KeyError(f"Unknown plugin: {plugin_name}")
 

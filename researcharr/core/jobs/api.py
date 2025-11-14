@@ -5,15 +5,16 @@ This module provides REST API endpoints for managing the job queue system.
 
 from __future__ import annotations
 
+import inspect
 import logging
+from datetime import datetime
 from functools import wraps
 from uuid import UUID
 
-from flask import Blueprint, current_app, jsonify, request
 from werkzeug.security import check_password_hash
 
+from flask import Blueprint, current_app, jsonify, request
 from researcharr.core.jobs import JobPriority, JobStatus
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -22,27 +23,30 @@ jobs_bp = Blueprint("jobs_api", __name__)
 
 
 def require_auth(func):
-    """Decorator that requires either valid API key or web session."""
+    """Decorator that requires either valid API key or web session.
+
+    Works with both sync and async view functions; always returns an async wrapper
+    for uniform behavior under Flask 3's async support.
+    """
 
     @wraps(func)
-    def wrapper(*args, **kwargs):
-        # Check session first
-        if hasattr(current_app, "session_get"):
-            if current_app.session_get("logged_in"):
-                return func(*args, **kwargs)
+    async def wrapped(*args, **kwargs):  # type: ignore
+        # Session-based auth
+        if hasattr(current_app, "session_get") and current_app.session_get("logged_in"):
+            result = func(*args, **kwargs)
+            return await result if inspect.isawaitable(result) else result
 
-        # Check for API key
+        # API key auth
         api_key = request.headers.get("X-API-Key")
         if api_key:
             stored_key = getattr(current_app, "config_data", {}).get("api_key")
-            if stored_key:
-                # Use constant-time comparison
-                if check_password_hash(stored_key, api_key):
-                    return func(*args, **kwargs)
+            if stored_key and check_password_hash(stored_key, api_key):
+                result = func(*args, **kwargs)
+                return await result if inspect.isawaitable(result) else result
 
         return jsonify({"error": "unauthorized"}), 401
 
-    return wrapper
+    return wrapped
 
 
 def get_job_service():
@@ -55,7 +59,7 @@ def get_job_service():
 
 @jobs_bp.route("/jobs", methods=["GET"])
 @require_auth
-def list_jobs():
+async def list_jobs():
     """List jobs with optional filtering.
 
     Query params:
@@ -76,7 +80,7 @@ def list_jobs():
 
         # Get jobs from service (would need to make this async-aware or use sync wrapper)
         # For now, return mock data structure
-        jobs = []
+        jobs = await service.list_jobs(status=status, limit=limit, offset=offset)
         return jsonify({"jobs": jobs, "total": len(jobs)})
 
     except (ValueError, KeyError) as e:
@@ -88,7 +92,7 @@ def list_jobs():
 
 @jobs_bp.route("/jobs", methods=["POST"])
 @require_auth
-def submit_job():
+async def submit_job():
     """Submit a new job to the queue.
 
     Request body:
@@ -149,7 +153,7 @@ def submit_job():
 
 @jobs_bp.route("/jobs/<job_id>", methods=["GET"])
 @require_auth
-def get_job(job_id: str):
+async def get_job(job_id: str):
     """Get job status and details."""
     service, error_resp, code = get_job_service()
     if error_resp:
@@ -181,7 +185,7 @@ def get_job(job_id: str):
 
 @jobs_bp.route("/jobs/<job_id>", methods=["DELETE"])
 @require_auth
-def cancel_job(job_id: str):
+async def cancel_job(job_id: str):
     """Cancel a pending or running job."""
     service, error_resp, code = get_job_service()
     if error_resp:
@@ -207,7 +211,7 @@ def cancel_job(job_id: str):
 
 @jobs_bp.route("/jobs/dead-letters", methods=["GET"])
 @require_auth
-def get_dead_letters():
+async def get_dead_letters():
     """Get permanently failed jobs."""
     service, error_resp, code = get_job_service()
     if error_resp:
@@ -226,7 +230,7 @@ def get_dead_letters():
 
 @jobs_bp.route("/jobs/dead-letters/<job_id>", methods=["POST"])
 @require_auth
-def retry_dead_letter(job_id: str):
+async def retry_dead_letter(job_id: str):
     """Retry a permanently failed job."""
     service, error_resp, code = get_job_service()
     if error_resp:
@@ -252,7 +256,7 @@ def retry_dead_letter(job_id: str):
 
 @jobs_bp.route("/jobs/metrics", methods=["GET"])
 @require_auth
-def get_metrics():
+async def get_metrics():
     """Get job queue metrics."""
     service, error_resp, code = get_job_service()
     if error_resp:
@@ -285,7 +289,7 @@ def get_metrics():
 
 @jobs_bp.route("/jobs/workers", methods=["GET"])
 @require_auth
-def get_workers():
+async def get_workers():
     """Get worker pool information."""
     service, error_resp, code = get_job_service()
     if error_resp:

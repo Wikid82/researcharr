@@ -692,16 +692,15 @@ class Pipeline:
 
             # import class
             stage_obj = None
-            if isinstance(cls_path, str) and cls_path:
-                try:
-                    mod_name, _, qual = cls_path.rpartition(".")
-                    mod = importlib.import_module(mod_name)
-                    StageCls = getattr(mod, qual)
-                    stage_obj = StageCls(**init_kwargs) if init_kwargs else StageCls()
-                except Exception:  # nosec B110 -- intentional broad except for resilience
-                    raise ImportError(f"Cannot import stage class '{cls_path}'")
-            else:
+            if not isinstance(cls_path, str) or not cls_path:
                 raise ValueError("stage class path must be a string")
+            try:
+                mod_name, _, qual = cls_path.rpartition(".")
+                mod = importlib.import_module(mod_name)
+                StageCls = getattr(mod, qual)
+                stage_obj = StageCls(**init_kwargs) if init_kwargs else StageCls()
+            except Exception as exc:  # nosec B110 -- intentional broad except for resilience
+                raise ImportError(f"Cannot import stage class '{cls_path}'") from exc
 
             p.add_stage(
                 stage_obj,

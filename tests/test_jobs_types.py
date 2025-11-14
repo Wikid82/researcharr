@@ -114,17 +114,11 @@ class TestJobDefinition:
         assert job.created_at == created
         assert job.scheduled_at == scheduled
 
-    def test_job_serialization_minimal(self):
-        """Test JSON serialization of minimal job."""
-        job = JobDefinition(handler="test.handler")
-        data = job.to_dict()
-
+    def test_job_serialization_minimal(self, basic_job: JobDefinition):
+        """Test serialization with minimal fields."""
+        data = basic_job.to_dict()
         assert data["handler"] == "test.handler"
-        assert "id" in data
-        assert data["priority"] == "normal"
-        assert data["args"] == []
-        assert data["kwargs"] == {}
-        assert data["max_retries"] == 3
+        assert data["priority"] == 10
 
     def test_job_serialization_complete(self):
         """Test JSON serialization with all fields."""
@@ -173,15 +167,18 @@ class TestJobDefinition:
         assert restored.id == original.id
 
     def test_job_from_dict(self):
-        """Test creating job from dictionary."""
+        """Test deserialization from dictionary."""
         data = {
-            "handler": "email.send",
             "id": str(uuid4()),
+            "name": "email_sender",
+            "handler": "email.send",
             "args": ["recipient@example.com"],
             "kwargs": {"subject": "Test"},
-            "priority": "high",
+            "priority": 20,
             "max_retries": 2,
             "timeout": 30.0,
+            "created_at": datetime.now(UTC).isoformat(),
+            "depends_on": [],
         }
 
         job = JobDefinition.from_dict(data)

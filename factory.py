@@ -3027,6 +3027,22 @@ def create_app() -> Flask:
         # Align with job queue schema; add type marker
         return jsonify(data)
 
+    @app.route("/api/background/tasks/<task_id>", methods=["DELETE"])
+    def api_background_task_cancel(task_id: str):
+        """Attempt to cancel a background task (pending or running)."""
+        mgr = getattr(app, "background_tasks", None)
+        if mgr is None:
+            return jsonify({"error": "background_disabled"}), 404
+        existing = mgr.get(task_id)
+        if existing is None:
+            return jsonify({"error": "not_found"}), 404
+        if existing.status in ("completed", "failed", "cancelled"):
+            return jsonify({"error": "not_cancellable", "status": existing.status}), 400
+        cancelled = mgr.cancel(task_id)
+        if cancelled:
+            return jsonify({"job_id": task_id, "status": mgr.serialize(task_id)["status"]})
+        return jsonify({"error": "cancel_failed"}), 500
+
     @app.route("/api/backups/settings", methods=["GET", "POST"])
     def api_backups_settings():
         if not is_logged_in():

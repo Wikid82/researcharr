@@ -18,6 +18,15 @@ import sqlite3 as _sqlite
 import sys
 from types import ModuleType
 
+_RECONCILED_PACKAGE_ATTRS = {
+    "factory",
+    "run",
+    "webui",
+    "backups",
+    "api",
+    "entrypoint",
+}
+
 # Defensive: make attribute access on the package reconcile short-name
 # top-level modules with their package-qualified counterparts. Some
 # import orders used by the tests insert a short-name module into
@@ -33,7 +42,7 @@ try:  # pragma: no cover - complex module reconciliation for import edge cases
     class _ResearcharrModule(ModuleType):  # pragma: no cover
         def __getattribute__(self, name: str):  # pragma: no cover
             # Only handle a small, well-known set of repo-root modules.
-            if name in ("factory", "run", "webui", "backups", "api", "entrypoint"):
+            if name in _RECONCILED_PACKAGE_ATTRS:
                 try:
                     # DEBUG: trace attribute access for reconciliation
                     # (left intentionally lightweight for local diagnostics)
@@ -141,7 +150,7 @@ try:  # pragma: no cover - complex module reconciliation for import edge cases
             # canonical sys.modules entries are updated so that
             # importlib.reload() will find the module under its
             # package-qualified name.
-            if name in ("factory", "run", "webui", "backups", "api", "entrypoint"):
+            if name in _RECONCILED_PACKAGE_ATTRS:
                 try:
                     if isinstance(value, ModuleType):
                         _pkg_name = f"{__name__}.{name}"

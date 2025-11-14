@@ -9,12 +9,12 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 try:
-    import redis.asyncio as redis
+    import redis
 except ImportError:
     redis = None  # type: ignore
 
 if TYPE_CHECKING:
-    from redis.asyncio import Redis as RedisClient  # type: ignore
+    from redis import Redis as RedisClient  # type: ignore
 else:
     RedisClient = Any  # type: ignore
 
@@ -76,7 +76,7 @@ class RedisJobQueue(JobQueue):
         """
         return f"{self.key_prefix}{suffix}"
 
-    async def initialize(self) -> None:
+    def initialize(self) -> None:
         """Initialize Redis connection."""
         if self._initialized:
             return
@@ -91,7 +91,7 @@ class RedisJobQueue(JobQueue):
             )
 
             # Test connection
-            await self._redis.ping()
+            self._redis.ping()
 
             self._initialized = True
             logger.info(f"Redis job queue initialized: {self.redis_url}")
@@ -100,19 +100,19 @@ class RedisJobQueue(JobQueue):
             logger.error(f"Failed to connect to Redis: {e}")
             raise ConnectionError(f"Cannot connect to Redis at {self.redis_url}") from e
 
-    async def shutdown(self, graceful: bool = True) -> None:
+    def shutdown(self, graceful: bool = True) -> None:
         """Shutdown Redis connection.
 
         Args:
             graceful: If True, wait for pending operations
         """
         if self._redis:
-            await self._redis.close()
+            self._redis.close()
             self._redis = None
             self._initialized = False
             logger.info("Redis job queue shutdown complete")
 
-    async def submit(self, job: JobDefinition) -> UUID:
+    def submit(self, job: JobDefinition) -> UUID:
         """Submit a job to the queue.
 
         Args:
@@ -133,7 +133,7 @@ class RedisJobQueue(JobQueue):
         job_id_str = str(job.id)
 
         # Use Redis pipeline for atomic operations
-        async with self._redis.pipeline(transaction=True) as pipe:
+        with self._redis.pipeline(transaction=True) as pipe:
             # Store job data
             pipe.hset(self._key("data"), job_id_str, job_data)
 
@@ -154,12 +154,12 @@ class RedisJobQueue(JobQueue):
             # Increment submitted counter
             pipe.incr(self._key("metrics:submitted"))
 
-            await pipe.execute()
+            pipe.execute()
 
         logger.debug(f"Job {job_id_str} submitted with priority {job.priority.name}")
         return job.id
 
-    async def get_next(self, worker_id: str) -> JobDefinition | None:
+    def get_next(self, worker_id: str) -> JobDefinition | None:
         """Get the next job from queue for a worker.
 
         Args:
@@ -172,7 +172,7 @@ class RedisJobQueue(JobQueue):
             raise ConnectionError("Redis connection not initialized")
 
         # Promote due scheduled jobs before checking ready queues
-        await self._promote_scheduled()
+        self._promote_scheduled()
 
         # Check priority queues from highest to lowest
         for priority in reversed(list(JobPriority)):
@@ -180,7 +180,7 @@ class RedisJobQueue(JobQueue):
 
             # Atomically get and remove highest priority job (lowest score)
             # Use ZPOPMIN for atomic pop
-            result = await self._redis.zpopmin(priority_queue_key, count=1)
+            result = self._redis.zpopmin(priority_queue_key, count=1)
 
             if result:
                 job_id_str, _score = result[0]
@@ -188,7 +188,7 @@ class RedisJobQueue(JobQueue):
                     job_id_str = job_id_str.decode("utf-8")
 
                 # Get job data
-                job_data = await self._redis.hget(self._key("data"), job_id_str)
+                job_data = self._redis.hget(self._key("data"), job_id_str)
                 if not job_data:
                     logger.warning(f"Job {job_id_str} not found in data store")
                     continue
@@ -199,18 +199,18 @@ class RedisJobQueue(JobQueue):
                 job = JobDefinition.from_json(job_data)
 
                 # Update status to RUNNING
-                async with self._redis.pipeline(transaction=True) as pipe:
+                with self._redis.pipeline(transaction=True) as pipe:
                     pipe.hset(self._key("status"), job_id_str, JobStatus.RUNNING.value)
                     pipe.hset(self._key("worker"), job_id_str, worker_id)
                     pipe.hset(self._key("started"), job_id_str, datetime.now(UTC).isoformat())
-                    await pipe.execute()
+                    pipe.execute()
 
                 logger.debug(f"Job {job_id_str} assigned to worker {worker_id}")
                 return job
 
         return None
 
-    async def _promote_scheduled(self, batch: int = 100) -> None:
+    def _promote_scheduled(self, batch: int = 100) -> None:
         """Move due scheduled jobs into ready priority queues.
 
         Args:
@@ -220,16 +220,16 @@ class RedisJobQueue(JobQueue):
             return None
         now_ts = datetime.now(UTC).timestamp()
         # Fetch due job IDs
-        due = await self._redis.zrangebyscore(self._key("scheduled"), 0, now_ts, start=0, num=batch)
+        due = self._redis.zrangebyscore(self._key("scheduled"), 0, now_ts, start=0, num=batch)
         if not due:
             return None
-        async with self._redis.pipeline(transaction=True) as pipe:
+        with self._redis.pipeline(transaction=True) as pipe:
             for raw_id in due:
                 job_id_str = raw_id.decode("utf-8") if isinstance(raw_id, bytes) else raw_id
                 # Remove from scheduled set
                 pipe.zrem(self._key("scheduled"), job_id_str)
                 # Load job priority
-                job_data = await self._redis.hget(self._key("data"), job_id_str)
+                job_data = self._redis.hget(self._key("data"), job_id_str)
                 if not job_data:
                     continue
                 if isinstance(job_data, bytes):
@@ -240,9 +240,9 @@ class RedisJobQueue(JobQueue):
                     continue
                 score = (-job.priority.value * 1e9) + datetime.now(UTC).timestamp()
                 pipe.zadd(self._key(f"queue:p{job.priority.value}"), {job_id_str: score})
-            await pipe.execute()
+            pipe.execute()
 
-    async def complete(self, job_id: UUID, result: JobResult) -> None:
+    def complete(self, job_id: UUID, result: JobResult) -> None:
         """Mark job as completed with result.
 
         Args:
@@ -255,7 +255,7 @@ class RedisJobQueue(JobQueue):
         job_id_str = str(job_id)
         result_data = result.to_json()
 
-        async with self._redis.pipeline(transaction=True) as pipe:
+        with self._redis.pipeline(transaction=True) as pipe:
             # Update status
             pipe.hset(self._key("status"), job_id_str, JobStatus.COMPLETED.value)
 
@@ -269,11 +269,11 @@ class RedisJobQueue(JobQueue):
             # Increment completed counter
             pipe.incr(self._key("metrics:completed"))
 
-            await pipe.execute()
+            pipe.execute()
 
         logger.debug(f"Job {job_id_str} completed successfully")
 
-    async def fail(self, job_id: UUID, error: str, retry: bool = True) -> None:
+    def fail(self, job_id: UUID, error: str, retry: bool = True) -> None:
         """Mark job as failed.
 
         Args:
@@ -287,7 +287,7 @@ class RedisJobQueue(JobQueue):
         job_id_str = str(job_id)
 
         # Get job data to check retry count
-        job_data = await self._redis.hget(self._key("data"), job_id_str)
+        job_data = self._redis.hget(self._key("data"), job_id_str)
         if not job_data:
             logger.warning(f"Job {job_id_str} not found")
             return
@@ -299,7 +299,7 @@ class RedisJobQueue(JobQueue):
 
         # Get current attempt count
         attempts_key = self._key(f"attempts:{job_id_str}")
-        attempts = await self._redis.incr(attempts_key)
+        attempts = self._redis.incr(attempts_key)
 
         should_retry = retry and attempts <= job.max_retries
 
@@ -313,7 +313,7 @@ class RedisJobQueue(JobQueue):
             retry_time = datetime.now(UTC).timestamp() + total_delay
             score = (-job.priority.value * 1e9) + retry_time
 
-            async with self._redis.pipeline(transaction=True) as pipe:
+            with self._redis.pipeline(transaction=True) as pipe:
                 # Update status to RETRYING
                 pipe.hset(self._key("status"), job_id_str, JobStatus.RETRYING.value)
 
@@ -330,14 +330,14 @@ class RedisJobQueue(JobQueue):
                 # Increment retry counter
                 pipe.incr(self._key("metrics:retried"))
 
-                await pipe.execute()
+                pipe.execute()
 
             logger.info(
                 f"Job {job_id_str} will retry in {total_delay:.1f}s (attempt {attempts}/{job.max_retries})"
             )
         else:
             # Move to dead letter queue
-            async with self._redis.pipeline(transaction=True) as pipe:
+            with self._redis.pipeline(transaction=True) as pipe:
                 # Update status to DEAD_LETTER
                 pipe.hset(self._key("status"), job_id_str, JobStatus.DEAD_LETTER.value)
 
@@ -354,11 +354,11 @@ class RedisJobQueue(JobQueue):
                 # Increment dead letter counter
                 pipe.incr(self._key("metrics:dead_letter"))
 
-                await pipe.execute()
+                pipe.execute()
 
             logger.error(f"Job {job_id_str} moved to dead letter queue after {attempts} attempts")
 
-    async def cancel(self, job_id: UUID) -> bool:
+    def cancel(self, job_id: UUID) -> bool:
         """Cancel a pending job.
 
         Args:
@@ -373,7 +373,7 @@ class RedisJobQueue(JobQueue):
         job_id_str = str(job_id)
 
         # Get current status
-        status_bytes = await self._redis.hget(self._key("status"), job_id_str)
+        status_bytes = self._redis.hget(self._key("status"), job_id_str)
         if not status_bytes:
             return False
 
@@ -385,7 +385,7 @@ class RedisJobQueue(JobQueue):
             return False
 
         # Get job to find priority
-        job_data = await self._redis.hget(self._key("data"), job_id_str)
+        job_data = self._redis.hget(self._key("data"), job_id_str)
         if not job_data:
             return False
 
@@ -394,7 +394,7 @@ class RedisJobQueue(JobQueue):
 
         job = JobDefinition.from_json(job_data)
 
-        async with self._redis.pipeline(transaction=True) as pipe:
+        with self._redis.pipeline(transaction=True) as pipe:
             # Remove from priority queue
             priority_queue_key = self._key(f"queue:p{job.priority.value}")
             pipe.zrem(priority_queue_key, job_id_str)
@@ -405,12 +405,12 @@ class RedisJobQueue(JobQueue):
             # Increment cancelled counter
             pipe.incr(self._key("metrics:cancelled"))
 
-            await pipe.execute()
+            pipe.execute()
 
         logger.debug(f"Job {job_id_str} cancelled")
         return True
 
-    async def get_status(self, job_id: UUID) -> JobStatus | None:
+    def get_status(self, job_id: UUID) -> JobStatus | None:
         """Get current status of a job.
 
         Args:
@@ -422,7 +422,7 @@ class RedisJobQueue(JobQueue):
         if not self._redis:
             raise ConnectionError("Redis connection not initialized")
 
-        status_bytes = await self._redis.hget(self._key("status"), str(job_id))
+        status_bytes = self._redis.hget(self._key("status"), str(job_id))
         if not status_bytes:
             return None
 
@@ -431,7 +431,7 @@ class RedisJobQueue(JobQueue):
         )
         return JobStatus(status_str)
 
-    async def get_result(self, job_id: UUID) -> JobResult | None:
+    def get_result(self, job_id: UUID) -> JobResult | None:
         """Get result of a completed job.
 
         Args:
@@ -444,7 +444,7 @@ class RedisJobQueue(JobQueue):
             raise ConnectionError("Redis connection not initialized")
 
         result_key = self._key(f"result:{str(job_id)}")
-        result_data = await self._redis.get(result_key)
+        result_data = self._redis.get(result_key)
 
         if not result_data:
             return None
@@ -454,7 +454,7 @@ class RedisJobQueue(JobQueue):
 
         return JobResult.from_json(result_data)
 
-    async def list_jobs(
+    def list_jobs(
         self,
         status: JobStatus | None = None,
         limit: int = 100,
@@ -474,7 +474,7 @@ class RedisJobQueue(JobQueue):
             raise ConnectionError("Redis connection not initialized")
 
         # Get all job IDs with status
-        status_map = await self._redis.hgetall(self._key("status"))
+        status_map = self._redis.hgetall(self._key("status"))
 
         # Filter by status if specified
         if status:
@@ -490,7 +490,7 @@ class RedisJobQueue(JobQueue):
         # Get job data
         jobs = []
         if job_ids := job_ids[offset : offset + limit]:
-            job_data_list = await self._redis.hmget(self._key("data"), *job_ids)
+            job_data_list = self._redis.hmget(self._key("data"), *job_ids)
             for job_data in job_data_list:
                 if job_data:
                     decoded_data = (
@@ -500,7 +500,7 @@ class RedisJobQueue(JobQueue):
 
         return jobs
 
-    async def get_dead_letters(self, limit: int = 100) -> list[JobDefinition]:
+    def get_dead_letters(self, limit: int = 100) -> list[JobDefinition]:
         """Get jobs that failed permanently (dead letter queue).
 
         Args:
@@ -513,12 +513,12 @@ class RedisJobQueue(JobQueue):
             raise ConnectionError("Redis connection not initialized")
 
         # Get job IDs from dead letter list
-        job_ids = await self._redis.lrange(self._key("dead_letter"), 0, limit - 1)
+        job_ids = self._redis.lrange(self._key("dead_letter"), 0, limit - 1)
 
         # Get job data
         jobs = []
         if job_ids:
-            job_data_list = await self._redis.hmget(self._key("data"), *job_ids)
+            job_data_list = self._redis.hmget(self._key("data"), *job_ids)
             for job_data in job_data_list:
                 if job_data:
                     decoded_data = (
@@ -528,7 +528,7 @@ class RedisJobQueue(JobQueue):
 
         return jobs
 
-    async def requeue_dead_letter(self, job_id: UUID) -> bool:
+    def requeue_dead_letter(self, job_id: UUID) -> bool:
         """Move a dead-letter job back to pending queue.
 
         Args:
@@ -543,12 +543,12 @@ class RedisJobQueue(JobQueue):
         job_id_str = str(job_id)
 
         # Check if in dead letter queue
-        status = await self.get_status(job_id)
+        status = self.get_status(job_id)
         if status != JobStatus.DEAD_LETTER:
             return False
 
         # Get job data
-        job_data = await self._redis.hget(self._key("data"), job_id_str)
+        job_data = self._redis.hget(self._key("data"), job_id_str)
         if not job_data:
             return False
 
@@ -557,7 +557,7 @@ class RedisJobQueue(JobQueue):
 
         job = JobDefinition.from_json(job_data)
 
-        async with self._redis.pipeline(transaction=True) as pipe:
+        with self._redis.pipeline(transaction=True) as pipe:
             # Remove from dead letter list
             pipe.lrem(self._key("dead_letter"), 0, job_id_str)
 
@@ -572,12 +572,12 @@ class RedisJobQueue(JobQueue):
             priority_queue_key = self._key(f"queue:p{job.priority.value}")
             pipe.zadd(priority_queue_key, {job_id_str: score})
 
-            await pipe.execute()
+            pipe.execute()
 
         logger.info(f"Job {job_id_str} requeued from dead letter")
         return True
 
-    async def purge(self, status: JobStatus | None = None) -> int:
+    def purge(self, status: JobStatus | None = None) -> int:
         """Remove jobs from queue.
 
         Args:
@@ -590,7 +590,7 @@ class RedisJobQueue(JobQueue):
             raise ConnectionError("Redis connection not initialized")
 
         # Get all job IDs with status
-        status_map = await self._redis.hgetall(self._key("status"))
+        status_map = self._redis.hgetall(self._key("status"))
 
         # Filter by status if specified
         if status:
@@ -607,7 +607,7 @@ class RedisJobQueue(JobQueue):
             return 0
 
         # Get job priorities for queue cleanup
-        job_data_list = await self._redis.hmget(self._key("data"), *job_ids)
+        job_data_list = self._redis.hmget(self._key("data"), *job_ids)
         priority_sets = {}
         for job_id, data in zip(job_ids, job_data_list, strict=False):
             if data:
@@ -616,7 +616,7 @@ class RedisJobQueue(JobQueue):
                 priority_sets.setdefault(job.priority.value, []).append(job_id)
 
         # Remove in pipeline
-        async with self._redis.pipeline(transaction=True) as pipe:
+        with self._redis.pipeline(transaction=True) as pipe:
             # Remove from data, status, worker, error hashes
             pipe.hdel(self._key("data"), *job_ids)
             pipe.hdel(self._key("status"), *job_ids)
@@ -639,13 +639,13 @@ class RedisJobQueue(JobQueue):
             for job_id in job_ids:
                 pipe.delete(self._key(f"result:{job_id}"))
 
-            await pipe.execute()
+            pipe.execute()
 
         count = len(job_ids)
         logger.info(f"Purged {count} jobs (status={status})")
         return count
 
-    async def get_metrics(self) -> dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get queue metrics.
 
         Returns:
@@ -655,7 +655,7 @@ class RedisJobQueue(JobQueue):
             raise ConnectionError("Redis connection not initialized")
 
         # Get status counts
-        status_map = await self._redis.hgetall(self._key("status"))
+        status_map = self._redis.hgetall(self._key("status"))
         status_counts = {
             status.value: sum(
                 bool((s.decode("utf-8") if isinstance(s, bytes) else s) == status.value)
@@ -671,7 +671,7 @@ class RedisJobQueue(JobQueue):
             "metrics:dead_letter",
             "metrics:cancelled",
         ]
-        metrics_values = await self._redis.mget([self._key(k) for k in metrics_keys])
+        metrics_values = self._redis.mget([self._key(k) for k in metrics_keys])
 
         submitted = int(metrics_values[0] or 0)
         completed = int(metrics_values[1] or 0)

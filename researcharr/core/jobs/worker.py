@@ -76,7 +76,7 @@ class WorkerPool(ABC):
     """
 
     @abstractmethod
-    async def start(self, count: int = 1) -> None:
+    def start(self, count: int = 1) -> None:
         """Start worker processes.
 
         Args:
@@ -88,7 +88,7 @@ class WorkerPool(ABC):
         """
 
     @abstractmethod
-    async def stop(self, graceful: bool = True, timeout: float = 30.0) -> None:
+    def stop(self, graceful: bool = True, timeout: float = 30.0) -> None:
         """Stop all workers.
 
         Args:
@@ -100,7 +100,7 @@ class WorkerPool(ABC):
         """
 
     @abstractmethod
-    async def scale(self, target_count: int) -> None:
+    def scale(self, target_count: int) -> None:
         """Scale workers to target count.
 
         Args:
@@ -112,7 +112,7 @@ class WorkerPool(ABC):
         """
 
     @abstractmethod
-    async def get_workers(self) -> list[WorkerInfo]:
+    def get_workers(self) -> list[WorkerInfo]:
         """Get information about all workers.
 
         Returns:
@@ -120,7 +120,7 @@ class WorkerPool(ABC):
         """
 
     @abstractmethod
-    async def get_worker(self, worker_id: str) -> WorkerInfo | None:
+    def get_worker(self, worker_id: str) -> WorkerInfo | None:
         """Get information about a specific worker.
 
         Args:
@@ -131,7 +131,7 @@ class WorkerPool(ABC):
         """
 
     @abstractmethod
-    async def restart_worker(self, worker_id: str) -> bool:
+    def restart_worker(self, worker_id: str) -> bool:
         """Restart a specific worker.
 
         Args:
@@ -145,7 +145,7 @@ class WorkerPool(ABC):
         """
 
     @abstractmethod
-    async def heartbeat(self, worker_id: str) -> None:
+    def heartbeat(self, worker_id: str) -> None:
         """Update worker heartbeat timestamp.
 
         Args:
@@ -157,7 +157,7 @@ class WorkerPool(ABC):
         """
 
     @abstractmethod
-    async def get_metrics(self) -> dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get worker pool metrics.
 
         Returns:

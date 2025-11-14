@@ -20,7 +20,7 @@ class JobQueue(ABC):
     """
 
     @abstractmethod
-    async def submit(self, job: JobDefinition) -> UUID:
+    def submit(self, job: JobDefinition) -> UUID:
         """Submit a job to the queue.
 
         Args:
@@ -35,7 +35,7 @@ class JobQueue(ABC):
         """
 
     @abstractmethod
-    async def get_next(self, worker_id: str) -> JobDefinition | None:
+    def get_next(self, worker_id: str) -> JobDefinition | None:
         """Get the next job from queue for a worker.
 
         Jobs are ordered by:
@@ -54,7 +54,7 @@ class JobQueue(ABC):
         """
 
     @abstractmethod
-    async def complete(self, job_id: UUID, result: JobResult) -> None:
+    def complete(self, job_id: UUID, result: JobResult) -> None:
         """Mark job as completed with result.
 
         Args:
@@ -66,7 +66,7 @@ class JobQueue(ABC):
         """
 
     @abstractmethod
-    async def fail(self, job_id: UUID, error: str, retry: bool = True) -> None:
+    def fail(self, job_id: UUID, error: str, retry: bool = True) -> None:
         """Mark job as failed.
 
         Args:
@@ -83,7 +83,7 @@ class JobQueue(ABC):
         """
 
     @abstractmethod
-    async def cancel(self, job_id: UUID) -> bool:
+    def cancel(self, job_id: UUID) -> bool:
         """Cancel a pending job.
 
         Args:
@@ -97,7 +97,7 @@ class JobQueue(ABC):
         """
 
     @abstractmethod
-    async def get_status(self, job_id: UUID) -> JobStatus | None:
+    def get_status(self, job_id: UUID) -> JobStatus | None:
         """Get current status of a job.
 
         Args:
@@ -108,7 +108,7 @@ class JobQueue(ABC):
         """
 
     @abstractmethod
-    async def get_result(self, job_id: UUID) -> JobResult | None:
+    def get_result(self, job_id: UUID) -> JobResult | None:
         """Get result of a completed job.
 
         Args:
@@ -119,7 +119,7 @@ class JobQueue(ABC):
         """
 
     @abstractmethod
-    async def list_jobs(
+    def list_jobs(
         self,
         status: JobStatus | None = None,
         limit: int = 100,
@@ -137,7 +137,7 @@ class JobQueue(ABC):
         """
 
     @abstractmethod
-    async def get_dead_letters(self, limit: int = 100) -> list[JobDefinition]:
+    def get_dead_letters(self, limit: int = 100) -> list[JobDefinition]:
         """Get jobs that failed permanently (dead letter queue).
 
         Args:
@@ -148,7 +148,7 @@ class JobQueue(ABC):
         """
 
     @abstractmethod
-    async def requeue_dead_letter(self, job_id: UUID) -> bool:
+    def requeue_dead_letter(self, job_id: UUID) -> bool:
         """Move a dead-letter job back to pending queue.
 
         Args:
@@ -162,7 +162,7 @@ class JobQueue(ABC):
         """
 
     @abstractmethod
-    async def purge(self, status: JobStatus | None = None) -> int:
+    def purge(self, status: JobStatus | None = None) -> int:
         """Remove jobs from queue.
 
         Args:
@@ -177,7 +177,7 @@ class JobQueue(ABC):
         """
 
     @abstractmethod
-    async def get_metrics(self) -> dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get queue metrics (size, throughput, etc.).
 
         Returns:
@@ -195,7 +195,7 @@ class JobQueue(ABC):
         """
 
     @abstractmethod
-    async def initialize(self) -> None:
+    def initialize(self) -> None:
         """Initialize the queue backend.
 
         Called once at application startup. Use this to:
@@ -210,7 +210,7 @@ class JobQueue(ABC):
         """
 
     @abstractmethod
-    async def shutdown(self, graceful: bool = True) -> None:
+    def shutdown(self, graceful: bool = True) -> None:
         """Shutdown the queue backend.
 
         Args:

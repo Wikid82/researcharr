@@ -30,11 +30,11 @@ def require_auth(func):
     """
 
     @wraps(func)
-    async def wrapped(*args, **kwargs):  # type: ignore
+    def wrapped(*args, **kwargs):  # type: ignore
         # Session-based auth
         if hasattr(current_app, "session_get") and current_app.session_get("logged_in"):
             result = func(*args, **kwargs)
-            return await result if inspect.isawaitable(result) else result
+            return result if inspect.isawaitable(result) else result
 
         # API key auth
         api_key = request.headers.get("X-API-Key")
@@ -42,7 +42,7 @@ def require_auth(func):
             stored_key = getattr(current_app, "config_data", {}).get("api_key")
             if stored_key and check_password_hash(stored_key, api_key):
                 result = func(*args, **kwargs)
-                return await result if inspect.isawaitable(result) else result
+                return result if inspect.isawaitable(result) else result
 
         return jsonify({"error": "unauthorized"}), 401
 
@@ -59,7 +59,7 @@ def get_job_service():
 
 @jobs_bp.route("/jobs", methods=["GET"])
 @require_auth
-async def list_jobs():
+def list_jobs():
     """List jobs with optional filtering.
 
     Query params:
@@ -80,7 +80,7 @@ async def list_jobs():
 
         # Get jobs from service (would need to make this async-aware or use sync wrapper)
         # For now, return mock data structure
-        jobs = await service.list_jobs(status=status, limit=limit, offset=offset)
+        jobs = service.list_jobs(status=status, limit=limit, offset=offset)
         return jsonify({"jobs": jobs, "total": len(jobs)})
 
     except (ValueError, KeyError) as e:
@@ -92,7 +92,7 @@ async def list_jobs():
 
 @jobs_bp.route("/jobs", methods=["POST"])
 @require_auth
-async def submit_job():
+def submit_job():
     """Submit a new job to the queue.
 
     Request body:
@@ -132,7 +132,7 @@ async def submit_job():
 
         # Submit job (would need async wrapper)
         # Submit actual job
-        job_id = await service.submit_job(
+        job_id = service.submit_job(
             handler,
             args=args,
             kwargs=kwargs,
@@ -159,7 +159,7 @@ async def submit_job():
 
 @jobs_bp.route("/jobs/<job_id>", methods=["GET"])
 @require_auth
-async def get_job(job_id: str):
+def get_job(job_id: str):
     """Get job status and details."""
     service, error_resp, code = get_job_service()
     if error_resp:
@@ -173,8 +173,8 @@ async def get_job(job_id: str):
             return jsonify({"error": "Invalid job ID format"}), 400
 
         # Get job status and result
-        # status = await service.get_job_status(uuid_id)
-        # result = await service.get_job_result(uuid_id)
+        # status = service.get_job_status(uuid_id)
+        # result = service.get_job_result(uuid_id)
 
         return jsonify(
             {
@@ -191,7 +191,7 @@ async def get_job(job_id: str):
 
 @jobs_bp.route("/jobs/<job_id>", methods=["DELETE"])
 @require_auth
-async def cancel_job(job_id: str):
+def cancel_job(job_id: str):
     """Cancel a pending or running job."""
     service, error_resp, code = get_job_service()
     if error_resp:
@@ -203,7 +203,7 @@ async def cancel_job(job_id: str):
         except ValueError:
             return jsonify({"error": "Invalid job ID format"}), 400
 
-        # cancelled = await service.cancel_job(uuid_id)
+        # cancelled = service.cancel_job(uuid_id)
         cancelled = False
 
         if cancelled:
@@ -225,7 +225,7 @@ async def get_dead_letters():
 
     try:
         limit = int(request.args.get("limit", 100))
-        # dead_letters = await service.get_dead_letters(limit=limit)
+        # dead_letters = service.get_dead_letters(limit=limit)
 
         return jsonify({"jobs": [], "total": 0})
 
@@ -248,7 +248,7 @@ async def retry_dead_letter(job_id: str):
         except ValueError:
             return jsonify({"error": "Invalid job ID format"}), 400
 
-        # requeued = await service.retry_dead_letter(uuid_id)
+        # requeued = service.retry_dead_letter(uuid_id)
         requeued = False
 
         if requeued:
@@ -262,14 +262,14 @@ async def retry_dead_letter(job_id: str):
 
 @jobs_bp.route("/jobs/metrics", methods=["GET"])
 @require_auth
-async def get_metrics():
+def get_metrics():
     """Get job queue metrics."""
     service, error_resp, code = get_job_service()
     if error_resp:
         return error_resp, code
 
     try:
-        # metrics = await service.get_metrics()
+        # metrics = service.get_metrics()
         metrics = {
             "queue": {
                 "pending": 0,
@@ -302,7 +302,7 @@ async def get_workers():
         return error_resp, code
 
     try:
-        # workers = await service.get_workers()
+        # workers = service.get_workers()
         workers = []
 
         return jsonify({"workers": workers, "total": len(workers)})
@@ -333,7 +333,7 @@ def scale_workers():
         if not isinstance(count, int) or count < 0:
             return jsonify({"error": "count must be a positive integer"}), 400
 
-        # await service.scale_workers(count)
+        # service.scale_workers(count)
 
         return jsonify({"workers": count, "status": "scaled"})
 

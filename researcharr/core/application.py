@@ -563,8 +563,9 @@ class CoreApplicationFactory:
         workers started. Failures are logged but do not block application
         startup.
         """
-        import os
         import asyncio
+        import os
+
         from .events import get_event_bus
         from .jobs import JobService, register_backup_job_handlers
 

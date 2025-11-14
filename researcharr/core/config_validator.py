@@ -256,8 +256,10 @@ class ConfigValidator:
                 errors.append(f"{path}: value {value} is greater than maximum {schema['maximum']}")
 
         # Check string patterns (basic validation)
-        if expected_type == "string" and "pattern" in schema and not re.match(
-            schema["pattern"], value
+        if (
+            expected_type == "string"
+            and "pattern" in schema
+            and not re.match(schema["pattern"], value)
         ):
             errors.append(f"{path}: value '{value}' does not match pattern {schema['pattern']}")
 

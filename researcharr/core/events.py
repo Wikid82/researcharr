@@ -125,10 +125,9 @@ class EventBus:
         with self._lock:
             if event_name:
                 return len(self._subscribers.get(event_name, []))
-            else:
-                total = sum(len(handlers) for handlers in self._subscribers.values())
-                total += len(self._wildcard_subscribers)
-                return total
+            total = sum(len(handlers) for handlers in self._subscribers.values())
+            total += len(self._wildcard_subscribers)
+            return total
 
     def list_events(self) -> list[str]:
         """List all event names that have subscribers."""

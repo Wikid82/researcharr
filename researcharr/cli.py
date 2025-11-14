@@ -234,10 +234,9 @@ def cmd_restore(args: argparse.Namespace) -> int:
                         print("Attempting automatic rollback...")
                         if snapshot_sqlite(snapshot_path, db_path):
                             print("✓ Rollback completed")
-                            return 1
                         else:
                             print("ERROR: Rollback failed", file=sys.stderr)
-                            return 1
+                        return 1
                 return 1
 
         # Clean up snapshot if restore was successful and auto-cleanup is enabled

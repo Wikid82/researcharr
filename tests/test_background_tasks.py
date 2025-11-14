@@ -102,3 +102,60 @@ def test_background_serialization_schema(tmp_path):
         assert key in data
     assert data["type"] == "background"
     mgr.shutdown()
+
+
+def test_background_cancel_pending(tmp_path):
+    # Use single worker; queue two tasks so second remains pending briefly
+    mgr = BackgroundTaskManager(max_workers=1)
+
+    def slow():
+        time.sleep(0.2)
+        return "slow"
+
+    first_id = mgr.submit(slow)
+    second_id = mgr.submit(lambda: "quick")
+    # Immediately cancel second while likely still pending
+    cancelled = mgr.cancel(second_id)
+    assert cancelled is True
+    # Wait for first to finish so pending second would otherwise start if not cancelled
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        if mgr.get(first_id).status in ("completed", "failed", "cancelled"):
+            break
+        time.sleep(0.01)
+    second_task = mgr.get(second_id)
+    assert second_task is not None
+    assert second_task.status == "cancelled"
+    mgr.shutdown()
+
+
+def test_background_cancel_running_cooperative(tmp_path):
+    mgr = BackgroundTaskManager(max_workers=1)
+
+    def coop(cancel_event):  # cooperative cancellation
+        # Loop until cancel requested
+        while not cancel_event.is_set():
+            time.sleep(0.01)
+        return "stopped"
+
+    tid = mgr.submit(coop)
+    # Ensure task started
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        t = mgr.get(tid)
+        if t and t.status == "running":
+            break
+        time.sleep(0.005)
+    # Request cancellation
+    assert mgr.cancel(tid) is True
+    # Wait for task to observe cancel
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        t = mgr.get(tid)
+        if t and t.status in ("cancelled", "failed", "completed"):
+            break
+        time.sleep(0.01)
+    final = mgr.get(tid)
+    assert final is not None
+    assert final.status == "cancelled"
+    mgr.shutdown()

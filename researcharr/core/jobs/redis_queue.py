@@ -136,24 +136,24 @@ class RedisJobQueue(JobQueue):
         # Use Redis pipeline for atomic operations
         async with self._redis.pipeline(transaction=True) as pipe:
             # Store job data
-            await pipe.hset(self._key("data"), job_id_str, job_data)
+            pipe.hset(self._key("data"), job_id_str, job_data)
 
             # Store job status
-            await pipe.hset(self._key("status"), job_id_str, JobStatus.PENDING.value)
+            pipe.hset(self._key("status"), job_id_str, JobStatus.PENDING.value)
 
             # If scheduled_at in future, enqueue into scheduled set; else ready queue
             if job.scheduled_at and job.scheduled_at.timestamp() > datetime.now(UTC).timestamp():
                 # Score = scheduled timestamp; separate ZSET for scheduled jobs
-                await pipe.zadd(self._key("scheduled"), {job_id_str: job.scheduled_at.timestamp()})
+                pipe.zadd(self._key("scheduled"), {job_id_str: job.scheduled_at.timestamp()})
             else:
                 # Priority scoring: lower score gets popped first via ZPOPMIN.
                 # Make higher priority => more negative score.
                 score = (-job.priority.value * 1e9) + job.created_at.timestamp()
                 priority_queue_key = self._key(f"queue:p{job.priority.value}")
-                await pipe.zadd(priority_queue_key, {job_id_str: score})
+                pipe.zadd(priority_queue_key, {job_id_str: score})
 
             # Increment submitted counter
-            await pipe.incr(self._key("metrics:submitted"))
+            pipe.incr(self._key("metrics:submitted"))
 
             await pipe.execute()
 
@@ -201,11 +201,11 @@ class RedisJobQueue(JobQueue):
 
                 # Update status to RUNNING
                 async with self._redis.pipeline(transaction=True) as pipe:
-                    await pipe.hset(
+                    pipe.hset(
                         self._key("status"), job_id_str, JobStatus.RUNNING.value
                     )
-                    await pipe.hset(self._key("worker"), job_id_str, worker_id)
-                    await pipe.hset(
+                    pipe.hset(self._key("worker"), job_id_str, worker_id)
+                    pipe.hset(
                         self._key("started"), job_id_str, datetime.now(UTC).isoformat()
                     )
                     await pipe.execute()
@@ -232,7 +232,7 @@ class RedisJobQueue(JobQueue):
             for raw_id in due:
                 job_id_str = raw_id.decode("utf-8") if isinstance(raw_id, bytes) else raw_id
                 # Remove from scheduled set
-                await pipe.zrem(self._key("scheduled"), job_id_str)
+                pipe.zrem(self._key("scheduled"), job_id_str)
                 # Load job priority
                 job_data = await self._redis.hget(self._key("data"), job_id_str)
                 if not job_data:
@@ -244,7 +244,7 @@ class RedisJobQueue(JobQueue):
                 except Exception:
                     continue
                 score = (-job.priority.value * 1e9) + datetime.now(UTC).timestamp()
-                await pipe.zadd(self._key(f"queue:p{job.priority.value}"), {job_id_str: score})
+                pipe.zadd(self._key(f"queue:p{job.priority.value}"), {job_id_str: score})
             await pipe.execute()
 
     async def complete(self, job_id: UUID, result: JobResult) -> None:
@@ -262,17 +262,17 @@ class RedisJobQueue(JobQueue):
 
         async with self._redis.pipeline(transaction=True) as pipe:
             # Update status
-            await pipe.hset(self._key("status"), job_id_str, JobStatus.COMPLETED.value)
+            pipe.hset(self._key("status"), job_id_str, JobStatus.COMPLETED.value)
 
             # Store result (with TTL of 7 days)
             result_key = self._key(f"result:{job_id_str}")
-            await pipe.setex(result_key, 7 * 24 * 3600, result_data)
+            pipe.setex(result_key, 7 * 24 * 3600, result_data)
 
             # Remove worker assignment
-            await pipe.hdel(self._key("worker"), job_id_str)
+            pipe.hdel(self._key("worker"), job_id_str)
 
             # Increment completed counter
-            await pipe.incr(self._key("metrics:completed"))
+            pipe.incr(self._key("metrics:completed"))
 
             await pipe.execute()
 
@@ -320,20 +320,20 @@ class RedisJobQueue(JobQueue):
 
             async with self._redis.pipeline(transaction=True) as pipe:
                 # Update status to RETRYING
-                await pipe.hset(self._key("status"), job_id_str, JobStatus.RETRYING.value)
+                pipe.hset(self._key("status"), job_id_str, JobStatus.RETRYING.value)
 
                 # Store error
-                await pipe.hset(self._key("error"), job_id_str, error)
+                pipe.hset(self._key("error"), job_id_str, error)
 
                 # Add back to queue with new score
                 priority_queue_key = self._key(f"queue:p{job.priority.value}")
-                await pipe.zadd(priority_queue_key, {job_id_str: score})
+                pipe.zadd(priority_queue_key, {job_id_str: score})
 
                 # Remove worker assignment
-                await pipe.hdel(self._key("worker"), job_id_str)
+                pipe.hdel(self._key("worker"), job_id_str)
 
                 # Increment retry counter
-                await pipe.incr(self._key("metrics:retried"))
+                pipe.incr(self._key("metrics:retried"))
 
                 await pipe.execute()
 
@@ -344,22 +344,22 @@ class RedisJobQueue(JobQueue):
             # Move to dead letter queue
             async with self._redis.pipeline(transaction=True) as pipe:
                 # Update status to DEAD_LETTER
-                await pipe.hset(
+                pipe.hset(
                     self._key("status"), job_id_str, JobStatus.DEAD_LETTER.value
                 )
 
                 # Store final error
-                await pipe.hset(self._key("error"), job_id_str, error)
+                pipe.hset(self._key("error"), job_id_str, error)
 
                 # Add to dead letter list (keep last N)
-                await pipe.lpush(self._key("dead_letter"), job_id_str)
-                await pipe.ltrim(self._key("dead_letter"), 0, self.max_dead_letters - 1)
+                pipe.lpush(self._key("dead_letter"), job_id_str)
+                pipe.ltrim(self._key("dead_letter"), 0, self.max_dead_letters - 1)
 
                 # Remove worker assignment
-                await pipe.hdel(self._key("worker"), job_id_str)
+                pipe.hdel(self._key("worker"), job_id_str)
 
                 # Increment dead letter counter
-                await pipe.incr(self._key("metrics:dead_letter"))
+                pipe.incr(self._key("metrics:dead_letter"))
 
                 await pipe.execute()
 
@@ -404,13 +404,13 @@ class RedisJobQueue(JobQueue):
         async with self._redis.pipeline(transaction=True) as pipe:
             # Remove from priority queue
             priority_queue_key = self._key(f"queue:p{job.priority.value}")
-            await pipe.zrem(priority_queue_key, job_id_str)
+            pipe.zrem(priority_queue_key, job_id_str)
 
             # Update status
-            await pipe.hset(self._key("status"), job_id_str, JobStatus.CANCELLED.value)
+            pipe.hset(self._key("status"), job_id_str, JobStatus.CANCELLED.value)
 
             # Increment cancelled counter
-            await pipe.incr(self._key("metrics:cancelled"))
+            pipe.incr(self._key("metrics:cancelled"))
 
             await pipe.execute()
 
@@ -563,18 +563,18 @@ class RedisJobQueue(JobQueue):
 
         async with self._redis.pipeline(transaction=True) as pipe:
             # Remove from dead letter list
-            await pipe.lrem(self._key("dead_letter"), 0, job_id_str)
+            pipe.lrem(self._key("dead_letter"), 0, job_id_str)
 
             # Reset attempts
-            await pipe.delete(self._key(f"attempts:{job_id_str}"))
+            pipe.delete(self._key(f"attempts:{job_id_str}"))
 
             # Update status to PENDING
-            await pipe.hset(self._key("status"), job_id_str, JobStatus.PENDING.value)
+            pipe.hset(self._key("status"), job_id_str, JobStatus.PENDING.value)
 
             # Add back to priority queue
             score = (-job.priority.value * 1e9) + datetime.now(UTC).timestamp()
             priority_queue_key = self._key(f"queue:p{job.priority.value}")
-            await pipe.zadd(priority_queue_key, {job_id_str: score})
+            pipe.zadd(priority_queue_key, {job_id_str: score})
 
             await pipe.execute()
 
@@ -622,26 +622,26 @@ class RedisJobQueue(JobQueue):
         # Remove in pipeline
         async with self._redis.pipeline(transaction=True) as pipe:
             # Remove from data, status, worker, error hashes
-            await pipe.hdel(self._key("data"), *job_ids)
-            await pipe.hdel(self._key("status"), *job_ids)
-            await pipe.hdel(self._key("worker"), *job_ids)
-            await pipe.hdel(self._key("error"), *job_ids)
+            pipe.hdel(self._key("data"), *job_ids)
+            pipe.hdel(self._key("status"), *job_ids)
+            pipe.hdel(self._key("worker"), *job_ids)
+            pipe.hdel(self._key("error"), *job_ids)
 
             # Remove from priority queues
             for priority, ids in priority_sets.items():
-                await pipe.zrem(self._key(f"queue:p{priority}"), *ids)
+                pipe.zrem(self._key(f"queue:p{priority}"), *ids)
 
             # Remove from dead letter list
             for job_id in job_ids:
-                await pipe.lrem(self._key("dead_letter"), 0, job_id)
+                pipe.lrem(self._key("dead_letter"), 0, job_id)
 
             # Remove attempts counters
             for job_id in job_ids:
-                await pipe.delete(self._key(f"attempts:{job_id}"))
+                pipe.delete(self._key(f"attempts:{job_id}"))
 
             # Remove results
             for job_id in job_ids:
-                await pipe.delete(self._key(f"result:{job_id}"))
+                pipe.delete(self._key(f"result:{job_id}"))
 
             await pipe.execute()
 

@@ -14,7 +14,7 @@ from uuid import UUID
 from werkzeug.security import check_password_hash
 
 from flask import Blueprint, current_app, jsonify, request
-from researcharr.core.jobs import JobPriority, JobStatus
+from researcharr.core.jobs.types import JobPriority, JobStatus
 
 logger = logging.getLogger(__name__)
 

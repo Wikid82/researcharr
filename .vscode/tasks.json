@@ -404,7 +404,7 @@
         }
         ,
         {
-            "label": "Sourcery: Analyze (Trial)",
+            "label": "Sourcery: Analyze",
             "type": "shell",
             "command": "bash",
             "args": [
@@ -426,7 +426,29 @@
         }
         ,
         {
-            "label": "Vulture: Dead Code Scan (Trial)",
+            "label": "Sourcery: Review & Fix",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "source ${workspaceFolder}/.venv/bin/activate && sourcery review --fix ${input:SOURCERY_SCOPE}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "SOURCERY_TOKEN": "${env:SOURCERY_TOKEN}"
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [],
+            "detail": "Runs Sourcery with --fix to apply suggestions to the given scope."
+        }
+        ,
+        {
+            "label": "Vulture: Dead Code Scan",
             "type": "shell",
             "command": "bash",
             "args": [

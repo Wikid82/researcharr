@@ -67,11 +67,11 @@ def _fallback_create_app():  # type: ignore
             from flask import Flask
 
             return Flask("factory_fallback")
-        except Exception:
+        except Exception as exc:
             raise ImportError(
                 "Flask import failed; cannot create fallback app. "
                 "Ensure Flask is installed: pip install flask"
-            )
+            ) from exc
 
     # Module imported successfully - ensure delegate is set up
     try:
@@ -87,11 +87,11 @@ def _fallback_create_app():  # type: ignore
             from flask import Flask
 
             return Flask("factory_fallback")
-        except Exception:
+        except Exception as exc:
             raise ImportError(
                 "Flask import failed; cannot create fallback app. "
                 "Ensure Flask is installed: pip install flask"
-            )
+            ) from exc
 
     # Call the real create_app - DO NOT catch exceptions here
     # If create_app fails, the exception should propagate to the caller
@@ -104,13 +104,13 @@ def _fallback_create_app():  # type: ignore
         from flask import Flask
 
         return Flask("factory_fallback")
-    except Exception:
+    except Exception as exc:
         # If Flask itself is missing, raise ImportError so tests fail fast
         # with a clear message rather than mysteriously getting None.
         raise ImportError(
             "Flask import failed; cannot create fallback app. "
             "Ensure Flask is installed: pip install flask"
-        )
+        ) from exc
 
 
 # Do NOT pre-bind a fallback create_app in globals. Tests expect the

@@ -1,5 +1,10 @@
 """Repository for ManagedApp model."""
 
+from __future__ import annotations
+
+from copy import deepcopy
+
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import joinedload
 
 from researcharr.cache import get as cache_get
@@ -23,7 +28,7 @@ class ManagedAppRepository(BaseRepository[ManagedApp]):
         key = make_key(("ManagedApp", "id", id))
         cached = cache_get(key)
         if cached is not None:
-            return cached
+            return self._reattach_cached_entity(cached)
         result = (
             self.session.query(ManagedApp)
             .options(joinedload(ManagedApp.tracked_items))
@@ -31,7 +36,7 @@ class ManagedAppRepository(BaseRepository[ManagedApp]):
             .first()
         )
         if result is not None:
-            cache_set(key, result, ttl=120)
+            cache_set(key, self._snapshot_entity(result), ttl=120)
         return result
 
     def get_all(self) -> list[ManagedApp]:
@@ -81,9 +86,9 @@ class ManagedAppRepository(BaseRepository[ManagedApp]):
         key = make_key(("ManagedApp", "active"))
         cached = cache_get(key)
         if cached is not None:
-            return cached
+            return self._reattach_cached_collection(cached)
         result = self.session.query(ManagedApp).filter(ManagedApp.is_active).all()
-        cache_set(key, result, ttl=60)
+        cache_set(key, self._snapshot_collection(result), ttl=60)
         return result
 
     def get_page(self, page: int, page_size: int) -> list[ManagedApp]:
@@ -103,9 +108,9 @@ class ManagedAppRepository(BaseRepository[ManagedApp]):
         key = make_key(("ManagedApp", "type", app_type))
         cached = cache_get(key)
         if cached is not None:
-            return cached
+            return self._reattach_cached_collection(cached)
         result = self.session.query(ManagedApp).filter(ManagedApp.app_type == app_type).all()
-        cache_set(key, result, ttl=60)
+        cache_set(key, self._snapshot_collection(result), ttl=60)
         return result
 
     def get_by_url(self, base_url: str, app_type: AppType) -> ManagedApp | None:
@@ -122,12 +127,43 @@ class ManagedAppRepository(BaseRepository[ManagedApp]):
         key = make_key(("ManagedApp", "by_url", app_type, base_url))
         cached = cache_get(key)
         if cached is not None:
-            return cached
+            return self._reattach_cached_entity(cached)
         result = (
             self.session.query(ManagedApp)
             .filter(ManagedApp.base_url == base_url, ManagedApp.app_type == app_type)
             .first()
         )
         if result is not None:
-            cache_set(key, result, ttl=300)
+            cache_set(key, self._snapshot_entity(result), ttl=300)
         return result
+
+    def _reattach_cached_entity(self, entity: ManagedApp | None) -> ManagedApp | None:
+        if entity is None:
+            return None
+
+        state = getattr(entity, "_sa_instance_state", None)
+        identity_key = getattr(state, "identity_key", None)
+        if identity_key is not None:
+            existing = self.session.identity_map.get(identity_key)
+            if existing is not None:
+                return existing
+
+        try:
+            return self.session.merge(entity, load=False)
+        except InvalidRequestError:
+            return self.session.merge(entity)
+
+    def _reattach_cached_collection(self, entities: list[ManagedApp]) -> list[ManagedApp]:
+        return [e for item in entities if (e := self._reattach_cached_entity(item)) is not None]
+
+    def _snapshot_entity(self, entity: ManagedApp) -> ManagedApp:
+        try:
+            snap = deepcopy(entity)
+        except Exception:
+            # Best effort - fallback to returning original instance; cached value will
+            # be reattached via merge() which handles cross-session identity reuse.
+            snap = entity
+        return snap
+
+    def _snapshot_collection(self, entities: list[ManagedApp]) -> list[ManagedApp]:
+        return [self._snapshot_entity(entity) for entity in entities]

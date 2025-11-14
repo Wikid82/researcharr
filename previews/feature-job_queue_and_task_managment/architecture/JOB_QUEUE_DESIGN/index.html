@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="researcharr contributors" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Job Queue and Task Management - Architecture Design - researcharr</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/css/researcharr.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Job Queue and Task Management - Architecture Design";
+        var mkdocs_page_input_path = "architecture/JOB_QUEUE_DESIGN.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> researcharr
+        </a>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">researcharr documentation — Day One</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../API/">ResearchArr API (v1)</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Backup-and-Recovery/">Backup and Recovery Procedures</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../CI-and-Development/">CI and Development</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../CLI-Usage/">CLI Usage Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../CONFIGURATION/">Configuration Reference</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Changelog/">Changelog</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Contributing/">Contributing to researcharr</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Coverage-CI-Local-Differences/">Coverage Differences: CI vs Local</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Coverage-Gutters-Example-Comparison/">Coverage Gutters Example Structure</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Coverage-Gutters-Quick-Reference/">Coverage Gutters - Quick Reference Card</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Coverage-Gutters-Quick-Start/">Coverage Gutters - Visual Quick Start Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Coverage-Gutters-Setup/">Coverage Gutters Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../DEV/">DEV</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Deployment-and-Resources/">Deployment and Resource Recommendations</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Environment-Variables/">Environment variables</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../FAQ/">FAQ</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Getting-Started/">Getting Started</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Health-and-Metrics/">Health and Metrics Endpoints</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Integrations/">Integrations</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../JOB_QUEUE_QUICKSTART/">Job Queue System - Quick Start Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Logs/">Logs and Live Streaming</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Packaging-and-Distribution/">Packaging and Distribution</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Plugins/">Plugins and instance configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Recent-Changes/">Recent Changes</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Renovate-Configuration/">Renovate Bot Configuration Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Roadmap/">Roadmap</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../SERVICES_ARCHITECTURE/">Services Architecture</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Status-and-Warnings/">System status warnings and how to fix them</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Versioning/">Versioning & Releases</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../WHEELHOUSE/">Wheelhouse (built wheels) workflow</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../tooling-experiments/">Experimental Tooling: Sourcery & Vulture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Architecture</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Job Queue and Task Management - Architecture Design</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#design-goals">Design Goals</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#architecture-layers">Architecture Layers</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#core-interfaces">Core Interfaces</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-job-definition">1. Job Definition</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-job-queue-interface">2. Job Queue Interface</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-worker-management">3. Worker Management</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#4-job-service">4. Job Service</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#implementation-phases">Implementation Phases</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#phase-1-core-foundations-week-1">Phase 1: Core Foundations (Week 1)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#phase-2-persistence-monitoring-week-2">Phase 2: Persistence &amp; Monitoring (Week 2)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#phase-3-advanced-features-week-3">Phase 3: Advanced Features (Week 3)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#phase-4-production-hardening-week-4">Phase 4: Production Hardening (Week 4)</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#database-schema">Database Schema</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#event-schema">Event Schema</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#metrics">Metrics</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#api-endpoints">API Endpoints</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#migration-path-from-existing-system">Migration Path from Existing System</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#future-enhancements">Future Enhancements</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#celery-integration">Celery Integration</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#rq-integration">RQ Integration</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#testing-strategy">Testing Strategy</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#unit-tests">Unit Tests</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#integration-tests">Integration Tests</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#performance-tests">Performance Tests</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#failure-tests">Failure Tests</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#success-metrics">Success Metrics</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#next-steps">Next Steps</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#questions-for-team-discussion">Questions for Team Discussion</a>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">researcharr</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a> &raquo;</li>
+          <li>Architecture &raquo;</li>
+      <li class="breadcrumb-item active">Job Queue and Task Management - Architecture Design</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="job-queue-and-task-management-architecture-design">Job Queue and Task Management - Architecture Design</h1>
+<p><strong>Issue</strong>: #109
+<strong>Status</strong>: Design Phase
+<strong>Date</strong>: November 14, 2025</p>
+<h2 id="overview">Overview</h2>
+<p>Design a flexible, production-ready job queue system that supports asynchronous task execution, status tracking, retry mechanisms, and distributed worker support. The system will leverage existing infrastructure (<code>async_pipeline.py</code>, APScheduler, event bus) while maintaining clean interfaces for future migration to Celery/RQ if needed.</p>
+<h2 id="design-goals">Design Goals</h2>
+<ol>
+<li><strong>Async-First</strong>: Built on <code>asyncio</code> for efficient resource utilization</li>
+<li><strong>Observable</strong>: Full job lifecycle tracking with status, progress, and metrics</li>
+<li><strong>Resilient</strong>: Automatic retries with exponential backoff and dead-letter queues</li>
+<li><strong>Scalable</strong>: Support for multiple workers and future distributed deployment</li>
+<li><strong>Portable</strong>: Abstract interfaces allowing backend swapping (in-memory → Redis → Celery)</li>
+<li><strong>Integrated</strong>: Leverage existing services (events, config, monitoring, database)</li>
+</ol>
+<h2 id="architecture-layers">Architecture Layers</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                     API Layer (REST/Events)                  │
+│  /api/jobs/submit  /api/jobs/{id}/status  /api/jobs/{id}   │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│                  Job Service Layer                           │
+│  JobService: High-level job management &amp; orchestration      │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│                 Queue Implementation Layer                   │
+│  JobQueue (abstract) → InMemoryQueue / RedisQueue / etc.    │
+│  WorkerPool: Manages worker lifecycle &amp; scaling             │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│                  Persistence Layer                           │
+│  JobRepository: SQLAlchemy models for jobs &amp; results        │
+│  JobResultStore: Configurable result storage (DB/Redis/S3)  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│              Infrastructure Services                         │
+│  EventBus, ConfigManager, MetricsService, Logger            │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="core-interfaces">Core Interfaces</h2>
+<h3 id="1-job-definition">1. Job Definition</h3>
+<pre><code class="language-python"># researcharr/core/jobs/types.py
+
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any, Callable, Optional
+from uuid import UUID, uuid4
+
+
+class JobStatus(str, Enum):
+    &quot;&quot;&quot;Job lifecycle states.&quot;&quot;&quot;
+    PENDING = &quot;pending&quot;       # Queued, not started
+    RUNNING = &quot;running&quot;       # Currently executing
+    COMPLETED = &quot;completed&quot;   # Successfully finished
+    FAILED = &quot;failed&quot;         # Failed after all retries
+    CANCELLED = &quot;cancelled&quot;   # Manually cancelled
+    RETRYING = &quot;retrying&quot;     # Failed, will retry
+    DEAD_LETTER = &quot;dead_letter&quot;  # Permanently failed
+
+
+class JobPriority(int, Enum):
+    &quot;&quot;&quot;Job priority levels (higher = more urgent).&quot;&quot;&quot;
+    LOW = 0
+    NORMAL = 10
+    HIGH = 20
+    CRITICAL = 30
+
+
+@dataclass
+class JobDefinition:
+    &quot;&quot;&quot;Definition of work to be performed.&quot;&quot;&quot;
+
+    # Identity
+    id: UUID = field(default_factory=uuid4)
+    name: str = &quot;&quot;  # e.g., &quot;process_media_item&quot;
+
+    # Execution
+    handler: str = &quot;&quot;  # Fully qualified function path
+    args: tuple[Any, ...] = field(default_factory=tuple)
+    kwargs: dict[str, Any] = field(default_factory=dict)
+
+    # Scheduling
+    priority: JobPriority = JobPriority.NORMAL
+    max_retries: int = 3
+    retry_delay: float = 1.0  # Base delay in seconds
+    retry_backoff: float = 2.0  # Multiplier for exponential backoff
+    timeout: Optional[float] = None  # Max execution time in seconds
+
+    # Metadata
+    tags: dict[str, str] = field(default_factory=dict)
+    created_at: datetime = field(default_factory=datetime.utcnow)
+
+    # Dependencies
+    depends_on: list[UUID] = field(default_factory=list)
+
+    def __post_init__(self):
+        &quot;&quot;&quot;Validate job definition.&quot;&quot;&quot;
+        if not self.handler:
+            raise ValueError(&quot;Job handler must be specified&quot;)
+        if self.max_retries &lt; 0:
+            raise ValueError(&quot;max_retries must be non-negative&quot;)
+
+
+@dataclass
+class JobResult:
+    &quot;&quot;&quot;Result of job execution.&quot;&quot;&quot;
+
+    job_id: UUID
+    status: JobStatus
+    result: Any = None
+    error: Optional[str] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    attempts: int = 0
+    worker_id: Optional[str] = None
+
+    @property
+    def duration(self) -&gt; Optional[float]:
+        &quot;&quot;&quot;Execution duration in seconds.&quot;&quot;&quot;
+        if self.started_at and self.completed_at:
+            return (self.completed_at - self.started_at).total_seconds()
+        return None
+
+
+@dataclass
+class JobProgress:
+    &quot;&quot;&quot;Progress information for long-running jobs.&quot;&quot;&quot;
+
+    job_id: UUID
+    current: int = 0
+    total: Optional[int] = None
+    message: str = &quot;&quot;
+    metadata: dict[str, Any] = field(default_factory=dict)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+    @property
+    def percentage(self) -&gt; Optional[float]:
+        &quot;&quot;&quot;Progress as percentage (0-100).&quot;&quot;&quot;
+        if self.total and self.total &gt; 0:
+            return (self.current / self.total) * 100
+        return None
+</code></pre>
+<h3 id="2-job-queue-interface">2. Job Queue Interface</h3>
+<pre><code class="language-python"># researcharr/core/jobs/queue.py
+
+from abc import ABC, abstractmethod
+from typing import AsyncIterator, Optional
+from uuid import UUID
+
+from .types import JobDefinition, JobResult, JobStatus
+
+
+class JobQueue(ABC):
+    &quot;&quot;&quot;Abstract interface for job queue implementations.&quot;&quot;&quot;
+
+    @abstractmethod
+    async def submit(self, job: JobDefinition) -&gt; UUID:
+        &quot;&quot;&quot;Submit a job to the queue.
+
+        Returns:
+            job_id: UUID of the submitted job
+        &quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def get_next(self, worker_id: str) -&gt; Optional[JobDefinition]:
+        &quot;&quot;&quot;Get the next job from queue for a worker.
+
+        Priority order: CRITICAL &gt; HIGH &gt; NORMAL &gt; LOW
+        Within same priority: FIFO
+
+        Returns:
+            JobDefinition if available, None if queue empty
+        &quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def complete(self, job_id: UUID, result: JobResult) -&gt; None:
+        &quot;&quot;&quot;Mark job as completed with result.&quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def fail(
+        self,
+        job_id: UUID,
+        error: str,
+        retry: bool = True
+    ) -&gt; None:
+        &quot;&quot;&quot;Mark job as failed.
+
+        Args:
+            job_id: Job identifier
+            error: Error message/traceback
+            retry: Whether to retry (if retries remaining)
+        &quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def cancel(self, job_id: UUID) -&gt; bool:
+        &quot;&quot;&quot;Cancel a pending job.
+
+        Returns:
+            True if cancelled, False if already running/completed
+        &quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def get_status(self, job_id: UUID) -&gt; Optional[JobStatus]:
+        &quot;&quot;&quot;Get current status of a job.&quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def get_result(self, job_id: UUID) -&gt; Optional[JobResult]:
+        &quot;&quot;&quot;Get result of a completed job.&quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def list_jobs(
+        self,
+        status: Optional[JobStatus] = None,
+        limit: int = 100,
+        offset: int = 0
+    ) -&gt; list[JobDefinition]:
+        &quot;&quot;&quot;List jobs, optionally filtered by status.&quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def get_dead_letters(self, limit: int = 100) -&gt; list[JobDefinition]:
+        &quot;&quot;&quot;Get jobs that failed permanently (dead letter queue).&quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def requeue_dead_letter(self, job_id: UUID) -&gt; bool:
+        &quot;&quot;&quot;Move a dead-letter job back to pending queue.&quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def purge(self, status: Optional[JobStatus] = None) -&gt; int:
+        &quot;&quot;&quot;Remove jobs from queue.
+
+        Returns:
+            Number of jobs removed
+        &quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def get_metrics(self) -&gt; dict[str, Any]:
+        &quot;&quot;&quot;Get queue metrics (size, throughput, etc.).&quot;&quot;&quot;
+        pass
+</code></pre>
+<h3 id="3-worker-management">3. Worker Management</h3>
+<pre><code class="language-python"># researcharr/core/jobs/worker.py
+
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Optional
+from uuid import UUID, uuid4
+
+
+class WorkerStatus(str, Enum):
+    &quot;&quot;&quot;Worker states.&quot;&quot;&quot;
+    IDLE = &quot;idle&quot;
+    BUSY = &quot;busy&quot;
+    STOPPING = &quot;stopping&quot;
+    STOPPED = &quot;stopped&quot;
+    ERROR = &quot;error&quot;
+
+
+@dataclass
+class WorkerInfo:
+    &quot;&quot;&quot;Information about a worker process.&quot;&quot;&quot;
+
+    id: str = field(default_factory=lambda: str(uuid4()))
+    status: WorkerStatus = WorkerStatus.IDLE
+    current_job: Optional[UUID] = None
+    started_at: datetime = field(default_factory=datetime.utcnow)
+    last_heartbeat: datetime = field(default_factory=datetime.utcnow)
+    jobs_completed: int = 0
+    jobs_failed: int = 0
+
+    @property
+    def is_healthy(self) -&gt; bool:
+        &quot;&quot;&quot;Check if worker is healthy (recent heartbeat).&quot;&quot;&quot;
+        age = (datetime.utcnow() - self.last_heartbeat).total_seconds()
+        return age &lt; 30  # 30 second timeout
+
+
+class WorkerPool(ABC):
+    &quot;&quot;&quot;Abstract interface for managing worker processes.&quot;&quot;&quot;
+
+    @abstractmethod
+    async def start(self, count: int = 1) -&gt; None:
+        &quot;&quot;&quot;Start worker processes.
+
+        Args:
+            count: Number of workers to start
+        &quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def stop(self, graceful: bool = True, timeout: float = 30.0) -&gt; None:
+        &quot;&quot;&quot;Stop all workers.
+
+        Args:
+            graceful: Wait for current jobs to complete
+            timeout: Max time to wait for graceful shutdown
+        &quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def scale(self, target_count: int) -&gt; None:
+        &quot;&quot;&quot;Scale workers to target count.&quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def get_workers(self) -&gt; list[WorkerInfo]:
+        &quot;&quot;&quot;Get information about all workers.&quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def get_worker(self, worker_id: str) -&gt; Optional[WorkerInfo]:
+        &quot;&quot;&quot;Get information about a specific worker.&quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    async def restart_worker(self, worker_id: str) -&gt; bool:
+        &quot;&quot;&quot;Restart a specific worker.&quot;&quot;&quot;
+        pass
+</code></pre>
+<h3 id="4-job-service">4. Job Service</h3>
+<pre><code class="language-python"># researcharr/core/jobs/service.py
+
+from typing import Any, Callable, Optional
+from uuid import UUID
+
+from .queue import JobQueue
+from .types import JobDefinition, JobPriority, JobProgress, JobResult, JobStatus
+from .worker import WorkerPool
+
+
+class JobService:
+    &quot;&quot;&quot;High-level service for job management.&quot;&quot;&quot;
+
+    def __init__(
+        self,
+        queue: JobQueue,
+        worker_pool: WorkerPool,
+        event_bus: Any,  # EventBus
+        metrics: Any,  # MetricsService
+    ):
+        self._queue = queue
+        self._workers = worker_pool
+        self._events = event_bus
+        self._metrics = metrics
+        self._handlers: dict[str, Callable] = {}
+
+    def register_handler(self, name: str, handler: Callable) -&gt; None:
+        &quot;&quot;&quot;Register a job handler function.
+
+        Args:
+            name: Handler name (e.g., 'process_media')
+            handler: Async callable that accepts (job_def, progress_callback)
+        &quot;&quot;&quot;
+        self._handlers[name] = handler
+
+    async def submit_job(
+        self,
+        handler: str,
+        args: tuple = (),
+        kwargs: dict = None,
+        priority: JobPriority = JobPriority.NORMAL,
+        **options
+    ) -&gt; UUID:
+        &quot;&quot;&quot;Submit a job for execution.
+
+        Args:
+            handler: Name of registered handler
+            args: Positional arguments
+            kwargs: Keyword arguments
+            priority: Job priority
+            **options: Additional JobDefinition fields
+
+        Returns:
+            job_id: UUID of submitted job
+        &quot;&quot;&quot;
+        job = JobDefinition(
+            handler=handler,
+            args=args,
+            kwargs=kwargs or {},
+            priority=priority,
+            **options
+        )
+
+        job_id = await self._queue.submit(job)
+
+        # Publish event
+        await self._events.publish('job.submitted', {
+            'job_id': str(job_id),
+            'handler': handler,
+            'priority': priority.value
+        })
+
+        # Update metrics
+        self._metrics.increment('jobs_submitted_total', {
+            'handler': handler,
+            'priority': priority.name
+        })
+
+        return job_id
+
+    async def get_job_status(self, job_id: UUID) -&gt; Optional[JobStatus]:
+        &quot;&quot;&quot;Get current status of a job.&quot;&quot;&quot;
+        return await self._queue.get_status(job_id)
+
+    async def get_job_result(self, job_id: UUID) -&gt; Optional[JobResult]:
+        &quot;&quot;&quot;Get result of a completed job.&quot;&quot;&quot;
+        return await self._queue.get_result(job_id)
+
+    async def cancel_job(self, job_id: UUID) -&gt; bool:
+        &quot;&quot;&quot;Cancel a pending job.&quot;&quot;&quot;
+        cancelled = await self._queue.cancel(job_id)
+        if cancelled:
+            await self._events.publish('job.cancelled', {'job_id': str(job_id)})
+        return cancelled
+
+    async def list_jobs(
+        self,
+        status: Optional[JobStatus] = None,
+        limit: int = 100
+    ) -&gt; list[JobDefinition]:
+        &quot;&quot;&quot;List jobs, optionally filtered by status.&quot;&quot;&quot;
+        return await self._queue.list_jobs(status=status, limit=limit)
+
+    async def get_dead_letters(self) -&gt; list[JobDefinition]:
+        &quot;&quot;&quot;Get permanently failed jobs.&quot;&quot;&quot;
+        return await self._queue.get_dead_letters()
+
+    async def retry_dead_letter(self, job_id: UUID) -&gt; bool:
+        &quot;&quot;&quot;Retry a permanently failed job.&quot;&quot;&quot;
+        return await self._queue.requeue_dead_letter(job_id)
+
+    async def get_metrics(self) -&gt; dict[str, Any]:
+        &quot;&quot;&quot;Get comprehensive job system metrics.&quot;&quot;&quot;
+        queue_metrics = await self._queue.get_metrics()
+        workers = await self._workers.get_workers()
+
+        return {
+            'queue': queue_metrics,
+            'workers': {
+                'total': len(workers),
+                'idle': sum(1 for w in workers if w.status == 'idle'),
+                'busy': sum(1 for w in workers if w.status == 'busy'),
+                'healthy': sum(1 for w in workers if w.is_healthy),
+            },
+            'system': {
+                'handlers_registered': len(self._handlers),
+            }
+        }
+
+    async def start(self, worker_count: int = 1) -&gt; None:
+        &quot;&quot;&quot;Start the job service and workers.&quot;&quot;&quot;
+        await self._workers.start(worker_count)
+        await self._events.publish('job_service.started', {
+            'worker_count': worker_count
+        })
+
+    async def stop(self, graceful: bool = True) -&gt; None:
+        &quot;&quot;&quot;Stop the job service and workers.&quot;&quot;&quot;
+        await self._workers.stop(graceful=graceful)
+        await self._events.publish('job_service.stopped', {})
+</code></pre>
+<h2 id="implementation-phases">Implementation Phases</h2>
+<h3 id="phase-1-core-foundations-week-1">Phase 1: Core Foundations (Week 1)</h3>
+<p><strong>Goal</strong>: Basic job submission and execution with in-memory queue</p>
+<ol>
+<li><strong>Create type definitions</strong> (<code>researcharr/core/jobs/types.py</code>)</li>
+<li>JobDefinition, JobResult, JobProgress dataclasses</li>
+<li>JobStatus, JobPriority enums</li>
+<li>
+<p>Validation logic</p>
+</li>
+<li>
+<p><strong>Implement abstract interfaces</strong> (<code>researcharr/core/jobs/queue.py</code>, <code>worker.py</code>)</p>
+</li>
+<li>JobQueue abstract base class</li>
+<li>WorkerPool abstract base class</li>
+<li>
+<p>Full interface documentation</p>
+</li>
+<li>
+<p><strong>Build in-memory queue</strong> (<code>researcharr/core/jobs/memory_queue.py</code>)</p>
+</li>
+<li>Priority queue using heapq</li>
+<li>Simple retry logic with exponential backoff</li>
+<li>Dead letter collection</li>
+<li>
+<p>Metrics tracking</p>
+</li>
+<li>
+<p><strong>Create worker implementation</strong> (<code>researcharr/core/jobs/memory_worker.py</code>)</p>
+</li>
+<li>Asyncio-based workers</li>
+<li>Job execution with timeout</li>
+<li>Error handling and retry</li>
+<li>
+<p>Heartbeat mechanism</p>
+</li>
+<li>
+<p><strong>Build JobService</strong> (<code>researcharr/core/jobs/service.py</code>)</p>
+</li>
+<li>Handler registration</li>
+<li>Job submission with validation</li>
+<li>Event publishing integration</li>
+<li>Metrics integration</li>
+</ol>
+<p><strong>Acceptance Criteria</strong>:
+- Can submit jobs and execute async handlers
+- Job status transitions correctly (pending → running → completed/failed)
+- Failed jobs retry with exponential backoff
+- Dead letter queue captures permanently failed jobs
+- Basic metrics available</p>
+<h3 id="phase-2-persistence-monitoring-week-2">Phase 2: Persistence &amp; Monitoring (Week 2)</h3>
+<p><strong>Goal</strong>: Persist job state and add comprehensive monitoring</p>
+<ol>
+<li><strong>Create database models</strong> (<code>researcharr/models/job.py</code>)</li>
+<li>Job table (id, status, handler, args, created_at, etc.)</li>
+<li>JobExecution table (attempts, started_at, completed_at, error)</li>
+<li>JobResult table (job_id, result_data, metadata)</li>
+<li>
+<p>Indexes for efficient queries</p>
+</li>
+<li>
+<p><strong>Implement JobRepository</strong> (<code>researcharr/repositories/job_repository.py</code>)</p>
+</li>
+<li>CRUD operations for jobs</li>
+<li>Status queries with filtering</li>
+<li>Result storage and retrieval</li>
+<li>
+<p>Execution history tracking</p>
+</li>
+<li>
+<p><strong>Build persistent queue</strong> (<code>researcharr/core/jobs/persistent_queue.py</code>)</p>
+</li>
+<li>Hybrid: in-memory priority queue + DB persistence</li>
+<li>Load pending jobs on startup</li>
+<li>Persist state changes immediately</li>
+<li>
+<p>Atomic operations for reliability</p>
+</li>
+<li>
+<p><strong>Add progress tracking</strong> (<code>researcharr/core/jobs/progress.py</code>)</p>
+</li>
+<li>Progress callback interface</li>
+<li>Real-time updates via EventBus</li>
+<li>Progress storage in database</li>
+<li>
+<p>WebSocket integration for UI</p>
+</li>
+<li>
+<p><strong>Enhance monitoring</strong> (<code>researcharr/core/jobs/metrics.py</code>)</p>
+<ul>
+<li>Prometheus metrics exporter</li>
+<li>Job throughput, latency, error rates</li>
+<li>Worker utilization tracking</li>
+<li>Queue depth monitoring</li>
+</ul>
+</li>
+</ol>
+<p><strong>Acceptance Criteria</strong>:
+- Jobs survive application restarts
+- Progress updates flow to UI in real-time
+- Comprehensive metrics in /metrics endpoint
+- Job history queryable via repository</p>
+<h3 id="phase-3-advanced-features-week-3">Phase 3: Advanced Features (Week 3)</h3>
+<p><strong>Goal</strong>: Job dependencies, scheduling, and distributed support</p>
+<ol>
+<li>
+<p><strong>Job dependencies</strong> (<code>researcharr/core/jobs/dependencies.py</code>)</p>
+<ul>
+<li>DAG validation (no cycles)</li>
+<li>Dependency tracking in database</li>
+<li>Automatic job triggering on parent completion</li>
+<li>Parallel execution of independent jobs</li>
+</ul>
+</li>
+<li>
+<p><strong>Scheduled jobs</strong> (<code>researcharr/core/jobs/scheduler_integration.py</code>)</p>
+<ul>
+<li>APScheduler integration</li>
+<li>Cron-based job submission</li>
+<li>One-time delayed jobs</li>
+<li>Recurring job management</li>
+</ul>
+</li>
+<li>
+<p><strong>Result storage backends</strong> (<code>researcharr/core/jobs/result_store.py</code>)</p>
+<ul>
+<li>Pluggable result storage (DB, Redis, S3)</li>
+<li>Large result handling (avoid DB bloat)</li>
+<li>Result TTL and cleanup</li>
+<li>Compression for large results</li>
+</ul>
+</li>
+<li>
+<p><strong>Distributed queue preparation</strong> (<code>researcharr/core/jobs/redis_queue.py</code>)</p>
+<ul>
+<li>Redis-based queue implementation</li>
+<li>Multi-process worker support</li>
+<li>Distributed locking</li>
+<li>Horizontal scaling</li>
+</ul>
+</li>
+</ol>
+<p><strong>Acceptance Criteria</strong>:
+- Jobs can depend on other jobs
+- Scheduled jobs execute at specified times
+- Large results stored efficiently
+- Multiple processes can share queue via Redis</p>
+<h3 id="phase-4-production-hardening-week-4">Phase 4: Production Hardening (Week 4)</h3>
+<p><strong>Goal</strong>: Battle-test and optimize for production use</p>
+<ol>
+<li>
+<p><strong>Error handling enhancements</strong></p>
+<ul>
+<li>Circuit breaker for failing handlers</li>
+<li>Rate limiting for problematic jobs</li>
+<li>Automatic quarantine of broken handlers</li>
+<li>Alert integration for critical failures</li>
+</ul>
+</li>
+<li>
+<p><strong>Performance optimization</strong></p>
+<ul>
+<li>Batch job submission API</li>
+<li>Connection pooling for database</li>
+<li>Efficient serialization (msgpack?)</li>
+<li>Query optimization with indexes</li>
+</ul>
+</li>
+<li>
+<p><strong>Operational tooling</strong></p>
+<ul>
+<li>CLI for job management (<code>researcharr jobs list</code>)</li>
+<li>Admin UI endpoints</li>
+<li>Job replay/requeue tools</li>
+<li>Bulk operations (cancel all, purge old)</li>
+</ul>
+</li>
+<li>
+<p><strong>Documentation and testing</strong></p>
+<ul>
+<li>Comprehensive test suite (unit + integration)</li>
+<li>Architecture documentation</li>
+<li>API documentation</li>
+<li>Migration guide for existing tasks</li>
+</ul>
+</li>
+</ol>
+<p><strong>Acceptance Criteria</strong>:
+- 95%+ test coverage for job system
+- Performance benchmarks documented
+- Production deployment guide complete
+- Zero data loss under failure scenarios</p>
+<h2 id="database-schema">Database Schema</h2>
+<pre><code class="language-sql">-- Job definitions
+CREATE TABLE jobs (
+    id UUID PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    handler VARCHAR(500) NOT NULL,
+    args_json TEXT,
+    kwargs_json TEXT,
+    priority INTEGER NOT NULL DEFAULT 10,
+    status VARCHAR(50) NOT NULL,
+    max_retries INTEGER NOT NULL DEFAULT 3,
+    retry_delay FLOAT NOT NULL DEFAULT 1.0,
+    retry_backoff FLOAT NOT NULL DEFAULT 2.0,
+    timeout FLOAT,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    INDEX idx_status (status),
+    INDEX idx_priority_created (priority DESC, created_at ASC),
+    INDEX idx_handler (handler)
+);
+
+-- Job execution attempts
+CREATE TABLE job_executions (
+    id SERIAL PRIMARY KEY,
+    job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+    attempt INTEGER NOT NULL,
+    worker_id VARCHAR(255),
+    started_at TIMESTAMP NOT NULL,
+    completed_at TIMESTAMP,
+    error TEXT,
+    INDEX idx_job_id (job_id),
+    INDEX idx_started (started_at DESC)
+);
+
+-- Job results
+CREATE TABLE job_results (
+    job_id UUID PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
+    result_data TEXT,
+    result_size INTEGER,
+    storage_backend VARCHAR(50),
+    storage_key VARCHAR(500),
+    created_at TIMESTAMP NOT NULL
+);
+
+-- Job progress tracking
+CREATE TABLE job_progress (
+    job_id UUID PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
+    current INTEGER NOT NULL DEFAULT 0,
+    total INTEGER,
+    message TEXT,
+    metadata_json TEXT,
+    updated_at TIMESTAMP NOT NULL
+);
+
+-- Job dependencies
+CREATE TABLE job_dependencies (
+    job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+    depends_on_job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+    PRIMARY KEY (job_id, depends_on_job_id),
+    INDEX idx_depends_on (depends_on_job_id)
+);
+</code></pre>
+<h2 id="event-schema">Event Schema</h2>
+<p>Job lifecycle events published to EventBus:</p>
+<pre><code class="language-python"># Job submitted
+'job.submitted' → {
+    'job_id': str,
+    'handler': str,
+    'priority': int,
+    'timestamp': datetime
+}
+
+# Job started
+'job.started' → {
+    'job_id': str,
+    'worker_id': str,
+    'attempt': int,
+    'timestamp': datetime
+}
+
+# Job progress
+'job.progress' → {
+    'job_id': str,
+    'current': int,
+    'total': int,
+    'percentage': float,
+    'message': str,
+    'timestamp': datetime
+}
+
+# Job completed
+'job.completed' → {
+    'job_id': str,
+    'duration': float,
+    'timestamp': datetime
+}
+
+# Job failed
+'job.failed' → {
+    'job_id': str,
+    'error': str,
+    'will_retry': bool,
+    'attempts': int,
+    'timestamp': datetime
+}
+
+# Job dead letter
+'job.dead_letter' → {
+    'job_id': str,
+    'handler': str,
+    'final_error': str,
+    'total_attempts': int,
+    'timestamp': datetime
+}
+
+# Job cancelled
+'job.cancelled' → {
+    'job_id': str,
+    'timestamp': datetime
+}
+</code></pre>
+<h2 id="metrics">Metrics</h2>
+<p>Prometheus metrics exposed:</p>
+<pre><code class="language-python"># Counters
+jobs_submitted_total{handler, priority}
+jobs_completed_total{handler, status}  # status: success/failed/cancelled
+jobs_retried_total{handler}
+jobs_dead_letter_total{handler}
+
+# Gauges
+jobs_pending{priority}
+jobs_running{handler}
+jobs_dead_letter
+workers_total
+workers_idle
+workers_busy
+
+# Histograms
+job_duration_seconds{handler}
+job_queue_time_seconds{priority}
+job_retry_delay_seconds{handler}
+
+# Summaries
+job_result_size_bytes{handler}
+</code></pre>
+<h2 id="configuration">Configuration</h2>
+<pre><code class="language-yaml"># config.yml
+jobs:
+  # Queue configuration
+  queue:
+    type: memory  # memory, redis, database
+    max_size: 10000
+    redis_url: redis://localhost:6379/0  # if type=redis
+
+  # Worker configuration
+  workers:
+    count: 4
+    max_jobs_per_worker: 1000  # Restart worker after N jobs
+    heartbeat_interval: 10  # seconds
+    shutdown_timeout: 30  # seconds
+
+  # Retry configuration
+  retry:
+    max_attempts: 3
+    base_delay: 1.0  # seconds
+    backoff_multiplier: 2.0
+    max_delay: 300.0  # seconds (5 minutes)
+
+  # Result storage
+  results:
+    backend: database  # database, redis, s3
+    ttl: 604800  # 7 days in seconds
+    large_result_threshold: 1048576  # 1MB, store in object storage
+    s3_bucket: researcharr-job-results  # if backend=s3
+
+  # Dead letter queue
+  dead_letter:
+    max_size: 1000
+    retention_days: 30
+
+  # Monitoring
+  monitoring:
+    metrics_interval: 5  # seconds
+    log_slow_jobs: true
+    slow_job_threshold: 60  # seconds
+</code></pre>
+<h2 id="api-endpoints">API Endpoints</h2>
+<pre><code class="language-python"># Job submission
+POST /api/jobs/submit
+{
+    &quot;handler&quot;: &quot;process_media&quot;,
+    &quot;args&quot;: [123],
+    &quot;kwargs&quot;: {&quot;quality&quot;: &quot;high&quot;},
+    &quot;priority&quot;: &quot;normal&quot;,
+    &quot;timeout&quot;: 300
+}
+→ {&quot;job_id&quot;: &quot;uuid&quot;, &quot;status&quot;: &quot;pending&quot;}
+
+# Job status
+GET /api/jobs/{job_id}/status
+→ {
+    &quot;job_id&quot;: &quot;uuid&quot;,
+    &quot;status&quot;: &quot;running&quot;,
+    &quot;progress&quot;: {&quot;current&quot;: 50, &quot;total&quot;: 100, &quot;percentage&quot;: 50.0},
+    &quot;attempts&quot;: 1,
+    &quot;created_at&quot;: &quot;2025-11-14T10:00:00Z&quot;,
+    &quot;started_at&quot;: &quot;2025-11-14T10:00:05Z&quot;
+}
+
+# Job result
+GET /api/jobs/{job_id}/result
+→ {
+    &quot;job_id&quot;: &quot;uuid&quot;,
+    &quot;status&quot;: &quot;completed&quot;,
+    &quot;result&quot;: {...},
+    &quot;duration&quot;: 12.5,
+    &quot;completed_at&quot;: &quot;2025-11-14T10:00:17Z&quot;
+}
+
+# List jobs
+GET /api/jobs?status=failed&amp;limit=50
+→ {
+    &quot;jobs&quot;: [{...}, {...}],
+    &quot;total&quot;: 123,
+    &quot;page&quot;: 1
+}
+
+# Cancel job
+POST /api/jobs/{job_id}/cancel
+→ {&quot;cancelled&quot;: true}
+
+# Retry dead letter
+POST /api/jobs/{job_id}/retry
+→ {&quot;job_id&quot;: &quot;uuid&quot;, &quot;status&quot;: &quot;pending&quot;}
+
+# Job metrics
+GET /api/jobs/metrics
+→ {
+    &quot;queue&quot;: {&quot;pending&quot;: 45, &quot;size&quot;: 10000},
+    &quot;workers&quot;: {&quot;total&quot;: 4, &quot;idle&quot;: 2, &quot;busy&quot;: 2},
+    &quot;throughput&quot;: {&quot;1m&quot;: 10.5, &quot;5m&quot;: 8.3, &quot;15m&quot;: 9.1}
+}
+
+# Worker management
+GET /api/workers
+→ [
+    {
+        &quot;id&quot;: &quot;worker-1&quot;,
+        &quot;status&quot;: &quot;busy&quot;,
+        &quot;current_job&quot;: &quot;uuid&quot;,
+        &quot;jobs_completed&quot;: 123,
+        &quot;uptime&quot;: 3600
+    }
+]
+
+POST /api/workers/scale
+{&quot;count&quot;: 8}
+→ {&quot;previous&quot;: 4, &quot;target&quot;: 8, &quot;status&quot;: &quot;scaling&quot;}
+</code></pre>
+<h2 id="migration-path-from-existing-system">Migration Path from Existing System</h2>
+<p>Current state uses:
+- APScheduler for cron-based jobs
+- <code>run_job()</code> function for manual execution
+- Thread-based background execution
+- No job tracking or retry logic</p>
+<p>Migration approach:</p>
+<ol>
+<li>
+<p><strong>Wrap existing handlers</strong>: Convert <code>run_job</code> to a job handler
+   <code>python
+   job_service.register_handler('legacy_run_job', async_wrapper(run_job))</code></p>
+</li>
+<li>
+<p><strong>Integrate with APScheduler</strong>: Schedule jobs via JobService
+   <code>python
+   scheduler.add_job(
+       lambda: job_service.submit_job('legacy_run_job'),
+       trigger=CronTrigger.from_crontab(cron_expr)
+   )</code></p>
+</li>
+<li>
+<p><strong>Gradual migration</strong>: New features use JobService, old code continues</p>
+</li>
+<li><strong>Feature parity</strong>: Once JobService has all features, deprecate old system</li>
+<li><strong>Cleanup</strong>: Remove old code after migration complete</li>
+</ol>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<h3 id="celery-integration">Celery Integration</h3>
+<p>When ready for distributed processing:</p>
+<pre><code class="language-python"># researcharr/core/jobs/celery_queue.py
+class CeleryJobQueue(JobQueue):
+    &quot;&quot;&quot;Celery-based distributed queue.&quot;&quot;&quot;
+
+    def __init__(self, broker_url: str, result_backend: str):
+        from celery import Celery
+        self.app = Celery('researcharr', broker=broker_url, backend=result_backend)
+        self._configure_celery()
+</code></pre>
+<p>Benefits:
+- Battle-tested distributed queue
+- Rich ecosystem (flower, monitoring)
+- Advanced features (chords, chains, groups)</p>
+<p>Trade-offs:
+- Additional dependency (Redis/RabbitMQ)
+- More complex deployment
+- Learning curve for operators</p>
+<h3 id="rq-integration">RQ Integration</h3>
+<p>Lighter alternative to Celery:</p>
+<pre><code class="language-python"># researcharr/core/jobs/rq_queue.py
+class RQJobQueue(JobQueue):
+    &quot;&quot;&quot;Redis Queue based implementation.&quot;&quot;&quot;
+
+    def __init__(self, redis_url: str):
+        from rq import Queue
+        self.queue = Queue(connection=Redis.from_url(redis_url))
+</code></pre>
+<p>Benefits:
+- Simpler than Celery
+- Just needs Redis
+- Good Python integration</p>
+<p>Trade-offs:
+- Less feature-rich than Celery
+- Smaller ecosystem
+- Redis required</p>
+<h2 id="testing-strategy">Testing Strategy</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<ul>
+<li>Each interface implementation</li>
+<li>Worker lifecycle</li>
+<li>Retry logic</li>
+<li>Error handling</li>
+<li>Metrics collection</li>
+</ul>
+<h3 id="integration-tests">Integration Tests</h3>
+<ul>
+<li>End-to-end job submission → execution → result</li>
+<li>Database persistence</li>
+<li>Event publishing</li>
+<li>Worker scaling</li>
+<li>Concurrent job execution</li>
+</ul>
+<h3 id="performance-tests">Performance Tests</h3>
+<ul>
+<li>High throughput (1000+ jobs/second)</li>
+<li>Large jobs (100MB+ results)</li>
+<li>Many workers (50+)</li>
+<li>Long-running jobs (hours)</li>
+<li>Queue depth stress test</li>
+</ul>
+<h3 id="failure-tests">Failure Tests</h3>
+<ul>
+<li>Database connection loss</li>
+<li>Worker crashes mid-job</li>
+<li>Handler exceptions</li>
+<li>Timeout handling</li>
+<li>Dead letter queue overflow</li>
+</ul>
+<h2 id="success-metrics">Success Metrics</h2>
+<ul>
+<li><strong>Reliability</strong>: 99.9% job success rate (excluding expected failures)</li>
+<li><strong>Performance</strong>: &lt;100ms overhead per job (queue → execution)</li>
+<li><strong>Scalability</strong>: Linear scaling to 100+ workers</li>
+<li><strong>Observability</strong>: 100% of jobs tracked with status/progress</li>
+<li><strong>Recovery</strong>: Zero job loss on application restart</li>
+</ul>
+<h2 id="next-steps">Next Steps</h2>
+<ol>
+<li><strong>Review this design</strong> with team</li>
+<li><strong>Create GitHub issue</strong> for Phase 1 implementation</li>
+<li><strong>Set up project structure</strong> (<code>researcharr/core/jobs/</code>)</li>
+<li><strong>Implement Phase 1</strong> (Week 1 deliverables)</li>
+<li><strong>Write comprehensive tests</strong> as we build</li>
+<li><strong>Document API</strong> in real-time</li>
+</ol>
+<h2 id="questions-for-team-discussion">Questions for Team Discussion</h2>
+<ol>
+<li><strong>Queue backend</strong>: Start with in-memory or go straight to Redis?</li>
+<li><strong>Worker count</strong>: Default to CPU count or fixed number (e.g., 4)?</li>
+<li><strong>Result storage</strong>: Large results in DB or always use object storage?</li>
+<li><strong>Priority levels</strong>: Do we need more than 4 levels (LOW/NORMAL/HIGH/CRITICAL)?</li>
+<li><strong>Job TTL</strong>: Auto-delete completed jobs after N days?</li>
+<li><strong>Handler registration</strong>: Explicit registration or auto-discovery via decorators?</li>
+<li><strong>Distributed</strong>: Plan for multi-instance from day 1 or add later?</li>
+<li><strong>Monitoring</strong>: Build custom UI or integrate with existing tools (Flower, etc.)?</li>
+</ol>
+<hr />
+<p><strong>Document Status</strong>: Draft for review
+<strong>Next Review</strong>: Before Phase 1 implementation
+<strong>Owner</strong>: Development Team
+<strong>Related Issues</strong>: #109</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../../tooling-experiments/" class="btn btn-neutral float-left" title="Experimental Tooling: Sourcery & Vulture"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../../tooling-experiments/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

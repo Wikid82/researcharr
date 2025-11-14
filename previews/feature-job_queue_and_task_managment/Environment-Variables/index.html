@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="researcharr contributors" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Environment variables - researcharr</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/css/researcharr.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Environment variables";
+        var mkdocs_page_input_path = "Environment-Variables.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> researcharr
+        </a>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">researcharr documentation — Day One</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../API/">ResearchArr API (v1)</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Backup-and-Recovery/">Backup and Recovery Procedures</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CI-and-Development/">CI and Development</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CLI-Usage/">CLI Usage Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CONFIGURATION/">Configuration Reference</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Changelog/">Changelog</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Contributing/">Contributing to researcharr</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-CI-Local-Differences/">Coverage Differences: CI vs Local</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Example-Comparison/">Coverage Gutters Example Structure</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Quick-Reference/">Coverage Gutters - Quick Reference Card</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Quick-Start/">Coverage Gutters - Visual Quick Start Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Coverage-Gutters-Setup/">Coverage Gutters Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEV/">DEV</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Deployment-and-Resources/">Deployment and Resource Recommendations</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="./">Environment variables</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#required-important">Required / important</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#optional-runtime">Optional / runtime</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#production-server-performance-recommended-env-vars">Production server / performance (recommended env vars)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#notes-best-practices">Notes &amp; best practices</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#ci-related-variables-for-contributors">CI-related variables (for contributors)</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../FAQ/">FAQ</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Getting-Started/">Getting Started</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Health-and-Metrics/">Health and Metrics Endpoints</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Integrations/">Integrations</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../JOB_QUEUE_QUICKSTART/">Job Queue System - Quick Start Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Logs/">Logs and Live Streaming</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Packaging-and-Distribution/">Packaging and Distribution</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Plugins/">Plugins and instance configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Recent-Changes/">Recent Changes</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Renovate-Configuration/">Renovate Bot Configuration Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Roadmap/">Roadmap</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../SERVICES_ARCHITECTURE/">Services Architecture</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Status-and-Warnings/">System status warnings and how to fix them</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Versioning/">Versioning & Releases</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../WHEELHOUSE/">Wheelhouse (built wheels) workflow</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../tooling-experiments/">Experimental Tooling: Sourcery & Vulture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Architecture</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../architecture/JOB_QUEUE_DESIGN/">Job Queue and Task Management - Architecture Design</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">researcharr</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a> &raquo;</li>
+      <li class="breadcrumb-item active">Environment variables</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="environment-variables">Environment variables</h1>
+<p>This document lists runtime environment variables used by researcharr. Set these in your Docker Compose, systemd unit, or container run command before starting the service.</p>
+<h2 id="required-important">Required / important</h2>
+<ul>
+<li>PUID</li>
+<li>Default: <code>1000</code></li>
+<li>
+<p>Description: The UID to use for files created by the process when writing into mounted volumes. Must be an integer. If invalid, the app will fall back to <code>1000</code> and log a warning.</p>
+</li>
+<li>
+<p>PGID</p>
+</li>
+<li>Default: <code>1000</code></li>
+<li>
+<p>Description: The GID to use for files created by the process when writing into mounted volumes. Must be an integer. If invalid, the app will fall back to <code>1000</code> and log a warning.</p>
+</li>
+<li>
+<p>TIMEZONE</p>
+</li>
+<li>Default: <code>UTC</code></li>
+<li>Description: Timezone used for scheduling and display. Example: <code>Europe/London</code> or <code>America/Los_Angeles</code>.</li>
+</ul>
+<p>Notes on timezone handling</p>
+<ul>
+<li>The entrypoint attempts to set <code>/etc/localtime</code> to match the configured <code>TIMEZONE</code>. If the container runtime disallows modifying <code>/etc</code> (read-only image or non-root runtime), the entrypoint exports the <code>TZ</code> environment variable and writes the configured timezone into <code>/config/timezone</code> as a fallback. The application reads <code>TZ</code> and <code>/config/timezone</code> so scheduling and display remain correct even when <code>/etc/localtime</code> cannot be updated.</li>
+</ul>
+<h2 id="optional-runtime">Optional / runtime</h2>
+<ul>
+<li>LOGLEVEL</li>
+<li>Default: <code>INFO</code></li>
+<li>
+<p>Description: Controls the default log level for the web UI and background scheduler. Can still be adjusted at runtime through the General Settings page.</p>
+</li>
+<li>
+<p>WEBUI_DEV_DEBUG</p>
+</li>
+<li>Default: <code>false</code></li>
+<li>
+<p>Description: Development-only flag. When true, enables additional debug behavior in the web UI and local runtime (more verbose logging and developer-only endpoints). Do not enable in production.</p>
+</li>
+<li>
+<p>AUTO_GENERATE_WEBUI_CREDS</p>
+</li>
+<li>Default: <code>false</code></li>
+<li>
+<p>Description: Previously allowed the application to auto-generate an initial admin password and API token on first-run and persist their hashes to <code>webui_user.yml</code>. The application now persists web UI users to the configured database and no longer supports YAML fallback; prefer seeding credentials in the DB for automation.</p>
+</li>
+<li>
+<p>WEBUI_DEV_ENABLE_DEBUG_ENDPOINT</p>
+</li>
+<li>Default: <code>false</code></li>
+<li>
+<p>Description: Enables a development-only introspection endpoint (<code>/__debug_auth</code>) used by automated tests and developer tooling to exercise authentication flows. Disabled by default.</p>
+</li>
+<li>
+<p>APP_DEBUG / FLASK_DEBUG</p>
+</li>
+<li>Default: <code>false</code></li>
+<li>
+<p>Description: If any of <code>APP_DEBUG</code>, <code>FLASK_DEBUG</code>, or <code>WEBUI_DEV_DEBUG</code> is truthy, the run script will start Flask in debug mode (useful for local troubleshooting). This also increases scheduler logging verbosity. Do not enable on production hosts.</p>
+</li>
+<li>
+<p>WEBUI_PORT</p>
+</li>
+<li>Default: <code>2929</code></li>
+<li>
+<p>Description: TCP port the web UI binds to inside the container. Use <code>-p HOST:2929</code> in your <code>docker run</code> or configure a matching port mapping in Docker Compose.</p>
+</li>
+<li>
+<p>WEBUI_RESET_TOKEN</p>
+</li>
+<li>Default: not set</li>
+<li>
+<p>Description: If set, enables the unauthenticated reset-password web form. The reset form must include this token to perform password resets via the UI.</p>
+</li>
+<li>
+<p>SECRET_KEY</p>
+</li>
+<li>Default: not set (required in production)</li>
+<li>
+<p>Description: Cryptographic secret used by Flask to sign sessions and other secrets. Must be a long, random value in production. The application will refuse to start in production mode if this is not set.</p>
+</li>
+<li>
+<p>SESSION_COOKIE_SECURE</p>
+</li>
+<li>Default: <code>true</code></li>
+<li>
+<p>Description: If <code>true</code>, the session cookie will only be sent over HTTPS. Set to <code>false</code> only for local development without TLS.</p>
+</li>
+<li>
+<p>SESSION_COOKIE_HTTPONLY</p>
+</li>
+<li>Default: <code>true</code></li>
+<li>
+<p>Description: If <code>true</code>, the session cookie will not be accessible to JavaScript.</p>
+</li>
+<li>
+<p>SESSION_COOKIE_SAMESITE</p>
+</li>
+<li>Default: <code>Lax</code></li>
+<li>Description: Controls SameSite attribute of the session cookie. Typical values: <code>Lax</code>, <code>Strict</code>, <code>None</code>.</li>
+</ul>
+<h2 id="production-server-performance-recommended-env-vars">Production server / performance (recommended env vars)</h2>
+<ul>
+<li>WEB_CONCURRENCY / GUNICORN_WORKERS</li>
+<li>Default: not set (choose based on CPU)</li>
+<li>
+<p>Description: Number of Gunicorn worker processes to run.</p>
+</li>
+<li>
+<p>GUNICORN_THREADS</p>
+</li>
+<li>Default: not set</li>
+<li>
+<p>Description: Number of threads per Gunicorn worker when using the gthread worker class.</p>
+</li>
+<li>
+<p>GUNICORN_TIMEOUT</p>
+</li>
+<li>Default: 30</li>
+<li>Description: Request timeout for Gunicorn workers in seconds.</li>
+</ul>
+<h2 id="notes-best-practices">Notes &amp; best practices</h2>
+<ul>
+<li>Do not manage PUID/PGID via the web UI; they are intentionally sourced from environment variables so ownership is deterministic for mounted volumes.</li>
+<li>When running under Docker, set <code>PUID</code> and <code>PGID</code> to match the user on the host that owns the mounted path to avoid permission issues:</li>
+</ul>
+<pre><code class="language-yaml">services:
+  researcharr:
+    environment:
+      - PUID=1001
+      - PGID=1001
+      - TIMEZONE=Europe/London
+      - LOGLEVEL=INFO
+      - WEBUI_PORT=2929
+</code></pre>
+<ul>
+<li>After changing any environment variable, restart the container for changes to take effect.</li>
+</ul>
+<h2 id="ci-related-variables-for-contributors">CI-related variables (for contributors)</h2>
+<ul>
+<li>CODECOV_TOKEN — used by GitHub Actions to upload coverage to Codecov. Not required at runtime in containers.</li>
+</ul>
+<p>If you want a machine-readable copy of this list (JSON/YAML), ask and I will add one for automation or tests.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../Deployment-and-Resources/" class="btn btn-neutral float-left" title="Deployment and Resource Recommendations"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../FAQ/" class="btn btn-neutral float-right" title="FAQ">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../Deployment-and-Resources/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../FAQ/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

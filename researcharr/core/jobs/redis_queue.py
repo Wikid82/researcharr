@@ -141,8 +141,9 @@ class RedisJobQueue(JobQueue):
                 # Score = scheduled timestamp; separate ZSET for scheduled jobs
                 await pipe.zadd(self._key("scheduled"), {job_id_str: job.scheduled_at.timestamp()})
             else:
-                # Add to priority queue (score = priority * 1e9 - created_ts) for ordering
-                score = job.priority.value * 1e9 - job.created_at.timestamp()
+                # Priority scoring: lower score gets popped first via ZPOPMIN.
+                # Make higher priority => more negative score.
+                score = (-job.priority.value * 1e9) + job.created_at.timestamp()
                 priority_queue_key = self._key(f"queue:p{job.priority.value}")
                 await pipe.zadd(priority_queue_key, {job_id_str: score})
 
@@ -237,7 +238,7 @@ class RedisJobQueue(JobQueue):
                     job = JobDefinition.from_json(job_data)
                 except Exception:
                     continue
-                score = job.priority.value * 1e9 - datetime.now(UTC).timestamp()
+                score = (-job.priority.value * 1e9) + datetime.now(UTC).timestamp()
                 await pipe.zadd(self._key(f"queue:p{job.priority.value}"), {job_id_str: score})
             await pipe.execute()
 
@@ -310,7 +311,7 @@ class RedisJobQueue(JobQueue):
 
             # Requeue with delay
             retry_time = datetime.now(UTC).timestamp() + total_delay
-            score = job.priority.value * 1e9 - retry_time
+            score = (-job.priority.value * 1e9) + retry_time
 
             async with self._redis.pipeline(transaction=True) as pipe:
                 # Update status to RETRYING
@@ -566,7 +567,7 @@ class RedisJobQueue(JobQueue):
             await pipe.hset(self._key("status"), job_id_str, JobStatus.PENDING.value)
 
             # Add back to priority queue
-            score = job.priority.value * 1e9 - datetime.now(UTC).timestamp()
+            score = (-job.priority.value * 1e9) + datetime.now(UTC).timestamp()
             priority_queue_key = self._key(f"queue:p{job.priority.value}")
             await pipe.zadd(priority_queue_key, {job_id_str: score})
 

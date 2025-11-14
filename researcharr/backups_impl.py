@@ -37,7 +37,7 @@ def create_backup_file(
     # returning None. Several tests exercise this branch explicitly against
     # the implementation module (not just the package shim).
     if not config_root.exists() and not prefix:
-        raise Exception("config_root does not exist and no prefix provided")
+        raise FileNotFoundError("config_root does not exist and no prefix provided")
 
     try:
         backups_dir.mkdir(parents=True, exist_ok=True)
@@ -108,7 +108,7 @@ def create_backup_file(
                             if _env_true("RESEARCHARR_BACKUP_INCLUDE_WAL"):
                                 for suffix in ("-wal", "-shm"):
                                     wal = p.with_name(p.name + suffix)
-                                    if wal.exists() and wal.is_file():
+                                    if wal.is_file():
                                         try:
                                             zf.write(wal, arcname=str(Path("db") / wal.name))
                                         except Exception:  # nosec B110 -- intentional broad except for resilience
@@ -271,10 +271,10 @@ def restore_backup(backup_path: str | Path, restore_dir: str | Path) -> bool:
     # Destination must already exist; letting the exception propagate for
     # callers/tests that expect an exception when it does not.
     if not dest.exists() or not dest.is_dir():
-        raise Exception("restore destination does not exist")
+        raise FileNotFoundError("restore destination does not exist")
 
     if not zipfile.is_zipfile(str(p)):
-        raise Exception("invalid backup file")
+        raise ValueError("invalid backup file")
 
     with zipfile.ZipFile(str(p), "r") as zf:
         for member in zf.namelist():

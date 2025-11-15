@@ -15,6 +15,5 @@ APScheduler==3.11.1
 SQLAlchemy==2.0.44
 alembic==1.17.1
 redis==7.0.1
-sqlite3==3.46.1
 # Development/formatting/testing tools have been moved to
 # requirements-dev.txt so CI can install a minimal runtime by default.

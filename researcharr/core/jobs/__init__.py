@@ -7,8 +7,8 @@ Example:
 
     >>> job_service = JobService(queue, workers, event_bus, metrics)
     >>> job_service.register_handler('process_media', process_media_handler)
-    >>> job_id = await job_service.submit_job('process_media', args=(123,))
-    >>> result = await job_service.get_job_result(job_id)
+    >>> job_id = job_service.submit_job('process_media', args=(123,))
+    >>> result = job_service.get_job_result(job_id)
 """
 
 from .api import jobs_bp

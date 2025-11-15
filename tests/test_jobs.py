@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
+import time
+
 import os
 import uuid
 from datetime import UTC, datetime
@@ -16,7 +17,7 @@ from researcharr.core.jobs import (
     JobService,
     JobStatus,
 )
-from researcharr.core.jobs.async_worker import AsyncWorkerPool
+from researcharr.core.jobs.threaded_worker import ThreadedWorkerPool
 from researcharr.core.jobs.redis_queue import RedisJobQueue
 
 
@@ -34,62 +35,62 @@ def unique_prefix():
 
 
 @pytest.fixture
-async def redis_queue(redis_url, unique_prefix):
+def redis_queue(redis_url, unique_prefix):
     """Create and initialize a Redis queue for testing."""
     queue = RedisJobQueue(redis_url=redis_url, key_prefix=unique_prefix)
-    await queue.initialize()
+    queue.initialize()
     yield queue
     # Cleanup - purge all test jobs
-    await queue.purge()
-    await queue.shutdown()
+    queue.purge()
+    queue.shutdown()
 
 
 @pytest.fixture
-async def worker_pool(redis_queue):
+def worker_pool(redis_queue):
     """Create a worker pool for testing."""
-    pool = AsyncWorkerPool(queue=redis_queue)
+    pool = ThreadedWorkerPool(queue=redis_queue)
     yield pool
-    await pool.stop(graceful=False)
+    pool.stop(graceful=False)
 
 
 @pytest.fixture
-async def job_service(redis_url, unique_prefix):
+def job_service(redis_url, unique_prefix):
     """Create a job service for testing."""
     # Create queue with unique prefix to avoid test pollution
     queue = RedisJobQueue(redis_url=redis_url, key_prefix=unique_prefix)
-    await queue.initialize()
+    queue.initialize()
 
     # Create service with the queue
     service = JobService(queue=queue)
-    await service.initialize()
+    service.initialize()
     yield service
-    await service.purge_jobs()  # Cleanup
-    await service.shutdown()
+    service.purge_jobs()  # Cleanup
+    service.shutdown()
 
 
 # Test handlers
-async def simple_handler(job: JobDefinition, progress_callback):
+def simple_handler(job: JobDefinition, progress_callback):
     """Simple test handler that returns args."""
-    await asyncio.sleep(0.1)  # Simulate work
+    time.sleep(0.1)  # Simulate work
     return {"args": job.args, "kwargs": job.kwargs}
 
 
-async def failing_handler(job: JobDefinition, progress_callback):
+def failing_handler(job: JobDefinition, progress_callback):
     """Handler that always fails."""
     raise ValueError("Test error")
 
 
-async def slow_handler(job: JobDefinition, progress_callback):
+def slow_handler(job: JobDefinition, progress_callback):
     """Handler that takes a while."""
-    await asyncio.sleep(2.0)
+    time.sleep(2.0)
     return "completed"
 
 
-async def progress_handler(job: JobDefinition, progress_callback):
+def progress_handler(job: JobDefinition, progress_callback):
     """Handler that reports progress."""
     for i in range(5):
-        await progress_callback(i, 5, f"Step {i}")
-        await asyncio.sleep(0.1)
+        progress_callback(i, 5, f"Step {i}")
+        time.sleep(0.1)
     return "done"
 
 
@@ -148,11 +149,10 @@ class TestJobDefinition:
 
 
 # Integration tests with Redis
-@pytest.mark.asyncio
 class TestRedisQueue:
     """Test Redis queue implementation."""
 
-    async def test_submit_and_get_job(self, redis_queue):
+    def test_submit_and_get_job(self, redis_queue):
         """Test submitting and retrieving a job."""
         job = JobDefinition(
             handler="test.handler",
@@ -161,53 +161,53 @@ class TestRedisQueue:
         )
 
         # Submit
-        job_id = await redis_queue.submit(job)
+        job_id = redis_queue.submit(job)
         assert job_id == job.id
 
         # Get status
-        status = await redis_queue.get_status(job_id)
+        status = redis_queue.get_status(job_id)
         assert status == JobStatus.PENDING
 
         # Get next job
-        retrieved = await redis_queue.get_next("worker-1")
+        retrieved = redis_queue.get_next("worker-1")
         assert retrieved is not None
         assert retrieved.id == job.id
         assert retrieved.handler == job.handler
 
         # Status should be RUNNING now
-        status = await redis_queue.get_status(job_id)
+        status = redis_queue.get_status(job_id)
         assert status == JobStatus.RUNNING
 
-    async def test_job_priority(self, redis_queue):
+    def test_job_priority(self, redis_queue):
         """Test priority queue ordering."""
         # Submit jobs with different priorities
         low_job = JobDefinition(handler="test", priority=JobPriority.LOW)
         normal_job = JobDefinition(handler="test", priority=JobPriority.NORMAL)
         high_job = JobDefinition(handler="test", priority=JobPriority.HIGH)
 
-        await redis_queue.submit(low_job)
-        await redis_queue.submit(normal_job)
-        await redis_queue.submit(high_job)
+        redis_queue.submit(low_job)
+        redis_queue.submit(normal_job)
+        redis_queue.submit(high_job)
 
         # Should get high priority first
-        job1 = await redis_queue.get_next("worker-1")
+        job1 = redis_queue.get_next("worker-1")
         assert job1.id == high_job.id
 
         # Then normal
-        job2 = await redis_queue.get_next("worker-1")
+        job2 = redis_queue.get_next("worker-1")
         assert job2.id == normal_job.id
 
         # Then low
-        job3 = await redis_queue.get_next("worker-1")
+        job3 = redis_queue.get_next("worker-1")
         assert job3.id == low_job.id
 
-    async def test_complete_job(self, redis_queue):
+    def test_complete_job(self, redis_queue):
         """Test completing a job."""
         job = JobDefinition(handler="test.handler")
-        job_id = await redis_queue.submit(job)
+        job_id = redis_queue.submit(job)
 
         # Get and complete
-        await redis_queue.get_next("worker-1")
+        redis_queue.get_next("worker-1")
 
         result = JobResult(
             job_id=job_id,
@@ -217,131 +217,131 @@ class TestRedisQueue:
             completed_at=datetime.now(UTC),
         )
 
-        await redis_queue.complete(job_id, result)
+        redis_queue.complete(job_id, result)
 
         # Check status
-        status = await redis_queue.get_status(job_id)
+        status = redis_queue.get_status(job_id)
         assert status == JobStatus.COMPLETED
 
         # Get result
-        retrieved_result = await redis_queue.get_result(job_id)
+        retrieved_result = redis_queue.get_result(job_id)
         assert retrieved_result is not None
         assert retrieved_result.status == JobStatus.COMPLETED
 
-    async def test_fail_and_retry(self, redis_queue):
+    def test_fail_and_retry(self, redis_queue):
         """Test job failure and retry."""
         job = JobDefinition(
             handler="test.handler",
             max_retries=2,
             retry_delay=0.1,
         )
-        job_id = await redis_queue.submit(job)
+        job_id = redis_queue.submit(job)
 
         # Get job
-        await redis_queue.get_next("worker-1")
+        redis_queue.get_next("worker-1")
 
         # Fail with retry
-        await redis_queue.fail(job_id, "Test error", retry=True)
+        redis_queue.fail(job_id, "Test error", retry=True)
 
         # Status should be RETRYING
-        status = await redis_queue.get_status(job_id)
+        status = redis_queue.get_status(job_id)
         assert status == JobStatus.RETRYING
 
         # Should be able to get it again after delay
-        await asyncio.sleep(0.2)
-        retried_job = await redis_queue.get_next("worker-1")
+        time.sleep(0.2)
+        retried_job = redis_queue.get_next("worker-1")
         assert retried_job is not None
         assert retried_job.id == job_id
 
-    async def test_dead_letter_queue(self, redis_queue):
+    def test_dead_letter_queue(self, redis_queue):
         """Test dead letter queue for exhausted retries."""
         job = JobDefinition(
             handler="test.handler",
             max_retries=1,
         )
-        job_id = await redis_queue.submit(job)
+        job_id = redis_queue.submit(job)
 
         # Fail twice (exceeds max_retries)
-        await redis_queue.get_next("worker-1")
-        await redis_queue.fail(job_id, "Error 1", retry=True)
+        redis_queue.get_next("worker-1")
+        redis_queue.fail(job_id, "Error 1", retry=True)
 
-        await asyncio.sleep(0.1)
-        await redis_queue.get_next("worker-1")
-        await redis_queue.fail(job_id, "Error 2", retry=True)
+        time.sleep(0.1)
+        redis_queue.get_next("worker-1")
+        redis_queue.fail(job_id, "Error 2", retry=True)
 
         # Should be in dead letter queue
-        status = await redis_queue.get_status(job_id)
+        status = redis_queue.get_status(job_id)
         assert status == JobStatus.DEAD_LETTER
 
         # Get dead letters
-        dead_letters = await redis_queue.get_dead_letters()
+        dead_letters = redis_queue.get_dead_letters()
         assert len(dead_letters) >= 1
         assert any(j.id == job_id for j in dead_letters)
 
-    async def test_requeue_dead_letter(self, redis_queue):
+    def test_requeue_dead_letter(self, redis_queue):
         """Test requeuing a dead letter job."""
         job = JobDefinition(handler="test.handler", max_retries=1)
-        job_id = await redis_queue.submit(job)
+        job_id = redis_queue.submit(job)
 
         # Move to dead letter
-        await redis_queue.get_next("worker-1")
-        await redis_queue.fail(job_id, "Error 1", retry=True)
-        await asyncio.sleep(0.1)
-        await redis_queue.get_next("worker-1")
-        await redis_queue.fail(job_id, "Error 2", retry=True)
+        redis_queue.get_next("worker-1")
+        redis_queue.fail(job_id, "Error 1", retry=True)
+        time.sleep(0.1)
+        redis_queue.get_next("worker-1")
+        redis_queue.fail(job_id, "Error 2", retry=True)
 
-        assert await redis_queue.get_status(job_id) == JobStatus.DEAD_LETTER
+        assert redis_queue.get_status(job_id) == JobStatus.DEAD_LETTER
 
         # Requeue
-        requeued = await redis_queue.requeue_dead_letter(job_id)
+        requeued = redis_queue.requeue_dead_letter(job_id)
         assert requeued is True
 
         # Should be pending again
-        status = await redis_queue.get_status(job_id)
+        status = redis_queue.get_status(job_id)
         assert status == JobStatus.PENDING
 
-    async def test_cancel_job(self, redis_queue):
+    def test_cancel_job(self, redis_queue):
         """Test cancelling a pending job."""
         job = JobDefinition(handler="test.handler")
-        job_id = await redis_queue.submit(job)
+        job_id = redis_queue.submit(job)
 
         # Cancel
-        cancelled = await redis_queue.cancel(job_id)
+        cancelled = redis_queue.cancel(job_id)
         assert cancelled is True
 
         # Status should be cancelled
-        status = await redis_queue.get_status(job_id)
+        status = redis_queue.get_status(job_id)
         assert status == JobStatus.CANCELLED
 
         # Should not get this job
-        next_job = await redis_queue.get_next("worker-1")
+        next_job = redis_queue.get_next("worker-1")
         assert next_job is None
 
-    async def test_list_jobs(self, redis_queue):
+    def test_list_jobs(self, redis_queue):
         """Test listing jobs."""
         # Submit multiple jobs
         jobs = [JobDefinition(handler=f"test.handler{i}") for i in range(5)]
         for job in jobs:
-            await redis_queue.submit(job)
+            redis_queue.submit(job)
 
         # List all
-        all_jobs = await redis_queue.list_jobs()
+        all_jobs = redis_queue.list_jobs()
         assert len(all_jobs) >= 5
 
         # List by status
-        pending_jobs = await redis_queue.list_jobs(status=JobStatus.PENDING)
+        pending_jobs = redis_queue.list_jobs(status=JobStatus.PENDING)
         assert len(pending_jobs) >= 5
 
-    async def test_metrics(self, redis_queue):
+    def test_metrics(self, redis_queue):
         """Test queue metrics."""
         # Submit some jobs
         job1 = JobDefinition(handler="test.handler1")
         job2 = JobDefinition(handler="test.handler2")
 
-        await redis_queue.submit(job1)
-        await redis_queue.submit(job2)
+        redis_queue.submit(job1)
+        redis_queue.submit(job2)
 
-        metrics = await redis_queue.get_metrics()
+        metrics = redis_queue.get_metrics()
 
         assert "pending" in metrics
         assert "running" in metrics
@@ -349,20 +349,19 @@ class TestRedisQueue:
         assert metrics["pending"] >= 2
 
 
-@pytest.mark.asyncio
 class TestJobService:
     """Test JobService integration."""
 
-    async def test_submit_and_execute_job(self, job_service):
+    def test_submit_and_execute_job(self, job_service):
         """Test end-to-end job submission and execution."""
         # Register handler
         job_service.register_handler("simple_test", simple_handler)
 
         # Start workers
-        await job_service.start_workers(count=1)
+        job_service.start_workers(count=1)
 
         # Submit job
-        job_id = await job_service.submit_job(
+        job_id = job_service.submit_job(
             "simple_test",
             args=(1, 2, 3),
             kwargs={"key": "value"},
@@ -370,24 +369,24 @@ class TestJobService:
 
         # Wait for completion
         for _ in range(50):  # Max 5 seconds
-            status = await job_service.get_job_status(job_id)
+            status = job_service.get_job_status(job_id)
             if status == JobStatus.COMPLETED:
                 break
-            await asyncio.sleep(0.1)
+            time.sleep(0.1)
 
         # Check result
-        result = await job_service.get_job_result(job_id)
+        result = job_service.get_job_result(job_id)
         assert result is not None
         assert result.status == JobStatus.COMPLETED
         assert result.result["args"] == [1, 2, 3]
         assert result.result["kwargs"] == {"key": "value"}
 
-    async def test_failing_job_retry(self, job_service):
+    def test_failing_job_retry(self, job_service):
         """Test that failing jobs are retried."""
         job_service.register_handler("failing_test", failing_handler)
-        await job_service.start_workers(count=1)
+        job_service.start_workers(count=1)
 
-        job_id = await job_service.submit_job(
+        job_id = job_service.submit_job(
             "failing_test",
             max_retries=2,
             retry_delay=0.1,
@@ -395,43 +394,43 @@ class TestJobService:
 
         # Wait for job to fail completely
         for _ in range(50):
-            status = await job_service.get_job_status(job_id)
+            status = job_service.get_job_status(job_id)
             if status == JobStatus.DEAD_LETTER:
                 break
-            await asyncio.sleep(0.1)
+            time.sleep(0.1)
 
         # Should be in dead letter queue
-        status = await job_service.get_job_status(job_id)
+        status = job_service.get_job_status(job_id)
         assert status == JobStatus.DEAD_LETTER
 
-        dead_letters = await job_service.get_dead_letters()
+        dead_letters = job_service.get_dead_letters()
         assert len(dead_letters) >= 1
 
-    async def test_get_metrics(self, job_service):
+    def test_get_metrics(self, job_service):
         """Test getting service metrics."""
-        await job_service.start_workers(count=2)
+        job_service.start_workers(count=2)
 
-        metrics = await job_service.get_metrics()
+        metrics = job_service.get_metrics()
 
         assert "queue" in metrics
         assert "workers" in metrics
         assert metrics["workers"]["total"] == 2
 
-    async def test_scale_workers(self, job_service):
+    def test_scale_workers(self, job_service):
         """Test scaling workers."""
-        await job_service.start_workers(count=2)
+        job_service.start_workers(count=2)
 
-        workers = await job_service.get_workers()
+        workers = job_service.get_workers()
         assert len(workers) == 2
 
         # Scale up
-        await job_service.scale_workers(4)
-        workers = await job_service.get_workers()
+        job_service.scale_workers(4)
+        workers = job_service.get_workers()
         assert len(workers) == 4
 
         # Scale down
-        await job_service.scale_workers(1)
-        workers = await job_service.get_workers()
+        job_service.scale_workers(1)
+        workers = job_service.get_workers()
         assert len(workers) == 1
 
 

@@ -70,8 +70,8 @@ class WorkerPool(ABC):
     """Abstract interface for managing worker processes.
 
     Implementations can be:
-    - Local: Asyncio tasks in same process
-    - Multi-process: Worker processes on same host
+    - Local: Thread-based workers in the current process
+    - Multi-process: Worker processes on the same host
     - Distributed: Workers across multiple hosts
     """
 

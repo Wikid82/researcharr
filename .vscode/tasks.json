@@ -42,6 +42,43 @@
             "detail": "Runs the current test file with coverage and a timeout (defaults to 20m)."
         },
 
+        // Coverage: single-process runs for reliable end-of-run combine
+        {
+            "label": "Run Coverage (Single Process Timeout)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-lc",
+                "source ${workspaceFolder}/.venv/bin/activate && timeout ${PYTEST_TIMEOUT:-1800}s python -m pytest tests/ -o addopts=\"\" -v --log-file=pytest.log --log-file-mode=a --randomly-seed=42 --randomly-dont-reorganize -m \"not webui\" --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml -p no:xdist"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "detail": "Runs coverage in a single process (disables xdist) with a timeout for reliable coverage combine."
+        },
+        {
+            "label": "Run Coverage (Single Process Debug)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-lc",
+                "source ${workspaceFolder}/.venv/bin/activate && timeout ${PYTEST_TIMEOUT:-2400}s python -m pytest tests/ -o addopts=\"\" -v --log-file=pytest.log --log-file-mode=a --randomly-seed=42 --randomly-dont-reorganize -m \"not webui\" --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml -p no:xdist 2>&1 | tee coverage-debug.log"
+            ],
+            "options": {
+                "env": {
+                    "COVERAGE_DEBUG": "process,config,dataio"
+                }
+            },
+            "group": {
+                "kind": "test",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "detail": "Single-process coverage with COVERAGE_DEBUG to triage end-of-run combine issues."
+        },
+
         // Docker Compose (feature compose)
         {
             "label": "Docker Compose Pull (feat)",

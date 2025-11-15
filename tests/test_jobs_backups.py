@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import time
-
 import os
+import time
 from pathlib import Path
 from uuid import uuid4
 
@@ -88,8 +87,7 @@ def test_backup_restore_job(job_service, temp_config_root):
     restore_res = job_service.get_job_result(restore_id)
     # Restore may fail or succeed depending on DB state
     assert (
-        restore_res is not None
-        or job_service.get_job_status(restore_id) == JobStatus.DEAD_LETTER
+        restore_res is not None or job_service.get_job_status(restore_id) == JobStatus.DEAD_LETTER
     )
     assert restore_res.status == JobStatus.COMPLETED
     assert settings_path.exists()

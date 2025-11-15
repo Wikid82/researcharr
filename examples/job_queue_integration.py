@@ -101,6 +101,7 @@ def setup_job_service(redis_url: str = "redis://localhost:6379/0") -> JobService
 def integrate_with_scheduler(job_service: JobService, scheduler: Any) -> None:
     """Integrate job queue with APScheduler."""
     from apscheduler.triggers.cron import CronTrigger
+
     from researcharr.config import get_config
 
     def submit_daily_backup() -> None:

@@ -380,9 +380,7 @@ class TestJobCancellation:
         assert event_name == "job.cancelled"
         assert event_data["job_id"] == str(job_id)
 
-    def test_cancel_job_no_event_when_failed(
-        self, mock_queue, mock_worker_pool, mock_event_bus
-    ):
+    def test_cancel_job_no_event_when_failed(self, mock_queue, mock_worker_pool, mock_event_bus):
         """Test that failed cancellation doesn't publish event."""
         service = JobService(
             queue=mock_queue,

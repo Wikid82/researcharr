@@ -9,9 +9,9 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from .threaded_worker import ThreadedWorkerPool
 from .queue import JobQueue
 from .redis_queue import RedisJobQueue
+from .threaded_worker import ThreadedWorkerPool
 from .types import JobDefinition, JobPriority, JobResult, JobStatus
 from .worker import WorkerPool
 

@@ -11,9 +11,9 @@ from datetime import datetime
 from functools import wraps
 from uuid import UUID
 
-from flask import Blueprint, current_app, jsonify, request
 from werkzeug.security import check_password_hash
 
+from flask import Blueprint, current_app, jsonify, request
 from researcharr.core.jobs.types import JobPriority, JobResult, JobStatus
 
 logger = logging.getLogger(__name__)

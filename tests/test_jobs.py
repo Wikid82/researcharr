@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import time
-
 import os
+import time
 import uuid
 from datetime import UTC, datetime
 
@@ -17,8 +16,8 @@ from researcharr.core.jobs import (
     JobService,
     JobStatus,
 )
-from researcharr.core.jobs.threaded_worker import ThreadedWorkerPool
 from researcharr.core.jobs.redis_queue import RedisJobQueue
+from researcharr.core.jobs.threaded_worker import ThreadedWorkerPool
 
 
 # Test fixtures

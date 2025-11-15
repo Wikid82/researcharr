@@ -73,14 +73,14 @@ class ThreadedWorker:
         self._stop_event.clear()
 
         # Start worker thread
-        self._thread = threading.Thread(target=self._run_loop, name=f"worker-{self.worker_id}", daemon=True)
+        self._thread = threading.Thread(
+            target=self._run_loop, name=f"worker-{self.worker_id}", daemon=True
+        )
         self._thread.start()
 
         # Start heartbeat thread
         self._heartbeat_thread = threading.Thread(
-            target=self._heartbeat_loop,
-            name=f"heartbeat-{self.worker_id}",
-            daemon=True
+            target=self._heartbeat_loop, name=f"heartbeat-{self.worker_id}", daemon=True
         )
         self._heartbeat_thread.start()
 
@@ -360,22 +360,31 @@ class ThreadedWorkerPool(WorkerPool):
         Args:
             target_count: Desired number of workers
         """
+        # Determine scaling action without calling into lock-acquiring methods while holding the lock
         with self._lock:
             current_count = len(self._workers)
-
             if target_count == current_count:
+                logger.info("Scaled worker pool from %d to %d", current_count, target_count)
                 return
 
-            if target_count > current_count:
-                # Scale up
-                self.start(target_count - current_count)
-            else:
-                # Scale down
+            scale_up_by = target_count - current_count if target_count > current_count else 0
+            workers_to_stop = []
+            if target_count < current_count:
                 stop_count = current_count - target_count
+                # Snapshot the workers to stop while holding the lock
                 workers_to_stop = list(self._workers.values())[:stop_count]
 
+        # Perform operations that may block outside the lock
+        if scale_up_by > 0:
+            # start() acquires the lock internally; call it outside to avoid deadlocks
+            self.start(scale_up_by)
+        elif workers_to_stop:
+            # Stop selected workers outside the lock to allow their threads to join cleanly
+            for worker in workers_to_stop:
+                worker.stop(graceful=True)
+            # Remove stopped workers from registry
+            with self._lock:
                 for worker in workers_to_stop:
-                    worker.stop(graceful=True)
                     self._workers.pop(worker.worker_id, None)
 
         logger.info(f"Scaled worker pool from {current_count} to {target_count}")

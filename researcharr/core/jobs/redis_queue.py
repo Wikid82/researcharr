@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import logging
 import random
+from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 try:
@@ -181,9 +182,10 @@ class RedisJobQueue(JobQueue):
             # Atomically get and remove highest priority job (lowest score)
             # Use ZPOPMIN for atomic pop
             result = self._redis.zpopmin(priority_queue_key, count=1)
+            result_seq = cast(Sequence[tuple[bytes | str, float]], result)
 
-            if result:
-                job_id_str, _score = result[0]
+            if result_seq:
+                job_id_str, _score = result_seq[0]
                 if isinstance(job_id_str, bytes):
                     job_id_str = job_id_str.decode("utf-8")
 
@@ -221,10 +223,11 @@ class RedisJobQueue(JobQueue):
         now_ts = datetime.now(UTC).timestamp()
         # Fetch due job IDs
         due = self._redis.zrangebyscore(self._key("scheduled"), 0, now_ts, start=0, num=batch)
-        if not due:
+        due_ids = cast(Sequence[bytes | str], due)
+        if not due_ids:
             return None
         with self._redis.pipeline(transaction=True) as pipe:
-            for raw_id in due:
+            for raw_id in due_ids:
                 job_id_str = raw_id.decode("utf-8") if isinstance(raw_id, bytes) else raw_id
                 # Remove from scheduled set
                 pipe.zrem(self._key("scheduled"), job_id_str)
@@ -299,7 +302,7 @@ class RedisJobQueue(JobQueue):
 
         # Get current attempt count
         attempts_key = self._key(f"attempts:{job_id_str}")
-        attempts = self._redis.incr(attempts_key)
+        attempts = cast(int, self._redis.incr(attempts_key))
 
         should_retry = retry and attempts <= job.max_retries
 
@@ -490,7 +493,9 @@ class RedisJobQueue(JobQueue):
         # Get job data
         jobs = []
         if job_ids := job_ids[offset : offset + limit]:
-            job_data_list = self._redis.hmget(self._key("data"), *job_ids)
+            job_data_list = cast(
+                Sequence[bytes | None], self._redis.hmget(self._key("data"), *job_ids)
+            )
             for job_data in job_data_list:
                 if job_data:
                     decoded_data = (
@@ -513,12 +518,16 @@ class RedisJobQueue(JobQueue):
             raise ConnectionError("Redis connection not initialized")
 
         # Get job IDs from dead letter list
-        job_ids = self._redis.lrange(self._key("dead_letter"), 0, limit - 1)
+        job_ids = cast(
+            Sequence[bytes | str], self._redis.lrange(self._key("dead_letter"), 0, limit - 1)
+        )
 
         # Get job data
         jobs = []
         if job_ids:
-            job_data_list = self._redis.hmget(self._key("data"), *job_ids)
+            job_data_list = cast(
+                Sequence[bytes | None], self._redis.hmget(self._key("data"), *job_ids)
+            )
             for job_data in job_data_list:
                 if job_data:
                     decoded_data = (
@@ -607,7 +616,7 @@ class RedisJobQueue(JobQueue):
             return 0
 
         # Get job priorities for queue cleanup
-        job_data_list = self._redis.hmget(self._key("data"), *job_ids)
+        job_data_list = cast(Sequence[bytes | None], self._redis.hmget(self._key("data"), *job_ids))
         priority_sets = {}
         for job_id, data in zip(job_ids, job_data_list, strict=False):
             if data:
@@ -671,7 +680,9 @@ class RedisJobQueue(JobQueue):
             "metrics:dead_letter",
             "metrics:cancelled",
         ]
-        metrics_values = self._redis.mget([self._key(k) for k in metrics_keys])
+        metrics_values = cast(
+            Sequence[bytes | None], self._redis.mget([self._key(k) for k in metrics_keys])
+        )
 
         submitted = int(metrics_values[0] or 0)
         completed = int(metrics_values[1] or 0)

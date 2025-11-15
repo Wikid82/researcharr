@@ -557,7 +557,6 @@ class CoreApplicationFactory:
         workers started. Failures are logged but do not block application
         startup.
         """
-        import asyncio
         import os
 
         from .events import get_event_bus
@@ -579,24 +578,21 @@ class CoreApplicationFactory:
         redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
         try:
             svc = JobService(redis_url=redis_url, event_bus=get_event_bus())
+            svc.initialize()
+            register_backup_job_handlers(svc)
 
-            async def _init():
-                await svc.initialize()
-                register_backup_job_handlers(svc)
-                # Use CPU count default; minimal floor of 1
-                try:
-                    import os as _os
+            try:
+                import os as _os
 
-                    count = (
-                        max(1, len(os.sched_getaffinity(0)))
-                        if hasattr(os, "sched_getaffinity")
-                        else (_os.cpu_count() or 1)
-                    )
-                except Exception:
-                    count = 1
-                await svc.start_workers(count=count)
+                count = (
+                    max(1, len(os.sched_getaffinity(0)))
+                    if hasattr(os, "sched_getaffinity")
+                    else (_os.cpu_count() or 1)
+                )
+            except Exception:
+                count = 1
 
-            asyncio.run(_init())
+            svc.start_workers(count=count)
             app.job_service = svc  # type: ignore[attr-defined]
         except Exception:  # nosec B110 - resilience; job queue optional
             try:

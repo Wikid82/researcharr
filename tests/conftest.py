@@ -603,6 +603,25 @@ def db_session(temp_db):
         engine.dispose()
 
 
+@pytest.fixture(scope="session", autouse=True)
+def force_coverage_cleanup():
+    """Force garbage collection after test session to close coverage.py SQLite connections.
+
+    Python 3.13 + coverage.py 7.0.0 can leave SQLite connections open during parallel
+    test execution (pytest-xdist), causing ResourceWarnings and potential hangs during
+    test cleanup. This fixture forces garbage collection after all tests complete,
+    ensuring coverage.py's internal .coverage database connections are properly closed.
+
+    See: https://github.com/nedbat/coveragepy/issues/1736
+    """
+    yield
+    import gc
+
+    # Force multiple GC passes to ensure all finalizers run
+    gc.collect()
+    gc.collect()
+
+
 @pytest.fixture(autouse=True, scope="function")
 def restore_researcharr_create_metrics_app():
     """Autouse fixture: backup and restore researcharr.create_metrics_app.

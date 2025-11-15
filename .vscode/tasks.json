@@ -1,6 +1,48 @@
 {
     "version": "2.0.0",
     "tasks": [
+        // Tests: timeout variants
+        {
+            "label": "Run Tests with Coverage (Timeout)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "SITE_PACKAGES=$(python -c 'import sysconfig; print(sysconfig.get_paths()[\"purelib\"])') && export PYTHONPATH=\"$SITE_PACKAGES:$PYTHONPATH\" && timeout ${PYTEST_TIMEOUT:-1800}s python -m pytest tests/ --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml -v"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "detail": "Runs pytest with coverage and a timeout (defaults to 30m via PYTEST_TIMEOUT)."
+        },
+        {
+            "label": "Run Tests (Quick) (Timeout)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "timeout ${PYTEST_TIMEOUT:-900}s python -m pytest tests/ -v"
+            ],
+            "group": "test",
+            "problemMatcher": [],
+            "detail": "Quick test run with a timeout (defaults to 15m)."
+        },
+        {
+            "label": "Run Current Test File with Coverage (Timeout)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "SITE_PACKAGES=$(python -c 'import sysconfig; print(sysconfig.get_paths()[\"purelib\"])') && export PYTHONPATH=\"$SITE_PACKAGES:$PYTHONPATH\" && timeout ${PYTEST_TIMEOUT:-1200}s python -m pytest ${file} --cov=researcharr --cov-report=term-missing --cov-report=html --cov-report=xml -v"
+            ],
+            "group": "test",
+            "problemMatcher": [],
+            "detail": "Runs the current test file with coverage and a timeout (defaults to 20m)."
+        },
+
+        // Docker Compose (feature compose)
         {
             "label": "Docker Compose Pull (feat)",
             "type": "shell",
@@ -78,6 +120,8 @@
             "problemMatcher": [],
             "detail": "Stops running containers without removing them (feature compose)."
         },
+
+        // Tests: local/CI coverage modes
         {
             "label": "Run Tests with Coverage",
             "type": "shell",
@@ -144,8 +188,9 @@
             },
             "problemMatcher": [],
             "detail": "Runs pytest with coverage using local source (higher coverage, ~64% vs CI's 59%)."
-        }
-        ,
+        },
+
+        // Dockerized test runs
         {
             "label": "Run Tests (Python 3.10 Docker)",
             "type": "shell",
@@ -178,6 +223,8 @@
             "problemMatcher": [],
             "detail": "Run a subset of tests (prompt for paths) under Python 3.10 via docker."
         },
+
+        // CI helpers
         {
             "label": "CI: Multi-Version Test (Quick)",
             "type": "shell",
@@ -249,6 +296,8 @@
             "problemMatcher": [],
             "detail": "Run local CI checks without Docker/Trivy (fast pre-commit check)."
         },
+
+        // Pre-commit and combined flows
         {
             "label": "Pre-commit + Coverage (Local)",
             "type": "shell",
@@ -272,7 +321,10 @@
             "label": "Pre-commit + Coverage (CI Mode)",
             "type": "shell",
             "command": "bash",
-            "args": ["scripts/run_precommit.sh", "--with-tests"],
+            "args": [
+                "scripts/run_precommit.sh",
+                "--with-tests"
+            ],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -283,8 +335,7 @@
             },
             "problemMatcher": [],
             "detail": "Run pre-commit + pytest with CI-like PYTHONPATH via wrapper script (robust quoting)."
-        }
-        ,
+        },
         {
             "label": "Pre-commit (CI Smoke)",
             "type": "shell",
@@ -304,6 +355,8 @@
             "problemMatcher": [],
             "detail": "Run pre-commit hooks then CI-mode smoke tests (fast, mimics CI import path)."
         },
+
+        // Linters, formatters, type checking
         {
             "label": "Ruff: Check",
             "type": "shell",
@@ -375,8 +428,9 @@
             },
             "problemMatcher": [],
             "detail": "Run basedpyright type checker (uses wrapper script to find based-pyright/pyright/npx)."
-        }
-        ,
+        },
+
+        // Utilities
         {
             "label": "Format YAML (Prettier)",
             "type": "shell",
@@ -394,8 +448,9 @@
             },
             "problemMatcher": [],
             "detail": "Run Prettier to format YAML files"
-        }
-        ,
+        },
+
+        // Sourcery
         {
             "label": "Sourcery: Analyze",
             "type": "shell",
@@ -416,8 +471,7 @@
             },
             "problemMatcher": [],
             "detail": "Runs Sourcery CLI over a path without wiring it into CI (requires sourcery-cli + token)."
-        }
-        ,
+        },
         {
             "label": "Sourcery: Review & Fix",
             "type": "shell",
@@ -438,8 +492,9 @@
             },
             "problemMatcher": [],
             "detail": "Runs Sourcery with --fix to apply suggestions to the given scope."
-        }
-        ,
+        },
+
+        // Dead code
         {
             "label": "Vulture: Dead Code Scan",
             "type": "shell",
@@ -458,8 +513,6 @@
             "problemMatcher": [],
             "detail": "Runs Vulture locally to list potential dead code (optional experiment)."
         }
-
-
     ],
     "inputs": [
         {

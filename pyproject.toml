@@ -242,14 +242,6 @@ ignore = [
     "PLC0415",  # lazy imports
 ]
 
-"researcharr/async_pipeline.py" = [
-    "PLC0415",  # lazy imports for optional dependencies
-    "PLR0915",  # pipeline stage functions necessarily large
-    "B904",     # intentional exception wrapping
-    "B028",     # warnings without stacklevel acceptable
-    "N806",     # Prometheus metric constants acceptable
-]
-
 "researcharr/backups.py" = [
     "PLC0415",  # lazy imports
     "B008",     # id() in default arg is intentional for finalizer

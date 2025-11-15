@@ -100,7 +100,7 @@ class JobService:
 
         Args:
             name: Handler name (e.g., 'process_media')
-            handler: Async callable(job: JobDefinition, progress: Callable)
+            handler: Callable(job: JobDefinition, progress: Callable)
 
         Example:
             def process_media(job: JobDefinition, progress: Callable):

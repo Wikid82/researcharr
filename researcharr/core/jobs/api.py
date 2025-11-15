@@ -5,16 +5,16 @@ This module provides REST API endpoints for managing the job queue system.
 
 from __future__ import annotations
 
-import inspect
 import logging
+from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from functools import wraps
 from uuid import UUID
 
+from flask import Blueprint, current_app, jsonify, request
 from werkzeug.security import check_password_hash
 
-from flask import Blueprint, current_app, jsonify, request
-from researcharr.core.jobs.types import JobPriority, JobStatus
+from researcharr.core.jobs.types import JobPriority, JobResult, JobStatus
 
 logger = logging.getLogger(__name__)
 
@@ -23,26 +23,18 @@ jobs_bp = Blueprint("jobs_api", __name__)
 
 
 def require_auth(func):
-    """Decorator that requires either valid API key or web session.
-
-    Works with both sync and async view functions; always returns an async wrapper
-    for uniform behavior under Flask 3's async support.
-    """
+    """Decorator that enforces API key or authenticated session."""
 
     @wraps(func)
     def wrapped(*args, **kwargs):  # type: ignore
-        # Session-based auth
         if hasattr(current_app, "session_get") and current_app.session_get("logged_in"):
-            result = func(*args, **kwargs)
-            return result if inspect.isawaitable(result) else result
+            return func(*args, **kwargs)
 
-        # API key auth
         api_key = request.headers.get("X-API-Key")
         if api_key:
             stored_key = getattr(current_app, "config_data", {}).get("api_key")
             if stored_key and check_password_hash(stored_key, api_key):
-                result = func(*args, **kwargs)
-                return result if inspect.isawaitable(result) else result
+                return func(*args, **kwargs)
 
         return jsonify({"error": "unauthorized"}), 401
 
@@ -78,10 +70,9 @@ def list_jobs():
         limit = int(request.args.get("limit", 100))
         offset = int(request.args.get("offset", 0))
 
-        # Get jobs from service (would need to make this async-aware or use sync wrapper)
-        # For now, return mock data structure
         jobs = service.list_jobs(status=status, limit=limit, offset=offset)
-        return jsonify({"jobs": jobs, "total": len(jobs)})
+        jobs_payload = [job.to_dict() for job in jobs]
+        return jsonify({"jobs": jobs_payload, "total": len(jobs_payload)})
 
     except (ValueError, KeyError) as e:
         return jsonify({"error": f"Invalid parameter: {e}"}), 400
@@ -130,8 +121,6 @@ def submit_job():
         max_retries = data.get("max_retries", 3)
         timeout = data.get("timeout")
 
-        # Submit job (would need async wrapper)
-        # Submit actual job
         job_id = service.submit_job(
             handler,
             args=args,
@@ -172,15 +161,14 @@ def get_job(job_id: str):
         except ValueError:
             return jsonify({"error": "Invalid job ID format"}), 400
 
-        # Get job status and result
-        # status = service.get_job_status(uuid_id)
-        # result = service.get_job_result(uuid_id)
+        status = service.get_job_status(uuid_id)
+        result = service.get_job_result(uuid_id)
 
         return jsonify(
             {
                 "job_id": job_id,
-                "status": "placeholder",
-                "result": None,
+                "status": status.value if status else None,
+                "result": result.to_dict() if isinstance(result, JobResult) else None,
             }
         )
 
@@ -203,8 +191,7 @@ def cancel_job(job_id: str):
         except ValueError:
             return jsonify({"error": "Invalid job ID format"}), 400
 
-        # cancelled = service.cancel_job(uuid_id)
-        cancelled = False
+        cancelled = service.cancel_job(uuid_id)
 
         if cancelled:
             return jsonify({"job_id": job_id, "status": "cancelled"})
@@ -217,7 +204,7 @@ def cancel_job(job_id: str):
 
 @jobs_bp.route("/jobs/dead-letters", methods=["GET"])
 @require_auth
-async def get_dead_letters():
+def get_dead_letters():
     """Get permanently failed jobs."""
     service, error_resp, code = get_job_service()
     if error_resp:
@@ -225,9 +212,10 @@ async def get_dead_letters():
 
     try:
         limit = int(request.args.get("limit", 100))
-        # dead_letters = service.get_dead_letters(limit=limit)
+        dead_letters = service.get_dead_letters(limit=limit)
+        payload = [job.to_dict() for job in dead_letters]
 
-        return jsonify({"jobs": [], "total": 0})
+        return jsonify({"jobs": payload, "total": len(payload)})
 
     except Exception as e:
         logger.exception("Error getting dead letters")
@@ -236,7 +224,7 @@ async def get_dead_letters():
 
 @jobs_bp.route("/jobs/dead-letters/<job_id>", methods=["POST"])
 @require_auth
-async def retry_dead_letter(job_id: str):
+def retry_dead_letter(job_id: str):
     """Retry a permanently failed job."""
     service, error_resp, code = get_job_service()
     if error_resp:
@@ -248,8 +236,7 @@ async def retry_dead_letter(job_id: str):
         except ValueError:
             return jsonify({"error": "Invalid job ID format"}), 400
 
-        # requeued = service.retry_dead_letter(uuid_id)
-        requeued = False
+        requeued = service.retry_dead_letter(uuid_id)
 
         if requeued:
             return jsonify({"job_id": job_id, "status": "requeued"})
@@ -269,22 +256,7 @@ def get_metrics():
         return error_resp, code
 
     try:
-        # metrics = service.get_metrics()
-        metrics = {
-            "queue": {
-                "pending": 0,
-                "running": 0,
-                "completed": 0,
-                "failed": 0,
-                "dead_letter": 0,
-            },
-            "workers": {
-                "total": 0,
-                "healthy": 0,
-                "idle": 0,
-                "busy": 0,
-            },
-        }
+        metrics = service.get_metrics()
 
         return jsonify(metrics)
 
@@ -295,17 +267,36 @@ def get_metrics():
 
 @jobs_bp.route("/jobs/workers", methods=["GET"])
 @require_auth
-async def get_workers():
+def get_workers():
     """Get worker pool information."""
     service, error_resp, code = get_job_service()
     if error_resp:
         return error_resp, code
 
     try:
-        # workers = service.get_workers()
-        workers = []
+        workers = service.get_workers()
 
-        return jsonify({"workers": workers, "total": len(workers)})
+        serialized: list[dict[str, object]] = []
+        for worker in workers:
+            if is_dataclass(worker):
+                data = asdict(worker)
+            elif isinstance(worker, dict):
+                data = dict(worker)
+            else:
+                data = {"value": str(worker)}
+
+            status = data.get("status")
+            if hasattr(status, "value"):
+                data["status"] = status.value
+
+            for ts_field in ("started_at", "last_heartbeat"):
+                value = data.get(ts_field)
+                if isinstance(value, datetime):
+                    data[ts_field] = value.isoformat()
+
+            serialized.append(data)
+
+        return jsonify({"workers": serialized, "total": len(serialized)})
 
     except Exception as e:
         logger.exception("Error getting workers")
@@ -333,7 +324,7 @@ def scale_workers():
         if not isinstance(count, int) or count < 0:
             return jsonify({"error": "count must be a positive integer"}), 400
 
-        # service.scale_workers(count)
+        service.scale_workers(count)
 
         return jsonify({"workers": count, "status": "scaled"})
 
